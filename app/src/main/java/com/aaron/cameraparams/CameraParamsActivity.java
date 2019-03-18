@@ -94,10 +94,10 @@ public class CameraParamsActivity extends AppCompatActivity {
             if (grantResults.length != 1 || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
 //                ErrorDialog.newInstance(getString(R.string.request_permission))
 //                    .show(getChildFragmentManager(), FRAGMENT_DIALOG)
+            } else {
+                super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+                bindCameraList();
             }
-        } else {
-            super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-            bindCameraList();
         }
     }
 
@@ -107,7 +107,7 @@ public class CameraParamsActivity extends AppCompatActivity {
 
         private class MyViewHolder extends RecyclerView.ViewHolder {
 
-            Button keyView;
+            TextView keyView;
             TextView keyValue;
             MyViewHolder(View itemView) {
                 super(itemView);

@@ -5,13 +5,14 @@
               android:orientation="vertical"
                 android:padding="16dp">
 
-    <Button
+    <TextView
             android:text="TextView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:id="@+id/tvw_key"
             android:textSize="20sp"
-            android:textColor="@android:color/primary_text_light"/>
+            android:textColor="@android:color/primary_text_dark"
+            android:background="@android:color/background_dark"/>
     <TextView
             android:text="TextView"
             android:layout_width="match_parent"
