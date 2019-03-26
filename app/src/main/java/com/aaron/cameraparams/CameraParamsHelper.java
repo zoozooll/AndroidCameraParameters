@@ -67,8 +67,21 @@ public class CameraParamsHelper {
     public <T> String keyValue(CameraCharacteristics.Key<T> key, T value) {
         if  (COLOR_CORRECTION_AVAILABLE_ABERRATION_MODES.equals(key)) {
              return getColorCorrectionAvailableAberrationMode((int[]) value);
+        } else if (INFO_SUPPORTED_HARDWARE_LEVEL.equals(key)) {
+            return getHardwareLevelInfo((Integer) value);
+        } else if (value instanceof int[]) {
+            return ((Arrays.toString((int[]) value)));
+        } else if (value instanceof float[]) {
+            return ((Arrays.toString((float[]) value)));
+        } else if (value instanceof boolean[]) {
+            return ((Arrays.toString((boolean []) value)));
+        } else if (value instanceof Object[]) {
+            return ((Arrays.toString((Object[]) value)));
+        } else if (value instanceof StreamConfigurationMap){
+            return CameraParamsHelper.streamConfigurationMapToString((StreamConfigurationMap)value);
+        } else {
+            return value.toString();
         }
-        return value.toString();
     }
 
 
@@ -96,7 +109,46 @@ public class CameraParamsHelper {
         return sb.toString();
     }
 
-    public static String streamConfigurationMapToString(StreamConfigurationMap map) {
+    private String getHardwareLevelInfo(int value) {
+        final int[] sortedHwLevels = {
+                CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY,
+                CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL,
+                CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED,
+                CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL,
+                CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_3
+        };
+        StringBuilder sb = new StringBuilder();
+        for (int sortedlevel : sortedHwLevels) {
+            if (value == sortedlevel) {
+                sb.append(" [ ");
+            }
+            switch (sortedlevel) {
+                case CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY:
+                    sb.append(" Legacy ");
+                    break;
+                case CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL:
+                    sb.append(" External ");
+                    break;
+                case CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED:
+                    sb.append(" Limited ");
+                    break;
+                case CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL:
+                    sb.append(" Full ");
+                    break;
+                case CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_3:
+                    sb.append(" 3 ");
+                    break;
+                default:
+                    break;
+            }
+            if (value == sortedlevel) {
+                sb.append(" ] ");
+            }
+        }
+        return sb.toString();
+    }
+
+    private static String streamConfigurationMapToString(StreamConfigurationMap map) {
         StringBuilder sb = new StringBuilder("StreamConfiguration\n(");
         appendOutputsString(map, sb);
         sb.append(", \n");

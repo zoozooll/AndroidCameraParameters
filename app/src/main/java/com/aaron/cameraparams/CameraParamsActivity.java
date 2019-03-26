@@ -136,7 +136,7 @@ public class CameraParamsActivity extends AppCompatActivity {
                 Log.d("aaron", "onBindViewHolder " + myDataset[position].name)
             }*/
             holder.keyView.setText(myDataset.get(position).getName());
-            Object t =  cameraController.getCharacteristicInfo(myDataset.get(position));
+            String t =  cameraController.getCharacteristicInfo(myDataset.get(position));
             /*if  (t ) {
                 is IntArray -> holder.keyValue.text = Arrays.toString(t)
                 is FloatArray -> holder.keyValue.text = Arrays.toString(t)
@@ -145,7 +145,7 @@ public class CameraParamsActivity extends AppCompatActivity {
                 else -> holder.keyValue.text = t.toString()
             }*/
 
-            holder.keyValue.setText(formatCameraParams(t));
+            holder.keyValue.setText(t);
 
         }
 
@@ -155,21 +155,6 @@ public class CameraParamsActivity extends AppCompatActivity {
         }
     }
 
-    private static String formatCameraParams(Object t) {
-        if (t instanceof int[]) {
-            return ((Arrays.toString((int[]) t)));
-        } else if (t instanceof float[]) {
-            return ((Arrays.toString((float[]) t)));
-        } else if (t instanceof boolean[]) {
-            return ((Arrays.toString((boolean []) t)));
-        } else if (t instanceof Object[]) {
-            return ((Arrays.toString((Object[]) t)));
-        } else if (t instanceof StreamConfigurationMap){
-            return CameraParamsHelper.streamConfigurationMapToString((StreamConfigurationMap)t);
-        } else {
-            return t.toString();
-        }
-    }
 
 
 

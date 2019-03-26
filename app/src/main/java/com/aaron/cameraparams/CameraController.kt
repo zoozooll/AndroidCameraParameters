@@ -74,7 +74,6 @@ class CameraController(private val context: Context) : ICameraController {
 
     }
 
-
     override fun init() {
         try {
             manager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
@@ -392,11 +391,8 @@ class CameraController(private val context: Context) : ICameraController {
         if (mCameraDevice == null) {
             return
         }
-
         mPreviewSession?.close()
-
         try {
-
             class MyStateCallback : CameraCaptureSession.StateCallback() {
                 private var callback_done: Boolean = false // must sychronize on this and notifyAll when setting to true
                 override fun onConfigured(session: CameraCaptureSession) {
@@ -406,7 +402,6 @@ class CameraController(private val context: Context) : ICameraController {
                     mPreviewSession = session
                     updatePreview()
                 }
-
                 override fun onConfigureFailed(@NonNull session: CameraCaptureSession) {
 
                 }
@@ -414,7 +409,6 @@ class CameraController(private val context: Context) : ICameraController {
             }
 
             val myStateCallback = MyStateCallback()
-
             val surfaces: MutableList<Surface> = ArrayList()
             previewSurface?.let { surfaces.add(it) }
             recordSurface?.let { surfaces.add(it) }
