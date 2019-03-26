@@ -44,8 +44,6 @@ public interface ICameraController {
 
     void setCameraSize(Size cameraSize);
 
-    void tryToOpenCamera();
-
     boolean setFocus(int x, int y);
 
 //    void switchCameraMode(int type);

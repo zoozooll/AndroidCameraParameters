@@ -1,6 +1,7 @@
 package com.aaron.cameraparams
 
 import android.annotation.SuppressLint
+
 import android.content.Context
 import android.graphics.ImageFormat
 import android.graphics.Rect
@@ -14,12 +15,11 @@ import android.util.Size
 import android.view.Surface
 import android.view.SurfaceHolder
 
-import java.util.ArrayList
-import java.util.Collections
-import java.util.Comparator
 import android.hardware.camera2.CameraCharacteristics.*
-
 import android.content.ContentValues.TAG
+import androidx.annotation.NonNull
+import java.util.*
+import kotlin.collections.ArrayList
 
 class CameraController(private val context: Context) : ICameraController {
 
@@ -27,15 +27,19 @@ class CameraController(private val context: Context) : ICameraController {
     private lateinit var supportCameraIds: Array<String>
     private lateinit var characteristics: CameraCharacteristics
     private lateinit var cameraId: String
-    private val keyList: List<CameraCharacteristics.Key<*>>? = null
-    private val expo_bracketing_n_images = 3
-    private val expo_bracketing_stops = 2.0
     private var mBackgroundThread: HandlerThread? = null
     private lateinit var manager: CameraManager
     private var mBackgroundHandler: Handler? = null
     private lateinit var supportedFeature: CameraFeature
     private var mCameraDevice: CameraDevice? = null
 
+    private var previewSurface: Surface? = null
+    private var recordSurface: Surface? = null
+    private var imageReaderSurface: Surface? = null
+
+    private var mPreviewBuilder: CaptureRequest.Builder? = null
+    private var mPreviewSession: CameraCaptureSession? = null
+    private var want_video_high_speed: Boolean = false
     private val mCaptureCallback = object : CameraCaptureSession.CaptureCallback() {
 
         private fun process(result: CaptureResult) {}
@@ -69,7 +73,6 @@ class CameraController(private val context: Context) : ICameraController {
         override fun onError(cameraDevice: CameraDevice, error: Int) {}
 
     }
-    private var previewSurface: Surface? = null
 
 
     override fun init() {
@@ -147,8 +150,6 @@ class CameraController(private val context: Context) : ICameraController {
         }
     }
 
-
-
     // Run after camera id is bound
     @SuppressLint("MissingPermission")
     override fun openCamera() {
@@ -193,8 +194,6 @@ class CameraController(private val context: Context) : ICameraController {
     override fun setCameraSize(cameraSize: Size) {
 
     }
-
-    override fun tryToOpenCamera() {}
 
     override fun getBackgroundHandler(): Handler? {
         return mBackgroundHandler
@@ -265,8 +264,6 @@ class CameraController(private val context: Context) : ICameraController {
             supportedFeature.hardwareLevel = characteristics.get(INFO_SUPPORTED_HARDWARE_LEVEL) ?: 0
 
             supportedFeature.intsCapabilities = characteristics.get(REQUEST_AVAILABLE_CAPABILITIES)
-
-            supportedFeature.requestsKey = characteristics.availableCaptureRequestKeys
 
             //传感器方向
             supportedFeature.mSensorOrientation = characteristics.get(SENSOR_ORIENTATION) ?: 0
@@ -359,38 +356,82 @@ class CameraController(private val context: Context) : ICameraController {
             else null
 
             supportedFeature.pixel_array_size = characteristics.get(SENSOR_INFO_PIXEL_ARRAY_SIZE)
+
+
+
+            val capabilities = characteristics.get(REQUEST_AVAILABLE_CAPABILITIES)
+            supportedFeature.supportedHighSpeedVideo =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && capabilities != null)
+                    capabilities.contains(REQUEST_AVAILABLE_CAPABILITIES_CONSTRAINED_HIGH_SPEED_VIDEO)
+                else
+                    false
+            if (supportedFeature.supportedHighSpeedVideo) {
+                supportedFeature.video_sizes_high_speed = ArrayList()
+                val camera_video_sizes_high_speed = map.getHighSpeedVideoSizes()
+                for (camera_size in camera_video_sizes_high_speed) {
+                    val fr = ArrayList<Range<Int>>()
+                    for (r in map.getHighSpeedVideoFpsRangesFor(camera_size)) {
+                        fr.add(r)
+                    }
+                    val hs_video_size = CameraController.VideoSize(camera_size.getWidth(), camera_size.getHeight(), fr, true)
+
+                    supportedFeature.video_sizes_high_speed!!.add(hs_video_size)
+                }
+            }
         }
 
     }
 
-    private var mPreviewBuilder: CaptureRequest.Builder? = null
 
-    private var mPreviewSession: CameraCaptureSession? = null
+
 
     private fun startPreview() {
-        if (previewSurface == null) {
+        if (mPreviewBuilder == null) {
             return
         }
+        if (mCameraDevice == null) {
+            return
+        }
+
+        mPreviewSession?.close()
+
         try {
-            closePreviewSession()
-            mPreviewBuilder = mCameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_RECORD)
-            mPreviewBuilder?.addTarget(previewSurface!!)
-            mCameraDevice?.createCaptureSession(listOf<Surface>(previewSurface!!),
-                object : CameraCaptureSession.StateCallback() {
 
-                    override fun onConfigured(session: CameraCaptureSession) {
-                        mPreviewSession = session
-                        updatePreview()
+            class MyStateCallback : CameraCaptureSession.StateCallback() {
+                private var callback_done: Boolean = false // must sychronize on this and notifyAll when setting to true
+                override fun onConfigured(session: CameraCaptureSession) {
+                    if (mCameraDevice == null) {
+                        return
                     }
+                    mPreviewSession = session
+                    updatePreview()
+                }
 
+                override fun onConfigureFailed(@NonNull session: CameraCaptureSession) {
 
-                    override fun onConfigureFailed(session: CameraCaptureSession) {
-                        Log.w(TAG, "Camera creates Capture Session failed")
-                    }
-                }, mBackgroundHandler
-            )
+                }
 
+            }
 
+            val myStateCallback = MyStateCallback()
+
+            val surfaces: MutableList<Surface> = ArrayList()
+            previewSurface?.let { surfaces.add(it) }
+            recordSurface?.let { surfaces.add(it) }
+            imageReaderSurface?.let { surfaces.add(it) }
+            if (recordSurface != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && want_video_high_speed) {
+                mCameraDevice?.createConstrainedHighSpeedCaptureSession(
+                    surfaces,
+                    myStateCallback,
+                    backgroundHandler
+                )
+            } else {
+                    mCameraDevice?.createCaptureSession(
+                        surfaces,
+                        myStateCallback,
+                        backgroundHandler
+                    )
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -462,7 +503,6 @@ class CameraController(private val context: Context) : ICameraController {
     }
 
     inner class CameraFeature {
-        var requestsKey: List<CaptureRequest.Key<*>>? = null
         var mSensorOrientation: Int = 0
         var hardwareLevel: Int = 0
         var intsCapabilities: IntArray? = null
@@ -491,6 +531,8 @@ class CameraController(private val context: Context) : ICameraController {
         var minimum_focus_distance: Float = 0.0F
         var lens_apertures: FloatArray? = null
         var pixel_array_size: Size? = null
+        var supportedHighSpeedVideo: Boolean = false
+        var video_sizes_high_speed: ArrayList<VideoSize>? = null
     }
 
     inner class CameraSettings {
@@ -505,11 +547,13 @@ class CameraController(private val context: Context) : ICameraController {
 
     class Area(internal val rect: Rect, internal val weight: Int)
 
-    inner class FaceData {
+    class FaceData {
         var bounds = ArrayList<Face>()               // 人脸列表
         var largest: Size? = null                                             // 最大分辨率
         var isFront: Boolean = false                                        //是否使用前置摄像头
     }
+
+    class VideoSize(val width: Int, val height: Int, val fpss: ArrayList<Range<Int>>, val isHighSpeed: Boolean)
 
     companion object {
 

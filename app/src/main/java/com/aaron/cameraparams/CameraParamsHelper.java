@@ -16,6 +16,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
+import static android.hardware.camera2.CameraCharacteristics.*;
+
 public class CameraParamsHelper {
 
     private Context context;
@@ -58,8 +60,40 @@ public class CameraParamsHelper {
         return keyList;
     }
 
-    public <T> T getCharacteristicInfo(CameraCharacteristics.Key<T> key) {
-        return characteristics.get(key);
+    public String getCharacteristicInfo(CameraCharacteristics.Key key) {
+        return keyValue(key, characteristics.get(key));
+    }
+
+    public <T> String keyValue(CameraCharacteristics.Key<T> key, T value) {
+        if  (COLOR_CORRECTION_AVAILABLE_ABERRATION_MODES.equals(key)) {
+             return getColorCorrectionAvailableAberrationMode((int[]) value);
+        }
+        return value.toString();
+    }
+
+
+    private String getColorCorrectionAvailableAberrationMode(int[] value) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("[");
+        for (int i : value) {
+            switch (i) {
+                case COLOR_CORRECTION_ABERRATION_MODE_OFF:
+                    sb.append("OFF");
+                    break;
+                case COLOR_CORRECTION_MODE_FAST:
+                    sb.append("FAST");
+                    break;
+                case COLOR_CORRECTION_MODE_HIGH_QUALITY:
+                    sb.append("QUALITY");
+                    break;
+                default:
+                    break;
+            }
+            sb.append(", ");
+        }
+        sb.deleteCharAt(sb.length() - 1);
+        sb.append("]");
+        return sb.toString();
     }
 
     public static String streamConfigurationMapToString(StreamConfigurationMap map) {
