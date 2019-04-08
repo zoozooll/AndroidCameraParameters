@@ -29,7 +29,7 @@ import java.util.*;
 
 public class CameraController implements ICameraController {
 
-    private static final String TAG = "CameraController";
+    private static final String TAG = "CameraController1";
     private final static int tonemap_max_curve_points_c = 64;
     // for BURSTTYPE_EXPO:
     private final static int max_expo_bracketing_n_images = 5; // could be more, but limit to 5 for now
@@ -132,7 +132,7 @@ public class CameraController implements ICameraController {
     private int state = STATE_NORMAL;
     private long precapture_state_change_time_ms = -1; // time we changed state for precapture modes
     private boolean ready_for_capture;
-    private boolean use_fake_precapture; // see CameraController.setUseCamera2FakeFlash() for details - this is the user/application setting, see use_fake_precapture_mode for whether fake precapture is enabled (as we may do this for other purposes, e.g., front screen flash)
+    private boolean use_fake_precapture; // see CameraController1.setUseCamera2FakeFlash() for details - this is the user/application setting, see use_fake_precapture_mode for whether fake precapture is enabled (as we may do this for other purposes, e.g., front screen flash)
     private boolean use_fake_precapture_mode; // true if either use_fake_precapture is true, or we're temporarily using fake precapture mode (e.g., for front screen flash or exposure bracketing)
     private boolean fake_precapture_torch_performed; // whether we turned on torch to do a fake precapture
     private boolean fake_precapture_torch_focus_performed; // whether we turned on torch to do an autofocus, in fake precapture mode
@@ -2186,7 +2186,7 @@ public class CameraController implements ICameraController {
             } else if (picture_cb == null) {
                 // just in case?
             } else if (!jpeg_todo && !raw_todo) {
-                // need to set picture_cb to null before calling onCompleted, as that may reenter CameraController to take another photo (if in auto-repeat burst mode) - see testTakePhotoRepeat()
+                // need to set picture_cb to null before calling onCompleted, as that may reenter CameraController1 to take another photo (if in auto-repeat burst mode) - see testTakePhotoRepeat()
                 ICameraController.PictureCallback cb = picture_cb;
                 picture_cb = null;
                 cb.onCompleted();
@@ -2595,10 +2595,10 @@ public class CameraController implements ICameraController {
 
     /**
      * Returns the viewable rect - this is crop region if available.
-     * We need this as callers will pass in (or expect returned) CameraController.Area values that
+     * We need this as callers will pass in (or expect returned) CameraController1.Area values that
      * are relative to the current view (i.e., taking zoom into account) (the old Camera API in
      * CameraController1 always works in terms of the current view, whilst Camera2 works in terms
-     * of the full view always). Similarly for the rect field in CameraController.Face.
+     * of the full view always). Similarly for the rect field in CameraController1.Face.
      */
     private Rect getViewableRect() {
         if (previewBuilder != null) {
@@ -2616,7 +2616,7 @@ public class CameraController implements ICameraController {
     }
 
     private Rect convertRectToCamera2(Rect crop_rect, Rect rect) {
-        // CameraController.Area is always [-1000, -1000] to [1000, 1000] for the viewable region
+        // CameraController1.Area is always [-1000, -1000] to [1000, 1000] for the viewable region
         // but for CameraController2, we must convert to be relative to the crop region
         double left_f = (rect.left + 1000) / 2000.0;
         double top_f = (rect.top + 1000) / 2000.0;
@@ -2769,7 +2769,11 @@ public class CameraController implements ICameraController {
         if (metering_rectangles == null)
             return null;
         Rect sensor_rect = getViewableRect();
-        if (metering_rectangles.length == 1 && metering_rectangles[0].getRect().left == 0 && metering_rectangles[0].getRect().top == 0 && metering_rectangles[0].getRect().right == sensor_rect.width() - 1 && metering_rectangles[0].getRect().bottom == sensor_rect.height() - 1) {
+        if (metering_rectangles.length == 1 &&
+                metering_rectangles[0].getRect().left == 0 &&
+                metering_rectangles[0].getRect().top == 0 &&
+                metering_rectangles[0].getRect().right == sensor_rect.width() - 1 &&
+                metering_rectangles[0].getRect().bottom == sensor_rect.height() - 1) {
             // for compatibility with CameraController1
             return null;
         }
@@ -2910,11 +2914,6 @@ public class CameraController implements ICameraController {
                 }
                 this.surface_texture = new Surface(texture);
             }
-            if (video_recorder != null) {
-            } else {
-            }
-			/*if( MyDebug.LOG )
-			Log.d(TAG, "preview size: " + previewImageReader.getWidth() + " x " + previewImageReader.getHeight());*/
 
             if (video_recorder != null)
                 video_recorder_surface = video_recorder.getSurface();
@@ -2960,35 +2959,6 @@ public class CameraController implements ICameraController {
                     // don't throw CameraControllerException here, as won't be caught - instead we throw CameraControllerException below
                 }
 
-				/*
-				public void onReady(CameraCaptureSession session) {
-					if( MyDebug.LOG )
-						Log.d(TAG, "onReady: " + session);
-					if( pending_request_when_ready != null ) {
-						if( MyDebug.LOG )
-							Log.d(TAG, "have pending_request_when_ready: " + pending_request_when_ready);
-						CaptureRequest request = pending_request_when_ready;
-						pending_request_when_ready = null;
-						try {
-							captureSession.capture(request, previewCaptureCallback, backgroundHandler);
-						}
-						catch(CameraAccessException e) {
-							if( MyDebug.LOG ) {
-								Log.e(TAG, "failed to take picture");
-								Log.e(TAG, "reason: " + e.getReason());
-								Log.e(TAG, "message: " + e.getMessage());
-							}
-							e.printStackTrace();
-							jpeg_todo = false;
-							raw_todo = false;
-							picture_cb = null;
-							if( take_picture_error_cb != null ) {
-								take_picture_error_cb.onError();
-								take_picture_error_cb = null;
-							}
-						}
-					}
-				}*/
             }
             final MyStateCallback myStateCallback = new MyStateCallback();
 
@@ -3145,8 +3115,6 @@ public class CameraController implements ICameraController {
             return;
         }
 		/*if( state == STATE_WAITING_AUTOFOCUS ) {
-			if( MyDebug.LOG )
-				Log.d(TAG, "already waiting for an autofocus");
 			// need to update the callback!
 			this.capture_follows_autofocus_hint = capture_follows_autofocus_hint;
 			this.autofocus_cb = cb;
@@ -3911,13 +3879,6 @@ public class CameraController implements ICameraController {
                 }
             }
         }
-
-		/*camera_settings.setupBuilder(previewBuilder, false);
-    	previewBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_START);
-		state = STATE_WAITING_AUTOFOCUS;
-		precapture_started = -1;
-    	//capture();
-    	setRepeatingRequest();*/
     }
 
     public int getCameraOrientation() {
@@ -3963,11 +3924,6 @@ public class CameraController implements ICameraController {
             media_action_sound.play(MediaActionSound.STOP_VIDEO_RECORDING);
         createPreviewRequest();
         createCaptureSession(null, false);
-		/*if( MyDebug.LOG )
-			Log.d(TAG, "add preview surface to previewBuilder");
-    	Surface surface = getPreviewSurface();
-		previewBuilder.addTarget(surface);*/
-        //setRepeatingRequest();
     }
 
     public String getParametersString() {
@@ -4330,7 +4286,7 @@ public class CameraController implements ICameraController {
                     case "flash_on":
                         // see note above for "flash_auto" for why we set this even fake flash mode - arguably we don't need to know
                         // about FLASH_REQUIRED in flash_on mode, but we set it for consistency...
-		    		/*if( use_fake_precapture || CameraController.this.want_expo_bracketing )
+		    		/*if( use_fake_precapture || CameraController1.this.want_expo_bracketing )
 			    		builder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_ON);
 		    		else*/
                         builder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_ON_ALWAYS_FLASH);
@@ -4652,7 +4608,7 @@ public class CameraController implements ICameraController {
          * but all images have been received.
          */
         private void takePhotoCompleted() {
-            // need to set jpeg_todo to false before calling onCompleted, as that may reenter CameraController to take another photo (if in auto-repeat burst mode) - see testTakePhotoRepeat()
+            // need to set jpeg_todo to false before calling onCompleted, as that may reenter CameraController1 to take another photo (if in auto-repeat burst mode) - see testTakePhotoRepeat()
             jpeg_todo = false;
             checkImagesCompleted();
 
