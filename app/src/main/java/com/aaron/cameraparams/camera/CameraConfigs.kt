@@ -141,8 +141,7 @@ fun getAeAvailableModes(value: IntArray): String {
             CONTROL_AE_MODE_ON_AUTO_FLASH_REDEYE -> sb.append("Flash Red Eye")
             CONTROL_AE_MODE_ON_EXTERNAL_FLASH -> sb.append("Flash External")
             CONTROL_AE_MODE_ON_ALWAYS_FLASH -> sb.append("Flash ALWAYS")
-            else -> {
-            }
+            else -> sb.append(i)
         }
         sb.append(",\n ")
     }
@@ -162,8 +161,7 @@ fun getAfAvailableModes(value: IntArray): String {
             CONTROL_AF_MODE_CONTINUOUS_VIDEO -> sb.append("Continuous Video")
             CONTROL_AF_MODE_EDOF -> sb.append("EDOF")
             CONTROL_AF_MODE_MACRO -> sb.append("Macro")
-            else -> {
-            }
+            else -> sb.append(i)
         }
         sb.append(", \n")
     }
@@ -186,8 +184,7 @@ fun getAwbAvailableModes(value: IntArray): String {
             CONTROL_AWB_MODE_CLOUDY_DAYLIGHT -> sb.append("CLOUDY_DAYLIGHT")
             CONTROL_AWB_MODE_TWILIGHT -> sb.append("TWILIGHT")
             CONTROL_AWB_MODE_SHADE -> sb.append("SHADE")
-            else -> {
-            }
+            else -> sb.append(i)
         }
         sb.append(", \n")
     }
@@ -205,8 +202,7 @@ fun getAvailableModes(value: IntArray): String {
             CONTROL_MODE_AUTO -> sb.append("AUTO")
             CONTROL_MODE_USE_SCENE_MODE -> sb.append("USE_SCENE_MODE")
             CONTROL_MODE_OFF_KEEP_STATE -> sb.append("OFF_KEEP_STATE")
-            else -> {
-            }
+            else -> sb.append(i)
         }
         sb.append(", \n")
     }
@@ -229,8 +225,7 @@ fun getAvailableEffects(value: IntArray): String {
             CONTROL_EFFECT_MODE_WHITEBOARD -> sb.append("WHITEBOARD")
             CONTROL_EFFECT_MODE_BLACKBOARD -> sb.append("BLACKBOARD")
             CONTROL_EFFECT_MODE_AQUA -> sb.append("AQUA")
-            else -> {
-            }
+            else -> sb.append(i)
         }
         sb.append(", \n")
     }
@@ -263,8 +258,7 @@ fun getAvailableSceneModes(value: IntArray): String {
             CONTROL_SCENE_MODE_BARCODE -> sb.append("BARCODE")
             CONTROL_SCENE_MODE_HIGH_SPEED_VIDEO -> sb.append("HIGH_SPEED_VIDEO")
             CONTROL_SCENE_MODE_HDR -> sb.append("HDR")
-            else -> {
-            }
+            else -> sb.append(i)
         }
         sb.append(", \n")
     }
@@ -283,8 +277,7 @@ fun getAvailableNoiseReductionModes(value: IntArray): String {
             NOISE_REDUCTION_MODE_HIGH_QUALITY -> sb.append("HIGH_QUALITY")
             NOISE_REDUCTION_MODE_MINIMAL -> sb.append("MINIMAL")
             NOISE_REDUCTION_MODE_ZERO_SHUTTER_LAG -> sb.append("ZERO_SHUTTER_LAG")
-            else -> {
-            }
+            else -> sb.append(i)
         }
         sb.append(", \n")
     }
@@ -301,8 +294,7 @@ fun getColorCorrectionAvailableAberrationMode(value: IntArray): String {
             COLOR_CORRECTION_ABERRATION_MODE_OFF -> sb.append("OFF")
             COLOR_CORRECTION_MODE_FAST -> sb.append("FAST")
             COLOR_CORRECTION_MODE_HIGH_QUALITY -> sb.append("QUALITY")
-            else -> {
-            }
+            else -> sb.append(i)
         }
         sb.append(", \n")
     }
@@ -330,8 +322,7 @@ fun getRequestAvailableCapabilities(value: IntArray): String {
             REQUEST_AVAILABLE_CAPABILITIES_LOGICAL_MULTI_CAMERA -> sb.append("LOGICAL_MULTI_CAMERA")
             REQUEST_AVAILABLE_CAPABILITIES_MONOCHROME -> sb.append("MONOCHROME")
             0x0000000d-> sb.append("SECURE_IMAGE_DATA")
-            else -> {
-            }
+            else -> sb.append(i)
         }
         sb.append(", \n")
     }
@@ -491,7 +482,7 @@ private fun appendValidOutputFormatsForInputString(map: StreamConfigurationMap, 
 }
 
 private fun appendHighSpeedVideoConfigurationsString(map: StreamConfigurationMap, sb: StringBuilder) {
-    if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.M) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
         return
     }
     sb.append("HighSpeedVideoConfigurations\n(")

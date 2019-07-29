@@ -7,13 +7,11 @@ import android.graphics.PixelFormat;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.params.StreamConfigurationMap;
+import android.util.JsonWriter;
 import android.util.Log;
 import android.util.Range;
 import android.util.Size;
-import android.view.LayoutInflater;
-import android.view.TextureView;
-import android.view.View;
-import android.view.ViewGroup;
+import android.view.*;
 import android.widget.*;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -22,7 +20,12 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -78,6 +81,24 @@ public class CameraParamsActivity extends AppCompatActivity {
     }
 
     @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.camera_params, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.menu_export:
+                    runExportAllParams();
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+    }
+
+    @Override
     protected void onStart() {
         super.onStart();
 //        Log.d("MyTexture", "onStart");
@@ -87,6 +108,51 @@ public class CameraParamsActivity extends AppCompatActivity {
     protected void onStop() {
         super.onStop();
 //        Log.d("MyTexture", "onStop");
+    }
+
+    private void runExportAllParams() {
+        new Thread("run Export All Params"){
+            @Override
+            public void run() {
+
+                CameraObject object = new CameraObject();
+                String[] cameras = cameraController.getSupportCameraIds();
+                List<CameraId> cameraIdList = new ArrayList<>();
+                for (String item : cameras) {
+                    CameraId cameraId = new CameraId();
+                    cameraId.cameraId = item;
+                    List<CameraParamaters> paramsList = new ArrayList<>();
+                    List<CameraCharacteristics.Key<?>> keys = cameraController.getAvailableKeys();
+                    for (CameraCharacteristics.Key key : keys) {
+                        CameraParamaters params = new CameraParamaters();
+                        params.key = key.getName();
+                        params.value = cameraController.getCharacteristicInfo(key);
+                        paramsList.add(params);
+                    }
+                    cameraId.paramaters = paramsList;
+                    cameraIdList.add(cameraId);
+                }
+                object.cameras = cameraIdList;
+                Gson gson = new Gson();
+                String json = gson.toJson(object);
+                FileWriter writer = null;
+                try {
+                    writer = new FileWriter(new File(getExternalCacheDir(), "cameraParams.json"));
+                    writer.append(json);
+                    writer.flush();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } finally {
+                    if (writer != null) {
+                        try {
+                            writer.close();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            }
+        }.start();
     }
 
     private void bindCameraList() {
