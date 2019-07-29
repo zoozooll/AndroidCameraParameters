@@ -10,7 +10,13 @@ import java.util.*
 import android.hardware.camera2.CameraCharacteristics.*
 import android.hardware.camera2.CameraMetadata
 import android.hardware.camera2.CameraMetadata.*
+import android.util.Rational
+import android.util.Size
+import kotlin.collections.HashMap
 
+private val cameraSizeComparator = Comparator<Size> { o1, o2 ->
+    o2.width * o2.height - o1.width * o1.height
+}
 
 val ALL_KEYS: ArrayList<CameraCharacteristics.Key<*>>
     get() {
@@ -31,10 +37,10 @@ val ALL_KEYS: ArrayList<CameraCharacteristics.Key<*>>
         list.add(CameraCharacteristics.CONTROL_MAX_REGIONS_AWB)
         list.add(CameraCharacteristics.CONTROL_MAX_REGIONS_AF)
 //hide        list.add(CameraCharacteristics.CONTROL_AVAILABLE_HIGH_SPEED_VIDEO_CONFIGURATIONS)
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.M) list.add(CameraCharacteristics.CONTROL_AE_LOCK_AVAILABLE)
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.M) list.add(CameraCharacteristics.CONTROL_AWB_LOCK_AVAILABLE)
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.M) list.add(CameraCharacteristics.CONTROL_AVAILABLE_MODES)
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.M) list.add(CameraCharacteristics.CONTROL_POST_RAW_SENSITIVITY_BOOST_RANGE)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) list.add(CameraCharacteristics.CONTROL_AE_LOCK_AVAILABLE)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) list.add(CameraCharacteristics.CONTROL_AWB_LOCK_AVAILABLE)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) list.add(CameraCharacteristics.CONTROL_AVAILABLE_MODES)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) list.add(CameraCharacteristics.CONTROL_POST_RAW_SENSITIVITY_BOOST_RANGE)
         list.add(CameraCharacteristics.EDGE_AVAILABLE_EDGE_MODES)
         list.add(CameraCharacteristics.FLASH_INFO_AVAILABLE)
         list.add(CameraCharacteristics.HOT_PIXEL_AVAILABLE_HOT_PIXEL_MODES)
@@ -48,19 +54,19 @@ val ALL_KEYS: ArrayList<CameraCharacteristics.Key<*>>
 //hide        list.add(CameraCharacteristics.LENS_INFO_SHADING_MAP_SIZE)
         list.add(CameraCharacteristics.LENS_INFO_FOCUS_DISTANCE_CALIBRATION)
         list.add(CameraCharacteristics.LENS_FACING)
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.M) list.add(CameraCharacteristics.LENS_POSE_ROTATION)
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.M) list.add(CameraCharacteristics.LENS_POSE_TRANSLATION)
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.M) list.add(CameraCharacteristics.LENS_INTRINSIC_CALIBRATION)
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.M) list.add(CameraCharacteristics.LENS_RADIAL_DISTORTION)
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) list.add(CameraCharacteristics.LENS_POSE_REFERENCE)
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) list.add(CameraCharacteristics.LENS_DISTORTION)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) list.add(CameraCharacteristics.LENS_POSE_ROTATION)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) list.add(CameraCharacteristics.LENS_POSE_TRANSLATION)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) list.add(CameraCharacteristics.LENS_INTRINSIC_CALIBRATION)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) list.add(CameraCharacteristics.LENS_RADIAL_DISTORTION)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) list.add(CameraCharacteristics.LENS_POSE_REFERENCE)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) list.add(CameraCharacteristics.LENS_DISTORTION)
         list.add(CameraCharacteristics.NOISE_REDUCTION_AVAILABLE_NOISE_REDUCTION_MODES)
 //hide        list.add(CameraCharacteristics.QUIRKS_USE_PARTIAL_RESULT)
 //hide        list.add(CameraCharacteristics.REQUEST_MAX_NUM_OUTPUT_STREAMS)
         list.add(CameraCharacteristics.REQUEST_MAX_NUM_OUTPUT_RAW)
         list.add(CameraCharacteristics.REQUEST_MAX_NUM_OUTPUT_PROC)
         list.add(CameraCharacteristics.REQUEST_MAX_NUM_OUTPUT_PROC_STALLING)
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.M) list.add(CameraCharacteristics.REQUEST_MAX_NUM_INPUT_STREAMS)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) list.add(CameraCharacteristics.REQUEST_MAX_NUM_INPUT_STREAMS)
         list.add(CameraCharacteristics.REQUEST_PIPELINE_MAX_DEPTH)
         list.add(CameraCharacteristics.REQUEST_PARTIAL_RESULT_COUNT)
         list.add(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
@@ -90,8 +96,8 @@ val ALL_KEYS: ArrayList<CameraCharacteristics.Key<*>>
         list.add(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE)
         list.add(CameraCharacteristics.SENSOR_INFO_WHITE_LEVEL)
         list.add(CameraCharacteristics.SENSOR_INFO_TIMESTAMP_SOURCE)
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.M) list.add(CameraCharacteristics.SENSOR_INFO_LENS_SHADING_APPLIED)
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.M) list.add(CameraCharacteristics.SENSOR_INFO_PRE_CORRECTION_ACTIVE_ARRAY_SIZE)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) list.add(CameraCharacteristics.SENSOR_INFO_LENS_SHADING_APPLIED)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) list.add(CameraCharacteristics.SENSOR_INFO_PRE_CORRECTION_ACTIVE_ARRAY_SIZE)
         list.add(CameraCharacteristics.SENSOR_REFERENCE_ILLUMINANT1)
         list.add(CameraCharacteristics.SENSOR_REFERENCE_ILLUMINANT2)
         list.add(CameraCharacteristics.SENSOR_CALIBRATION_TRANSFORM1)
@@ -104,27 +110,27 @@ val ALL_KEYS: ArrayList<CameraCharacteristics.Key<*>>
         list.add(CameraCharacteristics.SENSOR_MAX_ANALOG_SENSITIVITY)
         list.add(CameraCharacteristics.SENSOR_ORIENTATION)
         list.add(CameraCharacteristics.SENSOR_AVAILABLE_TEST_PATTERN_MODES)
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.N) list.add(CameraCharacteristics.SENSOR_OPTICAL_BLACK_REGIONS)
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.N) list.add(CameraCharacteristics.SHADING_AVAILABLE_MODES)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) list.add(CameraCharacteristics.SENSOR_OPTICAL_BLACK_REGIONS)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) list.add(CameraCharacteristics.SHADING_AVAILABLE_MODES)
         list.add(CameraCharacteristics.STATISTICS_INFO_AVAILABLE_FACE_DETECT_MODES)
         list.add(CameraCharacteristics.STATISTICS_INFO_MAX_FACE_COUNT)
         list.add(CameraCharacteristics.STATISTICS_INFO_AVAILABLE_HOT_PIXEL_MAP_MODES)
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.M) list.add(CameraCharacteristics.STATISTICS_INFO_AVAILABLE_LENS_SHADING_MAP_MODES)
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) list.add(CameraCharacteristics.STATISTICS_INFO_AVAILABLE_OIS_DATA_MODES)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) list.add(CameraCharacteristics.STATISTICS_INFO_AVAILABLE_LENS_SHADING_MAP_MODES)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) list.add(CameraCharacteristics.STATISTICS_INFO_AVAILABLE_OIS_DATA_MODES)
         list.add(CameraCharacteristics.TONEMAP_MAX_CURVE_POINTS)
         list.add(CameraCharacteristics.TONEMAP_AVAILABLE_TONE_MAP_MODES)
 //hide        list.add(CameraCharacteristics.LED_AVAILABLE_LEDS)
         list.add(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL)
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) list.add(CameraCharacteristics.INFO_VERSION)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) list.add(CameraCharacteristics.INFO_VERSION)
         list.add(CameraCharacteristics.SYNC_MAX_LATENCY)
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.M) list.add(CameraCharacteristics.REPROCESS_MAX_CAPTURE_STALL)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) list.add(CameraCharacteristics.REPROCESS_MAX_CAPTURE_STALL)
 //hide        list.add(CameraCharacteristics.DEPTH_AVAILABLE_DEPTH_STREAM_CONFIGURATIONS)
 //hide        list.add(CameraCharacteristics.DEPTH_AVAILABLE_DEPTH_MIN_FRAME_DURATIONS)
 //hide        list.add(CameraCharacteristics.DEPTH_AVAILABLE_DEPTH_STALL_DURATIONS)
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.M) list.add(CameraCharacteristics.DEPTH_DEPTH_IS_EXCLUSIVE)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) list.add(CameraCharacteristics.DEPTH_DEPTH_IS_EXCLUSIVE)
 //hide        list.add(CameraCharacteristics.LOGICAL_MULTI_CAMERA_PHYSICAL_IDS)
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) list.add(CameraCharacteristics.LOGICAL_MULTI_CAMERA_SENSOR_SYNC_TYPE)
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) list.add(CameraCharacteristics.DISTORTION_CORRECTION_AVAILABLE_MODES)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) list.add(CameraCharacteristics.LOGICAL_MULTI_CAMERA_SENSOR_SYNC_TYPE)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) list.add(CameraCharacteristics.DISTORTION_CORRECTION_AVAILABLE_MODES)
 
         return list
     }
@@ -384,7 +390,19 @@ fun appendOutputsString(map: StreamConfigurationMap, sb: StringBuilder) {
             sb.append(String.format(Locale.ENGLISH, "[format:%s(%d), NULL], \n", formatToString(format), format))
             continue
         }
-        for (size in sizes) {
+        Arrays.sort(sizes, cameraSizeComparator)
+        sb.append('\n')
+        val supportedPhotoMap = java.util.HashMap<Rational, ArrayList<Size>>()
+        sizes.forEachIndexed { _, size ->
+            val rational = Rational(size.width, size.height)
+            var list = supportedPhotoMap!![rational]
+            if (list == null) {
+                list = ArrayList()
+                supportedPhotoMap!![rational] = list
+            }
+            list.add(size)
+        }
+        /*for (size in sizes) {
             val minFrameDuration = map.getOutputMinFrameDuration(format, size)
             val stallDuration = map.getOutputStallDuration(format, size)
             sb.append(
@@ -393,6 +411,20 @@ fun appendOutputsString(map: StreamConfigurationMap, sb: StringBuilder) {
                     format, minFrameDuration, stallDuration
                 )
             )
+        }*/
+        for (entry in supportedPhotoMap.entries)
+        {
+            sb.append("${formatToString(format)}($format) : ${entry.key.numerator}:${entry.key.denominator}\n")
+            entry.value?.forEachIndexed { _, size ->
+                val minFrameDuration = map.getOutputMinFrameDuration(format, size)
+                val stallDuration = map.getOutputStallDuration(format, size)
+                sb.append(
+                    String.format(
+                        Locale.ENGLISH, "[w:%d, h:%d, min_duration:%d, " + "stall:%d], \n", size.width, size.height,
+                        minFrameDuration, stallDuration
+                    )
+                )
+            }
         }
     }
     // Remove the pending ", "
@@ -403,7 +435,7 @@ fun appendOutputsString(map: StreamConfigurationMap, sb: StringBuilder) {
 }
 
 private fun appendHighResOutputsString(map: StreamConfigurationMap, sb: StringBuilder) {
-    if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.M) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
         return
     }
     sb.append("HighResolutionOutputs\n(")
@@ -453,7 +485,7 @@ private fun appendInputsString(map: StreamConfigurationMap, sb: StringBuilder) {
 }
 
 private fun appendValidOutputFormatsForInputString(map: StreamConfigurationMap, sb: StringBuilder) {
-    if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.M) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
         return
     }
     sb.append("ValidOutputFormatsForInput\n(")
