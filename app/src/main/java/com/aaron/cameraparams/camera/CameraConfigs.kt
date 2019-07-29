@@ -414,14 +414,14 @@ fun appendOutputsString(map: StreamConfigurationMap, sb: StringBuilder) {
         }*/
         for (entry in supportedPhotoMap.entries)
         {
-            sb.append("${formatToString(format)}($format) : ${entry.key.numerator}:${entry.key.denominator}\n")
+            sb.append(" (${entry.key.numerator}:${entry.key.denominator})\n")
             entry.value?.forEachIndexed { _, size ->
                 val minFrameDuration = map.getOutputMinFrameDuration(format, size)
                 val stallDuration = map.getOutputStallDuration(format, size)
                 sb.append(
                     String.format(
-                        Locale.ENGLISH, "[w:%d, h:%d, min_duration:%d, " + "stall:%d], \n", size.width, size.height,
-                        minFrameDuration, stallDuration
+                        Locale.ENGLISH, "[w:%d, h:%d, format:%s(%d), min_duration:%d, " + "stall:%d], \n", size.width, size.height, formatToString(format),
+                        format, minFrameDuration, stallDuration
                     )
                 )
             }
