@@ -1,0 +1,598 @@
+{
+  "cameras": [
+    {
+      "cameraId": "0",
+      "paramaters": [
+        {
+          "key": "android.colorCorrection.availableAberrationModes",
+          "value": "[OFF, \nFAST, \nQUALITY, ]"
+        },
+        {
+          "key": "android.control.aeAvailableAntibandingModes",
+          "value": "[3, 1, 2]"
+        },
+        {
+          "key": "android.control.aeAvailableModes",
+          "value": "[OFF,\n ON,\n Flash Auto,\n Flash ALWAYS,\n]"
+        },
+        {
+          "key": "android.control.aeAvailableTargetFpsRanges",
+          "value": "[[12, 15], [15, 15], [14, 20], [20, 20], [14, 25], [25, 25], [14, 30], [30, 30]]"
+        },
+        {
+          "key": "android.control.aeCompensationRange",
+          "value": "[-4, 4]"
+        },
+        {
+          "key": "android.control.aeCompensationStep",
+          "value": "1/2"
+        },
+        {
+          "key": "android.control.aeLockAvailable",
+          "value": "true"
+        },
+        {
+          "key": "android.control.afAvailableModes",
+          "value": "[OFF, \nAUTO, \nMacro, \nContinuous Video, \nContinuous Picture, ]"
+        },
+        {
+          "key": "android.control.availableEffects",
+          "value": "[OFF, \nMONO, \nNegative, \nSEPIA, ]"
+        },
+        {
+          "key": "android.control.availableModes",
+          "value": "[OFF, \nAUTO, \nUSE_SCENE_MODE, ]"
+        },
+        {
+          "key": "android.control.availableSceneModes",
+          "value": "[FACE_PRIORITY, \nACTION, \nPORTRAIT, \nLANDSCAPE, \nNIGHT, \nNIGHT_PORTRAIT, \nTHEATRE, \nBEACH, \nSNOW, \nFIREWORKS, \nCANDLELIGHT, \n33, \n34, \nHIGH_SPEED_VIDEO, ]"
+        },
+        {
+          "key": "android.control.availableVideoStabilizationModes",
+          "value": "[0, 1]"
+        },
+        {
+          "key": "android.control.awbAvailableModes",
+          "value": "[AUTO, \nOFF, \nINCANDESCENT, \nFLUORESCENT, \nDAYLIGHT, \nCLOUDY_DAYLIGHT, ]"
+        },
+        {
+          "key": "android.control.awbLockAvailable",
+          "value": "true"
+        },
+        {
+          "key": "android.control.maxRegionsAe",
+          "value": "1"
+        },
+        {
+          "key": "android.control.maxRegionsAf",
+          "value": "1"
+        },
+        {
+          "key": "android.control.maxRegionsAwb",
+          "value": "0"
+        },
+        {
+          "key": "android.control.postRawSensitivityBoostRange",
+          "value": "[100, 100]"
+        },
+        {
+          "key": "android.depth.depthIsExclusive",
+          "value": "true"
+        },
+        {
+          "key": "android.edge.availableEdgeModes",
+          "value": "[0, 1, 2]"
+        },
+        {
+          "key": "android.flash.info.available",
+          "value": "true"
+        },
+        {
+          "key": "android.hotPixel.availableHotPixelModes",
+          "value": "[0, 1, 2]"
+        },
+        {
+          "key": "android.info.supportedHardwareLevel",
+          "value": " Legacy  External  [  Limited  ]  Full  3 "
+        },
+        {
+          "key": "android.jpeg.availableThumbnailSizes",
+          "value": "[0x0, 208x208, 512x256, 528x256, 512x288, 480x320, 512x384, 512x512]"
+        },
+        {
+          "key": "android.lens.facing",
+          "value": "1"
+        },
+        {
+          "key": "android.lens.info.availableApertures",
+          "value": "[1.6]"
+        },
+        {
+          "key": "android.lens.info.availableFilterDensities",
+          "value": "[0.0]"
+        },
+        {
+          "key": "android.lens.info.availableFocalLengths",
+          "value": "[3.95]"
+        },
+        {
+          "key": "android.lens.info.availableOpticalStabilization",
+          "value": "[0]"
+        },
+        {
+          "key": "android.lens.info.focusDistanceCalibration",
+          "value": "2"
+        },
+        {
+          "key": "android.lens.info.hyperfocalDistance",
+          "value": "0.2"
+        },
+        {
+          "key": "android.lens.info.minimumFocusDistance",
+          "value": "10.0"
+        },
+        {
+          "key": "android.noiseReduction.availableNoiseReductionModes",
+          "value": "[OFF, \nFAST, \nHIGH_QUALITY, ]"
+        },
+        {
+          "key": "android.request.availableCapabilities",
+          "value": "[BACKWARD_COMPATIBLE, \nMANUAL_POST_PROCESSING, \nRAW, \nCONSTRAINED_HIGH_SPEED_VIDEO, \nDEPTH_OUTPUT, ]"
+        },
+        {
+          "key": "android.request.maxNumInputStreams",
+          "value": "0"
+        },
+        {
+          "key": "android.request.maxNumOutputProc",
+          "value": "3"
+        },
+        {
+          "key": "android.request.maxNumOutputProcStalling",
+          "value": "1"
+        },
+        {
+          "key": "android.request.maxNumOutputRaw",
+          "value": "1"
+        },
+        {
+          "key": "android.request.partialResultCount",
+          "value": "1"
+        },
+        {
+          "key": "android.request.pipelineMaxDepth",
+          "value": "8"
+        },
+        {
+          "key": "android.scaler.availableMaxDigitalZoom",
+          "value": "6.0"
+        },
+        {
+          "key": "android.scaler.croppingType",
+          "value": "1"
+        },
+        {
+          "key": "android.scaler.streamConfigurationMap",
+          "value": "StreamConfiguration\n(Outputs\n([w:3968, h:2976, format:RAW_SENSOR(32), min_duration:33331760, stall:0], \n[w:3968, h:2976, format:JPEG(256), min_duration:50000000, stall:33331760], \n[w:320, h:240, format:JPEG(256), min_duration:33331760, stall:33331760], \n[w:640, h:480, format:JPEG(256), min_duration:33331760, stall:33331760], \n[w:1280, h:720, format:JPEG(256), min_duration:33331760, stall:33331760], \n[w:1920, h:1080, format:JPEG(256), min_duration:33331760, stall:33331760], \n[w:1456, h:1456, format:JPEG(256), min_duration:33331760, stall:33331760], \n[w:3264, h:1840, format:JPEG(256), min_duration:33331760, stall:33331760], \n[w:3264, h:2448, format:JPEG(256), min_duration:33331760, stall:33331760], \n[w:3840, h:2160, format:JPEG(256), min_duration:33331760, stall:33331760], \n[w:2048, h:1536, format:JPEG(256), min_duration:33331760, stall:33331760], \n[w:2976, h:2976, format:JPEG(256), min_duration:33331760, stall:33331760], \n[w:3968, h:2240, format:JPEG(256), min_duration:50000000, stall:33331760], \n[w:3968, h:2976, format:PRIVATE(34), min_duration:50000000, stall:0], \n[w:2976, h:2976, format:PRIVATE(34), min_duration:50000000, stall:0], \n[w:3840, h:2160, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:3280, h:2448, format:PRIVATE(34), min_duration:50000000, stall:0], \n[w:3264, h:2448, format:PRIVATE(34), min_duration:50000000, stall:0], \n[w:3264, h:1840, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:2448, h:2448, format:PRIVATE(34), min_duration:50000000, stall:0], \n[w:2592, h:1952, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:2048, h:1536, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:1920, h:1080, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:1440, h:1080, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:1536, h:864, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:1456, h:1456, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:1280, h:960, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:1280, h:720, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:960, h:720, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:960, h:540, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:720, h:720, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:720, h:540, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:640, h:480, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:640, h:360, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:736, h:412, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:544, h:408, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:480, h:360, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:400, h:400, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:352, h:288, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:320, h:240, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:208, h:144, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:176, h:144, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:3968, h:2976, format:YUV_420_888(35), min_duration:50000000, stall:0], \n[w:2976, h:2976, format:YUV_420_888(35), min_duration:50000000, stall:0], \n[w:3840, h:2160, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:3280, h:2448, format:YUV_420_888(35), min_duration:50000000, stall:0], \n[w:3264, h:2448, format:YUV_420_888(35), min_duration:50000000, stall:0], \n[w:3264, h:1840, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:2448, h:2448, format:YUV_420_888(35), min_duration:50000000, stall:0], \n[w:2592, h:1952, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:2048, h:1536, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:1920, h:1080, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:1440, h:1080, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:1536, h:864, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:1456, h:1456, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:1280, h:960, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:1280, h:720, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:960, h:720, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:960, h:540, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:720, h:720, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:720, h:540, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:640, h:480, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:640, h:360, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:736, h:412, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:544, h:408, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:480, h:360, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:400, h:400, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:352, h:288, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:320, h:240, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:208, h:144, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:176, h:144, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:960, h:540, format:DEPTH16(1144402265), min_duration:33331760, stall:33331760], \n[w:720, h:540, format:DEPTH16(1144402265), min_duration:33331760, stall:33331760], \n[w:640, h:360, format:DEPTH16(1144402265), min_duration:33331760, stall:33331760], \n[w:480, h:360, format:DEPTH16(1144402265), min_duration:33331760, stall:33331760], \n[w:992, h:744, format:DEPTH16(1144402265), min_duration:33331760, stall:0], \n[w:992, h:558, format:DEPTH16(1144402265), min_duration:33331760, stall:0], \n), \nHighResolutionOutputs\n(), \nInputs\n(), \nValidOutputFormatsForInput\n(), \nHighSpeedVideoConfigurations\n([w:1280, h:720, min_fps:30, max_fps:240], \n[w:1280, h:720, min_fps:240, max_fps:240], \n[w:1920, h:1080, min_fps:30, max_fps:120], \n[w:1920, h:1080, min_fps:120, max_fps:120], \n))"
+        },
+        {
+          "key": "android.sensor.availableTestPatternModes",
+          "value": "[0]"
+        },
+        {
+          "key": "android.sensor.blackLevelPattern",
+          "value": "BlackLevelPattern([64, 64], [64, 64])"
+        },
+        {
+          "key": "android.sensor.calibrationTransform1",
+          "value": "ColorSpaceTransform([128/128, 0/128, 0/128], [0/128, 128/128, 0/128], [0/128, 0/128, 128/128])"
+        },
+        {
+          "key": "android.sensor.calibrationTransform2",
+          "value": "ColorSpaceTransform([128/128, 0/128, 0/128], [0/128, 128/128, 0/128], [0/128, 0/128, 128/128])"
+        },
+        {
+          "key": "android.sensor.colorTransform1",
+          "value": "ColorSpaceTransform([1094/1024, -306/1024, -146/1024], [-442/1024, 1388/1024, 52/1024], [-104/1024, 250/1024, 600/1024])"
+        },
+        {
+          "key": "android.sensor.colorTransform2",
+          "value": "ColorSpaceTransform([2263/1024, -1364/1024, -145/1024], [-194/1024, 1257/1024, -56/1024], [-24/1024, 187/1024, 618/1024])"
+        },
+        {
+          "key": "android.sensor.forwardMatrix1",
+          "value": "ColorSpaceTransform([612/1024, 233/1024, 139/1024], [199/1024, 831/1024, -6/1024], [15/1024, -224/1024, 1049/1024])"
+        },
+        {
+          "key": "android.sensor.forwardMatrix2",
+          "value": "ColorSpaceTransform([441/1024, 317/1024, 226/1024], [29/1024, 908/1024, 87/1024], [9/1024, -655/1024, 1486/1024])"
+        },
+        {
+          "key": "android.sensor.info.activeArraySize",
+          "value": "Rect(0, 0 - 3968, 2976)"
+        },
+        {
+          "key": "android.sensor.info.colorFilterArrangement",
+          "value": "3"
+        },
+        {
+          "key": "android.sensor.info.exposureTimeRange",
+          "value": "[10000, 1000000000]"
+        },
+        {
+          "key": "android.sensor.info.maxFrameDuration",
+          "value": "9000000000"
+        },
+        {
+          "key": "android.sensor.info.physicalSize",
+          "value": "4.96x3.72"
+        },
+        {
+          "key": "android.sensor.info.pixelArraySize",
+          "value": "3968x2976"
+        },
+        {
+          "key": "android.sensor.info.preCorrectionActiveArraySize",
+          "value": "Rect(0, 0 - 3968, 2976)"
+        },
+        {
+          "key": "android.sensor.info.sensitivityRange",
+          "value": "[50, 3500]"
+        },
+        {
+          "key": "android.sensor.info.timestampSource",
+          "value": "1"
+        },
+        {
+          "key": "android.sensor.info.whiteLevel",
+          "value": "1023"
+        },
+        {
+          "key": "android.sensor.maxAnalogSensitivity",
+          "value": "1600"
+        },
+        {
+          "key": "android.sensor.orientation",
+          "value": "90"
+        },
+        {
+          "key": "android.sensor.referenceIlluminant1",
+          "value": "21"
+        },
+        {
+          "key": "android.sensor.referenceIlluminant2",
+          "value": "17"
+        },
+        {
+          "key": "android.shading.availableModes",
+          "value": "[0, 1, 2]"
+        },
+        {
+          "key": "android.statistics.info.availableFaceDetectModes",
+          "value": "[0, 1, 2]"
+        },
+        {
+          "key": "android.statistics.info.availableHotPixelMapModes",
+          "value": "[false]"
+        },
+        {
+          "key": "android.statistics.info.availableLensShadingMapModes",
+          "value": "[0, 1]"
+        },
+        {
+          "key": "android.statistics.info.maxFaceCount",
+          "value": "10"
+        },
+        {
+          "key": "android.sync.maxLatency",
+          "value": "5"
+        },
+        {
+          "key": "android.tonemap.availableToneMapModes",
+          "value": "[0, 1, 2]"
+        },
+        {
+          "key": "android.tonemap.maxCurvePoints",
+          "value": "257"
+        }
+      ]
+    },
+    {
+      "cameraId": "1",
+      "paramaters": [
+        {
+          "key": "android.colorCorrection.availableAberrationModes",
+          "value": "[OFF, \nFAST, \nQUALITY, ]"
+        },
+        {
+          "key": "android.control.aeAvailableAntibandingModes",
+          "value": "[3, 1, 2]"
+        },
+        {
+          "key": "android.control.aeAvailableModes",
+          "value": "[OFF,\n ON,\n Flash Auto,\n Flash ALWAYS,\n]"
+        },
+        {
+          "key": "android.control.aeAvailableTargetFpsRanges",
+          "value": "[[12, 15], [15, 15], [14, 20], [20, 20], [14, 25], [25, 25], [14, 30], [30, 30]]"
+        },
+        {
+          "key": "android.control.aeCompensationRange",
+          "value": "[-4, 4]"
+        },
+        {
+          "key": "android.control.aeCompensationStep",
+          "value": "1/2"
+        },
+        {
+          "key": "android.control.aeLockAvailable",
+          "value": "true"
+        },
+        {
+          "key": "android.control.afAvailableModes",
+          "value": "[OFF, \nAUTO, \nMacro, \nContinuous Video, \nContinuous Picture, ]"
+        },
+        {
+          "key": "android.control.availableEffects",
+          "value": "[OFF, \nMONO, \nNegative, \nSEPIA, ]"
+        },
+        {
+          "key": "android.control.availableModes",
+          "value": "[OFF, \nAUTO, \nUSE_SCENE_MODE, ]"
+        },
+        {
+          "key": "android.control.availableSceneModes",
+          "value": "[FACE_PRIORITY, \nACTION, \nPORTRAIT, \nLANDSCAPE, \nNIGHT, \nNIGHT_PORTRAIT, \nTHEATRE, \nBEACH, \nSNOW, \nFIREWORKS, \nCANDLELIGHT, \n33, \n34, \nHIGH_SPEED_VIDEO, ]"
+        },
+        {
+          "key": "android.control.availableVideoStabilizationModes",
+          "value": "[0, 1]"
+        },
+        {
+          "key": "android.control.awbAvailableModes",
+          "value": "[AUTO, \nOFF, \nINCANDESCENT, \nFLUORESCENT, \nDAYLIGHT, \nCLOUDY_DAYLIGHT, ]"
+        },
+        {
+          "key": "android.control.awbLockAvailable",
+          "value": "true"
+        },
+        {
+          "key": "android.control.maxRegionsAe",
+          "value": "1"
+        },
+        {
+          "key": "android.control.maxRegionsAf",
+          "value": "1"
+        },
+        {
+          "key": "android.control.maxRegionsAwb",
+          "value": "0"
+        },
+        {
+          "key": "android.control.postRawSensitivityBoostRange",
+          "value": "[100, 100]"
+        },
+        {
+          "key": "android.depth.depthIsExclusive",
+          "value": "true"
+        },
+        {
+          "key": "android.edge.availableEdgeModes",
+          "value": "[0, 1, 2]"
+        },
+        {
+          "key": "android.flash.info.available",
+          "value": "true"
+        },
+        {
+          "key": "android.hotPixel.availableHotPixelModes",
+          "value": "[0, 1, 2]"
+        },
+        {
+          "key": "android.info.supportedHardwareLevel",
+          "value": " Legacy  External  [  Limited  ]  Full  3 "
+        },
+        {
+          "key": "android.jpeg.availableThumbnailSizes",
+          "value": "[0x0, 208x208, 512x256, 528x256, 512x288, 480x320, 512x384, 512x512]"
+        },
+        {
+          "key": "android.lens.facing",
+          "value": "1"
+        },
+        {
+          "key": "android.lens.info.availableApertures",
+          "value": "[1.6]"
+        },
+        {
+          "key": "android.lens.info.availableFilterDensities",
+          "value": "[0.0]"
+        },
+        {
+          "key": "android.lens.info.availableFocalLengths",
+          "value": "[3.95]"
+        },
+        {
+          "key": "android.lens.info.availableOpticalStabilization",
+          "value": "[0]"
+        },
+        {
+          "key": "android.lens.info.focusDistanceCalibration",
+          "value": "2"
+        },
+        {
+          "key": "android.lens.info.hyperfocalDistance",
+          "value": "0.2"
+        },
+        {
+          "key": "android.lens.info.minimumFocusDistance",
+          "value": "10.0"
+        },
+        {
+          "key": "android.noiseReduction.availableNoiseReductionModes",
+          "value": "[OFF, \nFAST, \nHIGH_QUALITY, ]"
+        },
+        {
+          "key": "android.request.availableCapabilities",
+          "value": "[BACKWARD_COMPATIBLE, \nMANUAL_POST_PROCESSING, \nRAW, \nCONSTRAINED_HIGH_SPEED_VIDEO, \nDEPTH_OUTPUT, ]"
+        },
+        {
+          "key": "android.request.maxNumInputStreams",
+          "value": "0"
+        },
+        {
+          "key": "android.request.maxNumOutputProc",
+          "value": "3"
+        },
+        {
+          "key": "android.request.maxNumOutputProcStalling",
+          "value": "1"
+        },
+        {
+          "key": "android.request.maxNumOutputRaw",
+          "value": "1"
+        },
+        {
+          "key": "android.request.partialResultCount",
+          "value": "1"
+        },
+        {
+          "key": "android.request.pipelineMaxDepth",
+          "value": "8"
+        },
+        {
+          "key": "android.scaler.availableMaxDigitalZoom",
+          "value": "6.0"
+        },
+        {
+          "key": "android.scaler.croppingType",
+          "value": "1"
+        },
+        {
+          "key": "android.scaler.streamConfigurationMap",
+          "value": "StreamConfiguration\n(Outputs\n([w:3968, h:2976, format:RAW_SENSOR(32), min_duration:33331760, stall:0], \n[w:3968, h:2976, format:JPEG(256), min_duration:50000000, stall:33331760], \n[w:320, h:240, format:JPEG(256), min_duration:33331760, stall:33331760], \n[w:640, h:480, format:JPEG(256), min_duration:33331760, stall:33331760], \n[w:1280, h:720, format:JPEG(256), min_duration:33331760, stall:33331760], \n[w:1920, h:1080, format:JPEG(256), min_duration:33331760, stall:33331760], \n[w:1456, h:1456, format:JPEG(256), min_duration:33331760, stall:33331760], \n[w:3264, h:1840, format:JPEG(256), min_duration:33331760, stall:33331760], \n[w:3264, h:2448, format:JPEG(256), min_duration:33331760, stall:33331760], \n[w:3840, h:2160, format:JPEG(256), min_duration:33331760, stall:33331760], \n[w:2048, h:1536, format:JPEG(256), min_duration:33331760, stall:33331760], \n[w:2976, h:2976, format:JPEG(256), min_duration:33331760, stall:33331760], \n[w:3968, h:2240, format:JPEG(256), min_duration:50000000, stall:33331760], \n[w:3968, h:2976, format:PRIVATE(34), min_duration:50000000, stall:0], \n[w:2976, h:2976, format:PRIVATE(34), min_duration:50000000, stall:0], \n[w:3840, h:2160, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:3280, h:2448, format:PRIVATE(34), min_duration:50000000, stall:0], \n[w:3264, h:2448, format:PRIVATE(34), min_duration:50000000, stall:0], \n[w:3264, h:1840, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:2448, h:2448, format:PRIVATE(34), min_duration:50000000, stall:0], \n[w:2592, h:1952, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:2048, h:1536, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:1920, h:1080, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:1440, h:1080, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:1536, h:864, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:1456, h:1456, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:1280, h:960, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:1280, h:720, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:960, h:720, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:960, h:540, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:720, h:720, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:720, h:540, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:640, h:480, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:640, h:360, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:736, h:412, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:544, h:408, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:480, h:360, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:400, h:400, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:352, h:288, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:320, h:240, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:208, h:144, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:176, h:144, format:PRIVATE(34), min_duration:33331760, stall:0], \n[w:3968, h:2976, format:YUV_420_888(35), min_duration:50000000, stall:0], \n[w:2976, h:2976, format:YUV_420_888(35), min_duration:50000000, stall:0], \n[w:3840, h:2160, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:3280, h:2448, format:YUV_420_888(35), min_duration:50000000, stall:0], \n[w:3264, h:2448, format:YUV_420_888(35), min_duration:50000000, stall:0], \n[w:3264, h:1840, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:2448, h:2448, format:YUV_420_888(35), min_duration:50000000, stall:0], \n[w:2592, h:1952, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:2048, h:1536, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:1920, h:1080, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:1440, h:1080, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:1536, h:864, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:1456, h:1456, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:1280, h:960, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:1280, h:720, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:960, h:720, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:960, h:540, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:720, h:720, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:720, h:540, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:640, h:480, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:640, h:360, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:736, h:412, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:544, h:408, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:480, h:360, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:400, h:400, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:352, h:288, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:320, h:240, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:208, h:144, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:176, h:144, format:YUV_420_888(35), min_duration:33331760, stall:0], \n[w:960, h:540, format:DEPTH16(1144402265), min_duration:33331760, stall:33331760], \n[w:720, h:540, format:DEPTH16(1144402265), min_duration:33331760, stall:33331760], \n[w:640, h:360, format:DEPTH16(1144402265), min_duration:33331760, stall:33331760], \n[w:480, h:360, format:DEPTH16(1144402265), min_duration:33331760, stall:33331760], \n[w:992, h:744, format:DEPTH16(1144402265), min_duration:33331760, stall:0], \n[w:992, h:558, format:DEPTH16(1144402265), min_duration:33331760, stall:0], \n), \nHighResolutionOutputs\n(), \nInputs\n(), \nValidOutputFormatsForInput\n(), \nHighSpeedVideoConfigurations\n([w:1280, h:720, min_fps:30, max_fps:240], \n[w:1280, h:720, min_fps:240, max_fps:240], \n[w:1920, h:1080, min_fps:30, max_fps:120], \n[w:1920, h:1080, min_fps:120, max_fps:120], \n))"
+        },
+        {
+          "key": "android.sensor.availableTestPatternModes",
+          "value": "[0]"
+        },
+        {
+          "key": "android.sensor.blackLevelPattern",
+          "value": "BlackLevelPattern([64, 64], [64, 64])"
+        },
+        {
+          "key": "android.sensor.calibrationTransform1",
+          "value": "ColorSpaceTransform([128/128, 0/128, 0/128], [0/128, 128/128, 0/128], [0/128, 0/128, 128/128])"
+        },
+        {
+          "key": "android.sensor.calibrationTransform2",
+          "value": "ColorSpaceTransform([128/128, 0/128, 0/128], [0/128, 128/128, 0/128], [0/128, 0/128, 128/128])"
+        },
+        {
+          "key": "android.sensor.colorTransform1",
+          "value": "ColorSpaceTransform([1094/1024, -306/1024, -146/1024], [-442/1024, 1388/1024, 52/1024], [-104/1024, 250/1024, 600/1024])"
+        },
+        {
+          "key": "android.sensor.colorTransform2",
+          "value": "ColorSpaceTransform([2263/1024, -1364/1024, -145/1024], [-194/1024, 1257/1024, -56/1024], [-24/1024, 187/1024, 618/1024])"
+        },
+        {
+          "key": "android.sensor.forwardMatrix1",
+          "value": "ColorSpaceTransform([612/1024, 233/1024, 139/1024], [199/1024, 831/1024, -6/1024], [15/1024, -224/1024, 1049/1024])"
+        },
+        {
+          "key": "android.sensor.forwardMatrix2",
+          "value": "ColorSpaceTransform([441/1024, 317/1024, 226/1024], [29/1024, 908/1024, 87/1024], [9/1024, -655/1024, 1486/1024])"
+        },
+        {
+          "key": "android.sensor.info.activeArraySize",
+          "value": "Rect(0, 0 - 3968, 2976)"
+        },
+        {
+          "key": "android.sensor.info.colorFilterArrangement",
+          "value": "3"
+        },
+        {
+          "key": "android.sensor.info.exposureTimeRange",
+          "value": "[10000, 1000000000]"
+        },
+        {
+          "key": "android.sensor.info.maxFrameDuration",
+          "value": "9000000000"
+        },
+        {
+          "key": "android.sensor.info.physicalSize",
+          "value": "4.96x3.72"
+        },
+        {
+          "key": "android.sensor.info.pixelArraySize",
+          "value": "3968x2976"
+        },
+        {
+          "key": "android.sensor.info.preCorrectionActiveArraySize",
+          "value": "Rect(0, 0 - 3968, 2976)"
+        },
+        {
+          "key": "android.sensor.info.sensitivityRange",
+          "value": "[50, 3500]"
+        },
+        {
+          "key": "android.sensor.info.timestampSource",
+          "value": "1"
+        },
+        {
+          "key": "android.sensor.info.whiteLevel",
+          "value": "1023"
+        },
+        {
+          "key": "android.sensor.maxAnalogSensitivity",
+          "value": "1600"
+        },
+        {
+          "key": "android.sensor.orientation",
+          "value": "90"
+        },
+        {
+          "key": "android.sensor.referenceIlluminant1",
+          "value": "21"
+        },
+        {
+          "key": "android.sensor.referenceIlluminant2",
+          "value": "17"
+        },
+        {
+          "key": "android.shading.availableModes",
+          "value": "[0, 1, 2]"
+        },
+        {
+          "key": "android.statistics.info.availableFaceDetectModes",
+          "value": "[0, 1, 2]"
+        },
+        {
+          "key": "android.statistics.info.availableHotPixelMapModes",
+          "value": "[false]"
+        },
+        {
+          "key": "android.statistics.info.availableLensShadingMapModes",
+          "value": "[0, 1]"
+        },
+        {
+          "key": "android.statistics.info.maxFaceCount",
+          "value": "10"
+        },
+        {
+          "key": "android.sync.maxLatency",
+          "value": "5"
+        },
+        {
+          "key": "android.tonemap.availableToneMapModes",
+          "value": "[0, 1, 2]"
+        },
+        {
+          "key": "android.tonemap.maxCurvePoints",
+          "value": "257"
+        }
+      ]
+    }
+  ]
+}

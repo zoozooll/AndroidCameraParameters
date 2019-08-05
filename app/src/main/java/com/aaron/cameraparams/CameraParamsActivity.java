@@ -55,29 +55,7 @@ public class CameraParamsActivity extends AppCompatActivity {
             return;
         }
         bindCameraList();
-        /*TextureView mytexture = findViewById(R.id.mytexture);
-        mytexture.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
-            @Override
-            public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
-                Log.d("MyTexture", "onSurfaceTextureAvailable");
-            }
 
-            @Override
-            public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
-                Log.d("MyTexture", "onSurfaceTextureSizeChanged");
-            }
-
-            @Override
-            public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
-                Log.d("MyTexture", "onSurfaceTextureDestroyed");
-                return true;
-            }
-
-            @Override
-            public void onSurfaceTextureUpdated(SurfaceTexture surface) {
-                Log.d("MyTexture", "onSurfaceTextureUpdated");
-            }
-        });*/
     }
 
     @Override
@@ -101,13 +79,11 @@ public class CameraParamsActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
-//        Log.d("MyTexture", "onStart");
     }
 
     @Override
     protected void onStop() {
         super.onStop();
-//        Log.d("MyTexture", "onStop");
     }
 
     private void runExportAllParams() {
