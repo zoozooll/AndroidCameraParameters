@@ -67,12 +67,11 @@ public class CameraParamsActivity extends AppCompatActivity {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.menu_export:
-                    runExportAllParams();
-                return true;
-            default:
-                return super.onOptionsItemSelected(item);
+        if (item.getItemId() == R.id.menu_export) {
+            runExportAllParams();
+            return true;
+        } else {
+            return super.onOptionsItemSelected(item);
         }
     }
 
