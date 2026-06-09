@@ -1,221 +1,211 @@
-package com.aaron.cameraparams;
+package com.aaron.cameraparams
 
-import android.Manifest;
-import android.content.pm.PackageManager;
-import android.graphics.ImageFormat;
-import android.graphics.PixelFormat;
-import android.graphics.SurfaceTexture;
-import android.hardware.camera2.CameraCharacteristics;
-import android.hardware.camera2.params.StreamConfigurationMap;
-import android.util.JsonWriter;
-import android.util.Log;
-import android.util.Range;
-import android.util.Size;
-import android.view.*;
-import android.widget.*;
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
-import android.os.Bundle;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-import com.google.gson.Gson;
-import com.google.gson.JsonElement;
+import android.Manifest
+import android.content.pm.PackageManager
+import android.hardware.camera2.CameraCharacteristics
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.Menu
+import android.view.MenuItem
+import android.view.View
+import android.view.ViewGroup
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
+import android.widget.Spinner
+import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.aaron.cameraparams.CameraParamsActivity.MyAdapter.MyViewHolder
+import com.google.gson.Gson
+import java.io.File
+import java.io.FileWriter
+import java.io.IOException
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Locale;
+class CameraParamsActivity : AppCompatActivity() {
+    private var cameraController: CameraParamsHelper? = null
+    private var viewAdapter: MyAdapter? = null
+    private var viewManager: RecyclerView.LayoutManager? = null
+    private var camera_chooser: Spinner? = null
+    private var list_content: RecyclerView? = null
 
-public class CameraParamsActivity extends AppCompatActivity {
-
-    private static final int REQUEST_CAMERA_PERMISSION = 1;
-
-
-    private CameraParamsHelper cameraController;
-    private MyAdapter viewAdapter;
-    private RecyclerView.LayoutManager viewManager;
-    private Spinner camera_chooser;
-    private RecyclerView list_content;
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        camera_chooser = findViewById(R.id.camera_chooser);
-        list_content = findViewById(R.id.list_content);
-        cameraController = new CameraParamsHelper(this);
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+        camera_chooser = findViewById<Spinner>(R.id.camera_chooser)
+        list_content = findViewById<RecyclerView>(R.id.list_content)
+        cameraController = CameraParamsHelper(this)
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
-                != PackageManager.PERMISSION_GRANTED) {
-            requestCameraPermission();
-            return;
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestCameraPermission()
+            return
         }
-        bindCameraList();
-
+        bindCameraList()
     }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        MenuInflater inflater = getMenuInflater();
-        inflater.inflate(R.menu.camera_params, menu);
-        return true;
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        val inflater = getMenuInflater()
+        inflater.inflate(R.menu.camera_params, menu)
+        return true
     }
 
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
         if (item.getItemId() == R.id.menu_export) {
-            runExportAllParams();
-            return true;
+            runExportAllParams()
+            return true
         } else {
-            return super.onOptionsItemSelected(item);
+            return super.onOptionsItemSelected(item)
         }
     }
 
-    @Override
-    protected void onStart() {
-        super.onStart();
+    override fun onStart() {
+        super.onStart()
     }
 
-    @Override
-    protected void onStop() {
-        super.onStop();
+    override fun onStop() {
+        super.onStop()
     }
 
-    private void runExportAllParams() {
-        new Thread("run Export All Params"){
-            @Override
-            public void run() {
-
-                CameraObject object = new CameraObject();
-                String[] cameras = cameraController.getSupportCameraIds();
-                List<CameraId> cameraIdList = new ArrayList<>();
-                for (String item : cameras) {
-                    CameraId cameraId = new CameraId();
-                    cameraId.cameraId = item;
-                    List<CameraParamaters> paramsList = new ArrayList<>();
-                    List<CameraCharacteristics.Key<?>> keys = cameraController.getAvailableKeys();
-                    for (CameraCharacteristics.Key key : keys) {
-                        CameraParamaters params = new CameraParamaters();
-                        params.key = key.getName();
-                        params.value = cameraController.getCharacteristicInfo(key);
-                        paramsList.add(params);
+    private fun runExportAllParams() {
+        object : Thread("run Export All Params") {
+            override fun run() {
+                val `object` = CameraObject()
+                val cameras = cameraController!!.getSupportCameraIds()
+                val cameraIdList: MutableList<CameraId?> = ArrayList<CameraId?>()
+                for (item in cameras) {
+                    val cameraId = CameraId()
+                    cameraId.cameraId = item
+                    val paramsList: MutableList<CameraParamaters?> = ArrayList<CameraParamaters?>()
+                    val keys = cameraController!!.getAvailableKeys()
+                    for (key in keys) {
+                        val params = CameraParamaters()
+                        params.key = key.getName()
+                        params.value = cameraController!!.getCharacteristicInfo(key)
+                        paramsList.add(params)
                     }
-                    cameraId.paramaters = paramsList;
-                    cameraIdList.add(cameraId);
+                    cameraId.paramaters = paramsList
+                    cameraIdList.add(cameraId)
                 }
-                object.cameras = cameraIdList;
-                Gson gson = new Gson();
-                String json = gson.toJson(object);
-                FileWriter writer = null;
+                `object`.cameras = cameraIdList
+                val gson = Gson()
+                val json = gson.toJson(`object`)
+                var writer: FileWriter? = null
                 try {
-                    writer = new FileWriter(new File(getExternalCacheDir(), "cameraParams.json"));
-                    writer.append(json);
-                    writer.flush();
-                } catch (IOException e) {
-                    e.printStackTrace();
+                    writer = FileWriter(File(getExternalCacheDir(), "cameraParams.json"))
+                    writer.append(json)
+                    writer.flush()
+                } catch (e: IOException) {
+                    e.printStackTrace()
                 } finally {
                     if (writer != null) {
                         try {
-                            writer.close();
-                        } catch (IOException e) {
-                            e.printStackTrace();
+                            writer.close()
+                        } catch (e: IOException) {
+                            e.printStackTrace()
                         }
                     }
                 }
             }
-        }.start();
+        }.start()
     }
 
-    private void bindCameraList() {
-        viewManager = new LinearLayoutManager(this, RecyclerView.VERTICAL, false);
-        viewAdapter = new MyAdapter();
-        list_content.setHasFixedSize(true);
-        list_content.setLayoutManager(viewManager);
-        list_content.setAdapter(viewAdapter);
-        String[] cameras = cameraController.getSupportCameraIds();
-        camera_chooser.setAdapter(new ArrayAdapter<String> (this, android.R.layout.simple_list_item_1, android.R.id.text1, cameras));
-        camera_chooser.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                cameraController.bindCameraId(position);
-                viewAdapter.setDataset(cameraController.getAvailableKeys());
-                viewAdapter.notifyDataSetChanged();
+    private fun bindCameraList() {
+        viewManager = LinearLayoutManager(this, RecyclerView.VERTICAL, false)
+        viewAdapter = MyAdapter()
+        list_content!!.setHasFixedSize(true)
+        list_content!!.setLayoutManager(viewManager)
+        list_content!!.setAdapter(viewAdapter)
+        val cameras = cameraController!!.getSupportCameraIds()
+        camera_chooser!!.setAdapter(
+            ArrayAdapter<String?>(
+                this,
+                android.R.layout.simple_list_item_1,
+                android.R.id.text1,
+                cameras
+            )
+        )
+        camera_chooser!!.setOnItemSelectedListener(object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(
+                parent: AdapterView<*>?,
+                view: View?,
+                position: Int,
+                id: Long
+            ) {
+                cameraController!!.bindCameraId(position)
+                viewAdapter!!.setDataset(cameraController!!.getAvailableKeys())
+                viewAdapter!!.notifyDataSetChanged()
             }
 
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-
+            override fun onNothingSelected(parent: AdapterView<*>?) {
             }
-
-        });
-
+        })
     }
 
 
-    private void requestCameraPermission() {
+    private fun requestCameraPermission() {
         if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.CAMERA)) {
 //            ConfirmationDialog().show(getChildFragmentManager(), FRAGMENT_DIALOG)
         } else {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf<String>(Manifest.permission.CAMERA),
+                REQUEST_CAMERA_PERMISSION
+            )
         }
     }
 
-    @Override
-    public void onRequestPermissionsResult(
-            int requestCode, @NonNull String[] permissions,
-            @NonNull int[] grantResults
+    override fun onRequestPermissionsResult(
+        requestCode: Int, permissions: Array<String?>,
+        grantResults: IntArray
     ) {
         if (requestCode == REQUEST_CAMERA_PERMISSION) {
-            if (grantResults.length != 1 || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+            if (grantResults.size != 1 || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
 //                ErrorDialog.newInstance(getString(R.string.request_permission))
 //                    .show(getChildFragmentManager(), FRAGMENT_DIALOG)
             } else {
-                super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-                bindCameraList();
+                super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+                bindCameraList()
             }
         }
     }
 
-    private class MyAdapter extends RecyclerView.Adapter<MyAdapter.MyViewHolder> {
+    private inner class MyAdapter : RecyclerView.Adapter<MyViewHolder?>() {
+        private val myDataset: MutableList<CameraCharacteristics.Key<*>?> = ArrayList<Any?>()
 
-        private List<CameraCharacteristics.Key<?>> myDataset = new ArrayList();
+        private inner class MyViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+            var keyView: TextView
+            var keyValue: TextView
 
-        private class MyViewHolder extends RecyclerView.ViewHolder {
-
-            TextView keyView;
-            TextView keyValue;
-            MyViewHolder(View itemView) {
-                super(itemView);
-                keyView = itemView.findViewById(R.id.tvw_key);
-                keyValue = itemView.findViewById(R.id.tvw_value);
+            init {
+                keyView = itemView.findViewById<TextView>(R.id.tvw_key)
+                keyValue = itemView.findViewById<TextView>(R.id.tvw_value)
             }
-
         }
 
-        void setDataset(List<CameraCharacteristics.Key<?>> keys) {
-            myDataset.clear();
-            myDataset.addAll(keys);
+        fun setDataset(keys: MutableList<CameraCharacteristics.Key<*>>) {
+            myDataset.clear()
+            myDataset.addAll(keys)
         }
 
-        @Override
-        public MyViewHolder onCreateViewHolder(ViewGroup parent,
-                                       int viewType) {
-            View textView = LayoutInflater.from(parent.getContext())
-                    .inflate(R.layout.characterstics_item, parent, false);
-            return new MyViewHolder(textView);
+        override fun onCreateViewHolder(
+            parent: ViewGroup,
+            viewType: Int
+        ): MyViewHolder {
+            val textView = LayoutInflater.from(parent.getContext())
+                .inflate(R.layout.characterstics_item, parent, false)
+            return MyViewHolder(textView)
         }
 
-        @Override
-        public void onBindViewHolder(MyViewHolder holder, int position) {
+        override fun onBindViewHolder(holder: MyViewHolder, position: Int) {
             /*if (position == 3) {
                 Log.d("aaron", "onBindViewHolder " + myDataset[position].name)
             }*/
-            holder.keyView.setText(myDataset.get(position).getName());
-            String t =  cameraController.getCharacteristicInfo(myDataset.get(position));
+            holder.keyView.setText(myDataset.get(position)!!.getName())
+            val t = cameraController!!.getCharacteristicInfo(myDataset.get(position))
+
             /*if  (t ) {
                 is IntArray -> holder.keyValue.text = Arrays.toString(t)
                 is FloatArray -> holder.keyValue.text = Arrays.toString(t)
@@ -223,18 +213,16 @@ public class CameraParamsActivity extends AppCompatActivity {
                 is Array<Range> -> holder.keyView.text = Arrays.toString(t)
                 else -> holder.keyValue.text = t.toString()
             }*/
-
-            holder.keyValue.setText(t);
-
+            holder.keyValue.setText(t)
         }
 
-        @Override
-        public int getItemCount() {
-            return myDataset.size();
+        override fun getItemCount(): Int {
+            return myDataset.size
         }
     }
 
 
-
-
+    companion object {
+        private const val REQUEST_CAMERA_PERMISSION = 1
+    }
 }

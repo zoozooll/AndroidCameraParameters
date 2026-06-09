@@ -1,6 +1,6 @@
-package com.aaron.cameraparams;
+package com.aaron.cameraparams
 
-public class CameraParamaters {
-    public String key;
-    public String value;
+class CameraParamaters {
+    var key: String? = null
+    var value: String? = null
 }

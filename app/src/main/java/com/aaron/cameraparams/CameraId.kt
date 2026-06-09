@@ -1,8 +1,6 @@
-package com.aaron.cameraparams;
+package com.aaron.cameraparams
 
-import java.util.List;
-
-public class CameraId {
-    public String cameraId;
-    public List<CameraParamaters> paramaters;
+class CameraId {
+    var cameraId: String? = null
+    var paramaters: MutableList<CameraParamaters?>? = null
 }
