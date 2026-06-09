@@ -21,7 +21,7 @@ import com.aaron.cameraparams.camera.streamConfigurationMapToString
 
 class CameraParamsHelper(private val context: Context) {
     private var cameraIndex = 0
-    var supportCameraIds: Array<String?>
+    var supportCameraIds: Array<String?> = emptyArray()
         private set
     private var characteristics: CameraCharacteristics? = null
     private var keyList: MutableList<CameraCharacteristics.Key<*>?>? = null
@@ -56,11 +56,26 @@ class CameraParamsHelper(private val context: Context) {
             return keyList!!
         }
 
-    fun getCharacteristicInfo(key: CameraCharacteristics.Key<*>?): String {
-        return keyValue<Any?>(key, characteristics!!.get<Any?>(key))
+    fun getCharacteristic(key: CameraCharacteristics.Key<*>?): Any? {
+        return characteristics?.get(key)
     }
 
-    fun <T> keyValue(key: CameraCharacteristics.Key<T?>?, value: T?): String {
+    fun getHardwareLevel(): Int {
+        return characteristics?.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL) ?: -1
+    }
+
+    fun getCameraFacing(): Int {
+        return characteristics?.get(CameraCharacteristics.LENS_FACING) ?: -1
+    }
+
+    fun getCameraCharacteristics(): CameraCharacteristics? = characteristics
+
+    fun getCharacteristicInfo(key: CameraCharacteristics.Key<*>?): String {
+        val value = characteristics?.get(key as CameraCharacteristics.Key<Any?>)
+        return keyValue(key as? CameraCharacteristics.Key<Any?>, value)
+    }
+
+    fun keyValue(key: CameraCharacteristics.Key<Any?>?, value: Any?): String {
         if (CameraCharacteristics.COLOR_CORRECTION_AVAILABLE_ABERRATION_MODES == key) {
             return getColorCorrectionAvailableAberrationMode((value as kotlin.IntArray?)!!)
         } else if (CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL == key) {
@@ -87,7 +102,7 @@ class CameraParamsHelper(private val context: Context) {
             return (((value as FloatArray).contentToString()))
         } else if (value is BooleanArray) {
             return (((value as BooleanArray).contentToString()))
-        } else if (value is Array<Any>) {
+        } else if (value is Array<*>) {
             return (((value as Array<Any?>).contentToString()))
         } else if (value is StreamConfigurationMap) {
             return streamConfigurationMapToString(value as StreamConfigurationMap)
