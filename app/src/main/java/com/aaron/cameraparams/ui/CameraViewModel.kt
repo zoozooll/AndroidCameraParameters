@@ -29,7 +29,11 @@ data class ParameterCategory(
 data class UiState(
     val cameras: List<String> = emptyList(),
     val selectedCameraIndex: Int = 0,
+    val cameraName: String = "",
+    val cameraId: String = "",
     val hardwareLevel: String = "",
+    val sensorResolution: String = "",
+    val maxFps: String = "",
     val categories: List<ParameterCategory> = emptyList(),
     val searchQuery: String = "",
     val filteredCategories: List<ParameterCategory> = emptyList(),
@@ -76,9 +80,32 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
 
         val hardwareLevel = helper.getCharacteristicInfo(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL)
         
+        val chars = helper.getCameraCharacteristics()
+        val pixelArray = chars?.get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE)
+        val sensorRes = if (pixelArray != null) {
+            val mp = (pixelArray.width.toLong() * pixelArray.height.toLong()) / 1_000_000.0
+            "%.1f MP".format(mp)
+        } else "N/A"
+
+        val fpsRanges = chars?.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES)
+        val maxFpsVal = fpsRanges?.maxByOrNull { it.upper }?.upper ?: 0
+        
+        val facing = chars?.get(CameraCharacteristics.LENS_FACING)
+        val cameraName = when (facing) {
+            CameraCharacteristics.LENS_FACING_BACK -> "Rear Camera"
+            CameraCharacteristics.LENS_FACING_FRONT -> "Front Camera"
+            CameraCharacteristics.LENS_FACING_EXTERNAL -> "External Camera"
+            else -> "Unknown Camera"
+        }
+        val cameraId = helper.supportCameraIds.getOrNull(index) ?: ""
+
         _uiState.value = _uiState.value.copy(
             selectedCameraIndex = index,
+            cameraName = cameraName,
+            cameraId = cameraId,
             hardwareLevel = hardwareLevel,
+            sensorResolution = sensorRes,
+            maxFps = "$maxFpsVal fps",
             categories = categories,
             filteredCategories = categories,
             rawJson = generateRawJson(),
@@ -89,8 +116,13 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
     private fun detectFeatureFlags(): Map<String, Boolean> {
         val chars = helper.getCameraCharacteristics() ?: return emptyMap()
         
-        val rawSupport = chars.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)?.contains(
+        val capabilities = chars.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
+        val rawSupport = capabilities?.contains(
             CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW
+        ) ?: false
+        
+        val yuvReprocessing = capabilities?.contains(
+            CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_YUV_REPROCESSING
         ) ?: false
         
         val manualExp = chars.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_MODES)?.contains(
@@ -112,13 +144,18 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
             it == CameraCharacteristics.STATISTICS_FACE_DETECT_MODE_FULL 
         } ?: false
 
+        val sceneModes = chars.get(CameraCharacteristics.CONTROL_AVAILABLE_SCENE_MODES)
+        val hdrSupport = sceneModes?.contains(CameraCharacteristics.CONTROL_SCENE_MODE_HDR) ?: false
+
         return mapOf(
             "RAW" to rawSupport,
             "Manual Exp" to manualExp,
             "Manual Focus" to manualFocus,
             "Flash" to flashAvailable,
             "OIS" to oisAvailable,
-            "Face Detection" to faceDetection
+            "Face Detection" to faceDetection,
+            "HDR" to hdrSupport,
+            "YUV Reprocessing" to yuvReprocessing
         )
     }
 
