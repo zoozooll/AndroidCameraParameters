@@ -33,7 +33,7 @@ class CameraParamsHelper(private val context: Context) {
     private fun generalSupportedCameraIds() {
         try {
             val manager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
-            supportCameraIds = manager.getCameraIdList()
+            supportCameraIds = manager.cameraIdList
         } catch (e: Exception) {
             e.printStackTrace()
         }
