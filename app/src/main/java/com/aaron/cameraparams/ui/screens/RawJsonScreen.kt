@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aaron.cameraparams.ui.CameraViewModel
 import com.aaron.cameraparams.ui.theme.MonospaceTypography
@@ -24,17 +25,23 @@ fun RawJsonScreen(viewModel: CameraViewModel) {
     val clipboardManager = LocalClipboardManager.current
 
     Column(modifier = Modifier.fillMaxSize()) {
-        TopAppBar(
-            title = { Text("Raw (JSON)") },
-            actions = {
-                IconButton(onClick = { clipboardManager.setText(AnnotatedString(uiState.rawJson)) }) {
-                    Icon(Icons.Default.Info, contentDescription = "Copy Info")
-                }
-                IconButton(onClick = { /* Share action */ }) {
-                    Icon(Icons.Default.Share, contentDescription = "Share")
-                }
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "Raw (JSON)",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f)
+            )
+            IconButton(onClick = { clipboardManager.setText(AnnotatedString(uiState.rawJson)) }) {
+                Icon(Icons.Default.Info, contentDescription = "Copy Info")
             }
-        )
+            IconButton(onClick = { /* Share action */ }) {
+                Icon(Icons.Default.Share, contentDescription = "Share")
+            }
+        }
 
         Box(
             modifier = Modifier.weight(1f).fillMaxWidth().background(Color(0xFF0D0E11))
@@ -48,16 +55,4 @@ fun RawJsonScreen(viewModel: CameraViewModel) {
             )
         }
     }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun TopAppBar(title: @Composable () -> Unit, actions: @Composable RowScope.() -> Unit) {
-    CenterAlignedTopAppBar(
-        title = title,
-        actions = actions,
-        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
-    )
 }

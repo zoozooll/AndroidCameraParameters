@@ -344,25 +344,16 @@ fun getHardwareLevelInfo(value: Int): String {
         INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED,
         INFO_SUPPORTED_HARDWARE_LEVEL_FULL,
         INFO_SUPPORTED_HARDWARE_LEVEL_3)
-    val sb = StringBuilder()
-    for (sortedlevel in sortedHwLevels) {
-        if (value == sortedlevel) {
-            sb.append(" [ ")
-        }
-        when (sortedlevel) {
-           INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY -> sb.append(" Legacy ")
-           INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL -> sb.append(" External ")
-           INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED -> sb.append(" Limited ")
-           INFO_SUPPORTED_HARDWARE_LEVEL_FULL -> sb.append(" Full ")
-           INFO_SUPPORTED_HARDWARE_LEVEL_3 -> sb.append(" 3 ")
-            else -> {
-            }
-        }
-        if (value == sortedlevel) {
-            sb.append(" ] ")
+    when (value) {
+        INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY -> return (" Legacy ")
+        INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL -> return(" External ")
+        INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED -> return(" Limited ")
+        INFO_SUPPORTED_HARDWARE_LEVEL_FULL -> return(" Full ")
+        INFO_SUPPORTED_HARDWARE_LEVEL_3 -> return(" 3 ")
+        else -> {
+            return ""
         }
     }
-    return sb.toString()
 }
 
 fun streamConfigurationMapToString(map: StreamConfigurationMap): String {

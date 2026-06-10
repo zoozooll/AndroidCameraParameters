@@ -13,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aaron.cameraparams.ui.CameraParameter
 import com.aaron.cameraparams.ui.CameraViewModel
@@ -23,6 +24,13 @@ fun CategoriesScreen(viewModel: CameraViewModel, onNavigateToDetail: (String) ->
     val uiState by viewModel.uiState.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize()) {
+        Text(
+            "Categories",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        )
+        
         SearchBar(uiState.searchQuery) { viewModel.onSearchQueryChange(it) }
 
         LazyColumn(

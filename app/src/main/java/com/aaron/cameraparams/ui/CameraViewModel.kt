@@ -186,6 +186,23 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
         _uiState.value = _uiState.value.copy(searchQuery = query, filteredCategories = filtered)
     }
 
+    fun toggleCategoryExpansion(categoryName: String) {
+        val currentCategories = _uiState.value.categories
+        val updatedCategories = currentCategories.map { 
+            if (it.name == categoryName) it.copy(expanded = !it.expanded) else it
+        }
+        
+        // Also update filtered categories if they are being displayed
+        val updatedFiltered = _uiState.value.filteredCategories.map {
+            if (it.name == categoryName) it.copy(expanded = !it.expanded) else it
+        }
+        
+        _uiState.value = _uiState.value.copy(
+            categories = updatedCategories,
+            filteredCategories = updatedFiltered
+        )
+    }
+
     private fun generateRawJson(): String {
         val characteristics = helper.getCameraCharacteristics() ?: return "{}"
         val map = TreeMap<String, Any?>()

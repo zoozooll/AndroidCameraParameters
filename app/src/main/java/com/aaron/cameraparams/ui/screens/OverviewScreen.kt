@@ -1,12 +1,12 @@
 package com.aaron.cameraparams.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.graphics.Color
@@ -19,22 +19,32 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.aaron.cameraparams.ui.CameraViewModel
+import androidx.compose.ui.tooling.preview.Preview
+import com.aaron.cameraparams.ui.*
+import com.aaron.cameraparams.ui.theme.CameraParamsTheme
 
 @Composable
-fun OverviewScreen(viewModel: CameraViewModel, onNavigateToCategories: () -> Unit) {
+fun OverviewScreen(viewModel: CameraViewModel, onNavigateToDetail: (String) -> Unit) {
     val uiState by viewModel.uiState.collectAsState()
+    OverviewScreenContent(
+        uiState = uiState,
+        onToggleCategory = { viewModel.toggleCategoryExpansion(it) },
+        onNavigateToDetail = onNavigateToDetail
+    )
+}
 
+@Composable
+fun OverviewScreenContent(
+    uiState: UiState,
+    onToggleCategory: (String) -> Unit,
+    onNavigateToDetail: (String) -> Unit
+) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        item {
-            CameraSelector(uiState.cameraName, uiState.cameraId, uiState.cameras) {
-                viewModel.selectCamera(it)
-            }
-        }
-
         item {
             SummaryCard(
                 uiState.hardwareLevel,
@@ -47,13 +57,13 @@ fun OverviewScreen(viewModel: CameraViewModel, onNavigateToCategories: () -> Uni
             KeyFeaturesSection(uiState.featureFlags)
         }
 
-        item {
-            Text("Categories", style = MaterialTheme.typography.titleMedium)
-        }
-
         items(uiState.categories.size) { index ->
             val category = uiState.categories[index]
-            CategoryRow(category.name, category.parameters.size, onNavigateToCategories)
+            CategoryRow(
+                category = category,
+                onToggleExpand = { onToggleCategory(category.name) },
+                onNavigateToDetail = onNavigateToDetail
+            )
         }
     }
 }
@@ -63,35 +73,58 @@ fun CameraSelector(name: String, id: String, cameras: List<String>, onSelect: (I
     var expanded by remember { mutableStateOf(false) }
 
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(modifier = Modifier.weight(1f)) {
-            Row(
-                modifier = Modifier
-                    .clickable { expanded = true }
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(Icons.Default.Menu, contentDescription = null, modifier = Modifier.size(24.dp))
-                Spacer(Modifier.width(16.dp))
-                Column {
-                    Text(name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    Text("ID: $id", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                }
-                Icon(Icons.Default.ArrowDropDown, contentDescription = null)
-            }
+        Icon(
+            Icons.Default.Menu,
+            contentDescription = null,
+            modifier = Modifier.size(24.dp),
+            tint = MaterialTheme.colorScheme.onSurface
+        )
+        Spacer(Modifier.width(16.dp))
+        Text(
+            name,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.weight(1f)
+        )
+        Icon(
+            Icons.Default.ArrowDropDown,
+            contentDescription = null,
+            modifier = Modifier
+                .clickable { expanded = true }
+                .padding(4.dp)
+        )
+        
+        Spacer(Modifier.width(8.dp))
 
-            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                cameras.forEachIndexed { index, camId ->
-                    DropdownMenuItem(
-                        text = { Text("Camera $camId") },
-                        onClick = {
-                            onSelect(index)
-                            expanded = false
-                        }
-                    )
-                }
+        Surface(
+            color = Color(0xFF2C2E33),
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.size(width = 48.dp, height = 32.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(
+                    id,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+            }
+        }
+
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            cameras.forEachIndexed { index, camId ->
+                DropdownMenuItem(
+                    text = { Text("Camera $camId") },
+                    onClick = {
+                        onSelect(index)
+                        expanded = false
+                    }
+                )
             }
         }
     }
@@ -102,19 +135,26 @@ fun SummaryCard(level: String, resolution: String, maxFps: String) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(24.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("HARDWARE LEVEL", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(level, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
+                    Text(
+                        "HARDWARE LEVEL",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        letterSpacing = 1.sp
+                    )
+                    Text(
+                        level.replace("INFO_SUPPORTED_HARDWARE_LEVEL_", ""),
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.ExtraBold
+                    )
                 }
                 HardwareLevelIcon(level)
             }
 
-            Spacer(Modifier.height(16.dp))
-            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
             Spacer(Modifier.height(16.dp))
 
             Row(modifier = Modifier.fillMaxWidth()) {
@@ -127,37 +167,53 @@ fun SummaryCard(level: String, resolution: String, maxFps: String) {
 
 @Composable
 fun HardwareLevelIcon(level: String) {
-    val (icon, color) = when {
-        level.contains("LEVEL_3") -> Icons.Default.Security to Color(0xFF7B61FF)
-        level.contains("FULL") -> Icons.Default.FiberManualRecord to Color(0xFF2196F3)
-        level.contains("LIMITED") -> Icons.Default.Warning to Color(0xFFFFC107)
-        else -> Icons.Default.History to Color.Gray
+    val color = Color(0xFF7B61FF) // Design purple
+    Box(
+        modifier = Modifier
+            .size(56.dp)
+            .background(color.copy(alpha = 0.15f), RoundedCornerShape(16.dp)),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            Icons.Default.VerifiedUser, // Shield with check mark
+            contentDescription = null,
+            modifier = Modifier.size(32.dp),
+            tint = color
+        )
     }
-    Icon(
-        icon,
-        contentDescription = null,
-        modifier = Modifier.size(48.dp),
-        tint = color
-    )
 }
 
 @Composable
 fun SummaryStat(modifier: Modifier, label: String, value: String) {
     Column(modifier = modifier) {
-        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            letterSpacing = 1.sp
+        )
+        Text(
+            value,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun KeyFeaturesSection(features: Map<String, Boolean>) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Key Features", style = MaterialTheme.typography.titleMedium)
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Text(
+            "Key Features",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
         FlowRow(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            maxItemsInEachRow = 4
         ) {
             features.forEach { (label, supported) ->
                 FeatureChip(label, supported)
@@ -166,25 +222,59 @@ fun KeyFeaturesSection(features: Map<String, Boolean>) {
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun FeatureChip(label: String, supported: Boolean) {
-    Surface(
-        color = if (supported) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
-        shape = RoundedCornerShape(8.dp),
-        border = if (supported) null else FilterChipDefaults.filterChipBorder(enabled = true, selected = false)
+    val (icon, iconColor) = when {
+        label.contains("RAW", ignoreCase = true) -> Icons.Default.PhotoCamera to Color(0xFF7B61FF)
+        label.contains("Exp", ignoreCase = true) -> Icons.Default.BrightnessMedium to Color(0xFF8BC34A)
+        label.contains("Focus", ignoreCase = true) -> Icons.Default.FilterCenterFocus to Color(0xFF4CAF50)
+        label.contains("Flash", ignoreCase = true) -> Icons.Default.FlashOn to Color(0xFFFFEB3B)
+        label.contains("OIS", ignoreCase = true) -> Icons.Default.HdrStrong to Color(0xFF03A9F4)
+        label.contains("Face", ignoreCase = true) -> Icons.Default.Face to Color(0xFF00BCD4)
+        label.contains("HDR", ignoreCase = true) -> Icons.Default.HdrOn to Color(0xFF2196F3)
+        label.contains("YUV", ignoreCase = true) -> Icons.Default.Refresh to Color(0xFF9C27B0)
+        else -> Icons.Default.CheckCircle to Color.Gray
+    }
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.width(76.dp)
     ) {
+        Surface(
+            color = if (supported) Color(0xFF1E1F23) else Color(0xFF1E1F23).copy(alpha = 0.4f),
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.size(60.dp),
+            border = if (supported) null else BorderStroke(1.dp, Color(0xFF2C2E33))
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(28.dp),
+                    tint = if (supported) iconColor else Color(0xFF2C2E33)
+                )
+            }
+        }
+        Spacer(Modifier.height(6.dp))
         Text(
             label,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-            style = MaterialTheme.typography.bodyMedium,
-            color = if (supported) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+            textAlign = TextAlign.Center,
+            color = if (supported) Color.White else Color.White.copy(alpha = 0.4f),
+            maxLines = 2,
+            lineHeight = 12.sp
         )
     }
 }
 
 @Composable
-fun CategoryRow(name: String, count: Int, onClick: () -> Unit) {
+fun CategoryRow(
+    category: ParameterCategory,
+    onToggleExpand: () -> Unit,
+    onNavigateToDetail: (String) -> Unit
+) {
+    val name = category.name
+    val count = category.parameters.size
     val (icon, color) = when {
         name.contains("Sensor") -> Icons.Default.Sensors to Color(0xFF4CAF50)
         name.contains("Lens") -> Icons.Default.Lens to Color(0xFF2196F3)
@@ -192,49 +282,138 @@ fun CategoryRow(name: String, count: Int, onClick: () -> Unit) {
         name.contains("AF") -> Icons.Default.FilterCenterFocus to Color(0xFF4CAF50)
         name.contains("AWB") -> Icons.Default.WbSunny to Color(0xFF9C27B0)
         name.contains("Output") -> Icons.Default.SettingsInputComponent to Color(0xFF2196F3)
-        else -> Icons.Default.Folder to MaterialTheme.colorScheme.outline
+        else -> Icons.Default.Folder to Color(0xFF7B61FF)
     }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        onClick = onClick,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        onClick = onToggleExpand,
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1F23)),
+        shape = RoundedCornerShape(16.dp)
     ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .background(color.copy(alpha = 0.1f), RoundedCornerShape(8.dp)),
-                contentAlignment = Alignment.Center
+        Column {
+            Row(
+                modifier = Modifier.padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(icon, contentDescription = null, tint = color)
-            }
-            
-            Spacer(Modifier.width(16.dp))
-            
-            Text(
-                name,
-                modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium
-            )
-            
-            Surface(
-                color = MaterialTheme.colorScheme.primaryContainer,
-                shape = RoundedCornerShape(12.dp)
-            ) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .background(color.copy(alpha = 0.12f), RoundedCornerShape(12.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(24.dp))
+                }
+                
+                Spacer(Modifier.width(16.dp))
+                
                 Text(
-                    count.toString(),
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    name.substringBefore("(").trim(),
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White
+                )
+                
+                Surface(
+                    color = Color(0xFF2C2E33),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text(
+                        count.toString(),
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF7B61FF)
+                    )
+                }
+                
+                Spacer(Modifier.width(8.dp))
+                
+                Icon(
+                    if (category.expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                    contentDescription = null,
+                    tint = Color(0xFF2C2E33),
+                    modifier = Modifier.size(20.dp)
                 )
             }
-            
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.outline)
+
+            if (category.expanded) {
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    thickness = 0.5.dp,
+                    color = Color(0xFF2C2E33)
+                )
+                category.parameters.forEach { parameter ->
+                    ParameterItem(parameter, onNavigateToDetail)
+                }
+                Spacer(Modifier.height(8.dp))
+            }
         }
+    }
+}
+
+@Composable
+fun ParameterItem(parameter: CameraParameter, onClick: (String) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick(parameter.key) }
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                parameter.key.substringAfterLast("."),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = Color.White.copy(alpha = 0.9f)
+            )
+            Text(
+                parameter.value,
+                style = MaterialTheme.typography.bodySmall,
+                color = Color(0xFF7B61FF),
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            )
+        }
+        Icon(
+            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = Color(0xFF2C2E33),
+            modifier = Modifier.size(16.dp)
+        )
+    }
+}
+
+
+
+@Preview(showBackground = true)
+@Composable
+fun OverviewScreenPreview() {
+    CameraParamsTheme {
+        OverviewScreenContent(
+            uiState = UiState(
+                cameraName = "Rear Camera",
+                cameraId = "0",
+                cameras = listOf("0", "1", "2"),
+                hardwareLevel = "LEVEL_3",
+                sensorResolution = "4000 x 3000 (12.0 MP)",
+                maxFps = "60 FPS",
+                featureFlags = mapOf(
+                    "Flash" to true,
+                    "Manual Focus" to true,
+                    "RAW Support" to false,
+                    "Face Detection" to true
+                ),
+                categories = listOf(
+                    ParameterCategory("Sensor Info", listOf(CameraParameter("key", "val", "raw", "cat"))),
+                    ParameterCategory("Lens Settings", listOf(CameraParameter("key", "val", "raw", "cat"))),
+                    ParameterCategory("AE Control", listOf(CameraParameter("key", "val", "raw", "cat")))
+                )
+            ),
+            onToggleCategory = {},
+            onNavigateToDetail = {}
+        )
     }
 }
