@@ -26,20 +26,38 @@ data class ParameterCategory(
     val expanded: Boolean = false
 )
 
-data class UiState(
+data class CameraHeaderState(
     val cameras: List<String> = emptyList(),
     val selectedCameraIndex: Int = 0,
     val cameraName: String = "",
-    val cameraId: String = "",
+    val cameraId: String = ""
+)
+
+data class CameraOverviewState(
     val hardwareLevel: String = "",
     val sensorResolution: String = "",
     val maxFps: String = "",
-    val categories: List<ParameterCategory> = emptyList(),
-    val searchQuery: String = "",
-    val filteredCategories: List<ParameterCategory> = emptyList(),
-    val rawJson: String = "",
     val featureFlags: Map<String, Boolean> = emptyMap()
 )
+
+data class CameraParametersState(
+    val categories: List<ParameterCategory> = emptyList(),
+    val searchQuery: String = "",
+    val filteredCategories: List<ParameterCategory> = emptyList()
+)
+
+data class UiState(
+    val header: CameraHeaderState = CameraHeaderState(),
+    val overview: CameraOverviewState = CameraOverviewState(),
+    val parameters: CameraParametersState = CameraParametersState(),
+    val rawJson: String = ""
+)
+
+sealed class CameraIntent {
+    data class SelectCamera(val index: Int) : CameraIntent()
+    data class ToggleCategory(val name: String) : CameraIntent()
+    data class UpdateSearchQuery(val query: String) : CameraIntent()
+}
 
 class CameraViewModel(application: Application) : AndroidViewModel(application) {
     private val helper = CameraParamsHelper(application)
@@ -48,13 +66,23 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
 
     init {
         val cameras = helper.supportCameraIds.filterNotNull()
-        _uiState.value = _uiState.value.copy(cameras = cameras)
+        _uiState.value = _uiState.value.copy(
+            header = _uiState.value.header.copy(cameras = cameras)
+        )
         if (cameras.isNotEmpty()) {
-            selectCamera(0)
+            handleIntent(CameraIntent.SelectCamera(0))
         }
     }
 
-    fun selectCamera(index: Int) {
+    fun handleIntent(intent: CameraIntent) {
+        when (intent) {
+            is CameraIntent.SelectCamera -> selectCamera(intent.index)
+            is CameraIntent.ToggleCategory -> toggleCategoryExpansion(intent.name)
+            is CameraIntent.UpdateSearchQuery -> onSearchQueryChange(intent.query)
+        }
+    }
+
+    private fun selectCamera(index: Int) {
         viewModelScope.launch {
             helper.bindCameraId(index)
             updateParameters(index)
@@ -100,16 +128,24 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
         val cameraId = helper.supportCameraIds.getOrNull(index) ?: ""
 
         _uiState.value = _uiState.value.copy(
-            selectedCameraIndex = index,
-            cameraName = cameraName,
-            cameraId = cameraId,
-            hardwareLevel = hardwareLevel,
-            sensorResolution = sensorRes,
-            maxFps = "$maxFpsVal fps",
-            categories = categories,
-            filteredCategories = categories,
-            rawJson = generateRawJson(),
-            featureFlags = detectFeatureFlags()
+            header = CameraHeaderState(
+                cameras = _uiState.value.header.cameras,
+                selectedCameraIndex = index,
+                cameraName = cameraName,
+                cameraId = cameraId
+            ),
+            overview = CameraOverviewState(
+                hardwareLevel = hardwareLevel,
+                sensorResolution = sensorRes,
+                maxFps = "$maxFpsVal fps",
+                featureFlags = detectFeatureFlags()
+            ),
+            parameters = CameraParametersState(
+                categories = categories,
+                filteredCategories = categories,
+                searchQuery = _uiState.value.parameters.searchQuery
+            ),
+            rawJson = generateRawJson()
         )
     }
 
@@ -173,33 +209,40 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    fun onSearchQueryChange(query: String) {
+    private fun onSearchQueryChange(query: String) {
         val filtered = if (query.isEmpty()) {
-            _uiState.value.categories
+            _uiState.value.parameters.categories
         } else {
-            _uiState.value.categories.map { category ->
+            _uiState.value.parameters.categories.map { category ->
                 category.copy(parameters = category.parameters.filter { 
                     it.key.contains(query, ignoreCase = true) || it.value.contains(query, ignoreCase = true)
                 })
             }.filter { it.parameters.isNotEmpty() }
         }
-        _uiState.value = _uiState.value.copy(searchQuery = query, filteredCategories = filtered)
+        _uiState.value = _uiState.value.copy(
+            parameters = _uiState.value.parameters.copy(
+                searchQuery = query,
+                filteredCategories = filtered
+            )
+        )
     }
 
-    fun toggleCategoryExpansion(categoryName: String) {
-        val currentCategories = _uiState.value.categories
+    private fun toggleCategoryExpansion(categoryName: String) {
+        val currentCategories = _uiState.value.parameters.categories
         val updatedCategories = currentCategories.map { 
             if (it.name == categoryName) it.copy(expanded = !it.expanded) else it
         }
         
         // Also update filtered categories if they are being displayed
-        val updatedFiltered = _uiState.value.filteredCategories.map {
+        val updatedFiltered = _uiState.value.parameters.filteredCategories.map {
             if (it.name == categoryName) it.copy(expanded = !it.expanded) else it
         }
         
         _uiState.value = _uiState.value.copy(
-            categories = updatedCategories,
-            filteredCategories = updatedFiltered
+            parameters = _uiState.value.parameters.copy(
+                categories = updatedCategories,
+                filteredCategories = updatedFiltered
+            )
         )
     }
 

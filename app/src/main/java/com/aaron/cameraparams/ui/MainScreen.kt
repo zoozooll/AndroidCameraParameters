@@ -26,18 +26,26 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.NavHostController
+import androidx.compose.ui.res.painterResource
+import com.aaron.cameraparams.R
+import com.aaron.cameraparams.ui.theme.CameraParamsTheme
 import com.aaron.cameraparams.ui.screens.*
 
-sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
-    object Overview : Screen("overview", "Overview", Icons.Default.Home)
-    object Categories : Screen("categories", "Categories", Icons.Default.List)
-    object RawJson : Screen("raw_json", "Raw (JSON)", Icons.Default.Settings)
-    object Favorites : Screen("favorites", "Favorites", Icons.Default.Star)
-    object ParameterDetail : Screen("detail/{parameterKey}?origin={origin}", "Detail", Icons.Default.Info)
+sealed class Screen(val route: String, val label: String, val icon: Int) {
+    object Overview : Screen("overview", "Overview", R.drawable.ic_overview)
+    object Categories : Screen("categories", "Categories", R.drawable.ic_categories)
+    object RawJson : Screen("raw_json", "Raw (JSON)", R.drawable.ic_raw_json)
+    object Favorites : Screen("favorites", "Favorites", R.drawable.ic_favorites)
+    object ParameterDetail : Screen("detail/{parameterKey}?origin={origin}", "Detail", R.drawable.ic_overview) // Using Overview icon as placeholder for detail
 }
 
 @Composable
-fun CameraSelector(name: String, id: String, cameras: List<String>, onSelect: (Int) -> Unit) {
+fun CameraSelector(
+    state: CameraHeaderState,
+    onIntent: (CameraIntent) -> Unit
+) {
     var expanded by remember { mutableStateOf(false) }
 
     Row(
@@ -54,7 +62,7 @@ fun CameraSelector(name: String, id: String, cameras: List<String>, onSelect: (I
         )
         Spacer(Modifier.width(16.dp))
         Text(
-            name,
+            state.cameraName,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.weight(1f)
@@ -76,7 +84,7 @@ fun CameraSelector(name: String, id: String, cameras: List<String>, onSelect: (I
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Text(
-                    id,
+                    state.cameraId,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
@@ -85,11 +93,11 @@ fun CameraSelector(name: String, id: String, cameras: List<String>, onSelect: (I
         }
 
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            cameras.forEachIndexed { index, camId ->
+            state.cameras.forEachIndexed { index, camId ->
                 DropdownMenuItem(
                     text = { Text("Camera $camId") },
                     onClick = {
-                        onSelect(index)
+                        onIntent(CameraIntent.SelectCamera(index))
                         expanded = false
                     }
                 )
@@ -102,68 +110,11 @@ fun CameraSelector(name: String, id: String, cameras: List<String>, onSelect: (I
 fun MainScreen(viewModel: CameraViewModel = viewModel()) {
     val navController = rememberNavController()
     val uiState by viewModel.uiState.collectAsState()
-    val items = listOf(
-        Screen.Overview,
-        Screen.Categories,
-        Screen.RawJson,
-        Screen.Favorites
-    )
 
-    Scaffold(
-        topBar = {
-            val navBackStackEntry by navController.currentBackStackEntryAsState()
-            val currentDestination = navBackStackEntry?.destination
-            val isMainTab = currentDestination?.hierarchy?.any { dest ->
-                items.any { it.route == dest.route }
-            } == true
-            
-            if (isMainTab) {
-                Surface(shadowElevation = 4.dp) {
-                    CameraSelector(
-                        name = uiState.cameraName,
-                        id = uiState.cameraId,
-                        cameras = uiState.cameras,
-                        onSelect = { viewModel.selectCamera(it) }
-                    )
-                }
-            }
-        },
-        bottomBar = {
-            NavigationBar {
-                val navBackStackEntry by navController.currentBackStackEntryAsState()
-                val currentDestination = navBackStackEntry?.destination
-                items.forEach { screen ->
-                    NavigationBarItem(
-                        icon = { Icon(screen.icon, contentDescription = null) },
-                        label = { Text(screen.label) },
-                        selected = currentDestination?.hierarchy?.any { 
-                            val route = it.route ?: return@any false
-                            if (route.startsWith("detail/")) {
-                                val originArg = navBackStackEntry?.arguments?.getString("origin")
-                                if (originArg != null) {
-                                    screen.route == originArg
-                                } else {
-                                    screen == Screen.Categories
-                                }
-                            } else {
-                                route == screen.route
-                            }
-                        } == true,
-                        onClick = {
-                            if (currentDestination?.route != screen.route) {
-                                navController.navigate(screen.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            }
-                        }
-                    )
-                }
-            }
-        }
+    MainScreenContent(
+        headerState = uiState.header,
+        navController = navController,
+        onIntent = { viewModel.handleIntent(it) }
     ) { innerPadding ->
         NavHost(navController, startDestination = Screen.Overview.route, Modifier.padding(innerPadding)) {
             composable(Screen.Overview.route) { 
@@ -196,8 +147,109 @@ fun MainScreen(viewModel: CameraViewModel = viewModel()) {
 }
 
 @Composable
+fun MainScreenContent(
+    headerState: CameraHeaderState,
+    navController: NavHostController,
+    onIntent: (CameraIntent) -> Unit,
+    content: @Composable (PaddingValues) -> Unit
+) {
+    val items = listOf(
+        Screen.Overview,
+        Screen.Categories,
+        Screen.RawJson,
+        Screen.Favorites
+    )
+
+    Scaffold(
+        topBar = {
+            val navBackStackEntry by navController.currentBackStackEntryAsState()
+            val currentDestination = navBackStackEntry?.destination
+            val isMainTab = currentDestination?.hierarchy?.any { dest ->
+                items.any { it.route == dest.route }
+            } == true
+            
+            if (isMainTab) {
+                Surface(shadowElevation = 4.dp) {
+                    CameraSelector(
+                        state = headerState,
+                        onIntent = onIntent
+                    )
+                }
+            }
+        },
+        bottomBar = {
+            NavigationBar {
+                val navBackStackEntry by navController.currentBackStackEntryAsState()
+                val currentDestination = navBackStackEntry?.destination
+                items.forEach { screen ->
+                    val isSelected = currentDestination?.hierarchy?.any { 
+                        val route = it.route ?: return@any false
+                        if (route.startsWith("detail/")) {
+                            val originArg = navBackStackEntry?.arguments?.getString("origin")
+                            if (originArg != null) {
+                                screen.route == originArg
+                            } else {
+                                screen == Screen.Categories
+                            }
+                        } else {
+                            route == screen.route
+                        }
+                    } == true
+
+                    NavigationBarItem(
+                        icon = { Icon(painterResource(screen.icon), contentDescription = null) },
+                        label = { Text(screen.label) },
+                        selected = isSelected,
+                        onClick = {
+                            if (currentDestination?.route != screen.route) {
+                                navController.navigate(screen.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            }
+                        },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                            indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    )
+                }
+            }
+        },
+        content = content
+    )
+}
+
+@Composable
 fun FavoritesScreen() {
     Surface {
         Text("Favorites coming soon...", modifier = Modifier.padding(16.dp))
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun MainScreenPreview() {
+    CameraParamsTheme {
+        val navController = rememberNavController()
+        MainScreenContent(
+            headerState = CameraHeaderState(
+                cameraName = "Rear Camera",
+                cameraId = "0",
+                cameras = listOf("0", "1", "2")
+            ),
+            navController = navController,
+            onIntent = {}
+        ) { innerPadding ->
+            Box(modifier = Modifier.padding(innerPadding).fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("Content Area")
+            }
+        }
     }
 }

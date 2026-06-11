@@ -15,14 +15,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.aaron.cameraparams.ui.CameraParameter
-import com.aaron.cameraparams.ui.CameraViewModel
-import com.aaron.cameraparams.ui.ParameterCategory
+import com.aaron.cameraparams.ui.*
 
 @Composable
 fun CategoriesScreen(viewModel: CameraViewModel, onNavigateToDetail: (String) -> Unit) {
     val uiState by viewModel.uiState.collectAsState()
 
+    CategoriesScreenContent(
+        state = uiState.parameters,
+        onIntent = { viewModel.handleIntent(it) },
+        onNavigateToDetail = onNavigateToDetail
+    )
+}
+
+@Composable
+fun CategoriesScreenContent(
+    state: CameraParametersState,
+    onIntent: (CameraIntent) -> Unit,
+    onNavigateToDetail: (String) -> Unit
+) {
     Column(modifier = Modifier.fillMaxSize()) {
         Text(
             "Categories",
@@ -31,15 +42,19 @@ fun CategoriesScreen(viewModel: CameraViewModel, onNavigateToDetail: (String) ->
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
         
-        SearchBar(uiState.searchQuery) { viewModel.onSearchQueryChange(it) }
+        SearchBar(state.searchQuery) { onIntent(CameraIntent.UpdateSearchQuery(it)) }
 
         LazyColumn(
             modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(uiState.filteredCategories) { category ->
-                CategoryExpandableGroup(category, onNavigateToDetail)
+            items(state.filteredCategories) { category ->
+                CategoryExpandableGroup(
+                    category = category,
+                    onToggle = { onIntent(CameraIntent.ToggleCategory(category.name)) },
+                    onNavigateToDetail = onNavigateToDetail
+                )
             }
         }
     }
@@ -62,16 +77,18 @@ fun SearchBar(query: String, onQueryChange: (String) -> Unit) {
 }
 
 @Composable
-fun CategoryExpandableGroup(category: ParameterCategory, onNavigateToDetail: (String) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-
+fun CategoryExpandableGroup(
+    category: ParameterCategory,
+    onToggle: () -> Unit,
+    onNavigateToDetail: (String) -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column {
             Row(
-                modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded }.padding(16.dp),
+                modifier = Modifier.fillMaxWidth().clickable { onToggle() }.padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
@@ -84,13 +101,13 @@ fun CategoryExpandableGroup(category: ParameterCategory, onNavigateToDetail: (St
                 }
                 Spacer(Modifier.width(8.dp))
                 Icon(
-                    if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                    if (category.expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                     contentDescription = null
                 )
             }
 
-            if (expanded) {
-                Divider(modifier = Modifier.padding(horizontal = 16.dp))
+            if (category.expanded) {
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 category.parameters.forEach { parameter ->
                     ParameterRow(parameter, onNavigateToDetail)
                 }

@@ -1,25 +1,24 @@
 package com.aaron.cameraparams.ui.screens
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.filled.*
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.tooling.preview.Preview
 import com.aaron.cameraparams.ui.*
 import com.aaron.cameraparams.ui.theme.CameraParamsTheme
 
@@ -27,16 +26,18 @@ import com.aaron.cameraparams.ui.theme.CameraParamsTheme
 fun OverviewScreen(viewModel: CameraViewModel, onNavigateToDetail: (String) -> Unit) {
     val uiState by viewModel.uiState.collectAsState()
     OverviewScreenContent(
-        uiState = uiState,
-        onToggleCategory = { viewModel.toggleCategoryExpansion(it) },
+        overviewState = uiState.overview,
+        parametersState = uiState.parameters,
+        onIntent = { viewModel.handleIntent(it) },
         onNavigateToDetail = onNavigateToDetail
     )
 }
 
 @Composable
 fun OverviewScreenContent(
-    uiState: UiState,
-    onToggleCategory: (String) -> Unit,
+    overviewState: CameraOverviewState,
+    parametersState: CameraParametersState,
+    onIntent: (CameraIntent) -> Unit,
     onNavigateToDetail: (String) -> Unit
 ) {
     LazyColumn(
@@ -46,22 +47,18 @@ fun OverviewScreenContent(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            SummaryCard(
-                uiState.hardwareLevel,
-                uiState.sensorResolution,
-                uiState.maxFps
-            )
+            SummaryCard(overviewState)
         }
 
         item {
-            KeyFeaturesSection(uiState.featureFlags)
+            KeyFeaturesSection(overviewState.featureFlags)
         }
 
-        items(uiState.categories.size) { index ->
-            val category = uiState.categories[index]
+        items(parametersState.categories.size) { index ->
+            val category = parametersState.categories[index]
             CategoryRow(
                 category = category,
-                onToggleExpand = { onToggleCategory(category.name) },
+                onToggleExpand = { onIntent(CameraIntent.ToggleCategory(category.name)) },
                 onNavigateToDetail = onNavigateToDetail
             )
         }
@@ -69,73 +66,11 @@ fun OverviewScreenContent(
 }
 
 @Composable
-fun CameraSelector(name: String, id: String, cameras: List<String>, onSelect: (Int) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            Icons.Default.Menu,
-            contentDescription = null,
-            modifier = Modifier.size(24.dp),
-            tint = MaterialTheme.colorScheme.onSurface
-        )
-        Spacer(Modifier.width(16.dp))
-        Text(
-            name,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.weight(1f)
-        )
-        Icon(
-            Icons.Default.ArrowDropDown,
-            contentDescription = null,
-            modifier = Modifier
-                .clickable { expanded = true }
-                .padding(4.dp)
-        )
-        
-        Spacer(Modifier.width(8.dp))
-
-        Surface(
-            color = Color(0xFF2C2E33),
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier.size(width = 48.dp, height = 32.dp)
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Text(
-                    id,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-            }
-        }
-
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            cameras.forEachIndexed { index, camId ->
-                DropdownMenuItem(
-                    text = { Text("Camera $camId") },
-                    onClick = {
-                        onSelect(index)
-                        expanded = false
-                    }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun SummaryCard(level: String, resolution: String, maxFps: String) {
+fun SummaryCard(state: CameraOverviewState) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        shape = RoundedCornerShape(24.dp)
+        shape = RoundedCornerShape(8.dp)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -147,20 +82,24 @@ fun SummaryCard(level: String, resolution: String, maxFps: String) {
                         letterSpacing = 1.sp
                     )
                     Text(
-                        level.replace("INFO_SUPPORTED_HARDWARE_LEVEL_", ""),
+                        state.hardwareLevel.replace("INFO_SUPPORTED_HARDWARE_LEVEL_", ""),
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.ExtraBold
                     )
                 }
-                HardwareLevelIcon(level)
+                HardwareLevelIcon(state.hardwareLevel)
             }
-
-            Spacer(Modifier.height(16.dp))
-
-            Row(modifier = Modifier.fillMaxWidth()) {
-                SummaryStat(Modifier.weight(1f), "SENSOR", resolution)
-                SummaryStat(Modifier.weight(1f), "MAX FPS", maxFps)
-            }
+        }
+    }
+    Spacer(modifier = Modifier.height(8.dp))
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Row(modifier = Modifier.fillMaxWidth()) {
+            SummaryStat(Modifier.weight(1f), "RESOLUTION", state.sensorResolution)
+            SummaryStat(Modifier.weight(1f), "MAX FPS", state.maxFps)
         }
     }
 }
@@ -176,7 +115,7 @@ fun HardwareLevelIcon(level: String) {
     ) {
         Icon(
             Icons.Default.VerifiedUser, // Shield with check mark
-            contentDescription = null,
+            contentDescription = "Hardware Level: $level",
             modifier = Modifier.size(32.dp),
             tint = color
         )
@@ -185,7 +124,7 @@ fun HardwareLevelIcon(level: String) {
 
 @Composable
 fun SummaryStat(modifier: Modifier, label: String, value: String) {
-    Column(modifier = modifier) {
+    Column(modifier = modifier.padding(16.dp)) {
         Text(
             label,
             style = MaterialTheme.typography.labelSmall,
@@ -238,7 +177,7 @@ fun FeatureChip(label: String, supported: Boolean) {
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.width(76.dp)
+        modifier = Modifier.width(72.dp)
     ) {
         Surface(
             color = if (supported) Color(0xFF1E1F23) else Color(0xFF1E1F23).copy(alpha = 0.4f),
@@ -393,10 +332,7 @@ fun ParameterItem(parameter: CameraParameter, onClick: (String) -> Unit) {
 fun OverviewScreenPreview() {
     CameraParamsTheme {
         OverviewScreenContent(
-            uiState = UiState(
-                cameraName = "Rear Camera",
-                cameraId = "0",
-                cameras = listOf("0", "1", "2"),
+            overviewState = CameraOverviewState(
                 hardwareLevel = "LEVEL_3",
                 sensorResolution = "4000 x 3000 (12.0 MP)",
                 maxFps = "60 FPS",
@@ -405,14 +341,16 @@ fun OverviewScreenPreview() {
                     "Manual Focus" to true,
                     "RAW Support" to false,
                     "Face Detection" to true
-                ),
+                )
+            ),
+            parametersState = CameraParametersState(
                 categories = listOf(
                     ParameterCategory("Sensor Info", listOf(CameraParameter("key", "val", "raw", "cat"))),
                     ParameterCategory("Lens Settings", listOf(CameraParameter("key", "val", "raw", "cat"))),
                     ParameterCategory("AE Control", listOf(CameraParameter("key", "val", "raw", "cat")))
                 )
             ),
-            onToggleCategory = {},
+            onIntent = {},
             onNavigateToDetail = {}
         )
     }

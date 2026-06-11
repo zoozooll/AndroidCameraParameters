@@ -1,28 +1,29 @@
 package com.aaron.cameraparams.ui.screens
 
+import android.content.ClipData
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aaron.cameraparams.ui.CameraViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ParameterDetailScreen(viewModel: CameraViewModel, parameterKey: String, onBack: () -> Unit) {
     val uiState by viewModel.uiState.collectAsState()
-    val parameter = uiState.categories.flatMap { it.parameters }.find { it.key == parameterKey }
-    val clipboardManager = LocalClipboardManager.current
+    val parameter = uiState.parameters.categories.flatMap { it.parameters }.find { it.key == parameterKey }
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
 
     Scaffold(
         topBar = {
@@ -45,7 +46,14 @@ fun ParameterDetailScreen(viewModel: CameraViewModel, parameterKey: String, onBa
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                DetailCard("Value", parameter.value, onCopy = { clipboardManager.setText(AnnotatedString(parameter.value)) })
+                DetailCard(
+                    "Value",
+                    parameter.value,
+                    onCopy = {
+                        val clipData = ClipData.newPlainText("Value", parameter.value)
+                        scope.launch { clipboard.setClipEntry(ClipEntry(clipData)) }
+                    }
+                )
                 
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(16.dp)) {
@@ -56,7 +64,14 @@ fun ParameterDetailScreen(viewModel: CameraViewModel, parameterKey: String, onBa
                     }
                 }
 
-                DetailCard("Raw Value", parameter.rawValue, onCopy = { clipboardManager.setText(AnnotatedString(parameter.rawValue)) })
+                DetailCard(
+                    "Raw Value",
+                    parameter.rawValue,
+                    onCopy = {
+                        val clipData = ClipData.newPlainText("Raw Value", parameter.rawValue)
+                        scope.launch { clipboard.setClipEntry(ClipEntry(clipData)) }
+                    }
+                )
             }
         } else {
             Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {

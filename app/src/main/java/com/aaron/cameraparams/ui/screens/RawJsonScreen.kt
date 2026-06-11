@@ -1,5 +1,6 @@
 package com.aaron.cameraparams.ui.screens
 
+import android.content.ClipData
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -12,17 +13,19 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aaron.cameraparams.ui.CameraViewModel
 import com.aaron.cameraparams.ui.theme.MonospaceTypography
+import kotlinx.coroutines.launch
 
 @Composable
 fun RawJsonScreen(viewModel: CameraViewModel) {
     val uiState by viewModel.uiState.collectAsState()
-    val clipboardManager = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
 
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
@@ -35,7 +38,10 @@ fun RawJsonScreen(viewModel: CameraViewModel) {
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f)
             )
-            IconButton(onClick = { clipboardManager.setText(AnnotatedString(uiState.rawJson)) }) {
+            IconButton(onClick = {
+                val clipData = ClipData.newPlainText("Raw JSON", uiState.rawJson)
+                scope.launch { clipboard.setClipEntry(ClipEntry(clipData)) }
+            }) {
                 Icon(Icons.Default.Info, contentDescription = "Copy Info")
             }
             IconButton(onClick = { /* Share action */ }) {
