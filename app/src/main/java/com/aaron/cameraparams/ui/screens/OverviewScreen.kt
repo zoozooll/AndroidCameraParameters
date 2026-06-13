@@ -1,5 +1,6 @@
 package com.aaron.cameraparams.ui.screens
 
+import android.telecom.Connection
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -11,6 +12,8 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.res.painterResource
+import com.aaron.cameraparams.R
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -91,15 +94,130 @@ fun SummaryCard(state: CameraOverviewState) {
             }
         }
     }
-    Spacer(modifier = Modifier.height(8.dp))
+    val featureFlags = state.featureFlags
+
+    Spacer(Modifier.height(6.dp))
+    
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        // Row 1
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            FeatureSummaryCard(
+                modifier = Modifier.weight(1f),
+                iconRes = R.drawable.ic_sensor,
+                primaryText = state.sensorResolution,
+                secondaryText = state.sensorResolutionDetails,
+                footerText = "Sensor Resolution",
+                accentColor = Color(0xFF4CAF50)
+            )
+            FeatureSummaryCard(
+                modifier = Modifier.weight(1f),
+                iconRes = R.drawable.ic_video,
+                primaryText = state.maxFps,
+                secondaryText = state.maxFpsDetails,
+                footerText = "Max Video FPS",
+                accentColor = Color(0xFF2196F3)
+            )
+            FeatureSummaryCard(
+                modifier = Modifier.weight(1f),
+                iconRes = R.drawable.ic_raw_box,
+                primaryText = "RAW",
+                secondaryText = if (featureFlags["RAW"] == true) "Supported" else "Not Support",
+                footerText = "Capture Capability",
+                accentColor = Color(0xFF7B61FF)
+            )
+        }
+        
+        // Row 2
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            FeatureSummaryCard(
+                modifier = Modifier.weight(1f),
+                iconRes = R.drawable.ic_flash_bolt,
+                primaryText = "Flash",
+                secondaryText = if (featureFlags["Flash"] == true) "Supported" else "Not Support",
+                footerText = "Flash Support",
+                accentColor = Color(0xFFFFEB3B)
+            )
+            FeatureSummaryCard(
+                modifier = Modifier.weight(1f),
+                iconRes = R.drawable.ic_ois_hand,
+                primaryText = "OIS",
+                secondaryText = if (featureFlags["OIS"] == true) "Supported" else "Not Support",
+                footerText = "Stabilization",
+                accentColor = Color(0xFF00BCD4)
+            )
+            FeatureSummaryCard(
+                modifier = Modifier.weight(1f),
+                iconRes = R.drawable.ic_face_detect_smile,
+                primaryText = "Face Detect",
+                secondaryText = if (featureFlags["Face Detection"] == true) "Supported" else "Not Support",
+                footerText = "AI Feature",
+                accentColor = Color(0xFFFF4081)
+            )
+        }
+    }
+}
+
+@Composable
+fun FeatureSummaryCard(
+    modifier: Modifier,
+    iconRes: Int,
+    primaryText: String,
+    secondaryText: String,
+    footerText: String,
+    accentColor: Color
+) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        shape = RoundedCornerShape(8.dp)
+        modifier = modifier.height(140.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1F23)),
+        shape = RoundedCornerShape(16.dp)
     ) {
-        Row(modifier = Modifier.fillMaxWidth()) {
-            SummaryStat(Modifier.weight(1f), "RESOLUTION", state.sensorResolution)
-            SummaryStat(Modifier.weight(1f), "MAX FPS", state.maxFps)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(accentColor.copy(alpha = 0.1f), RoundedCornerShape(12.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(id = iconRes),
+                    contentDescription = null,
+                    tint = accentColor,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+            
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    primaryText,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                Text(
+                    secondaryText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (secondaryText == "Supported") Color(0xFF4CAF50) else Color.White.copy(alpha = 0.5f)
+                )
+            }
+            
+            Text(
+                footerText,
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.White.copy(alpha = 0.3f),
+                fontSize = 9.sp
+            )
         }
     }
 }
@@ -118,23 +236,6 @@ fun HardwareLevelIcon(level: String) {
             contentDescription = "Hardware Level: $level",
             modifier = Modifier.size(32.dp),
             tint = color
-        )
-    }
-}
-
-@Composable
-fun SummaryStat(modifier: Modifier, label: String, value: String) {
-    Column(modifier = modifier.padding(16.dp)) {
-        Text(
-            label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-            letterSpacing = 1.sp
-        )
-        Text(
-            value,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
         )
     }
 }
@@ -334,13 +435,16 @@ fun OverviewScreenPreview() {
         OverviewScreenContent(
             overviewState = CameraOverviewState(
                 hardwareLevel = "LEVEL_3",
-                sensorResolution = "4000 x 3000 (12.0 MP)",
-                maxFps = "60 FPS",
+                sensorResolution = "12 MP",
+                sensorResolutionDetails = "4000 x 3000",
+                maxFps = "60 fps",
+                maxFpsDetails = "1920x1080",
                 featureFlags = mapOf(
                     "Flash" to true,
                     "Manual Focus" to true,
-                    "RAW Support" to false,
-                    "Face Detection" to true
+                    "RAW" to false,
+                    "Face Detection" to true,
+                    "OIS" to true
                 )
             ),
             parametersState = CameraParametersState(

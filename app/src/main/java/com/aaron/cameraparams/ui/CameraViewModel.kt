@@ -36,7 +36,9 @@ data class CameraHeaderState(
 data class CameraOverviewState(
     val hardwareLevel: String = "",
     val sensorResolution: String = "",
+    val sensorResolutionDetails: String = "",
     val maxFps: String = "",
+    val maxFpsDetails: String = "",
     val featureFlags: Map<String, Boolean> = emptyMap()
 )
 
@@ -100,7 +102,8 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
         }
 
         val categoriesMap = params.groupBy { it.category }
-        val categoryOrder = listOf("Sensor", "Lens", "AE (Auto Exposure)", "AF (Auto Focus)", "AWB (White Balance)", "Output", "Request", "Statistics", "Other")
+        val categoryOrder = listOf("Sensor", "Lens", "AE (Auto Exposure)", "AF (Auto Focus)",
+            "AWB (White Balance)", "Output", "Request", "Statistics", "Other")
         
         val categories = categoryOrder.map { name ->
             ParameterCategory(name, categoriesMap[name] ?: emptyList())
@@ -112,7 +115,11 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
         val pixelArray = chars?.get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE)
         val sensorRes = if (pixelArray != null) {
             val mp = (pixelArray.width.toLong() * pixelArray.height.toLong()) / 1_000_000.0
-            "%.1f MP".format(mp)
+            "%.0f MP".format(mp)
+        } else "N/A"
+
+        val sensorResSum = if (pixelArray != null) {
+            "${pixelArray.width}x${pixelArray.height}"
         } else "N/A"
 
         val fpsRanges = chars?.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES)
@@ -137,7 +144,9 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
             overview = CameraOverviewState(
                 hardwareLevel = hardwareLevel,
                 sensorResolution = sensorRes,
+                sensorResolutionDetails = sensorResSum,
                 maxFps = "$maxFpsVal fps",
+                maxFpsDetails = if (pixelArray != null) "1920x1080" else "N/A", // Placeholder for common video res
                 featureFlags = detectFeatureFlags()
             ),
             parameters = CameraParametersState(
