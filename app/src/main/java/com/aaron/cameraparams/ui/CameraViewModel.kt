@@ -110,7 +110,6 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
         }.filter { it.parameters.isNotEmpty() }
 
         val hardwareLevel = helper.getCharacteristicInfo(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL)
-        
         val chars = helper.getCameraCharacteristics()
         val pixelArray = chars?.get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE)
         val sensorRes = if (pixelArray != null) {
@@ -197,6 +196,7 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
             "Manual Exp" to manualExp,
             "Manual Focus" to manualFocus,
             "Flash" to flashAvailable,
+            "RedEye" to false,
             "OIS" to oisAvailable,
             "Face Detection" to faceDetection,
             "HDR" to hdrSupport,

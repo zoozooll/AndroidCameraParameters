@@ -109,7 +109,7 @@ fun SummaryCard(state: CameraOverviewState) {
                 iconRes = R.drawable.ic_sensor,
                 primaryText = state.sensorResolution,
                 secondaryText = state.sensorResolutionDetails,
-                footerText = "Sensor Resolution",
+                footerText = "Resolution",
                 accentColor = Color(0xFF4CAF50)
             )
             FeatureSummaryCard(
@@ -117,7 +117,7 @@ fun SummaryCard(state: CameraOverviewState) {
                 iconRes = R.drawable.ic_video,
                 primaryText = state.maxFps,
                 secondaryText = state.maxFpsDetails,
-                footerText = "Max Video FPS",
+                footerText = "Max FPS",
                 accentColor = Color(0xFF2196F3)
             )
             FeatureSummaryCard(
@@ -125,7 +125,7 @@ fun SummaryCard(state: CameraOverviewState) {
                 iconRes = R.drawable.ic_raw_box,
                 primaryText = "RAW",
                 secondaryText = if (featureFlags["RAW"] == true) "Supported" else "Not Support",
-                footerText = "Capture Capability",
+                footerText = "Capture",
                 accentColor = Color(0xFF7B61FF)
             )
         }
@@ -140,7 +140,7 @@ fun SummaryCard(state: CameraOverviewState) {
                 iconRes = R.drawable.ic_flash_bolt,
                 primaryText = "Flash",
                 secondaryText = if (featureFlags["Flash"] == true) "Supported" else "Not Support",
-                footerText = "Flash Support",
+                footerText = "Flash Feature",
                 accentColor = Color(0xFFFFEB3B)
             )
             FeatureSummaryCard(
@@ -154,7 +154,7 @@ fun SummaryCard(state: CameraOverviewState) {
             FeatureSummaryCard(
                 modifier = Modifier.weight(1f),
                 iconRes = R.drawable.ic_face_detect_smile,
-                primaryText = "Face Detect",
+                primaryText = "FaceDete",
                 secondaryText = if (featureFlags["Face Detection"] == true) "Supported" else "Not Support",
                 footerText = "AI Feature",
                 accentColor = Color(0xFFFF4081)
