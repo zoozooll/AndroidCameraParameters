@@ -35,6 +35,20 @@ android {
     buildFeatures {
         viewBinding = true
         compose = true
+        buildConfig = true
+    }
+
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("googlePlay") {
+            dimension = "distribution"
+            buildConfigField("String", "STORE_NAME", "\"Google Play\"")
+        }
+        create("fdroid") {
+            dimension = "distribution"
+            versionNameSuffix = "-fdroid"
+            buildConfigField("String", "STORE_NAME", "\"F-Droid\"")
+        }
     }
 }
 

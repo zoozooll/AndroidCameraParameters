@@ -1,7 +1,9 @@
 package com.aaron.cameraparams.ui
 
 import android.app.Application
+ import android.content.Context
 import android.hardware.camera2.CameraCharacteristics
+import android.hardware.camera2.CameraManager
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.aaron.cameraparams.CameraParamsHelper
@@ -62,12 +64,13 @@ sealed class CameraIntent {
 }
 
 class CameraViewModel(application: Application) : AndroidViewModel(application) {
+    private val cameraManager = application.getSystemService(Context.CAMERA_SERVICE) as CameraManager
     private val helper = CameraParamsHelper(application)
     private val _uiState = MutableStateFlow(UiState())
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
     init {
-        val cameras = helper.supportCameraIds.filterNotNull()
+        val cameras = cameraManager.cameraIdList.toList()
         _uiState.value = _uiState.value.copy(
             header = _uiState.value.header.copy(cameras = cameras)
         )
@@ -86,19 +89,21 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
 
     private fun selectCamera(index: Int) {
         viewModelScope.launch {
-            helper.bindCameraId(index)
-            updateParameters(index)
+            val cameraId = uiState.value.header.cameras.getOrNull(index) ?: return@launch
+            val characteristics = cameraManager.getCameraCharacteristics(cameraId)
+            updateParameters(characteristics, cameraId, index)
         }
     }
 
-    private fun updateParameters(index: Int) {
-        val keys = helper.availableKeys
+    private fun updateParameters(chars: CameraCharacteristics, cameraId: String, index: Int) {
+        val keys = chars.keys
         val params = keys.mapNotNull { key ->
-            if (key == null) return@mapNotNull null
-            val value = helper.getCharacteristicInfo(key)
-            val rawValue = helper.getCharacteristic(key)?.toString() ?: "null"
+            val value = chars.get(key)
+            @Suppress("UNCHECKED_CAST")
+            val formattedValue = helper.keyValue(key as CameraCharacteristics.Key<Any?>, value)
+            val rawValue = value?.toString() ?: "null"
             val category = getCategoryForKey(key.name)
-            CameraParameter(key.name, value, rawValue, category)
+            CameraParameter(key.name, formattedValue, rawValue, category)
         }
 
         val categoriesMap = params.groupBy { it.category }
@@ -109,9 +114,12 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
             ParameterCategory(name, categoriesMap[name] ?: emptyList())
         }.filter { it.parameters.isNotEmpty() }
 
-        val hardwareLevel = helper.getCharacteristicInfo(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL)
-        val chars = helper.getCameraCharacteristics()
-        val pixelArray = chars?.get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE)
+        val hardwareLevel = helper.keyValue(
+            CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL as CameraCharacteristics.Key<Any?>,
+            chars.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL)
+        )
+        
+        val pixelArray = chars.get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE)
         val sensorRes = if (pixelArray != null) {
             val mp = (pixelArray.width.toLong() * pixelArray.height.toLong()) / 1_000_000.0
             "%.0f MP".format(mp)
@@ -121,17 +129,16 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
             "${pixelArray.width}x${pixelArray.height}"
         } else "N/A"
 
-        val fpsRanges = chars?.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES)
+        val fpsRanges = chars.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES)
         val maxFpsVal = fpsRanges?.maxByOrNull { it.upper }?.upper ?: 0
         
-        val facing = chars?.get(CameraCharacteristics.LENS_FACING)
+        val facing = chars.get(CameraCharacteristics.LENS_FACING)
         val cameraName = when (facing) {
             CameraCharacteristics.LENS_FACING_BACK -> "Rear Camera"
             CameraCharacteristics.LENS_FACING_FRONT -> "Front Camera"
             CameraCharacteristics.LENS_FACING_EXTERNAL -> "External Camera"
             else -> "Unknown Camera"
         }
-        val cameraId = helper.supportCameraIds.getOrNull(index) ?: ""
 
         _uiState.value = _uiState.value.copy(
             header = CameraHeaderState(
@@ -146,20 +153,18 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
                 sensorResolutionDetails = sensorResSum,
                 maxFps = "$maxFpsVal fps",
                 maxFpsDetails = if (pixelArray != null) "1920x1080" else "N/A", // Placeholder for common video res
-                featureFlags = detectFeatureFlags()
+                featureFlags = detectFeatureFlags(chars)
             ),
             parameters = CameraParametersState(
                 categories = categories,
                 filteredCategories = categories,
                 searchQuery = _uiState.value.parameters.searchQuery
             ),
-            rawJson = generateRawJson()
+            rawJson = generateRawJson(chars)
         )
     }
 
-    private fun detectFeatureFlags(): Map<String, Boolean> {
-        val chars = helper.getCameraCharacteristics() ?: return emptyMap()
-        
+    private fun detectFeatureFlags(chars: CameraCharacteristics): Map<String, Boolean> {
         val capabilities = chars.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
         val rawSupport = capabilities?.contains(
             CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW
@@ -255,13 +260,10 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
         )
     }
 
-    private fun generateRawJson(): String {
-        val characteristics = helper.getCameraCharacteristics() ?: return "{}"
+    private fun generateRawJson(chars: CameraCharacteristics): String {
         val map = TreeMap<String, Any?>()
-        helper.availableKeys.forEach { key ->
-            if (key != null) {
-                map[key.name] = helper.getCharacteristic(key)
-            }
+        chars.keys.forEach { key ->
+            map[key.name] = chars.get(key)
         }
         val gson = GsonBuilder().setPrettyPrinting().create()
         return gson.toJson(map)
