@@ -8,9 +8,10 @@ This Privacy Policy describes how **Camera Parameters** ("we", "us", or "our") h
 
 The Camera Parameters app is designed as a technical diagnostic tool. Our primary goal is to provide users with transparency regarding their device's hardware capabilities.
 
-### Camera Permission (`android.permission.CAMERA`)
-The app requires the Camera permission to access the Android `Camera2` API. 
-- **Purpose**: We use this permission exclusively to read technical metadata (CameraCharacteristics) such as sensor resolution, lens focal length, and supported hardware levels.
+### Camera Metadata Access
+The app accesses camera metadata via the Android `Camera2` API.
+- **No Permission Required**: We have designed the app to run without the `android.permission.CAMERA` permission.
+- **Purpose**: We read technical metadata (CameraCharacteristics) such as supported hardware levels and basic lens info. Note that without the camera permission, some advanced hardware details may be restricted by the Android system.
 - **No Capture**: The app **does not** capture, record, or store any photos, videos, or audio.
 - **Local Processing**: All data read from the camera API is processed locally on your device and displayed on your screen.
 

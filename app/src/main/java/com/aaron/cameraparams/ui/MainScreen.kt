@@ -215,7 +215,10 @@ fun MainScreenContent(
             } == true
             
             if (isMainTab) {
-                Surface(shadowElevation = 4.dp) {
+                Surface(
+                    shadowElevation = 4.dp,
+                    modifier = Modifier.statusBarsPadding()
+                ) {
                     CameraSelector(
                         state = headerState,
                         onIntent = onIntent
