@@ -29,6 +29,12 @@ import androidx.navigation.compose.rememberNavController
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavHostController
 import androidx.compose.ui.res.painterResource
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import android.content.Intent
+import android.net.Uri
+import com.aaron.cameraparams.BuildConfig
 import com.aaron.cameraparams.R
 import com.aaron.cameraparams.ui.theme.CameraParamsTheme
 import com.aaron.cameraparams.ui.screens.*
@@ -47,6 +53,10 @@ fun CameraSelector(
     onIntent: (CameraIntent) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
+    var menuExpanded by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val privacyUrl = stringResource(R.string.url_privacy_policy)
+    val playStoreUrl = stringResource(R.string.url_play_store)
 
     Row(
         modifier = Modifier
@@ -54,26 +64,62 @@ fun CameraSelector(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            Icons.Default.Menu,
-            contentDescription = null,
-            modifier = Modifier.size(24.dp),
-            tint = MaterialTheme.colorScheme.onSurface
-        )
-        Spacer(Modifier.width(16.dp))
+        IconButton(onClick = { menuExpanded = true }) {
+            Icon(
+                Icons.Default.Menu,
+                contentDescription = "Menu",
+                modifier = Modifier.size(24.dp),
+                tint = MaterialTheme.colorScheme.onSurface
+            )
+        }
+
+        DropdownMenu(
+            expanded = menuExpanded,
+            onDismissRequest = { menuExpanded = false }
+        ) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.menu_privacy_policy)) },
+                onClick = {
+                    menuExpanded = false
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(privacyUrl))
+                    context.startActivity(intent)
+                }
+            )
+            
+            if (BuildConfig.STORE_NAME == "Google Play") {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.menu_rate_app)) },
+                    onClick = {
+                        menuExpanded = false
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(playStoreUrl))
+                        context.startActivity(intent)
+                    }
+                )
+            }
+
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.menu_about)) },
+                onClick = {
+                    menuExpanded = false
+                    // Show a simple about dialog or navigate
+                }
+            )
+        }
+
+        Spacer(Modifier.width(8.dp))
         Text(
             state.cameraName,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.weight(1f)
         )
-        Icon(
-            Icons.Default.ArrowDropDown,
-            contentDescription = null,
-            modifier = Modifier
-                .clickable { expanded = true }
-                .padding(4.dp)
-        )
+        IconButton(onClick = { expanded = true }) {
+            Icon(
+                Icons.Default.ArrowDropDown,
+                contentDescription = "Select Camera",
+                modifier = Modifier.padding(4.dp)
+            )
+        }
         
         Spacer(Modifier.width(8.dp))
 
