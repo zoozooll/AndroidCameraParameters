@@ -14,6 +14,8 @@ import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import com.aaron.cameraparams.R
 import com.aaron.cameraparams.ui.CameraViewModel
 import kotlinx.coroutines.launch
 
@@ -28,10 +30,10 @@ fun ParameterDetailScreen(viewModel: CameraViewModel, parameterKey: String, onBa
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(parameter?.key?.substringAfterLast(".") ?: "Detail") },
+                title = { Text(parameter?.key?.substringAfterLast(".") ?: stringResource(R.string.nav_detail)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                     }
                 }
             )
@@ -47,35 +49,35 @@ fun ParameterDetailScreen(viewModel: CameraViewModel, parameterKey: String, onBa
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 DetailCard(
-                    "Value",
+                    stringResource(R.string.detail_value_label),
                     parameter.value,
                     onCopy = {
-                        val clipData = ClipData.newPlainText("Value", parameter.value)
+                        val clipData = ClipData.newPlainText(parameter.key, parameter.value)
                         scope.launch { clipboard.setClipEntry(ClipEntry(clipData)) }
                     }
                 )
                 
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Info", style = MaterialTheme.typography.labelSmall)
+                        Text(stringResource(R.string.detail_info_label), style = MaterialTheme.typography.labelSmall)
                         Spacer(Modifier.height(8.dp))
-                        InfoRow("Key", parameter.key)
-                        InfoRow("Category", parameter.category)
+                        InfoRow(stringResource(R.string.detail_key_label), parameter.key)
+                        InfoRow(stringResource(R.string.detail_category_label), parameter.category)
                     }
                 }
 
                 DetailCard(
-                    "Raw Value",
+                    stringResource(R.string.detail_raw_value_label),
                     parameter.rawValue,
                     onCopy = {
-                        val clipData = ClipData.newPlainText("Raw Value", parameter.rawValue)
+                        val clipData = ClipData.newPlainText(parameter.key, parameter.rawValue)
                         scope.launch { clipboard.setClipEntry(ClipEntry(clipData)) }
                     }
                 )
             }
         } else {
             Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
-                Text("Parameter not found")
+                Text(stringResource(R.string.error_parameter_not_found))
             }
         }
     }
@@ -88,7 +90,7 @@ fun DetailCard(title: String, value: String, onCopy: () -> Unit) {
             Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 Text(title, style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f))
                 IconButton(onClick = onCopy, modifier = Modifier.size(24.dp)) {
-                    Icon(Icons.Default.Info, contentDescription = "Copy")
+                    Icon(Icons.Default.Info, contentDescription = stringResource(R.string.cd_copy))
                 }
             }
             Spacer(Modifier.height(8.dp))

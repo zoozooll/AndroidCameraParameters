@@ -39,12 +39,14 @@ import com.aaron.cameraparams.R
 import com.aaron.cameraparams.ui.theme.CameraParamsTheme
 import com.aaron.cameraparams.ui.screens.*
 
-sealed class Screen(val route: String, val label: String, val icon: Int) {
-    object Overview : Screen("overview", "Overview", R.drawable.ic_overview)
-    object Categories : Screen("categories", "Categories", R.drawable.ic_categories)
-    object RawJson : Screen("raw_json", "Raw (JSON)", R.drawable.ic_raw_json)
-    object Favorites : Screen("favorites", "Favorites", R.drawable.ic_favorites)
-    object ParameterDetail : Screen("detail/{parameterKey}?origin={origin}", "Detail", R.drawable.ic_overview) // Using Overview icon as placeholder for detail
+import androidx.annotation.StringRes
+
+sealed class Screen(val route: String, @StringRes val label: Int, val icon: Int) {
+    object Overview : Screen("overview", R.string.nav_overview, R.drawable.ic_overview)
+    object Categories : Screen("categories", R.string.nav_categories, R.drawable.ic_categories)
+    object RawJson : Screen("raw_json", R.string.nav_raw_json, R.drawable.ic_raw_json)
+    object Favorites : Screen("favorites", R.string.nav_favorites, R.drawable.ic_favorites)
+    object ParameterDetail : Screen("detail/{parameterKey}?origin={origin}", R.string.nav_detail, R.drawable.ic_overview) // Using Overview icon as placeholder for detail
 }
 
 @Composable
@@ -67,7 +69,7 @@ fun CameraSelector(
         IconButton(onClick = { menuExpanded = true }) {
             Icon(
                 Icons.Default.Menu,
-                contentDescription = "Menu",
+                contentDescription = stringResource(R.string.cd_menu),
                 modifier = Modifier.size(24.dp),
                 tint = MaterialTheme.colorScheme.onSurface
             )
@@ -116,7 +118,7 @@ fun CameraSelector(
         IconButton(onClick = { expanded = true }) {
             Icon(
                 Icons.Default.ArrowDropDown,
-                contentDescription = "Select Camera",
+                contentDescription = stringResource(R.string.cd_select_camera),
                 modifier = Modifier.padding(4.dp)
             )
         }
@@ -141,7 +143,7 @@ fun CameraSelector(
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             state.cameras.forEachIndexed { index, camId ->
                 DropdownMenuItem(
-                    text = { Text("Camera $camId") },
+                    text = { Text(stringResource(R.string.camera_label_format, camId)) },
                     onClick = {
                         onIntent(CameraIntent.SelectCamera(index))
                         expanded = false
@@ -247,7 +249,7 @@ fun MainScreenContent(
 
                     NavigationBarItem(
                         icon = { Icon(painterResource(screen.icon), contentDescription = null) },
-                        label = { Text(screen.label) },
+                        label = { Text(stringResource(screen.label)) },
                         selected = isSelected,
                         onClick = {
                             if (currentDestination?.route != screen.route) {
@@ -278,7 +280,7 @@ fun MainScreenContent(
 @Composable
 fun FavoritesScreen() {
     Surface {
-        Text("Favorites coming soon...", modifier = Modifier.padding(16.dp))
+        Text(stringResource(R.string.favorites_coming_soon), modifier = Modifier.padding(16.dp))
     }
 }
 
@@ -297,7 +299,7 @@ fun MainScreenPreview() {
             onIntent = {}
         ) { innerPadding ->
             Box(modifier = Modifier.padding(innerPadding).fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Content Area")
+                Text(stringResource(R.string.content_area_placeholder))
             }
         }
     }

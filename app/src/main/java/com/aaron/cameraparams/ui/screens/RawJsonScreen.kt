@@ -17,6 +17,8 @@ import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import com.aaron.cameraparams.R
 import com.aaron.cameraparams.ui.CameraViewModel
 import com.aaron.cameraparams.ui.theme.MonospaceTypography
 import kotlinx.coroutines.launch
@@ -33,7 +35,7 @@ fun RawJsonScreen(viewModel: CameraViewModel) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                "Raw (JSON)",
+                stringResource(R.string.nav_raw_json),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f)
@@ -42,10 +44,10 @@ fun RawJsonScreen(viewModel: CameraViewModel) {
                 val clipData = ClipData.newPlainText("Raw JSON", uiState.rawJson)
                 scope.launch { clipboard.setClipEntry(ClipEntry(clipData)) }
             }) {
-                Icon(Icons.Default.Info, contentDescription = "Copy Info")
+                Icon(Icons.Default.Info, contentDescription = stringResource(R.string.cd_copy_info))
             }
             IconButton(onClick = { /* Share action */ }) {
-                Icon(Icons.Default.Share, contentDescription = "Share")
+                Icon(Icons.Default.Share, contentDescription = stringResource(R.string.cd_share))
             }
         }
 
