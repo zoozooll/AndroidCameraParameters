@@ -15,6 +15,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import com.aaron.cameraparams.R
 import com.aaron.cameraparams.ui.*
 
 @Composable
@@ -36,7 +38,7 @@ fun CategoriesScreenContent(
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         Text(
-            "Categories",
+            stringResource(R.string.screen_categories_title),
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
@@ -66,7 +68,7 @@ fun SearchBar(query: String, onQueryChange: (String) -> Unit) {
         value = query,
         onValueChange = onQueryChange,
         modifier = Modifier.fillMaxWidth().padding(16.dp),
-        placeholder = { Text("Search parameters...") },
+        placeholder = { Text(stringResource(R.string.search_placeholder)) },
         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
         shape = MaterialTheme.shapes.medium,
         colors = TextFieldDefaults.colors(

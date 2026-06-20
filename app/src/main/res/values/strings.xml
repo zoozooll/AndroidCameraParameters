@@ -1,6 +1,5 @@
 <resources>
     <string name="app_name">CameraParamsDemo</string>
-    <string name="title_activity_camera">CameraActivity</string>
     <string name="url_privacy_policy">https://github.com/zoozooll/AndroidCameraParameters/blob/master/PRIVACY_POLICY.md</string>
     <string name="url_play_store">https://play.google.com/store/apps/details?id=com.aaron.cameraparams</string>
     <string name="about_title">About Camera Parameters</string>
@@ -8,4 +7,65 @@
     <string name="menu_privacy_policy">Privacy Policy</string>
     <string name="menu_rate_app">Rate on Play Store</string>
     <string name="menu_about">About</string>
+
+    <!-- Navigation Labels -->
+    <string name="nav_overview">Overview</string>
+    <string name="nav_categories">Categories</string>
+    <string name="nav_raw_json">Raw (JSON)</string>
+    <string name="nav_favorites">Favorites</string>
+    <string name="nav_detail">Detail</string>
+
+    <!-- Accessibility & Content Descriptions -->
+    <string name="cd_menu">Menu</string>
+    <string name="cd_select_camera">Select Camera</string>
+    <string name="cd_back">Back</string>
+    <string name="cd_copy">Copy</string>
+    <string name="cd_share">Share</string>
+    <string name="cd_copy_info">Copy Info</string>
+
+    <!-- Screen Content -->
+    <string name="screen_categories_title">Categories</string>
+    <string name="search_placeholder">Search parameters…</string>
+    <string name="favorites_coming_soon">Favorites coming soon…</string>
+    <string name="content_area_placeholder">Content Area</string>
+
+    <!-- Camera Selector -->
+    <string name="camera_label_format">Camera %1$s</string>
+
+    <!-- Overview Screen -->
+    <string name="hardware_level_label">HARDWARE LEVEL</string>
+    <string name="hardware_level_cd_format">Hardware Level: %1$s</string>
+    <string name="key_features_title">Key Features</string>
+
+    <!-- Feature Labels -->
+    <string name="feature_resolution">Resolution</string>
+    <string name="feature_max_fps">Max FPS</string>
+    <string name="feature_raw">RAW</string>
+    <string name="feature_capture">Capture</string>
+    <string name="feature_flash">Flash</string>
+    <string name="feature_flash_feature">Flash Feature</string>
+    <string name="feature_ois">OIS</string>
+    <string name="feature_stabilization">Stabilization</string>
+    <string name="feature_face_detection">Face Detection</string>
+    <string name="feature_ai_feature">AI Feature</string>
+
+    <!-- Status Strings -->
+    <string name="status_supported">Supported</string>
+    <string name="status_not_supported">Not Supported</string>
+
+    <!-- Detail Screen -->
+    <string name="detail_value_label">Value</string>
+    <string name="detail_info_label">Info</string>
+    <string name="detail_key_label">Key</string>
+    <string name="detail_category_label">Category</string>
+    <string name="detail_raw_value_label">Raw Value</string>
+    <string name="error_parameter_not_found">Parameter not found</string>
+
+    <!-- Theme Preview -->
+    <string name="theme_preview_title">Camera Params Theme</string>
+    <string name="theme_preview_desc">This is a demonstration of the theme typography and colors.</string>
+    <string name="theme_preview_button">Sample Button</string>
+    <string name="theme_preview_surface_variant">Surface Variant</string>
+
+    <string name="camera_params_title">Camera Params</string>
 </resources>

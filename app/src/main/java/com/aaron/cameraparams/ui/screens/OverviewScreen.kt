@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import com.aaron.cameraparams.R
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -79,7 +80,7 @@ fun SummaryCard(state: CameraOverviewState) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        "HARDWARE LEVEL",
+                        stringResource(R.string.hardware_level_label),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                         letterSpacing = 1.sp
@@ -109,7 +110,7 @@ fun SummaryCard(state: CameraOverviewState) {
                 iconRes = R.drawable.ic_sensor,
                 primaryText = state.sensorResolution,
                 secondaryText = state.sensorResolutionDetails,
-                footerText = "Resolution",
+                footerText = stringResource(R.string.feature_resolution),
                 accentColor = Color(0xFF4CAF50)
             )
             FeatureSummaryCard(
@@ -117,15 +118,15 @@ fun SummaryCard(state: CameraOverviewState) {
                 iconRes = R.drawable.ic_video,
                 primaryText = state.maxFps,
                 secondaryText = state.maxFpsDetails,
-                footerText = "Max FPS",
+                footerText = stringResource(R.string.feature_max_fps),
                 accentColor = Color(0xFF2196F3)
             )
             FeatureSummaryCard(
                 modifier = Modifier.weight(1f),
                 iconRes = R.drawable.ic_raw_box,
-                primaryText = "RAW",
-                secondaryText = if (featureFlags["RAW"] == true) "Supported" else "Not Support",
-                footerText = "Capture",
+                primaryText = stringResource(R.string.feature_raw),
+                secondaryText = if (featureFlags["RAW"] == true) stringResource(R.string.status_supported) else stringResource(R.string.status_not_supported),
+                footerText = stringResource(R.string.feature_capture),
                 accentColor = Color(0xFF7B61FF)
             )
         }
@@ -138,25 +139,25 @@ fun SummaryCard(state: CameraOverviewState) {
             FeatureSummaryCard(
                 modifier = Modifier.weight(1f),
                 iconRes = R.drawable.ic_flash_bolt,
-                primaryText = "Flash",
-                secondaryText = if (featureFlags["Flash"] == true) "Supported" else "Not Support",
-                footerText = "Flash Feature",
+                primaryText = stringResource(R.string.feature_flash),
+                secondaryText = if (featureFlags["Flash"] == true) stringResource(R.string.status_supported) else stringResource(R.string.status_not_supported),
+                footerText = stringResource(R.string.feature_flash_feature),
                 accentColor = Color(0xFFFFEB3B)
             )
             FeatureSummaryCard(
                 modifier = Modifier.weight(1f),
                 iconRes = R.drawable.ic_ois_hand,
-                primaryText = "OIS",
-                secondaryText = if (featureFlags["OIS"] == true) "Supported" else "Not Support",
-                footerText = "Stabilization",
+                primaryText = stringResource(R.string.feature_ois),
+                secondaryText = if (featureFlags["OIS"] == true) stringResource(R.string.status_supported) else stringResource(R.string.status_not_supported),
+                footerText = stringResource(R.string.feature_stabilization),
                 accentColor = Color(0xFF00BCD4)
             )
             FeatureSummaryCard(
                 modifier = Modifier.weight(1f),
                 iconRes = R.drawable.ic_face_detect_smile,
-                primaryText = "FaceDete",
-                secondaryText = if (featureFlags["Face Detection"] == true) "Supported" else "Not Support",
-                footerText = "AI Feature",
+                primaryText = stringResource(R.string.feature_face_detection).substring(0, 8),
+                secondaryText = if (featureFlags["Face Detection"] == true) stringResource(R.string.status_supported) else stringResource(R.string.status_not_supported),
+                footerText = stringResource(R.string.feature_ai_feature),
                 accentColor = Color(0xFFFF4081)
             )
         }
@@ -208,7 +209,7 @@ fun FeatureSummaryCard(
                 Text(
                     secondaryText,
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (secondaryText == "Supported") Color(0xFF4CAF50) else Color.White.copy(alpha = 0.5f)
+                    color = if (secondaryText == stringResource(R.string.status_supported)) Color(0xFF4CAF50) else Color.White.copy(alpha = 0.5f)
                 )
             }
             
@@ -233,7 +234,7 @@ fun HardwareLevelIcon(level: String) {
     ) {
         Icon(
             Icons.Default.VerifiedUser, // Shield with check mark
-            contentDescription = "Hardware Level: $level",
+            contentDescription = stringResource(R.string.hardware_level_cd_format, level),
             modifier = Modifier.size(32.dp),
             tint = color
         )
@@ -245,7 +246,7 @@ fun HardwareLevelIcon(level: String) {
 fun KeyFeaturesSection(features: Map<String, Boolean>) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(
-            "Key Features",
+            stringResource(R.string.key_features_title),
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )
