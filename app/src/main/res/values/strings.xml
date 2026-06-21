@@ -1,7 +1,7 @@
 <resources>
-    <string name="app_name">CameraParamsDemo</string>
-    <string name="url_privacy_policy">https://github.com/zoozooll/AndroidCameraParameters/blob/master/PRIVACY_POLICY.md</string>
-    <string name="url_play_store">https://play.google.com/store/apps/details?id=com.aaron.cameraparams</string>
+    <string name="app_name">Camera Params</string>
+    <string name="url_privacy_policy" translatable="false">https://github.com/minininja/AndroidCameraParameters/blob/master/PRIVACY_POLICY.md</string>
+    <string name="url_play_store" translatable="false">https://play.google.com/store/apps/details?id=com.minininja.cameraparams</string>
     <string name="about_title">About Camera Parameters</string>
     <string name="about_description">A powerful diagnostic tool for exploring Android Camera2 API capabilities.</string>
     <string name="menu_privacy_policy">Privacy Policy</string>
@@ -11,7 +11,7 @@
     <!-- Navigation Labels -->
     <string name="nav_overview">Overview</string>
     <string name="nav_categories">Categories</string>
-    <string name="nav_raw_json">Raw (JSON)</string>
+    <string name="nav_raw_json">Resource</string>
     <string name="nav_favorites">Favorites</string>
     <string name="nav_detail">Detail</string>
 

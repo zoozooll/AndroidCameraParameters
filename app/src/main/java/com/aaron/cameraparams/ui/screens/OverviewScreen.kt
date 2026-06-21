@@ -155,7 +155,7 @@ fun SummaryCard(state: CameraOverviewState) {
             FeatureSummaryCard(
                 modifier = Modifier.weight(1f),
                 iconRes = R.drawable.ic_face_detect_smile,
-                primaryText = stringResource(R.string.feature_face_detection).substring(0, 8),
+                primaryText = stringResource(R.string.feature_face_detection),
                 secondaryText = if (featureFlags["Face Detection"] == true) stringResource(R.string.status_supported) else stringResource(R.string.status_not_supported),
                 footerText = stringResource(R.string.feature_ai_feature),
                 accentColor = Color(0xFFFF4081)
