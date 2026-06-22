@@ -69,4 +69,88 @@
     <string name="theme_preview_surface_variant">表面变体</string>
 
     <string name="camera_params_title">相机参数</string>
+
+    <!-- Camera Facings -->
+    <string name="camera_facing_back">后置摄像头</string>
+    <string name="camera_facing_front">前置摄像头</string>
+    <string name="camera_facing_external">外部摄像头</string>
+    <string name="camera_facing_unknown">未知摄像头</string>
+
+    <!-- Categories -->
+    <string name="category_sensor">传感器</string>
+    <string name="category_lens">镜头</string>
+    <string name="category_ae">自动曝光</string>
+    <string name="category_af">自动对焦</string>
+    <string name="category_awb">自动白平衡</string>
+    <string name="category_output">输出</string>
+    <string name="category_request">请求</string>
+    <string name="category_statistics">统计</string>
+    <string name="category_other">其他</string>
+
+    <!-- Hardware Levels -->
+    <string name="hw_level_legacy">旧的</string>
+    <string name="hw_level_external">扩展</string>
+    <string name="hw_level_limited">受限</string>
+    <string name="hw_level_full">完整</string>
+    <string name="hw_level_3">3级</string>
+
+    <!-- Feature Flags Display Names -->
+    <string name="feature_manual_exp">手动曝光</string>
+    <string name="feature_manual_focus">手动对焦</string>
+    <string name="feature_redeye">红眼减弱</string>
+    <string name="feature_hdr">HDR</string>
+    <string name="feature_yuv_repro">YUV重处理</string>
+
+    <!-- Modes -->
+    <string name="mode_off">关闭</string>
+    <string name="mode_on">开启</string>
+    <string name="mode_auto">自动</string>
+    <string name="mode_flash_auto">闪光灯自动</string>
+    <string name="mode_flash_red_eye">闪光灯红眼</string>
+    <string name="mode_flash_external">外部闪光灯</string>
+    <string name="mode_flash_always">总是闪光</string>
+    <string name="mode_continuous_picture">连续拍照对焦</string>
+    <string name="mode_continuous_video">连续录像对焦</string>
+    <string name="mode_edof">景深扩展</string>
+    <string name="mode_macro">微距</string>
+    <string name="mode_incandescent">白炽灯</string>
+    <string name="mode_fluorescent">荧光灯</string>
+    <string name="mode_warm_fluorescent">暖色荧光灯</string>
+    <string name="mode_daylight">日光</string>
+    <string name="mode_cloudy_daylight">阴天</string>
+    <string name="mode_twilight">黄昏</string>
+    <string name="mode_shade">阴影</string>
+    <string name="mode_use_scene_mode">使用场景模式</string>
+    <string name="mode_off_keep_state">关闭并保持状态</string>
+    <string name="mode_mono">黑白</string>
+    <string name="mode_negative">负片</string>
+    <string name="mode_solarize">曝光过度</string>
+    <string name="mode_sepia">褐色</string>
+    <string name="mode_posterize">色调分离</string>
+    <string name="mode_whiteboard">白板</string>
+    <string name="mode_blackboard">黑板</string>
+    <string name="mode_aqua">水下</string>
+    <string name="mode_disabled">禁用</string>
+    <string name="mode_face_priority">人脸优先</string>
+    <string name="mode_action">运动</string>
+    <string name="mode_portrait">人像</string>
+    <string name="mode_landscape">风景</string>
+    <string name="mode_night">夜景</string>
+    <string name="mode_night_portrait">夜间人像</string>
+    <string name="mode_theatre">剧院</string>
+    <string name="mode_beach">海滩</string>
+    <string name="mode_snow">雪景</string>
+    <string name="mode_sunset">日落</string>
+    <string name="mode_steadyphoto">防抖拍照</string>
+    <string name="mode_fireworks">烟花</string>
+    <string name="mode_sports">体育</string>
+    <string name="mode_party">派对</string>
+    <string name="mode_candlelight">烛光</string>
+    <string name="mode_barcode">条形码</string>
+    <string name="mode_high_speed_video">高速录像</string>
+    <string name="mode_fast">快速</string>
+    <string name="mode_high_quality">高质量</string>
+    <string name="mode_minimal">极简</string>
+    <string name="mode_zero_shutter_lag">零快门延迟</string>
+    <string name="mode_quality">质量</string>
 </resources>

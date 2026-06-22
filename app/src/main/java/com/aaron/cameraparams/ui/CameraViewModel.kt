@@ -7,6 +7,7 @@ import android.hardware.camera2.CameraManager
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.aaron.cameraparams.CameraParamsHelper
+import com.aaron.cameraparams.R
 import com.google.gson.GsonBuilder
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -107,8 +108,17 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
         }
 
         val categoriesMap = params.groupBy { it.category }
-        val categoryOrder = listOf("Sensor", "Lens", "AE (Auto Exposure)", "AF (Auto Focus)",
-            "AWB (White Balance)", "Output", "Request", "Statistics", "Other")
+        val categoryOrder = listOf(
+            getApplication<Application>().getString(R.string.category_sensor),
+            getApplication<Application>().getString(R.string.category_lens),
+            getApplication<Application>().getString(R.string.category_ae),
+            getApplication<Application>().getString(R.string.category_af),
+            getApplication<Application>().getString(R.string.category_awb),
+            getApplication<Application>().getString(R.string.category_output),
+            getApplication<Application>().getString(R.string.category_request),
+            getApplication<Application>().getString(R.string.category_statistics),
+            getApplication<Application>().getString(R.string.category_other)
+        )
         
         val categories = categoryOrder.map { name ->
             ParameterCategory(name, categoriesMap[name] ?: emptyList())
@@ -134,10 +144,10 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
         
         val facing = chars.get(CameraCharacteristics.LENS_FACING)
         val cameraName = when (facing) {
-            CameraCharacteristics.LENS_FACING_BACK -> "Rear Camera"
-            CameraCharacteristics.LENS_FACING_FRONT -> "Front Camera"
-            CameraCharacteristics.LENS_FACING_EXTERNAL -> "External Camera"
-            else -> "Unknown Camera"
+            CameraCharacteristics.LENS_FACING_BACK -> getApplication<Application>().getString(R.string.camera_facing_back)
+            CameraCharacteristics.LENS_FACING_FRONT -> getApplication<Application>().getString(R.string.camera_facing_front)
+            CameraCharacteristics.LENS_FACING_EXTERNAL -> getApplication<Application>().getString(R.string.camera_facing_external)
+            else -> getApplication<Application>().getString(R.string.camera_facing_unknown)
         }
 
         _uiState.value = _uiState.value.copy(
@@ -211,15 +221,15 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
 
     private fun getCategoryForKey(keyName: String): String {
         return when {
-            keyName.contains("sensor", ignoreCase = true) -> "Sensor"
-            keyName.contains("lens", ignoreCase = true) -> "Lens"
-            keyName.contains("control.ae", ignoreCase = true) -> "AE (Auto Exposure)"
-            keyName.contains("control.af", ignoreCase = true) -> "AF (Auto Focus)"
-            keyName.contains("control.awb", ignoreCase = true) -> "AWB (White Balance)"
-            keyName.contains("scaler", ignoreCase = true) || keyName.contains("reprocess", ignoreCase = true) -> "Output"
-            keyName.contains("request", ignoreCase = true) -> "Request"
-            keyName.contains("statistics", ignoreCase = true) -> "Statistics"
-            else -> "Other"
+            keyName.contains("sensor", ignoreCase = true) -> getApplication<Application>().getString(R.string.category_sensor)
+            keyName.contains("lens", ignoreCase = true) -> getApplication<Application>().getString(R.string.category_lens)
+            keyName.contains("control.ae", ignoreCase = true) -> getApplication<Application>().getString(R.string.category_ae)
+            keyName.contains("control.af", ignoreCase = true) -> getApplication<Application>().getString(R.string.category_af)
+            keyName.contains("control.awb", ignoreCase = true) -> getApplication<Application>().getString(R.string.category_awb)
+            keyName.contains("scaler", ignoreCase = true) || keyName.contains("reprocess", ignoreCase = true) -> getApplication<Application>().getString(R.string.category_output)
+            keyName.contains("request", ignoreCase = true) -> getApplication<Application>().getString(R.string.category_request)
+            keyName.contains("statistics", ignoreCase = true) -> getApplication<Application>().getString(R.string.category_statistics)
+            else -> getApplication<Application>().getString(R.string.category_other)
         }
     }
 

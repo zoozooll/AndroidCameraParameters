@@ -77,25 +77,25 @@ class CameraParamsHelper(private val context: Context) {
 
     fun keyValue(key: CameraCharacteristics.Key<Any?>?, value: Any?): String {
         if (CameraCharacteristics.COLOR_CORRECTION_AVAILABLE_ABERRATION_MODES == key) {
-            return getColorCorrectionAvailableAberrationMode((value as kotlin.IntArray?)!!)
+            return getColorCorrectionAvailableAberrationMode(context, (value as kotlin.IntArray?)!!)
         } else if (CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL == key) {
-            return getHardwareLevelInfo((value as kotlin.Int?)!!)
+            return getHardwareLevelInfo(context, (value as kotlin.Int?)!!)
         } else if (CameraCharacteristics.CONTROL_AE_AVAILABLE_MODES == key) {
-            return getAeAvailableModes((value as kotlin.IntArray?)!!)
+            return getAeAvailableModes(context, (value as kotlin.IntArray?)!!)
         } else if (CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES == key) {
-            return getAfAvailableModes((value as kotlin.IntArray?)!!)
+            return getAfAvailableModes(context, (value as kotlin.IntArray?)!!)
         } else if (CameraCharacteristics.CONTROL_AWB_AVAILABLE_MODES == key) {
-            return getAwbAvailableModes((value as kotlin.IntArray?)!!)
+            return getAwbAvailableModes(context, (value as kotlin.IntArray?)!!)
         } else if (CameraCharacteristics.CONTROL_AVAILABLE_EFFECTS == key) {
-            return getAvailableEffects((value as kotlin.IntArray?)!!)
+            return getAvailableEffects(context, (value as kotlin.IntArray?)!!)
         } else if (CameraCharacteristics.CONTROL_AVAILABLE_SCENE_MODES == key) {
-            return getAvailableSceneModes((value as kotlin.IntArray?)!!)
+            return getAvailableSceneModes(context, (value as kotlin.IntArray?)!!)
         } else if (CameraCharacteristics.NOISE_REDUCTION_AVAILABLE_NOISE_REDUCTION_MODES == key) {
-            return getAvailableNoiseReductionModes((value as kotlin.IntArray?)!!)
+            return getAvailableNoiseReductionModes(context, (value as kotlin.IntArray?)!!)
         } else if (CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES == key) {
             return getRequestAvailableCapabilities((value as kotlin.IntArray?)!!)
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && CameraCharacteristics.CONTROL_AVAILABLE_MODES == key) {
-            return getAvailableModes((value as kotlin.IntArray?)!!)
+            return getAvailableModes(context, (value as kotlin.IntArray?)!!)
         } else if (value is IntArray) {
             return (((value as IntArray).contentToString()))
         } else if (value is FloatArray) {

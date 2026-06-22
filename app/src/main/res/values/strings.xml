@@ -68,4 +68,88 @@
     <string name="theme_preview_surface_variant">Surface Variant</string>
 
     <string name="camera_params_title">Camera Params</string>
+
+    <!-- Camera Facings -->
+    <string name="camera_facing_back">Rear Camera</string>
+    <string name="camera_facing_front">Front Camera</string>
+    <string name="camera_facing_external">External Camera</string>
+    <string name="camera_facing_unknown">Unknown Camera</string>
+
+    <!-- Categories -->
+    <string name="category_sensor">Sensor</string>
+    <string name="category_lens">Lens</string>
+    <string name="category_ae">AE (Auto Exposure)</string>
+    <string name="category_af">AF (Auto Focus)</string>
+    <string name="category_awb">AWB (White Balance)</string>
+    <string name="category_output">Output</string>
+    <string name="category_request">Request</string>
+    <string name="category_statistics">Statistics</string>
+    <string name="category_other">Other</string>
+
+    <!-- Hardware Levels -->
+    <string name="hw_level_legacy">Legacy</string>
+    <string name="hw_level_external">External</string>
+    <string name="hw_level_limited">Limited</string>
+    <string name="hw_level_full">Full</string>
+    <string name="hw_level_3">3</string>
+
+    <!-- Feature Flags Display Names -->
+    <string name="feature_manual_exp">Manual Exp</string>
+    <string name="feature_manual_focus">Manual Focus</string>
+    <string name="feature_redeye">RedEye</string>
+    <string name="feature_hdr">HDR</string>
+    <string name="feature_yuv_repro">YUV Reprocessing</string>
+
+    <!-- Modes -->
+    <string name="mode_off">OFF</string>
+    <string name="mode_on">ON</string>
+    <string name="mode_auto">AUTO</string>
+    <string name="mode_flash_auto">Flash Auto</string>
+    <string name="mode_flash_red_eye">Flash Red Eye</string>
+    <string name="mode_flash_external">Flash External</string>
+    <string name="mode_flash_always">Flash ALWAYS</string>
+    <string name="mode_continuous_picture">Continuous Picture</string>
+    <string name="mode_continuous_video">Continuous Video</string>
+    <string name="mode_edof">EDOF</string>
+    <string name="mode_macro">Macro</string>
+    <string name="mode_incandescent">INCANDESCENT</string>
+    <string name="mode_fluorescent">FLUORESCENT</string>
+    <string name="mode_warm_fluorescent">WARM_FLUORESCENT</string>
+    <string name="mode_daylight">DAYLIGHT</string>
+    <string name="mode_cloudy_daylight">CLOUDY_DAYLIGHT</string>
+    <string name="mode_twilight">TWILIGHT</string>
+    <string name="mode_shade">SHADE</string>
+    <string name="mode_use_scene_mode">USE_SCENE_MODE</string>
+    <string name="mode_off_keep_state">OFF_KEEP_STATE</string>
+    <string name="mode_mono">MONO</string>
+    <string name="mode_negative">Negative</string>
+    <string name="mode_solarize">Solarize</string>
+    <string name="mode_sepia">SEPIA</string>
+    <string name="mode_posterize">POSTERIZE</string>
+    <string name="mode_whiteboard">WHITEBOARD</string>
+    <string name="mode_blackboard">BLACKBOARD</string>
+    <string name="mode_aqua">AQUA</string>
+    <string name="mode_disabled">DISABLED</string>
+    <string name="mode_face_priority">FACE_PRIORITY</string>
+    <string name="mode_action">ACTION</string>
+    <string name="mode_portrait">PORTRAIT</string>
+    <string name="mode_landscape">LANDSCAPE</string>
+    <string name="mode_night">NIGHT</string>
+    <string name="mode_night_portrait">NIGHT_PORTRAIT</string>
+    <string name="mode_theatre">THEATRE</string>
+    <string name="mode_beach">BEACH</string>
+    <string name="mode_snow">SNOW</string>
+    <string name="mode_sunset">SUNSET</string>
+    <string name="mode_steadyphoto">STEADYPHOTO</string>
+    <string name="mode_fireworks">FIREWORKS</string>
+    <string name="mode_sports">SPORTS</string>
+    <string name="mode_party">PARTY</string>
+    <string name="mode_candlelight">CANDLELIGHT</string>
+    <string name="mode_barcode">BARCODE</string>
+    <string name="mode_high_speed_video">HIGH_SPEED_VIDEO</string>
+    <string name="mode_fast">FAST</string>
+    <string name="mode_high_quality">HIGH_QUALITY</string>
+    <string name="mode_minimal">MINIMAL</string>
+    <string name="mode_zero_shutter_lag">ZERO_SHUTTER_LAG</string>
+    <string name="mode_quality">QUALITY</string>
 </resources>

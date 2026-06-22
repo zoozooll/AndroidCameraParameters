@@ -86,7 +86,7 @@ fun SummaryCard(state: CameraOverviewState) {
                         letterSpacing = 1.sp
                     )
                     Text(
-                        state.hardwareLevel.replace("INFO_SUPPORTED_HARDWARE_LEVEL_", ""),
+                        state.hardwareLevel,
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.ExtraBold
                     )
@@ -277,6 +277,19 @@ fun FeatureChip(label: String, supported: Boolean) {
         else -> Icons.Default.CheckCircle to Color.Gray
     }
 
+    val displayName = when {
+        label == "RAW" -> stringResource(R.string.feature_raw)
+        label == "Manual Exp" -> stringResource(R.string.feature_manual_exp)
+        label == "Manual Focus" -> stringResource(R.string.feature_manual_focus)
+        label == "Flash" -> stringResource(R.string.feature_flash)
+        label == "RedEye" -> stringResource(R.string.feature_redeye)
+        label == "OIS" -> stringResource(R.string.feature_ois)
+        label == "Face Detection" -> stringResource(R.string.feature_face_detection)
+        label == "HDR" -> stringResource(R.string.feature_hdr)
+        label == "YUV Reprocessing" -> stringResource(R.string.feature_yuv_repro)
+        else -> label
+    }
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.width(72.dp)
@@ -298,7 +311,7 @@ fun FeatureChip(label: String, supported: Boolean) {
         }
         Spacer(Modifier.height(6.dp))
         Text(
-            label,
+            displayName,
             style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
             textAlign = TextAlign.Center,
             color = if (supported) Color.White else Color.White.copy(alpha = 0.4f),
