@@ -1,5 +1,7 @@
 # Android Camera Parameters
 
+[English] | [简体中文](docs/translations/README_zh-CN.md) | [繁體中文](docs/translations/README_zh-TW.md) | [日本語](docs/translations/README_ja.md) | [한국어](docs/translations/README_ko.md)
+
 Android Camera Parameters is a powerful diagnostic tool for developers and enthusiasts to explore the deep technical capabilities of their device's cameras. It leverages the Android Camera2 API to provide detailed insights into every lens on your device.
 
 ![App Overview](docs/designer/page1.png)
