@@ -60,6 +60,12 @@
     <string name="detail_raw_value_label">원본 값</string>
     <string name="error_parameter_not_found">파라미터를 찾을 수 없습니다</string>
 
+    <!-- Theme Preview -->
+    <string name="theme_preview_title">카메라 파라미터 테마</string>
+    <string name="theme_preview_desc">테마의 타이포그래피와 색상을 보여주는 데모입니다.</string>
+    <string name="theme_preview_button">샘플 버튼</string>
+    <string name="theme_preview_surface_variant">서피스 변형</string>
+
     <string name="camera_params_title">카메라 파라미터</string>
 
     <!-- Camera Facings -->
@@ -80,7 +86,7 @@
     <string name="category_other">기타</string>
 
     <!-- Hardware Levels -->
-    <string name="hw_level_legacy">레거시(Legacy)</string>
+    <string name="hw_level_legacy">레거시</string>
     <string name="hw_level_external">외부</string>
     <string name="hw_level_limited">제한됨</string>
     <string name="hw_level_full">전체 지원</string>

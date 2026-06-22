@@ -60,6 +60,12 @@
     <string name="detail_raw_value_label">Nilai Mentah</string>
     <string name="error_parameter_not_found">Parameter tidak ditemukan</string>
 
+    <!-- Theme Preview -->
+    <string name="theme_preview_title">Tema Parameter Kamera</string>
+    <string name="theme_preview_desc">Ini adalah demonstrasi tipografi dan warna tema.</string>
+    <string name="theme_preview_button">Contoh Tombol</string>
+    <string name="theme_preview_surface_variant">Varian Permukaan</string>
+
     <string name="camera_params_title">Parameter Kamera</string>
 
     <!-- Camera Facings -->
@@ -84,7 +90,7 @@
     <string name="hw_level_external">Eksternal</string>
     <string name="hw_level_limited">Terbatas</string>
     <string name="hw_level_full">Penuh</string>
-    <string name="hw_level_3">3</string>
+    <string name="hw_level_3">Level 3</string>
 
     <!-- Feature Flags Display Names -->
     <string name="feature_manual_exp">Eksposur Manual</string>

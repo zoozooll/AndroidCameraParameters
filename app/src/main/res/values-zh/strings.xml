@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">相机参数</string>
-    <string name="url_privacy_policy">https://github.com/minininja/AndroidCameraParameters/blob/master/PRIVACY_POLICY.md</string>
-    <string name="url_play_store">https://play.google.com/store/apps/details?id=com.minininja.cameraparams</string>
     <string name="about_title">关于相机参数</string>
     <string name="about_description">用于探索 Android Camera2 API 功能的强大诊断工具。</string>
     <string name="menu_privacy_policy">隐私政策</string>
@@ -92,7 +90,7 @@
     <string name="hw_level_external">扩展</string>
     <string name="hw_level_limited">受限</string>
     <string name="hw_level_full">完整</string>
-    <string name="hw_level_3">3级</string>
+    <string name="hw_level_3">3 级</string>
 
     <!-- Feature Flags Display Names -->
     <string name="feature_manual_exp">手动曝光</string>
