@@ -2,7 +2,7 @@
 
 Android Camera Parameters is a powerful diagnostic tool for developers and enthusiasts to explore the deep technical capabilities of their device's cameras. It leverages the Android Camera2 API to provide detailed insights into every lens on your device.
 
-![App Overview](docs/page1.png)
+![App Overview](docs/designer/page1.png)
 
 ## Key Features
 
@@ -11,6 +11,23 @@ Android Camera Parameters is a powerful diagnostic tool for developers and enthu
 *   **Real-time Feature Tracking**: Check support for RAW capture, Optical Image Stabilization (OIS), Manual Exposure, Manual Focus, and more.
 *   **Categorized Exploration**: Hundreds of parameters organized by Sensor, Lens, AE/AF/AWB, and Processing categories.
 *   **Raw Data Export**: View the complete camera profile as a structured JSON.
+*   **Multi-language Support**: Fully localized into 12+ languages including Chinese, Spanish, Japanese, and more.
+
+## Supported Languages
+
+The app is localized to support a global audience:
+- 🇺🇸 English
+- 🇨🇳 Chinese (Simplified)
+- 🇹🇼/🇭🇰 Chinese (Traditional)
+- 🇪🇸 Spanish
+- 🇧🇷 Portuguese (Brazil)
+- 🇫🇷 French
+- 🇩🇪 German
+- 🇷🇺 Russian
+- 🇮🇳 Hindi
+- 🇮🇩 Indonesian
+- 🇯🇵 Japanese
+- 🇰🇷 Korean
 
 ## Tech Stack
 

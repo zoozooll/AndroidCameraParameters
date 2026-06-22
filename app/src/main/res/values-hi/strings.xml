@@ -60,6 +60,12 @@
     <string name="detail_raw_value_label">रॉ मान</string>
     <string name="error_parameter_not_found">पैरामीटर नहीं मिला</string>
 
+    <!-- Theme Preview -->
+    <string name="theme_preview_title">कैमरा पैरामीटर्स थीम</string>
+    <string name="theme_preview_desc">यह थीम टाइपोग्राफी और रंगों का प्रदर्शन है।</string>
+    <string name="theme_preview_button">नमूना बटन</string>
+    <string name="theme_preview_surface_variant">सतह संस्करण</string>
+
     <string name="camera_params_title">कैमरा पैरामीटर्स</string>
 
     <!-- Camera Facings -->
@@ -84,7 +90,7 @@
     <string name="hw_level_external">बाहरी</string>
     <string name="hw_level_limited">सीमित</string>
     <string name="hw_level_full">पूर्ण</string>
-    <string name="hw_level_3">3</string>
+    <string name="hw_level_3">स्तर 3</string>
 
     <!-- Feature Flags Display Names -->
     <string name="feature_manual_exp">मैनुअल एक्सपोज़र</string>

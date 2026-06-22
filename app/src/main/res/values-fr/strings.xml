@@ -60,6 +60,12 @@
     <string name="detail_raw_value_label">Valeur brute</string>
     <string name="error_parameter_not_found">Paramètre non trouvé</string>
 
+    <!-- Theme Preview -->
+    <string name="theme_preview_title">Thème Paramètres Caméra</string>
+    <string name="theme_preview_desc">Ceci est une démonstration de la typographie et des couleurs du thème.</string>
+    <string name="theme_preview_button">Bouton d\'exemple</string>
+    <string name="theme_preview_surface_variant">Variante de surface</string>
+
     <string name="camera_params_title">Paramètres Caméra</string>
 
     <!-- Camera Facings -->
@@ -84,7 +90,7 @@
     <string name="hw_level_external">Externe</string>
     <string name="hw_level_limited">Limité</string>
     <string name="hw_level_full">Complet</string>
-    <string name="hw_level_3">3</string>
+    <string name="hw_level_3">Niveau 3</string>
 
     <!-- Feature Flags Display Names -->
     <string name="feature_manual_exp">Exp. manuelle</string>

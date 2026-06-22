@@ -91,7 +91,7 @@
     <string name="hw_level_external">External</string>
     <string name="hw_level_limited">Limited</string>
     <string name="hw_level_full">Full</string>
-    <string name="hw_level_3">3</string>
+    <string name="hw_level_3">Level 3</string>
 
     <!-- Feature Flags Display Names -->
     <string name="feature_manual_exp">Manual Exp</string>

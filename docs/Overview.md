@@ -2,7 +2,7 @@
 
 This page provides a detailed breakdown of the application's dashboard and key features.
 
-![App Overview](../docs/page1.png)
+![App Overview](designer/page1.png)
 
 ## Dashboard Components
 

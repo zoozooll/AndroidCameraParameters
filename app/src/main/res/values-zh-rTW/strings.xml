@@ -86,7 +86,7 @@
     <string name="category_other">其他</string>
 
     <!-- Hardware Levels -->
-    <string name="hw_level_legacy">舊有 (Legacy)</string>
+    <string name="hw_level_legacy">舊有</string>
     <string name="hw_level_external">外部</string>
     <string name="hw_level_limited">受限</string>
     <string name="hw_level_full">完整</string>

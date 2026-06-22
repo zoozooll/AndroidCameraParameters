@@ -60,6 +60,12 @@
     <string name="detail_raw_value_label">生の値</string>
     <string name="error_parameter_not_found">パラメータが見つかりません</string>
 
+    <!-- Theme Preview -->
+    <string name="theme_preview_title">カメラパラメータのテーマ</string>
+    <string name="theme_preview_desc">これはテーマのタイポグラフィと色のデモンストレーションです。</string>
+    <string name="theme_preview_button">サンプルボタン</string>
+    <string name="theme_preview_surface_variant">サーフェスバリアント</string>
+
     <string name="camera_params_title">カメラパラメータ</string>
 
     <!-- Camera Facings -->
