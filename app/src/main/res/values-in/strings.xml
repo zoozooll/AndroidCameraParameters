@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Parameter Kamera</string>
+    <string name="about_title">Tentang Parameter Kamera</string>
+    <string name="about_description">Alat diagnostik yang kuat untuk mengeksplorasi kemampuan API Camera2 Android.</string>
+    <string name="menu_privacy_policy">Kebijakan Privasi</string>
+    <string name="menu_rate_app">Beri Nilai di Play Store</string>
+    <string name="menu_about">Tentang</string>
+
+    <!-- Navigation Labels -->
+    <string name="nav_overview">Ikhtisar</string>
+    <string name="nav_categories">Kategori</string>
+    <string name="nav_raw_json">Sumber Daya</string>
+    <string name="nav_favorites">Favorit</string>
+    <string name="nav_detail">Detail</string>
+
+    <!-- Accessibility & Content Descriptions -->
+    <string name="cd_menu">Menu</string>
+    <string name="cd_select_camera">Pilih Kamera</string>
+    <string name="cd_back">Kembali</string>
+    <string name="cd_copy">Salin</string>
+    <string name="cd_share">Bagikan</string>
+    <string name="cd_copy_info">Salin Info</string>
+
+    <!-- Screen Content -->
+    <string name="screen_categories_title">Kategori</string>
+    <string name="search_placeholder">Cari parameter…</string>
+    <string name="favorites_coming_soon">Favorit segera hadir…</string>
+    <string name="content_area_placeholder">Area Konten</string>
+
+    <!-- Camera Selector -->
+    <string name="camera_label_format">Kamera %1$s</string>
+
+    <!-- Overview Screen -->
+    <string name="hardware_level_label">LEVEL PERANGKAT KERAS</string>
+    <string name="hardware_level_cd_format">Level perangkat keras: %1$s</string>
+    <string name="key_features_title">Fitur Utama</string>
+
+    <!-- Feature Labels -->
+    <string name="feature_resolution">Resolusi</string>
+    <string name="feature_max_fps">FPS Maks</string>
+    <string name="feature_raw">RAW</string>
+    <string name="feature_capture">Pengambilan</string>
+    <string name="feature_flash">Flash</string>
+    <string name="feature_flash_feature">Fitur Flash</string>
+    <string name="feature_ois">OIS</string>
+    <string name="feature_stabilization">Stabilisasi</string>
+    <string name="feature_face_detection">Deteksi Wajah</string>
+    <string name="feature_ai_feature">Fitur AI</string>
+
+    <!-- Status Strings -->
+    <string name="status_supported">Didukung</string>
+    <string name="status_not_supported">Tidak Didukung</string>
+
+    <!-- Detail Screen -->
+    <string name="detail_value_label">Nilai</string>
+    <string name="detail_info_label">Info</string>
+    <string name="detail_key_label">Kunci</string>
+    <string name="detail_category_label">Kategori</string>
+    <string name="detail_raw_value_label">Nilai Mentah</string>
+    <string name="error_parameter_not_found">Parameter tidak ditemukan</string>
+
+    <string name="camera_params_title">Parameter Kamera</string>
+
+    <!-- Camera Facings -->
+    <string name="camera_facing_back">Kamera Belakang</string>
+    <string name="camera_facing_front">Kamera Depan</string>
+    <string name="camera_facing_external">Kamera Eksternal</string>
+    <string name="camera_facing_unknown">Kamera Tidak Diketahui</string>
+
+    <!-- Categories -->
+    <string name="category_sensor">Sensor</string>
+    <string name="category_lens">Lensa</string>
+    <string name="category_ae">AE (Auto Exposure)</string>
+    <string name="category_af">AF (Auto Focus)</string>
+    <string name="category_awb">AWB (White Balance)</string>
+    <string name="category_output">Output</string>
+    <string name="category_request">Permintaan</string>
+    <string name="category_statistics">Statistik</string>
+    <string name="category_other">Lainnya</string>
+
+    <!-- Hardware Levels -->
+    <string name="hw_level_legacy">Legacy</string>
+    <string name="hw_level_external">Eksternal</string>
+    <string name="hw_level_limited">Terbatas</string>
+    <string name="hw_level_full">Penuh</string>
+    <string name="hw_level_3">3</string>
+
+    <!-- Feature Flags Display Names -->
+    <string name="feature_manual_exp">Eksposur Manual</string>
+    <string name="feature_manual_focus">Fokus Manual</string>
+    <string name="feature_redeye">Mata Merah</string>
+    <string name="feature_hdr">HDR</string>
+    <string name="feature_yuv_repro">Reprosesi YUV</string>
+
+    <!-- Modes -->
+    <string name="mode_off">MATI</string>
+    <string name="mode_on">NYALA</string>
+    <string name="mode_auto">OTOMATIS</string>
+    <string name="mode_flash_auto">Flash Otomatis</string>
+    <string name="mode_flash_red_eye">Flash Mata Merah</string>
+    <string name="mode_flash_external">Flash Eksternal</string>
+    <string name="mode_flash_always">Flash SELALU</string>
+    <string name="mode_continuous_picture">Gambar Berkelanjutan</string>
+    <string name="mode_continuous_video">Video Berkelanjutan</string>
+    <string name="mode_edof">EDOF</string>
+    <string name="mode_macro">Makro</string>
+    <string name="mode_incandescent">PIJAR</string>
+    <string name="mode_fluorescent">FLUORESEN</string>
+    <string name="mode_warm_fluorescent">FLUORESEN_HANGAT</string>
+    <string name="mode_daylight">CAHAYA_SIANG</string>
+    <string name="mode_cloudy_daylight">BERAWAN</string>
+    <string name="mode_twilight">SENJA</string>
+    <string name="mode_shade">TEDUH</string>
+    <string name="mode_use_scene_mode">GUNAKAN_MODE_ADEGAN</string>
+    <string name="mode_off_keep_state">MATI_JAGA_STATUS</string>
+    <string name="mode_mono">MONO</string>
+    <string name="mode_negative">Negatif</string>
+    <string name="mode_solarize">Solarisasi</string>
+    <string name="mode_sepia">SEPIA</string>
+    <string name="mode_posterize">Posterisasi</string>
+    <string name="mode_whiteboard">Papan Tulis Putih</string>
+    <string name="mode_blackboard">Papan Tulis Hitam</string>
+    <string name="mode_aqua">AIR</string>
+    <string name="mode_disabled">DINONAKTIFKAN</string>
+    <string name="mode_face_priority">Prioritas Wajah</string>
+    <string name="mode_action">AKSI</string>
+    <string name="mode_portrait">POTRET</string>
+    <string name="mode_landscape">LANSKAP</string>
+    <string name="mode_night">MALAM</string>
+    <string name="mode_night_portrait">POTRET MALAM</string>
+    <string name="mode_theatre">TEATER</string>
+    <string name="mode_beach">PANTAI</string>
+    <string name="mode_snow">SALJU</string>
+    <string name="mode_sunset">MATAHARI TERBENAM</string>
+    <string name="mode_steadyphoto">Foto Stabil</string>
+    <string name="mode_fireworks">Kembang Api</string>
+    <string name="mode_sports">Olahraga</string>
+    <string name="mode_party">Pesta</string>
+    <string name="mode_candlelight">Cahaya Lilin</string>
+    <string name="mode_barcode">Kode Batang</string>
+    <string name="mode_high_speed_video">Video Kecepatan Tinggi</string>
+    <string name="mode_fast">CEPAT</string>
+    <string name="mode_high_quality">KUALITAS TINGGI</string>
+    <string name="mode_minimal">MINIMAL</string>
+    <string name="mode_zero_shutter_lag">Tanpa Penundaan Rana</string>
+    <string name="mode_quality">KUALITAS</string>
+</resources>

@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">카메라 파라미터</string>
+    <string name="about_title">카메라 파라미터 정보</string>
+    <string name="about_description">Android Camera2 API 기능을 탐색하기 위한 강력한 진단 도구입니다.</string>
+    <string name="menu_privacy_policy">개인정보 처리방침</string>
+    <string name="menu_rate_app">Play 스토어에서 평가</string>
+    <string name="menu_about">정보</string>
+
+    <!-- Navigation Labels -->
+    <string name="nav_overview">개요</string>
+    <string name="nav_categories">카테고리</string>
+    <string name="nav_raw_json">리소스</string>
+    <string name="nav_favorites">즐겨찾기</string>
+    <string name="nav_detail">상세 정보</string>
+
+    <!-- Accessibility & Content Descriptions -->
+    <string name="cd_menu">메뉴</string>
+    <string name="cd_select_camera">카메라 선택</string>
+    <string name="cd_back">뒤로</string>
+    <string name="cd_copy">복사</string>
+    <string name="cd_share">공유</string>
+    <string name="cd_copy_info">정보 복사</string>
+
+    <!-- Screen Content -->
+    <string name="screen_categories_title">카테고리</string>
+    <string name="search_placeholder">파라미터 검색…</string>
+    <string name="favorites_coming_soon">즐겨찾기 기능 곧 출시 예정…</string>
+    <string name="content_area_placeholder">콘텐츠 영역</string>
+
+    <!-- Camera Selector -->
+    <string name="camera_label_format">카메라 %1$s</string>
+
+    <!-- Overview Screen -->
+    <string name="hardware_level_label">하드웨어 레벨</string>
+    <string name="hardware_level_cd_format">하드웨어 레벨: %1$s</string>
+    <string name="key_features_title">주요 기능</string>
+
+    <!-- Feature Labels -->
+    <string name="feature_resolution">해상도</string>
+    <string name="feature_max_fps">최대 FPS</string>
+    <string name="feature_raw">RAW</string>
+    <string name="feature_capture">캡처</string>
+    <string name="feature_flash">플래시</string>
+    <string name="feature_flash_feature">플래시 기능</string>
+    <string name="feature_ois">광학식 손떨림 보정(OIS)</string>
+    <string name="feature_stabilization">손떨림 보정</string>
+    <string name="feature_face_detection">얼굴 인식</string>
+    <string name="feature_ai_feature">AI 기능</string>
+
+    <!-- Status Strings -->
+    <string name="status_supported">지원됨</string>
+    <string name="status_not_supported">지원 안 됨</string>
+
+    <!-- Detail Screen -->
+    <string name="detail_value_label">값</string>
+    <string name="detail_info_label">정보</string>
+    <string name="detail_key_label">키</string>
+    <string name="detail_category_label">카테고리</string>
+    <string name="detail_raw_value_label">원본 값</string>
+    <string name="error_parameter_not_found">파라미터를 찾을 수 없습니다</string>
+
+    <string name="camera_params_title">카메라 파라미터</string>
+
+    <!-- Camera Facings -->
+    <string name="camera_facing_back">후면 카메라</string>
+    <string name="camera_facing_front">전면 카메라</string>
+    <string name="camera_facing_external">외부 카메라</string>
+    <string name="camera_facing_unknown">알 수 없는 카메라</string>
+
+    <!-- Categories -->
+    <string name="category_sensor">센서</string>
+    <string name="category_lens">렌즈</string>
+    <string name="category_ae">AE (자동 노출)</string>
+    <string name="category_af">AF (자동 초점)</string>
+    <string name="category_awb">AWB (화이트 밸런스)</string>
+    <string name="category_output">출력</string>
+    <string name="category_request">요청</string>
+    <string name="category_statistics">통계</string>
+    <string name="category_other">기타</string>
+
+    <!-- Hardware Levels -->
+    <string name="hw_level_legacy">레거시(Legacy)</string>
+    <string name="hw_level_external">외부</string>
+    <string name="hw_level_limited">제한됨</string>
+    <string name="hw_level_full">전체 지원</string>
+    <string name="hw_level_3">레벨 3</string>
+
+    <!-- Feature Flags Display Names -->
+    <string name="feature_manual_exp">수동 노출</string>
+    <string name="feature_manual_focus">수동 초점</string>
+    <string name="feature_redeye">적목 방지</string>
+    <string name="feature_hdr">HDR</string>
+    <string name="feature_yuv_repro">YUV 재처리</string>
+
+    <!-- Modes -->
+    <string name="mode_off">꺼짐</string>
+    <string name="mode_on">켜짐</string>
+    <string name="mode_auto">자동</string>
+    <string name="mode_flash_auto">플래시 자동</string>
+    <string name="mode_flash_red_eye">플래시 적목 방지</string>
+    <string name="mode_flash_external">외부 플래시</string>
+    <string name="mode_flash_always">플래시 항상 켬</string>
+    <string name="mode_continuous_picture">연속 사진</string>
+    <string name="mode_continuous_video">연속 비디오</string>
+    <string name="mode_edof">EDOF</string>
+    <string name="mode_macro">매크로</string>
+    <string name="mode_incandescent">백열등</string>
+    <string name="mode_fluorescent">형광등</string>
+    <string name="mode_warm_fluorescent">온백색 형광등</string>
+    <string name="mode_daylight">태양광</string>
+    <string name="mode_cloudy_daylight">흐림</string>
+    <string name="mode_twilight">황혼</string>
+    <string name="mode_shade">그늘</string>
+    <string name="mode_use_scene_mode">장면 모드 사용</string>
+    <string name="mode_off_keep_state">꺼짐(상태 유지)</string>
+    <string name="mode_mono">모노</string>
+    <string name="mode_negative">네거티브</string>
+    <string name="mode_solarize">솔라라이즈</string>
+    <string name="mode_sepia">세피아</string>
+    <string name="mode_posterize">포스터라이즈</string>
+    <string name="mode_whiteboard">화이트보드</string>
+    <string name="mode_blackboard">블랙보드</string>
+    <string name="mode_aqua">수중</string>
+    <string name="mode_disabled">비활성화됨</string>
+    <string name="mode_face_priority">얼굴 우선</string>
+    <string name="mode_action">액션</string>
+    <string name="mode_portrait">인물</string>
+    <string name="mode_landscape">풍경</string>
+    <string name="mode_night">야경</string>
+    <string name="mode_night_portrait">야간 인물</string>
+    <string name="mode_theatre">영화관</string>
+    <string name="mode_beach">해변</string>
+    <string name="mode_snow">설경</string>
+    <string name="mode_sunset">일몰</string>
+    <string name="mode_steadyphoto">흔들림 방지 사진</string>
+    <string name="mode_fireworks">불꽃놀이</string>
+    <string name="mode_sports">스포츠</string>
+    <string name="mode_party">파티</string>
+    <string name="mode_candlelight">촛불</string>
+    <string name="mode_barcode">바코드</string>
+    <string name="mode_high_speed_video">고속 비디오</string>
+    <string name="mode_fast">빠르게</string>
+    <string name="mode_high_quality">고품질</string>
+    <string name="mode_minimal">최소</string>
+    <string name="mode_zero_shutter_lag">셔터 지연 없음</string>
+    <string name="mode_quality">품질 우선</string>
+</resources>

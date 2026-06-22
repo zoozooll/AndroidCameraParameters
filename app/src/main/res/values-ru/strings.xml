@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Параметры камеры</string>
+    <string name="about_title">О Параметрах камеры</string>
+    <string name="about_description">Мощный диагностический инструмент для изучения возможностей Android Camera2 API.</string>
+    <string name="menu_privacy_policy">Политика конфиденциальности</string>
+    <string name="menu_rate_app">Оценить в Play Store</string>
+    <string name="menu_about">О программе</string>
+
+    <!-- Navigation Labels -->
+    <string name="nav_overview">Обзор</string>
+    <string name="nav_categories">Категории</string>
+    <string name="nav_raw_json">Ресурс</string>
+    <string name="nav_favorites">Избранное</string>
+    <string name="nav_detail">Детали</string>
+
+    <!-- Accessibility & Content Descriptions -->
+    <string name="cd_menu">Меню</string>
+    <string name="cd_select_camera">Выбрать камеру</string>
+    <string name="cd_back">Назад</string>
+    <string name="cd_copy">Копировать</string>
+    <string name="cd_share">Поделиться</string>
+    <string name="cd_copy_info">Копировать информацию</string>
+
+    <!-- Screen Content -->
+    <string name="screen_categories_title">Категории</string>
+    <string name="search_placeholder">Поиск параметров…</string>
+    <string name="favorites_coming_soon">Избранное скоро появится…</string>
+    <string name="content_area_placeholder">Область контента</string>
+
+    <!-- Camera Selector -->
+    <string name="camera_label_format">Камера %1$s</string>
+
+    <!-- Overview Screen -->
+    <string name="hardware_level_label">УРОВЕНЬ ОБОРУДОВАНИЯ</string>
+    <string name="hardware_level_cd_format">Уровень оборудования: %1$s</string>
+    <string name="key_features_title">Ключевые особенности</string>
+
+    <!-- Feature Labels -->
+    <string name="feature_resolution">Разрешение</string>
+    <string name="feature_max_fps">Макс. FPS</string>
+    <string name="feature_raw">RAW</string>
+    <string name="feature_capture">Съемка</string>
+    <string name="feature_flash">Вспышка</string>
+    <string name="feature_flash_feature">Функция вспышки</string>
+    <string name="feature_ois">OIS</string>
+    <string name="feature_stabilization">Стабилизация</string>
+    <string name="feature_face_detection">Распознавание лиц</string>
+    <string name="feature_ai_feature">Функция ИИ</string>
+
+    <!-- Status Strings -->
+    <string name="status_supported">Поддерживается</string>
+    <string name="status_not_supported">Не поддерживается</string>
+
+    <!-- Detail Screen -->
+    <string name="detail_value_label">Значение</string>
+    <string name="detail_info_label">Инфо</string>
+    <string name="detail_key_label">Ключ</string>
+    <string name="detail_category_label">Категория</string>
+    <string name="detail_raw_value_label">Исходное значение</string>
+    <string name="error_parameter_not_found">Параметр не найден</string>
+
+    <string name="camera_params_title">Параметры камеры</string>
+
+    <!-- Camera Facings -->
+    <string name="camera_facing_back">Задняя камера</string>
+    <string name="camera_facing_front">Фронтальная камера</string>
+    <string name="camera_facing_external">Внешняя камера</string>
+    <string name="camera_facing_unknown">Неизвестная камера</string>
+
+    <!-- Categories -->
+    <string name="category_sensor">Сенсор</string>
+    <string name="category_lens">Объектив</string>
+    <string name="category_ae">AE (Автоэкспозиция)</string>
+    <string name="category_af">AF (Автофокус)</string>
+    <string name="category_awb">AWB (Баланс белого)</string>
+    <string name="category_output">Выход</string>
+    <string name="category_request">Запрос</string>
+    <string name="category_statistics">Статистика</string>
+    <string name="category_other">Другое</string>
+
+    <!-- Hardware Levels -->
+    <string name="hw_level_legacy">Устаревший</string>
+    <string name="hw_level_external">Внешний</string>
+    <string name="hw_level_limited">Ограниченный</string>
+    <string name="hw_level_full">Полный</string>
+    <string name="hw_level_3">3</string>
+
+    <!-- Feature Flags Display Names -->
+    <string name="feature_manual_exp">Ручн. эксп.</string>
+    <string name="feature_manual_focus">Ручн. фокус</string>
+    <string name="feature_redeye">Красные глаза</string>
+    <string name="feature_hdr">HDR</string>
+    <string name="feature_yuv_repro">YUV-обработка</string>
+
+    <!-- Modes -->
+    <string name="mode_off">ВЫКЛ</string>
+    <string name="mode_on">ВКЛ</string>
+    <string name="mode_auto">АВТО</string>
+    <string name="mode_flash_auto">Вспышка Авто</string>
+    <string name="mode_flash_red_eye">Вспышка Красные глаза</string>
+    <string name="mode_flash_external">Вспышка Внешняя</string>
+    <string name="mode_flash_always">Вспышка ВСЕГДА</string>
+    <string name="mode_continuous_picture">Непрерывное фото</string>
+    <string name="mode_continuous_video">Непрерывное видео</string>
+    <string name="mode_edof">EDOF</string>
+    <string name="mode_macro">Макро</string>
+    <string name="mode_incandescent">ЛАМПА_НАКАЛИВАНИЯ</string>
+    <string name="mode_fluorescent">ФЛУОРЕСЦЕНТ</string>
+    <string name="mode_warm_fluorescent">ТЕПЛЫЙ_ФЛУОРЕСЦЕНТ</string>
+    <string name="mode_daylight">ДНЕВНОЙ_СВЕТ</string>
+    <string name="mode_cloudy_daylight">ОБЛАЧНО</string>
+    <string name="mode_twilight">СУМЕРКИ</string>
+    <string name="mode_shade">ТЕНЬ</string>
+    <string name="mode_use_scene_mode">РЕЖИМ_СЦЕНЫ</string>
+    <string name="mode_off_keep_state">ВЫКЛ_СОХР_СОСТОЯНИЕ</string>
+    <string name="mode_mono">МОНО</string>
+    <string name="mode_negative">Негатив</string>
+    <string name="mode_solarize">Соляризация</string>
+    <string name="mode_sepia">СЕПИЯ</string>
+    <string name="mode_posterize">Постеризация</string>
+    <string name="mode_whiteboard">Белая доска</string>
+    <string name="mode_blackboard">Черная доска</string>
+    <string name="mode_aqua">ВОДА</string>
+    <string name="mode_disabled">ОТКЛЮЧЕНО</string>
+    <string name="mode_face_priority">Приоритет лица</string>
+    <string name="mode_action">ДЕЙСТВИЕ</string>
+    <string name="mode_portrait">ПОРТРЕТ</string>
+    <string name="mode_landscape">ПЕЙЗАЖ</string>
+    <string name="mode_night">НОЧЬ</string>
+    <string name="mode_night_portrait">НОЧНОЙ ПОРТРЕТ</string>
+    <string name="mode_theatre">ТЕАТР</string>
+    <string name="mode_beach">ПЛЯЖ</string>
+    <string name="mode_snow">СНЕГ</string>
+    <string name="mode_sunset">ЗАКАТ</string>
+    <string name="mode_steadyphoto">Стабильное фото</string>
+    <string name="mode_fireworks">Фейерверки</string>
+    <string name="mode_sports">Спорт</string>
+    <string name="mode_party">Вечеринка</string>
+    <string name="mode_candlelight">Свет свечи</string>
+    <string name="mode_barcode">Штрих-код</string>
+    <string name="mode_high_speed_video">Скоростное видео</string>
+    <string name="mode_fast">БЫСТРО</string>
+    <string name="mode_high_quality">ВЫСОКОЕ КАЧЕСТВО</string>
+    <string name="mode_minimal">МИНИМАЛЬНО</string>
+    <string name="mode_zero_shutter_lag">Без задержки затвора</string>
+    <string name="mode_quality">КАЧЕСТВО</string>
+</resources>
