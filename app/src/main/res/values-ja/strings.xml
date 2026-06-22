@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">カメラパラメータ</string>
+    <string name="about_title">カメラパラメータについて</string>
+    <string name="about_description">Android Camera2 APIの機能を探索するための強力な診断ツール。</string>
+    <string name="menu_privacy_policy">プライバシーポリシー</string>
+    <string name="menu_rate_app">Playストアで評価</string>
+    <string name="menu_about">アプリについて</string>
+
+    <!-- Navigation Labels -->
+    <string name="nav_overview">概要</string>
+    <string name="nav_categories">カテゴリ</string>
+    <string name="nav_raw_json">リソース</string>
+    <string name="nav_favorites">お気に入り</string>
+    <string name="nav_detail">詳細</string>
+
+    <!-- Accessibility & Content Descriptions -->
+    <string name="cd_menu">メニュー</string>
+    <string name="cd_select_camera">カメラを選択</string>
+    <string name="cd_back">戻る</string>
+    <string name="cd_copy">コピー</string>
+    <string name="cd_share">共有</string>
+    <string name="cd_copy_info">情報をコピー</string>
+
+    <!-- Screen Content -->
+    <string name="screen_categories_title">カテゴリ</string>
+    <string name="search_placeholder">パラメータを検索…</string>
+    <string name="favorites_coming_soon">お気に入り機能は近日公開予定…</string>
+    <string name="content_area_placeholder">コンテンツエリア</string>
+
+    <!-- Camera Selector -->
+    <string name="camera_label_format">カメラ %1$s</string>
+
+    <!-- Overview Screen -->
+    <string name="hardware_level_label">ハードウェアレベル</string>
+    <string name="hardware_level_cd_format">ハードウェアレベル: %1$s</string>
+    <string name="key_features_title">主な機能</string>
+
+    <!-- Feature Labels -->
+    <string name="feature_resolution">解像度</string>
+    <string name="feature_max_fps">最大FPS</string>
+    <string name="feature_raw">RAW</string>
+    <string name="feature_capture">キャプチャ</string>
+    <string name="feature_flash">フラッシュ</string>
+    <string name="feature_flash_feature">フラッシュ機能</string>
+    <string name="feature_ois">光学手ブレ補正</string>
+    <string name="feature_stabilization">手ブレ補正</string>
+    <string name="feature_face_detection">顔認識</string>
+    <string name="feature_ai_feature">AI機能</string>
+
+    <!-- Status Strings -->
+    <string name="status_supported">対応</string>
+    <string name="status_not_supported">非対応</string>
+
+    <!-- Detail Screen -->
+    <string name="detail_value_label">値</string>
+    <string name="detail_info_label">情報</string>
+    <string name="detail_key_label">キー</string>
+    <string name="detail_category_label">カテゴリ</string>
+    <string name="detail_raw_value_label">生の値</string>
+    <string name="error_parameter_not_found">パラメータが見つかりません</string>
+
+    <string name="camera_params_title">カメラパラメータ</string>
+
+    <!-- Camera Facings -->
+    <string name="camera_facing_back">背面カメラ</string>
+    <string name="camera_facing_front">前面カメラ</string>
+    <string name="camera_facing_external">外部カメラ</string>
+    <string name="camera_facing_unknown">不明なカメラ</string>
+
+    <!-- Categories -->
+    <string name="category_sensor">センサー</string>
+    <string name="category_lens">レンズ</string>
+    <string name="category_ae">AE (自動露出)</string>
+    <string name="category_af">AF (オートフォーカス)</string>
+    <string name="category_awb">AWB (ホワイトバランス)</string>
+    <string name="category_output">出力</string>
+    <string name="category_request">リクエスト</string>
+    <string name="category_statistics">統計</string>
+    <string name="category_other">その他</string>
+
+    <!-- Hardware Levels -->
+    <string name="hw_level_legacy">レガシー</string>
+    <string name="hw_level_external">外部</string>
+    <string name="hw_level_limited">制限付き</string>
+    <string name="hw_level_full">フル</string>
+    <string name="hw_level_3">レベル3</string>
+
+    <!-- Feature Flags Display Names -->
+    <string name="feature_manual_exp">手動露出</string>
+    <string name="feature_manual_focus">マニュアルフォーカス</string>
+    <string name="feature_redeye">赤目軽減</string>
+    <string name="feature_hdr">HDR</string>
+    <string name="feature_yuv_repro">YUV再処理</string>
+
+    <!-- Modes -->
+    <string name="mode_off">オフ</string>
+    <string name="mode_on">オン</string>
+    <string name="mode_auto">オート</string>
+    <string name="mode_flash_auto">フラッシュオート</string>
+    <string name="mode_flash_red_eye">フラッシュ赤目軽減</string>
+    <string name="mode_flash_external">外部フラッシュ</string>
+    <string name="mode_flash_always">フラッシュ常時</string>
+    <string name="mode_continuous_picture">連続撮影</string>
+    <string name="mode_continuous_video">連続ビデオ</string>
+    <string name="mode_edof">EDOF</string>
+    <string name="mode_macro">マクロ</string>
+    <string name="mode_incandescent">白熱灯</string>
+    <string name="mode_fluorescent">蛍光灯</string>
+    <string name="mode_warm_fluorescent">温白色蛍光灯</string>
+    <string name="mode_daylight">日光</string>
+    <string name="mode_cloudy_daylight">曇天</string>
+    <string name="mode_twilight">薄暮</string>
+    <string name="mode_shade">日陰</string>
+    <string name="mode_use_scene_mode">シーンモード使用</string>
+    <string name="mode_off_keep_state">オフ(状態維持)</string>
+    <string name="mode_mono">モノクロ</string>
+    <string name="mode_negative">ネガ</string>
+    <string name="mode_solarize">ソラリゼーション</string>
+    <string name="mode_sepia">セピア</string>
+    <string name="mode_posterize">ポスタリゼーション</string>
+    <string name="mode_whiteboard">ホワイトボード</string>
+    <string name="mode_blackboard">ブラックボード</string>
+    <string name="mode_aqua">水中</string>
+    <string name="mode_disabled">無効</string>
+    <string name="mode_face_priority">顔優先</string>
+    <string name="mode_action">アクション</string>
+    <string name="mode_portrait">ポートレート</string>
+    <string name="mode_landscape">風景</string>
+    <string name="mode_night">夜景</string>
+    <string name="mode_night_portrait">夜景ポートレート</string>
+    <string name="mode_theatre">シアター</string>
+    <string name="mode_beach">ビーチ</string>
+    <string name="mode_snow">雪景</string>
+    <string name="mode_sunset">夕景</string>
+    <string name="mode_steadyphoto">手ブレ補正撮影</string>
+    <string name="mode_fireworks">花火</string>
+    <string name="mode_sports">スポーツ</string>
+    <string name="mode_party">パーティー</string>
+    <string name="mode_candlelight">キャンドルライト</string>
+    <string name="mode_barcode">バーコード</string>
+    <string name="mode_high_speed_video">ハイスピードビデオ</string>
+    <string name="mode_fast">高速</string>
+    <string name="mode_high_quality">高品質</string>
+    <string name="mode_minimal">最小</string>
+    <string name="mode_zero_shutter_lag">ゼロシャッターラグ</string>
+    <string name="mode_quality">画質優先</string>
+</resources>

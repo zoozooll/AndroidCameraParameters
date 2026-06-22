@@ -1,5 +1,6 @@
 package com.aaron.cameraparams.camera
 
+import android.content.Context
 import android.graphics.ImageFormat
 import android.graphics.PixelFormat
 import android.hardware.camera2.CameraCharacteristics
@@ -12,6 +13,7 @@ import android.hardware.camera2.CameraMetadata
 import android.hardware.camera2.CameraMetadata.*
 import android.util.Rational
 import android.util.Size
+import com.aaron.cameraparams.R
 import kotlin.collections.HashMap
 
 private val cameraSizeComparator = Comparator<Size> { o1, o2 ->
@@ -136,17 +138,17 @@ val ALL_KEYS: ArrayList<CameraCharacteristics.Key<*>>
     }
 
 
-fun getAeAvailableModes(value: IntArray): String {
+fun getAeAvailableModes(context: Context, value: IntArray): String {
     val sb = StringBuilder()
     sb.append("[")
     for (i in value) {
         when (i) {
-            CONTROL_AE_MODE_OFF -> sb.append("OFF")
-            CONTROL_AE_MODE_ON -> sb.append("ON")
-            CONTROL_AE_MODE_ON_AUTO_FLASH -> sb.append("Flash Auto")
-            CONTROL_AE_MODE_ON_AUTO_FLASH_REDEYE -> sb.append("Flash Red Eye")
-            CONTROL_AE_MODE_ON_EXTERNAL_FLASH -> sb.append("Flash External")
-            CONTROL_AE_MODE_ON_ALWAYS_FLASH -> sb.append("Flash ALWAYS")
+            CONTROL_AE_MODE_OFF -> sb.append(context.getString(R.string.mode_off))
+            CONTROL_AE_MODE_ON -> sb.append(context.getString(R.string.mode_on))
+            CONTROL_AE_MODE_ON_AUTO_FLASH -> sb.append(context.getString(R.string.mode_flash_auto))
+            CONTROL_AE_MODE_ON_AUTO_FLASH_REDEYE -> sb.append(context.getString(R.string.mode_flash_red_eye))
+            CONTROL_AE_MODE_ON_EXTERNAL_FLASH -> sb.append(context.getString(R.string.mode_flash_external))
+            CONTROL_AE_MODE_ON_ALWAYS_FLASH -> sb.append(context.getString(R.string.mode_flash_always))
             else -> sb.append(i)
         }
         sb.append(",\n ")
@@ -156,17 +158,17 @@ fun getAeAvailableModes(value: IntArray): String {
     return sb.toString()
 }
 
-fun getAfAvailableModes(value: IntArray): String {
+fun getAfAvailableModes(context: Context, value: IntArray): String {
     val sb = StringBuilder()
     sb.append("[")
     for (i in value) {
         when (i) {
-            CONTROL_AF_MODE_OFF -> sb.append("OFF")
-            CONTROL_AF_MODE_AUTO -> sb.append("AUTO")
-            CONTROL_AF_MODE_CONTINUOUS_PICTURE -> sb.append("Continuous Picture")
-            CONTROL_AF_MODE_CONTINUOUS_VIDEO -> sb.append("Continuous Video")
-            CONTROL_AF_MODE_EDOF -> sb.append("EDOF")
-            CONTROL_AF_MODE_MACRO -> sb.append("Macro")
+            CONTROL_AF_MODE_OFF -> sb.append(context.getString(R.string.mode_off))
+            CONTROL_AF_MODE_AUTO -> sb.append(context.getString(R.string.mode_auto))
+            CONTROL_AF_MODE_CONTINUOUS_PICTURE -> sb.append(context.getString(R.string.mode_continuous_picture))
+            CONTROL_AF_MODE_CONTINUOUS_VIDEO -> sb.append(context.getString(R.string.mode_continuous_video))
+            CONTROL_AF_MODE_EDOF -> sb.append(context.getString(R.string.mode_edof))
+            CONTROL_AF_MODE_MACRO -> sb.append(context.getString(R.string.mode_macro))
             else -> sb.append(i)
         }
         sb.append(", \n")
@@ -176,20 +178,20 @@ fun getAfAvailableModes(value: IntArray): String {
     return sb.toString()
 }
 
-fun getAwbAvailableModes(value: IntArray): String {
+fun getAwbAvailableModes(context: Context, value: IntArray): String {
     val sb = StringBuilder()
     sb.append("[")
     for (i in value) {
         when (i) {
-            CONTROL_AWB_MODE_OFF -> sb.append("OFF")
-            CONTROL_AWB_MODE_AUTO -> sb.append("AUTO")
-            CONTROL_AWB_MODE_INCANDESCENT -> sb.append("INCANDESCENT")
-            CONTROL_AWB_MODE_FLUORESCENT -> sb.append("FLUORESCENT")
-            CONTROL_AWB_MODE_WARM_FLUORESCENT -> sb.append("WARM_FLUORESCENT")
-            CONTROL_AWB_MODE_DAYLIGHT -> sb.append("DAYLIGHT")
-            CONTROL_AWB_MODE_CLOUDY_DAYLIGHT -> sb.append("CLOUDY_DAYLIGHT")
-            CONTROL_AWB_MODE_TWILIGHT -> sb.append("TWILIGHT")
-            CONTROL_AWB_MODE_SHADE -> sb.append("SHADE")
+            CONTROL_AWB_MODE_OFF -> sb.append(context.getString(R.string.mode_off))
+            CONTROL_AWB_MODE_AUTO -> sb.append(context.getString(R.string.mode_auto))
+            CONTROL_AWB_MODE_INCANDESCENT -> sb.append(context.getString(R.string.mode_incandescent))
+            CONTROL_AWB_MODE_FLUORESCENT -> sb.append(context.getString(R.string.mode_fluorescent))
+            CONTROL_AWB_MODE_WARM_FLUORESCENT -> sb.append(context.getString(R.string.mode_warm_fluorescent))
+            CONTROL_AWB_MODE_DAYLIGHT -> sb.append(context.getString(R.string.mode_daylight))
+            CONTROL_AWB_MODE_CLOUDY_DAYLIGHT -> sb.append(context.getString(R.string.mode_cloudy_daylight))
+            CONTROL_AWB_MODE_TWILIGHT -> sb.append(context.getString(R.string.mode_twilight))
+            CONTROL_AWB_MODE_SHADE -> sb.append(context.getString(R.string.mode_shade))
             else -> sb.append(i)
         }
         sb.append(", \n")
@@ -199,15 +201,15 @@ fun getAwbAvailableModes(value: IntArray): String {
     return sb.toString()
 }
 
-fun getAvailableModes(value: IntArray): String {
+fun getAvailableModes(context: Context, value: IntArray): String {
     val sb = StringBuilder()
     sb.append("[")
     for (i in value) {
         when (i) {
-            CONTROL_MODE_OFF -> sb.append("OFF")
-            CONTROL_MODE_AUTO -> sb.append("AUTO")
-            CONTROL_MODE_USE_SCENE_MODE -> sb.append("USE_SCENE_MODE")
-            CONTROL_MODE_OFF_KEEP_STATE -> sb.append("OFF_KEEP_STATE")
+            CONTROL_MODE_OFF -> sb.append(context.getString(R.string.mode_off))
+            CONTROL_MODE_AUTO -> sb.append(context.getString(R.string.mode_auto))
+            CONTROL_MODE_USE_SCENE_MODE -> sb.append(context.getString(R.string.mode_use_scene_mode))
+            CONTROL_MODE_OFF_KEEP_STATE -> sb.append(context.getString(R.string.mode_off_keep_state))
             else -> sb.append(i)
         }
         sb.append(", \n")
@@ -217,20 +219,20 @@ fun getAvailableModes(value: IntArray): String {
     return sb.toString()
 }
 
-fun getAvailableEffects(value: IntArray): String {
+fun getAvailableEffects(context: Context, value: IntArray): String {
     val sb = StringBuilder()
     sb.append("[")
     for (i in value) {
         when (i) {
-            CONTROL_EFFECT_MODE_OFF -> sb.append("OFF")
-            CONTROL_EFFECT_MODE_MONO -> sb.append("MONO")
-            CONTROL_EFFECT_MODE_NEGATIVE -> sb.append("Negative")
-            CONTROL_EFFECT_MODE_SOLARIZE -> sb.append("Solarize")
-            CONTROL_EFFECT_MODE_SEPIA -> sb.append("SEPIA")
-            CONTROL_EFFECT_MODE_POSTERIZE -> sb.append("POSTERIZE")
-            CONTROL_EFFECT_MODE_WHITEBOARD -> sb.append("WHITEBOARD")
-            CONTROL_EFFECT_MODE_BLACKBOARD -> sb.append("BLACKBOARD")
-            CONTROL_EFFECT_MODE_AQUA -> sb.append("AQUA")
+            CONTROL_EFFECT_MODE_OFF -> sb.append(context.getString(R.string.mode_off))
+            CONTROL_EFFECT_MODE_MONO -> sb.append(context.getString(R.string.mode_mono))
+            CONTROL_EFFECT_MODE_NEGATIVE -> sb.append(context.getString(R.string.mode_negative))
+            CONTROL_EFFECT_MODE_SOLARIZE -> sb.append(context.getString(R.string.mode_solarize))
+            CONTROL_EFFECT_MODE_SEPIA -> sb.append(context.getString(R.string.mode_sepia))
+            CONTROL_EFFECT_MODE_POSTERIZE -> sb.append(context.getString(R.string.mode_posterize))
+            CONTROL_EFFECT_MODE_WHITEBOARD -> sb.append(context.getString(R.string.mode_whiteboard))
+            CONTROL_EFFECT_MODE_BLACKBOARD -> sb.append(context.getString(R.string.mode_blackboard))
+            CONTROL_EFFECT_MODE_AQUA -> sb.append(context.getString(R.string.mode_aqua))
             else -> sb.append(i)
         }
         sb.append(", \n")
@@ -240,29 +242,29 @@ fun getAvailableEffects(value: IntArray): String {
     return sb.toString()
 }
 
-fun getAvailableSceneModes(value: IntArray): String {
+fun getAvailableSceneModes(context: Context, value: IntArray): String {
     val sb = StringBuilder()
     sb.append("[")
     for (i in value) {
         when (i) {
-            CONTROL_SCENE_MODE_DISABLED -> sb.append("DISABLED")
-            CONTROL_SCENE_MODE_FACE_PRIORITY -> sb.append("FACE_PRIORITY")
-            CONTROL_SCENE_MODE_ACTION -> sb.append("ACTION")
-            CONTROL_SCENE_MODE_PORTRAIT -> sb.append("PORTRAIT")
-            CONTROL_SCENE_MODE_LANDSCAPE -> sb.append("LANDSCAPE")
-            CONTROL_SCENE_MODE_NIGHT -> sb.append("NIGHT")
-            CONTROL_SCENE_MODE_NIGHT_PORTRAIT -> sb.append("NIGHT_PORTRAIT")
-            CONTROL_SCENE_MODE_THEATRE -> sb.append("THEATRE")
-            CONTROL_SCENE_MODE_BEACH -> sb.append("BEACH")
-            CONTROL_SCENE_MODE_SNOW -> sb.append("SNOW")
-            CONTROL_SCENE_MODE_SUNSET -> sb.append("SUNSET")
-            CONTROL_SCENE_MODE_STEADYPHOTO -> sb.append("STEADYPHOTO")
-            CONTROL_SCENE_MODE_FIREWORKS -> sb.append("FIREWORKS")
-            CONTROL_SCENE_MODE_SPORTS -> sb.append("SPORTS")
-            CONTROL_SCENE_MODE_PARTY -> sb.append("PARTY")
-            CONTROL_SCENE_MODE_CANDLELIGHT -> sb.append("CANDLELIGHT")
-            CONTROL_SCENE_MODE_BARCODE -> sb.append("BARCODE")
-            CONTROL_SCENE_MODE_HIGH_SPEED_VIDEO -> sb.append("HIGH_SPEED_VIDEO")
+            CONTROL_SCENE_MODE_DISABLED -> sb.append(context.getString(R.string.mode_disabled))
+            CONTROL_SCENE_MODE_FACE_PRIORITY -> sb.append(context.getString(R.string.mode_face_priority))
+            CONTROL_SCENE_MODE_ACTION -> sb.append(context.getString(R.string.mode_action))
+            CONTROL_SCENE_MODE_PORTRAIT -> sb.append(context.getString(R.string.mode_portrait))
+            CONTROL_SCENE_MODE_LANDSCAPE -> sb.append(context.getString(R.string.mode_landscape))
+            CONTROL_SCENE_MODE_NIGHT -> sb.append(context.getString(R.string.mode_night))
+            CONTROL_SCENE_MODE_NIGHT_PORTRAIT -> sb.append(context.getString(R.string.mode_night_portrait))
+            CONTROL_SCENE_MODE_THEATRE -> sb.append(context.getString(R.string.mode_theatre))
+            CONTROL_SCENE_MODE_BEACH -> sb.append(context.getString(R.string.mode_beach))
+            CONTROL_SCENE_MODE_SNOW -> sb.append(context.getString(R.string.mode_snow))
+            CONTROL_SCENE_MODE_SUNSET -> sb.append(context.getString(R.string.mode_sunset))
+            CONTROL_SCENE_MODE_STEADYPHOTO -> sb.append(context.getString(R.string.mode_steadyphoto))
+            CONTROL_SCENE_MODE_FIREWORKS -> sb.append(context.getString(R.string.mode_fireworks))
+            CONTROL_SCENE_MODE_SPORTS -> sb.append(context.getString(R.string.mode_sports))
+            CONTROL_SCENE_MODE_PARTY -> sb.append(context.getString(R.string.mode_party))
+            CONTROL_SCENE_MODE_CANDLELIGHT -> sb.append(context.getString(R.string.mode_candlelight))
+            CONTROL_SCENE_MODE_BARCODE -> sb.append(context.getString(R.string.mode_barcode))
+            CONTROL_SCENE_MODE_HIGH_SPEED_VIDEO -> sb.append(context.getString(R.string.mode_high_speed_video))
             CONTROL_SCENE_MODE_HDR -> sb.append("HDR")
             else -> sb.append(i)
         }
@@ -273,16 +275,16 @@ fun getAvailableSceneModes(value: IntArray): String {
     return sb.toString()
 }
 
-fun getAvailableNoiseReductionModes(value: IntArray): String {
+fun getAvailableNoiseReductionModes(context: Context, value: IntArray): String {
     val sb = StringBuilder()
     sb.append("[")
     for (i in value) {
         when (i) {
-            NOISE_REDUCTION_MODE_OFF -> sb.append("OFF")
-            NOISE_REDUCTION_MODE_FAST -> sb.append("FAST")
-            NOISE_REDUCTION_MODE_HIGH_QUALITY -> sb.append("HIGH_QUALITY")
-            NOISE_REDUCTION_MODE_MINIMAL -> sb.append("MINIMAL")
-            NOISE_REDUCTION_MODE_ZERO_SHUTTER_LAG -> sb.append("ZERO_SHUTTER_LAG")
+            NOISE_REDUCTION_MODE_OFF -> sb.append(context.getString(R.string.mode_off))
+            NOISE_REDUCTION_MODE_FAST -> sb.append(context.getString(R.string.mode_fast))
+            NOISE_REDUCTION_MODE_HIGH_QUALITY -> sb.append(context.getString(R.string.mode_high_quality))
+            NOISE_REDUCTION_MODE_MINIMAL -> sb.append(context.getString(R.string.mode_minimal))
+            NOISE_REDUCTION_MODE_ZERO_SHUTTER_LAG -> sb.append(context.getString(R.string.mode_zero_shutter_lag))
             else -> sb.append(i)
         }
         sb.append(", \n")
@@ -292,14 +294,14 @@ fun getAvailableNoiseReductionModes(value: IntArray): String {
     return sb.toString()
 }
 
-fun getColorCorrectionAvailableAberrationMode(value: IntArray): String {
+fun getColorCorrectionAvailableAberrationMode(context: Context, value: IntArray): String {
     val sb = StringBuilder()
     sb.append("[")
     for (i in value) {
         when (i) {
-            COLOR_CORRECTION_ABERRATION_MODE_OFF -> sb.append("OFF")
-            COLOR_CORRECTION_MODE_FAST -> sb.append("FAST")
-            COLOR_CORRECTION_MODE_HIGH_QUALITY -> sb.append("QUALITY")
+            COLOR_CORRECTION_ABERRATION_MODE_OFF -> sb.append(context.getString(R.string.mode_off))
+            COLOR_CORRECTION_MODE_FAST -> sb.append(context.getString(R.string.mode_fast))
+            COLOR_CORRECTION_MODE_HIGH_QUALITY -> sb.append(context.getString(R.string.mode_quality))
             else -> sb.append(i)
         }
         sb.append(", \n")
@@ -337,22 +339,14 @@ fun getRequestAvailableCapabilities(value: IntArray): String {
     return sb.toString()
 }
 
-fun getHardwareLevelInfo(value: Int): String {
-    val sortedHwLevels = intArrayOf(
-        INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY,
-        INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL,
-        INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED,
-        INFO_SUPPORTED_HARDWARE_LEVEL_FULL,
-        INFO_SUPPORTED_HARDWARE_LEVEL_3)
+fun getHardwareLevelInfo(context: Context, value: Int): String {
     when (value) {
-        INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY -> return (" Legacy ")
-        INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL -> return(" External ")
-        INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED -> return(" Limited ")
-        INFO_SUPPORTED_HARDWARE_LEVEL_FULL -> return(" Full ")
-        INFO_SUPPORTED_HARDWARE_LEVEL_3 -> return(" 3 ")
-        else -> {
-            return ""
-        }
+        INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY -> return context.getString(R.string.hw_level_legacy)
+        INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL -> return context.getString(R.string.hw_level_external)
+        INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED -> return context.getString(R.string.hw_level_limited)
+        INFO_SUPPORTED_HARDWARE_LEVEL_FULL -> return context.getString(R.string.hw_level_full)
+        INFO_SUPPORTED_HARDWARE_LEVEL_3 -> return context.getString(R.string.hw_level_3)
+        else -> return ""
     }
 }
 

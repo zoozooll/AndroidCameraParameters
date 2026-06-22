@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">कैमरा पैरामीटर्स</string>
+    <string name="about_title">कैमरा पैरामीटर्स के बारे में</string>
+    <string name="about_description">Android Camera2 API क्षमताओं को एक्सप्लोर करने के लिए एक शक्तिशाली नैदानिक उपकरण।</string>
+    <string name="menu_privacy_policy">गोपनीयता नीति</string>
+    <string name="menu_rate_app">Play Store पर रेट करें</string>
+    <string name="menu_about">के बारे में</string>
+
+    <!-- Navigation Labels -->
+    <string name="nav_overview">अवलोकन</string>
+    <string name="nav_categories">श्रेणियां</string>
+    <string name="nav_raw_json">संसाधन</string>
+    <string name="nav_favorites">पसंदीदा</string>
+    <string name="nav_detail">विवरण</string>
+
+    <!-- Accessibility & Content Descriptions -->
+    <string name="cd_menu">मेनू</string>
+    <string name="cd_select_camera">कैमरा चुनें</string>
+    <string name="cd_back">पीछे</string>
+    <string name="cd_copy">कॉपी करें</string>
+    <string name="cd_share">शेयर करें</string>
+    <string name="cd_copy_info">जानकारी कॉपी करें</string>
+
+    <!-- Screen Content -->
+    <string name="screen_categories_title">श्रेणियां</string>
+    <string name="search_placeholder">पैरामीटर्स खोजें…</string>
+    <string name="favorites_coming_soon">पसंदीदा जल्द ही आ रहे हैं…</string>
+    <string name="content_area_placeholder">सामग्री क्षेत्र</string>
+
+    <!-- Camera Selector -->
+    <string name="camera_label_format">कैमरा %1$s</string>
+
+    <!-- Overview Screen -->
+    <string name="hardware_level_label">हार्डवेयर स्तर</string>
+    <string name="hardware_level_cd_format">हार्डवेयर स्तर: %1$s</string>
+    <string name="key_features_title">मुख्य विशेषताएं</string>
+
+    <!-- Feature Labels -->
+    <string name="feature_resolution">रेज़ोल्यूशन</string>
+    <string name="feature_max_fps">अधिकतम FPS</string>
+    <string name="feature_raw">RAW</string>
+    <string name="feature_capture">कैप्चर</string>
+    <string name="feature_flash">फ्लैश</string>
+    <string name="feature_flash_feature">फ्लैश सुविधा</string>
+    <string name="feature_ois">OIS</string>
+    <string name="feature_stabilization">स्थिरीकरण</string>
+    <string name="feature_face_detection">चेहरा पहचान</string>
+    <string name="feature_ai_feature">AI सुविधा</string>
+
+    <!-- Status Strings -->
+    <string name="status_supported">समर्थित</string>
+    <string name="status_not_supported">समर्थित नहीं</string>
+
+    <!-- Detail Screen -->
+    <string name="detail_value_label">मान</string>
+    <string name="detail_info_label">जानकारी</string>
+    <string name="detail_key_label">कुंजी</string>
+    <string name="detail_category_label">श्रेणी</string>
+    <string name="detail_raw_value_label">रॉ मान</string>
+    <string name="error_parameter_not_found">पैरामीटर नहीं मिला</string>
+
+    <string name="camera_params_title">कैमरा पैरामीटर्स</string>
+
+    <!-- Camera Facings -->
+    <string name="camera_facing_back">पीछे का कैमरा</string>
+    <string name="camera_facing_front">सामने का कैमरा</string>
+    <string name="camera_facing_external">बाहरी कैमरा</string>
+    <string name="camera_facing_unknown">अज्ञात कैमरा</string>
+
+    <!-- Categories -->
+    <string name="category_sensor">सेंसर</string>
+    <string name="category_lens">लेंस</string>
+    <string name="category_ae">AE (ऑटो एक्सपोज़र)</string>
+    <string name="category_af">AF (ऑटो फोकस)</string>
+    <string name="category_awb">AWB (ऑटो व्हाइट बैलेंस)</string>
+    <string name="category_output">आउटपुट</string>
+    <string name="category_request">अनुरोध</string>
+    <string name="category_statistics">सांख्यिकी</string>
+    <string name="category_other">अन्य</string>
+
+    <!-- Hardware Levels -->
+    <string name="hw_level_legacy">लिगेसी</string>
+    <string name="hw_level_external">बाहरी</string>
+    <string name="hw_level_limited">सीमित</string>
+    <string name="hw_level_full">पूर्ण</string>
+    <string name="hw_level_3">3</string>
+
+    <!-- Feature Flags Display Names -->
+    <string name="feature_manual_exp">मैनुअल एक्सपोज़र</string>
+    <string name="feature_manual_focus">मैनुअल फोकस</string>
+    <string name="feature_redeye">लाल आंख</string>
+    <string name="feature_hdr">HDR</string>
+    <string name="feature_yuv_repro">YUV पुनर्संसाधन</string>
+
+    <!-- Modes -->
+    <string name="mode_off">बंद</string>
+    <string name="mode_on">चालू</string>
+    <string name="mode_auto">ऑटो</string>
+    <string name="mode_flash_auto">फ्लैश ऑटो</string>
+    <string name="mode_flash_red_eye">फ्लैश लाल आंख</string>
+    <string name="mode_flash_external">फ्लैश बाहरी</string>
+    <string name="mode_flash_always">फ्लैश हमेशा</string>
+    <string name="mode_continuous_picture">निरंतर चित्र</string>
+    <string name="mode_continuous_video">निरंतर वीडियो</string>
+    <string name="mode_edof">EDOF</string>
+    <string name="mode_macro">मैक्रो</string>
+    <string name="mode_incandescent">तापदीप्त</string>
+    <string name="mode_fluorescent">प्रतिदीप्त</string>
+    <string name="mode_warm_fluorescent">गर्म प्रतिदीप्त</string>
+    <string name="mode_daylight">दिन का प्रकाश</string>
+    <string name="mode_cloudy_daylight">बादल</string>
+    <string name="mode_twilight">गोधूलि</string>
+    <string name="mode_shade">छाया</string>
+    <string name="mode_use_scene_mode">सीन मोड उपयोग करें</string>
+    <string name="mode_off_keep_state">बंद अवस्था बनाए रखें</string>
+    <string name="mode_mono">मोनो</string>
+    <string name="mode_negative">नेगेटिव</string>
+    <string name="mode_solarize">सोलराइज़</string>
+    <string name="mode_sepia">सेपिया</string>
+    <string name="mode_posterize">पोस्टरराइज़</string>
+    <string name="mode_whiteboard">व्हाइटबोर्ड</string>
+    <string name="mode_blackboard">ब्लैकबोर्ड</string>
+    <string name="mode_aqua">पानी</string>
+    <string name="mode_disabled">अक्षम</string>
+    <string name="mode_face_priority">चेहरा प्राथमिकता</string>
+    <string name="mode_action">एक्शन</string>
+    <string name="mode_portrait">पोर्ट्रेट</string>
+    <string name="mode_landscape">लैंडस्केप</string>
+    <string name="mode_night">रात</string>
+    <string name="mode_night_portrait">रात का पोर्ट्रेट</string>
+    <string name="mode_theatre">थिएटर</string>
+    <string name="mode_beach">समुद्र तट</string>
+    <string name="mode_snow">बर्फ</string>
+    <string name="mode_sunset">सूर्यास्त</string>
+    <string name="mode_steadyphoto">स्थिर फोटो</string>
+    <string name="mode_fireworks">आतिशबाजी</string>
+    <string name="mode_sports">खेल</string>
+    <string name="mode_party">पार्टी</string>
+    <string name="mode_candlelight">मोमबत्ती की रोशनी</string>
+    <string name="mode_barcode">बारकोड</string>
+    <string name="mode_high_speed_video">हाई स्पीड वीडियो</string>
+    <string name="mode_fast">तेज़</string>
+    <string name="mode_high_quality">उच्च गुणवत्ता</string>
+    <string name="mode_minimal">न्यूनतम</string>
+    <string name="mode_zero_shutter_lag">शून्य शटर लैग</string>
+    <string name="mode_quality">गुणवत्ता</string>
+</resources>

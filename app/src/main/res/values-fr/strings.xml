@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Paramètres Caméra</string>
+    <string name="about_title">À propos de Paramètres Caméra</string>
+    <string name="about_description">Un puissant outil de diagnostic pour explorer les capacités de l\'API Camera2 d\'Android.</string>
+    <string name="menu_privacy_policy">Politique de confidentialité</string>
+    <string name="menu_rate_app">Noter sur le Play Store</string>
+    <string name="menu_about">À propos</string>
+
+    <!-- Navigation Labels -->
+    <string name="nav_overview">Aperçu</string>
+    <string name="nav_categories">Catégories</string>
+    <string name="nav_raw_json">Ressource</string>
+    <string name="nav_favorites">Favoris</string>
+    <string name="nav_detail">Détail</string>
+
+    <!-- Accessibility & Content Descriptions -->
+    <string name="cd_menu">Menu</string>
+    <string name="cd_select_camera">Sélectionner la caméra</string>
+    <string name="cd_back">Retour</string>
+    <string name="cd_copy">Copier</string>
+    <string name="cd_share">Partager</string>
+    <string name="cd_copy_info">Copier les informations</string>
+
+    <!-- Screen Content -->
+    <string name="screen_categories_title">Catégories</string>
+    <string name="search_placeholder">Rechercher des paramètres…</string>
+    <string name="favorites_coming_soon">Favoris bientôt disponibles…</string>
+    <string name="content_area_placeholder">Zone de contenu</string>
+
+    <!-- Camera Selector -->
+    <string name="camera_label_format">Caméra %1$s</string>
+
+    <!-- Overview Screen -->
+    <string name="hardware_level_label">NIVEAU MATÉRIEL</string>
+    <string name="hardware_level_cd_format">Niveau matériel : %1$s</string>
+    <string name="key_features_title">Caractéristiques clés</string>
+
+    <!-- Feature Labels -->
+    <string name="feature_resolution">Résolution</string>
+    <string name="feature_max_fps">FPS Max</string>
+    <string name="feature_raw">RAW</string>
+    <string name="feature_capture">Capture</string>
+    <string name="feature_flash">Flash</string>
+    <string name="feature_flash_feature">Fonction Flash</string>
+    <string name="feature_ois">OIS</string>
+    <string name="feature_stabilization">Stabilisation</string>
+    <string name="feature_face_detection">Détection de visage</string>
+    <string name="feature_ai_feature">Fonction IA</string>
+
+    <!-- Status Strings -->
+    <string name="status_supported">Pris en charge</string>
+    <string name="status_not_supported">Non pris en charge</string>
+
+    <!-- Detail Screen -->
+    <string name="detail_value_label">Valeur</string>
+    <string name="detail_info_label">Info</string>
+    <string name="detail_key_label">Clé</string>
+    <string name="detail_category_label">Catégorie</string>
+    <string name="detail_raw_value_label">Valeur brute</string>
+    <string name="error_parameter_not_found">Paramètre non trouvé</string>
+
+    <string name="camera_params_title">Paramètres Caméra</string>
+
+    <!-- Camera Facings -->
+    <string name="camera_facing_back">Caméra arrière</string>
+    <string name="camera_facing_front">Caméra avant</string>
+    <string name="camera_facing_external">Caméra externe</string>
+    <string name="camera_facing_unknown">Caméra inconnue</string>
+
+    <!-- Categories -->
+    <string name="category_sensor">Capteur</string>
+    <string name="category_lens">Objectif</string>
+    <string name="category_ae">AE (Exposition auto)</string>
+    <string name="category_af">AF (Mise au point auto)</string>
+    <string name="category_awb">AWB (Balance des blancs)</string>
+    <string name="category_output">Sortie</string>
+    <string name="category_request">Requête</string>
+    <string name="category_statistics">Statistiques</string>
+    <string name="category_other">Autre</string>
+
+    <!-- Hardware Levels -->
+    <string name="hw_level_legacy">Hérité</string>
+    <string name="hw_level_external">Externe</string>
+    <string name="hw_level_limited">Limité</string>
+    <string name="hw_level_full">Complet</string>
+    <string name="hw_level_3">3</string>
+
+    <!-- Feature Flags Display Names -->
+    <string name="feature_manual_exp">Exp. manuelle</string>
+    <string name="feature_manual_focus">Mise au point manuelle</string>
+    <string name="feature_redeye">Anti-yeux rouges</string>
+    <string name="feature_hdr">HDR</string>
+    <string name="feature_yuv_repro">Retraitement YUV</string>
+
+    <!-- Modes -->
+    <string name="mode_off">DÉSACTIVÉ</string>
+    <string name="mode_on">ACTIVÉ</string>
+    <string name="mode_auto">AUTO</string>
+    <string name="mode_flash_auto">Flash Auto</string>
+    <string name="mode_flash_red_eye">Flash Anti-yeux rouges</string>
+    <string name="mode_flash_external">Flash Externe</string>
+    <string name="mode_flash_always">Flash TOUJOURS</string>
+    <string name="mode_continuous_picture">Photo continue</string>
+    <string name="mode_continuous_video">Vidéo continue</string>
+    <string name="mode_edof">EDOF</string>
+    <string name="mode_macro">Macro</string>
+    <string name="mode_incandescent">INCANDESCENT</string>
+    <string name="mode_fluorescent">FLUORESCENT</string>
+    <string name="mode_warm_fluorescent">FLUORESCENT_CHAUD</string>
+    <string name="mode_daylight">LUMIÈRE_JOUR</string>
+    <string name="mode_cloudy_daylight">NUAGEUX</string>
+    <string name="mode_twilight">CRÉPUSCULE</string>
+    <string name="mode_shade">OMBRE</string>
+    <string name="mode_use_scene_mode">UTILISER_MODE_SCÈNE</string>
+    <string name="mode_off_keep_state">ARRÊT_CONSERVER_ÉTAT</string>
+    <string name="mode_mono">MONO</string>
+    <string name="mode_negative">Négatif</string>
+    <string name="mode_solarize">Solariser</string>
+    <string name="mode_sepia">SÉPIA</string>
+    <string name="mode_posterize">Postériser</string>
+    <string name="mode_whiteboard">Tableau blanc</string>
+    <string name="mode_blackboard">Tableau noir</string>
+    <string name="mode_aqua">EAU</string>
+    <string name="mode_disabled">DÉSACTIVÉ</string>
+    <string name="mode_face_priority">Priorité visage</string>
+    <string name="mode_action">ACTION</string>
+    <string name="mode_portrait">PORTRAIT</string>
+    <string name="mode_landscape">PAYSAGE</string>
+    <string name="mode_night">NUIT</string>
+    <string name="mode_night_portrait">PORTRAIT NOCTURNE</string>
+    <string name="mode_theatre">THÉÂTRE</string>
+    <string name="mode_beach">PLAGE</string>
+    <string name="mode_snow">NEIGE</string>
+    <string name="mode_sunset">COUCHER SOLEIL</string>
+    <string name="mode_steadyphoto">Photo stable</string>
+    <string name="mode_fireworks">Feux d\'artifice</string>
+    <string name="mode_sports">Sports</string>
+    <string name="mode_party">Fête</string>
+    <string name="mode_candlelight">Lumière bougie</string>
+    <string name="mode_barcode">Code-barres</string>
+    <string name="mode_high_speed_video">Vidéo haute vitesse</string>
+    <string name="mode_fast">RAPIDE</string>
+    <string name="mode_high_quality">HAUTE QUALITÉ</string>
+    <string name="mode_minimal">MINIMAL</string>
+    <string name="mode_zero_shutter_lag">Zéro retard d\'obturateur</string>
+    <string name="mode_quality">QUALITÉ</string>
+</resources>
