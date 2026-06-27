@@ -6,7 +6,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -15,15 +15,27 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import com.aaron.cameraparams.R
+import com.aaron.cameraparams.ui.CameraParameter
 import com.aaron.cameraparams.ui.CameraViewModel
+import com.aaron.cameraparams.ui.theme.CameraParamsTheme
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ParameterDetailScreen(viewModel: CameraViewModel, parameterKey: String, onBack: () -> Unit) {
     val uiState by viewModel.uiState.collectAsState()
     val parameter = uiState.parameters.categories.flatMap { it.parameters }.find { it.key == parameterKey }
+    
+    ParameterDetailScreenContent(
+        parameter = parameter,
+        onBack = onBack
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ParameterDetailScreenContent(parameter: CameraParameter?, onBack: () -> Unit) {
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
 
@@ -65,15 +77,7 @@ fun ParameterDetailScreen(viewModel: CameraViewModel, parameterKey: String, onBa
                         InfoRow(stringResource(R.string.detail_category_label), parameter.category)
                     }
                 }
-
-                DetailCard(
-                    stringResource(R.string.detail_raw_value_label),
-                    parameter.rawValue,
-                    onCopy = {
-                        val clipData = ClipData.newPlainText(parameter.key, parameter.rawValue)
-                        scope.launch { clipboard.setClipEntry(ClipEntry(clipData)) }
-                    }
-                )
+                
             }
         } else {
             Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
@@ -90,7 +94,7 @@ fun DetailCard(title: String, value: String, onCopy: () -> Unit) {
             Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 Text(title, style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f))
                 IconButton(onClick = onCopy, modifier = Modifier.size(24.dp)) {
-                    Icon(Icons.Default.Info, contentDescription = stringResource(R.string.cd_copy))
+                    Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.cd_copy))
                 }
             }
             Spacer(Modifier.height(8.dp))
@@ -104,5 +108,21 @@ fun InfoRow(label: String, value: String) {
     Row(modifier = Modifier.padding(vertical = 4.dp)) {
         Text(label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, modifier = Modifier.width(100.dp))
         Text(value, style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun ParameterDetailScreenPreview() {
+    CameraParamsTheme {
+        ParameterDetailScreenContent(
+            parameter = CameraParameter(
+                key = "android.sensor.info.pixelArraySize",
+                value = "4032x3024",
+                rawValue = "4032x3024",
+                category = "Sensor Info"
+            ),
+            onBack = {}
+        )
     }
 }
