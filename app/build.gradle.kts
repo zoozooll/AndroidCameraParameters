@@ -1,8 +1,23 @@
+import java.util.Properties
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.text.SimpleDateFormat
+import java.util.Date
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+// 1. Load Versioning from local.properties
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.inputStream().use { localProperties.load(it) }
+}
+
+val vCode = localProperties.getProperty("VERSION_CODE")?.toInt() ?: 3
+val vName = localProperties.getProperty("VERSION_NAME") ?: "1.0.1"
 
 android {
     namespace = "com.aaron.cameraparams"
@@ -12,8 +27,8 @@ android {
         applicationId = "com.minininja.cameraparams"
         minSdk = 23
         targetSdk = 37
-        versionCode = 3
-        versionName = "1.0.1"
+        versionCode = vCode
+        versionName = vName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -31,16 +46,6 @@ android {
             }
         }
     }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-
-    buildFeatures {
-        viewBinding = true
-        compose = true
-        buildConfig = true
-    }
 
     flavorDimensions += "distribution"
     productFlavors {
@@ -54,6 +59,100 @@ android {
             buildConfigField("String", "STORE_NAME", "\"F-Droid\"")
         }
     }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    buildFeatures {
+        viewBinding = true
+        compose = true
+        buildConfig = true
+    }
+}
+
+// 2. Task to increment version
+tasks.register("incrementVersion") {
+    doLast {
+        if (localPropertiesFile.exists()) {
+            val props = Properties()
+            localPropertiesFile.inputStream().use { props.load(it) }
+
+            val oldCode = props.getProperty("VERSION_CODE")?.toInt() ?: 0
+            val newCode = oldCode + 1
+            props.setProperty("VERSION_CODE", newCode.toString())
+
+            val oldName = props.getProperty("VERSION_NAME") ?: "1.0.0"
+            val parts = oldName.split(".")
+            val newName = if (parts.size >= 3) {
+                val lastPart = parts.last().toIntOrNull() ?: 0
+                parts.dropLast(1).joinToString(".") + "." + (lastPart + 1)
+            } else {
+                "$oldName.1"
+            }
+            props.setProperty("VERSION_NAME", newName)
+
+            localPropertiesFile.outputStream().use {
+                props.store(it, "Incremented after successful release build")
+            }
+            println("Version updated to: $newName ($newCode)")
+        }
+    }
+}
+
+// 3. Task to rename artifacts (APK and AAB)
+tasks.register("renameReleaseBundle") {
+    doLast {
+        val requestedTasks = gradle.startParameter.taskNames
+
+        val isBundleBuild = requestedTasks.any { it.contains("bundle") }
+        println("isBundleBuild: $isBundleBuild")
+        val isAssembleBuild = requestedTasks.any { it.contains("assemble") }
+        println("isAssembleBuild: $isAssembleBuild")
+
+        val destinationFolder1 = project.findProperty("android.injected.bundle.destination.directory")
+        println("destinationFolder1: $destinationFolder1")
+        val destinationFolder2 = project.findProperty("android.injected.apk.destination.directory")
+        println("destinationFolder2: $destinationFolder2")
+            // Fallback to the older names just in case
+        val destinationFolder3 = project.findProperty("android.injected.bundle.export.dir")
+        println("destinationFolder3: $destinationFolder3")
+        val destinationFolder4 = project.findProperty("android.injected.apk.export.dir")
+        println("destinationFolder4: $destinationFolder4")
+
+
+//        destDir.walkTopDown().forEach { file ->
+//            // Match files that contain "-release" (the default Gradle output naming)
+//            // This includes both .apk and .aab files
+//            if ((file.extension == "aab" || file.extension == "apk") &&
+//                file.name.contains("-release") &&
+//                file.absolutePath.contains("release", ignoreCase = true)) {
+//
+//                // Replace "-release" with "-version-timestamp"
+//                // This preserves the original extension (.aab -> .aab, .apk -> .apk)
+//                val newName = file.name.replace("-release", "-${vName}-${timestamp}")
+//                val dest = File(file.parentFile, newName)
+//
+//                file.copyTo(dest, overwrite = true)
+//                println("Artifact processed: ${file.name} -> ${dest.name}")
+//            }
+//        }
+    }
+}
+
+// 4. Hook everything up
+tasks.configureEach {
+    if (name.startsWith("assemble") && name.endsWith("Release") && !name.contains("Debug")
+        && name.contains("GooglePlay")) {
+        finalizedBy("incrementVersion")
+        finalizedBy("renameReleaseBundle")
+    }
+//    if (name.startsWith("bundle") && name.endsWith("Release") && !name.contains("Debug")
+//        && name.contains("GooglePlay")) {
+//        finalizedBy("incrementVersion")
+//        finalizedBy("renameReleaseBundle")
+//    }
 }
 
 kotlin {

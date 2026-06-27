@@ -1,0 +1,1 @@
+Explore and diagnose your device's Camera2 API capabilities and parameters.

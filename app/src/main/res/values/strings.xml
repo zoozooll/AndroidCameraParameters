@@ -152,4 +152,5 @@
     <string name="mode_minimal">MINIMAL</string>
     <string name="mode_zero_shutter_lag">ZERO_SHUTTER_LAG</string>
     <string name="mode_quality">QUALITY</string>
+    <string name="detail_description_label">description</string>
 </resources>

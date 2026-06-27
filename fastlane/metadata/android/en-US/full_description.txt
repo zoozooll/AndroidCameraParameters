@@ -1,0 +1,17 @@
+**Camera Params** is a powerful diagnostic tool designed for developers and photography enthusiasts to explore the deep technical capabilities of Android cameras through the Camera2 API.
+
+Whether you're a developer debugging camera features or a user curious about your hardware's limits, Camera Params provides a comprehensive view of everything your camera can do.
+
+**Key Features:**
+- **Camera Overview:** Quickly see hardware support levels (Legacy, Limited, Full, Level 3) and key features like OIS, RAW support, and Flash capabilities.
+- **Detailed Categories:** Browse through organized categories including Sensor, Lens, Auto Exposure (AE), Auto Focus (AF), White Balance (AWB), and more.
+- **Deep Parameter Insights:** Dive into every individual Camera2 characteristic, including its current value, key name, and detailed description.
+- **Raw Data View:** For the power users, view the complete camera characteristics in a raw JSON format for easy inspection or sharing.
+- **Multi-Camera Support:** Seamlessly switch between all available camera units on your device, including front, rear, and external cameras.
+
+**Why use Camera Params?**
+- **For Developers:** Verify your device's support for specific Camera2 features and debug implementation details.
+- **For Enthusiasts:** Understand your camera's hardware limits, such as maximum resolution, focal lengths, and supported stabilization modes.
+- **Diagnostic Tool:** Check if your device supports advanced features like RAW capture, Manual Exposure, or Face Detection.
+
+Unlock the full potential of your Android camera hardware with Camera Params!
