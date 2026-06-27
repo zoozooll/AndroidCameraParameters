@@ -104,26 +104,40 @@ tasks.register("incrementVersion") {
 // 3. Task to rename artifacts (APK and AAB)
 tasks.register("renameReleaseBundle") {
     doLast {
-        val timestamp = SimpleDateFormat("yyyyMMddHHmm").format(Date())
-        val outputsDir = layout.buildDirectory.dir("outputs").get().asFile
-        println("Searching for artifacts to rename in: ${outputsDir.absolutePath}")
+        val requestedTasks = gradle.startParameter.taskNames
 
-        outputsDir.walkTopDown().forEach { file ->
-            // Match files that contain "-release" (the default Gradle output naming)
-            // This includes both .apk and .aab files
-            if ((file.extension == "aab" || file.extension == "apk") &&
-                file.name.contains("-release") &&
-                file.absolutePath.contains("release", ignoreCase = true)) {
+        val isBundleBuild = requestedTasks.any { it.contains("bundle") }
+        println("isBundleBuild: $isBundleBuild")
+        val isAssembleBuild = requestedTasks.any { it.contains("assemble") }
+        println("isAssembleBuild: $isAssembleBuild")
 
-                // Replace "-release" with "-version-timestamp"
-                // This preserves the original extension (.aab -> .aab, .apk -> .apk)
-                val newName = file.name.replace("-release", "-${vName}-${timestamp}")
-                val dest = File(file.parentFile, newName)
+        val destinationFolder1 = project.findProperty("android.injected.bundle.destination.directory")
+        println("destinationFolder1: $destinationFolder1")
+        val destinationFolder2 = project.findProperty("android.injected.apk.destination.directory")
+        println("destinationFolder2: $destinationFolder2")
+            // Fallback to the older names just in case
+        val destinationFolder3 = project.findProperty("android.injected.bundle.export.dir")
+        println("destinationFolder3: $destinationFolder3")
+        val destinationFolder4 = project.findProperty("android.injected.apk.export.dir")
+        println("destinationFolder4: $destinationFolder4")
 
-                file.copyTo(dest, overwrite = true)
-                println("Artifact processed: ${file.name} -> ${dest.name}")
-            }
-        }
+
+//        destDir.walkTopDown().forEach { file ->
+//            // Match files that contain "-release" (the default Gradle output naming)
+//            // This includes both .apk and .aab files
+//            if ((file.extension == "aab" || file.extension == "apk") &&
+//                file.name.contains("-release") &&
+//                file.absolutePath.contains("release", ignoreCase = true)) {
+//
+//                // Replace "-release" with "-version-timestamp"
+//                // This preserves the original extension (.aab -> .aab, .apk -> .apk)
+//                val newName = file.name.replace("-release", "-${vName}-${timestamp}")
+//                val dest = File(file.parentFile, newName)
+//
+//                file.copyTo(dest, overwrite = true)
+//                println("Artifact processed: ${file.name} -> ${dest.name}")
+//            }
+//        }
     }
 }
 
@@ -134,11 +148,11 @@ tasks.configureEach {
         finalizedBy("incrementVersion")
         finalizedBy("renameReleaseBundle")
     }
-    if (name.startsWith("bundle") && name.endsWith("Release") && !name.contains("Debug")
-        && name.contains("GooglePlay")) {
-        finalizedBy("incrementVersion")
-        finalizedBy("renameReleaseBundle")
-    }
+//    if (name.startsWith("bundle") && name.endsWith("Release") && !name.contains("Debug")
+//        && name.contains("GooglePlay")) {
+//        finalizedBy("incrementVersion")
+//        finalizedBy("renameReleaseBundle")
+//    }
 }
 
 kotlin {
