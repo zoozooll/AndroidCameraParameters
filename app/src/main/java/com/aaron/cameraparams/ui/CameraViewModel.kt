@@ -40,6 +40,7 @@ data class CameraOverviewState(
     val hardwareLevel: String = "",
     val sensorResolution: String = "",
     val sensorResolutionDetails: String = "",
+    val sensorPhysicalSize: String = "",
     val maxFps: String = "",
     val maxFpsDetails: String = "",
     val featureFlags: Map<String, Boolean> = emptyMap()
@@ -139,6 +140,11 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
             "${pixelArray.width}x${pixelArray.height}"
         } else "N/A"
 
+        val physicalSize = chars.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE)
+        val sensorPhysicalSize = if (physicalSize != null) {
+            "%.2f x %.2f mm".format(physicalSize.width, physicalSize.height)
+        } else "N/A"
+
         val fpsRanges = chars.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES)
         val maxFpsVal = fpsRanges?.maxByOrNull { it.upper }?.upper ?: 0
         
@@ -161,6 +167,7 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
                 hardwareLevel = hardwareLevel,
                 sensorResolution = sensorRes,
                 sensorResolutionDetails = sensorResSum,
+                sensorPhysicalSize = sensorPhysicalSize,
                 maxFps = "$maxFpsVal fps",
                 maxFpsDetails = if (pixelArray != null) "1920x1080" else "N/A", // Placeholder for common video res
                 featureFlags = detectFeatureFlags(chars)
@@ -206,12 +213,17 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
         val sceneModes = chars.get(CameraCharacteristics.CONTROL_AVAILABLE_SCENE_MODES)
         val hdrSupport = sceneModes?.contains(CameraCharacteristics.CONTROL_SCENE_MODE_HDR) ?: false
 
+        val aeModes = chars.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_MODES)
+        val redEyeSupport = aeModes?.contains(
+            CameraCharacteristics.CONTROL_AE_MODE_ON_AUTO_FLASH_REDEYE
+        ) ?: false
+
         return mapOf(
             "RAW" to rawSupport,
             "Manual Exp" to manualExp,
             "Manual Focus" to manualFocus,
             "Flash" to flashAvailable,
-            "RedEye" to false,
+            "RedEye" to redEyeSupport,
             "OIS" to oisAvailable,
             "Face Detection" to faceDetection,
             "HDR" to hdrSupport,

@@ -48,6 +48,7 @@
     <string name="feature_stabilization">Stabilization</string>
     <string name="feature_face_detection">Face Detection</string>
     <string name="feature_ai_feature">AI Feature</string>
+    <string name="feature_sensor_size">Sensor Size</string>
 
     <!-- Status Strings -->
     <string name="status_supported">Supported</string>
