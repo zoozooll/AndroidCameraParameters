@@ -57,15 +57,6 @@ fun OverviewScreenContent(
         item {
             SummaryCard(overviewState)
         }
-
-        items(parametersState.categories.size) { index ->
-            val category = parametersState.categories[index]
-            CategoryRow(
-                category = category,
-                onToggleExpand = { onIntent(CameraIntent.ToggleCategory(category.name)) },
-                onNavigateToDetail = onNavigateToDetail
-            )
-        }
     }
 }
 
@@ -97,7 +88,6 @@ fun SummaryCard(state: CameraOverviewState) {
         }
     }
     
-    val featureFlags = state.featureFlags
     var selectedFeature by remember { mutableStateOf<FeatureDetail?>(null) }
     
     // Resolve strings here to avoid calling @Composable inside onClick
@@ -135,7 +125,6 @@ fun SummaryCard(state: CameraOverviewState) {
         FeatureSummaryCard(
             modifier = itemModifier,
             painter = painterResource(R.drawable.ic_sensor),
-            footerText = stringResource(R.string.feature_resolution),
             accentColor = Color(0xFF4CAF50),
             onClick = {
                 selectedFeature = FeatureDetail(
@@ -153,7 +142,6 @@ fun SummaryCard(state: CameraOverviewState) {
         FeatureSummaryCard(
             modifier = itemModifier,
             painter = painterResource(R.drawable.ic_video),
-            footerText = stringResource(R.string.feature_max_fps),
             accentColor = Color(0xFF2196F3),
             onClick = {
                 selectedFeature = FeatureDetail(
@@ -171,7 +159,6 @@ fun SummaryCard(state: CameraOverviewState) {
         FeatureSummaryCard(
             modifier = itemModifier,
             painter = painterResource(R.drawable.ic_sensor),
-            footerText = stringResource(R.string.category_sensor),
             accentColor = Color(0xFFFF9800),
             onClick = {
                 selectedFeature = FeatureDetail(
@@ -190,7 +177,6 @@ fun SummaryCard(state: CameraOverviewState) {
         FeatureSummaryCard(
             modifier = itemModifier,
             painter = painterResource(R.drawable.ic_raw_box),
-            footerText = stringResource(R.string.feature_capture),
             accentColor = Color(0xFF7B61FF),
             onClick = {
                 selectedFeature = FeatureDetail(
@@ -202,13 +188,12 @@ fun SummaryCard(state: CameraOverviewState) {
                 )
             }
         ) {
-            FeatureStatusContent(featureFlags["RAW"] == true, rawTitle)
+            FeatureStatusContent(state.rawFormatSupported, rawTitle)
         }
 
         FeatureSummaryCard(
             modifier = itemModifier,
             painter = painterResource(R.drawable.ic_flash_bolt),
-            footerText = stringResource(R.string.feature_flash_feature),
             accentColor = Color(0xFFFFEB3B),
             onClick = {
                 selectedFeature = FeatureDetail(
@@ -220,13 +205,12 @@ fun SummaryCard(state: CameraOverviewState) {
                 )
             }
         ) {
-            FeatureStatusContent(featureFlags["Flash"] == true, flashTitle)
+            FeatureStatusContent(state.autoFlashSupported, flashTitle)
         }
 
         FeatureSummaryCard(
             modifier = itemModifier,
             painter = painterResource(R.drawable.ic_ois_hand),
-            footerText = stringResource(R.string.feature_stabilization),
             accentColor = Color(0xFF00BCD4),
             onClick = {
                 selectedFeature = FeatureDetail(
@@ -238,13 +222,12 @@ fun SummaryCard(state: CameraOverviewState) {
                 )
             }
         ) {
-            FeatureStatusContent(featureFlags["OIS"] == true, oisTitle)
+            FeatureStatusContent(state.oisSupported, oisTitle)
         }
 
         FeatureSummaryCard(
             modifier = itemModifier,
             painter = painterResource(R.drawable.ic_face_detect_smile),
-            footerText = stringResource(R.string.feature_ai_feature),
             accentColor = Color(0xFFFF4081),
             onClick = {
                 selectedFeature = FeatureDetail(
@@ -256,13 +239,12 @@ fun SummaryCard(state: CameraOverviewState) {
                 )
             }
         ) {
-            FeatureStatusContent(featureFlags["Face Detection"] == true, faceTitle)
+            FeatureStatusContent(state.faceDetectionSupported, faceTitle)
         }
 
         FeatureSummaryCard(
             modifier = itemModifier,
             painter = rememberVectorPainter(Icons.Default.BrightnessMedium),
-            footerText = stringResource(R.string.category_ae),
             accentColor = Color(0xFF8BC34A),
             onClick = {
                 selectedFeature = FeatureDetail(
@@ -274,13 +256,12 @@ fun SummaryCard(state: CameraOverviewState) {
                 )
             }
         ) {
-            FeatureStatusContent(featureFlags["Manual Exp"] == true, manualExpTitle)
+            FeatureStatusContent(state.manualExpSupported, manualExpTitle)
         }
 
         FeatureSummaryCard(
             modifier = itemModifier,
             painter = rememberVectorPainter(Icons.Default.FilterCenterFocus),
-            footerText = stringResource(R.string.category_af),
             accentColor = Color(0xFF4CAF50),
             onClick = {
                 selectedFeature = FeatureDetail(
@@ -292,13 +273,12 @@ fun SummaryCard(state: CameraOverviewState) {
                 )
             }
         ) {
-            FeatureStatusContent(featureFlags["Manual Focus"] == true, manualFocusTitle)
+            FeatureStatusContent(state.manualFocusSupported, manualFocusTitle)
         }
 
         FeatureSummaryCard(
             modifier = itemModifier,
             painter = rememberVectorPainter(Icons.Default.HdrOn),
-            footerText = stringResource(R.string.category_ae),
             accentColor = Color(0xFF2196F3),
             onClick = {
                 selectedFeature = FeatureDetail(
@@ -310,13 +290,12 @@ fun SummaryCard(state: CameraOverviewState) {
                 )
             }
         ) {
-            FeatureStatusContent(featureFlags["HDR"] == true, hdrTitle)
+            FeatureStatusContent(state.hdrSupported, hdrTitle)
         }
 
         FeatureSummaryCard(
             modifier = itemModifier,
             painter = rememberVectorPainter(Icons.Default.Refresh),
-            footerText = stringResource(R.string.category_output),
             accentColor = Color(0xFF9C27B0),
             onClick = {
                 selectedFeature = FeatureDetail(
@@ -328,13 +307,12 @@ fun SummaryCard(state: CameraOverviewState) {
                 )
             }
         ) {
-            FeatureStatusContent(featureFlags["YUV Reprocessing"] == true, yuvTitle)
+            FeatureStatusContent(state.yuvReprocessingSupported, yuvTitle)
         }
 
         FeatureSummaryCard(
             modifier = itemModifier,
             painter = rememberVectorPainter(Icons.Default.RemoveRedEye),
-            footerText = stringResource(R.string.category_ae),
             accentColor = Color(0xFFF44336),
             onClick = {
                 selectedFeature = FeatureDetail(
@@ -346,7 +324,7 @@ fun SummaryCard(state: CameraOverviewState) {
                 )
             }
         ) {
-            FeatureStatusContent(featureFlags["RedEye"] == true, redEyeTitle)
+            FeatureStatusContent(state.redEyeReductionSupported, redEyeTitle)
         }
     }
 }
@@ -373,17 +351,18 @@ fun FeatureValueContent(primary: String, secondary: String) {
 @Composable
 fun FeatureStatusContent(supported: Boolean, label: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(
-            imageVector = if (supported) Icons.Default.CheckCircle else Icons.Default.RemoveCircleOutline,
-            contentDescription = null,
-            tint = if (supported) Color(0xFF4CAF50) else Color.White.copy(alpha = 0.3f),
-            modifier = Modifier.size(24.dp)
-        )
         Text(
             label,
             style = MaterialTheme.typography.labelSmall,
             color = if (supported) Color.White else Color.White.copy(alpha = 0.4f),
             textAlign = TextAlign.Center
+        )
+
+        Icon(
+            imageVector = if (supported) Icons.Default.CheckCircle else Icons.Default.RemoveCircleOutline,
+            contentDescription = null,
+            tint = if (supported) Color(0xFF4CAF50) else Color.White.copy(alpha = 0.3f),
+            modifier = Modifier.size(24.dp)
         )
     }
 }
@@ -392,14 +371,13 @@ fun FeatureStatusContent(supported: Boolean, label: String) {
 fun FeatureSummaryCard(
     modifier: Modifier,
     painter: Painter,
-    footerText: String,
     accentColor: Color,
     onClick: () -> Unit,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Card(
         modifier = modifier
-            .height(140.dp)
+            .height(112.dp)
             .clickable { onClick() },
         colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1F23)),
         shape = RoundedCornerShape(16.dp)
@@ -413,7 +391,7 @@ fun FeatureSummaryCard(
         ) {
             Box(
                 modifier = Modifier
-                    .size(56.dp)
+                    .size(48.dp)
                     .background(accentColor.copy(alpha = 0.1f), RoundedCornerShape(12.dp)),
                 contentAlignment = Alignment.Center
             ) {
@@ -421,18 +399,12 @@ fun FeatureSummaryCard(
                     painter = painter,
                     contentDescription = null,
                     tint = accentColor,
-                    modifier = Modifier.size(48.dp)
+                    modifier = Modifier.size(40.dp)
                 )
             }
             
             content()
-            
-            Text(
-                footerText,
-                style = MaterialTheme.typography.labelSmall,
-                color = Color.White.copy(alpha = 0.3f),
-                fontSize = 9.sp
-            )
+
         }
     }
 }
@@ -544,185 +516,6 @@ fun HardwareLevelIcon(level: String) {
     }
 }
 
-@Composable
-fun FeatureChip(label: String, supported: Boolean) {
-    val (painter, iconColor) = when {
-        label.contains("RAW", ignoreCase = true) -> painterResource(R.drawable.ic_raw_box) to Color(0xFF7B61FF)
-        label.contains("Exp", ignoreCase = true) -> rememberVectorPainter(Icons.Default.BrightnessMedium) to Color(0xFF8BC34A)
-        label.contains("Focus", ignoreCase = true) -> rememberVectorPainter(Icons.Default.FilterCenterFocus) to Color(0xFF4CAF50)
-        label.contains("Flash", ignoreCase = true) -> painterResource(R.drawable.ic_flash_bolt) to Color(0xFFFFEB3B)
-        label.contains("OIS", ignoreCase = true) -> painterResource(R.drawable.ic_ois_hand) to Color(0xFF03A9F4)
-        label.contains("Face", ignoreCase = true) -> painterResource(R.drawable.ic_face_detect_smile) to Color(0xFF00BCD4)
-        label.contains("HDR", ignoreCase = true) -> rememberVectorPainter(Icons.Default.HdrOn) to Color(0xFF2196F3)
-        label.contains("YUV", ignoreCase = true) -> rememberVectorPainter(Icons.Default.Refresh) to Color(0xFF9C27B0)
-        else -> rememberVectorPainter(Icons.Default.CheckCircle) to Color.Gray
-    }
-
-    val displayName = when {
-        label == "RAW" -> stringResource(R.string.feature_raw)
-        label == "Manual Exp" -> stringResource(R.string.feature_manual_exp)
-        label == "Manual Focus" -> stringResource(R.string.feature_manual_focus)
-        label == "Flash" -> stringResource(R.string.feature_flash)
-        label == "RedEye" -> stringResource(R.string.feature_redeye)
-        label == "OIS" -> stringResource(R.string.feature_ois)
-        label == "Face Detection" -> stringResource(R.string.feature_face_detection)
-        label == "HDR" -> stringResource(R.string.feature_hdr)
-        label == "YUV Reprocessing" -> stringResource(R.string.feature_yuv_repro)
-        else -> label
-    }
-
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.width(72.dp)
-    ) {
-        Surface(
-            color = if (supported) Color(0xFF1E1F23) else Color(0xFF1E1F23).copy(alpha = 0.4f),
-            shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.size(60.dp),
-            border = if (supported) null else BorderStroke(1.dp, Color(0xFF2C2E33))
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    painter = painter,
-                    contentDescription = null,
-                    modifier = Modifier.size(28.dp),
-                    tint = if (supported) iconColor else Color(0xFF2C2E33)
-                )
-            }
-        }
-        Spacer(Modifier.height(6.dp))
-        Text(
-            displayName,
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-            textAlign = TextAlign.Center,
-            color = if (supported) Color.White else Color.White.copy(alpha = 0.4f),
-            maxLines = 2,
-            lineHeight = 12.sp
-        )
-    }
-}
-
-@Composable
-fun CategoryRow(
-    category: ParameterCategory,
-    onToggleExpand: () -> Unit,
-    onNavigateToDetail: (String) -> Unit
-) {
-    val name = category.name
-    val count = category.parameters.size
-    val (painter, color) = when {
-        name.contains("Sensor") -> painterResource(R.drawable.ic_sensor) to Color(0xFF4CAF50)
-        name.contains("Lens") -> rememberVectorPainter(Icons.Default.Lens) to Color(0xFF2196F3)
-        name.contains("AE") -> rememberVectorPainter(Icons.Default.Exposure) to Color(0xFFFF9800)
-        name.contains("AF") -> rememberVectorPainter(Icons.Default.FilterCenterFocus) to Color(0xFF4CAF50)
-        name.contains("AWB") -> rememberVectorPainter(Icons.Default.WbSunny) to Color(0xFF9C27B0)
-        name.contains("Output") -> rememberVectorPainter(Icons.Default.SettingsInputComponent) to Color(0xFF2196F3)
-        else -> rememberVectorPainter(Icons.Default.Folder) to Color(0xFF7B61FF)
-    }
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        onClick = onToggleExpand,
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1F23)),
-        shape = RoundedCornerShape(16.dp)
-    ) {
-        Column {
-            Row(
-                modifier = Modifier.padding(14.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .background(color.copy(alpha = 0.12f), RoundedCornerShape(12.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(painter = painter, contentDescription = null, tint = color, modifier = Modifier.size(24.dp))
-                }
-                
-                Spacer(Modifier.width(16.dp))
-                
-                Text(
-                    name.substringBefore("(").trim(),
-                    modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White
-                )
-                
-                Surface(
-                    color = Color(0xFF2C2E33),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text(
-                        count.toString(),
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF7B61FF)
-                    )
-                }
-                
-                Spacer(Modifier.width(8.dp))
-                
-                Icon(
-                    if (category.expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                    contentDescription = null,
-                    tint = Color(0xFF2C2E33),
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-
-            if (category.expanded) {
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    thickness = 0.5.dp,
-                    color = Color(0xFF2C2E33)
-                )
-                category.parameters.forEach { parameter ->
-                    ParameterItem(parameter, onNavigateToDetail)
-                }
-                Spacer(Modifier.height(8.dp))
-            }
-        }
-    }
-}
-
-@Composable
-fun ParameterItem(parameter: CameraParameter, onClick: (String) -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick(parameter.key) }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                parameter.key.substringAfterLast("."),
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
-                color = Color.White.copy(alpha = 0.9f)
-            )
-            Text(
-                parameter.value,
-                style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF7B61FF),
-                maxLines = 1,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-            )
-        }
-        Icon(
-            Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription = null,
-            tint = Color(0xFF2C2E33),
-            modifier = Modifier.size(16.dp)
-        )
-    }
-}
-
-
-
 @Preview(showBackground = true)
 @Composable
 fun OverviewScreenPreview() {
@@ -734,13 +527,15 @@ fun OverviewScreenPreview() {
                 sensorResolutionDetails = "4000 x 3000",
                 maxFps = "60 fps",
                 maxFpsDetails = "1920x1080",
-                featureFlags = mapOf(
-                    "Flash" to true,
-                    "Manual Focus" to true,
-                    "RAW" to false,
-                    "Face Detection" to true,
-                    "OIS" to true
-                )
+                rawFormatSupported = true,
+                autoFlashSupported = true,
+                oisSupported = true,
+                faceDetectionSupported = true,
+                manualExpSupported = true,
+                manualFocusSupported = false,
+                hdrSupported = false,
+                yuvReprocessingSupported = false,
+                redEyeReductionSupported = false,
             ),
             parametersState = CameraParametersState(
                 categories = listOf(

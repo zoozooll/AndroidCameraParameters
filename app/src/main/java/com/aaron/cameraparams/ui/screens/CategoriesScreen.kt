@@ -16,8 +16,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import com.aaron.cameraparams.R
 import com.aaron.cameraparams.ui.*
+import com.aaron.cameraparams.ui.theme.CameraParamsTheme
 
 @Composable
 fun CategoriesScreen(viewModel: CameraViewModel, onNavigateToDetail: (String) -> Unit) {
@@ -139,5 +141,60 @@ fun ParameterRow(parameter: CameraParameter, onClick: (String) -> Unit) {
             maxLines = 1,
             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
         )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun CategoriesScreenPreview() {
+    val sampleParameters = listOf(
+        CameraParameter(
+            key = "android.sensor.info.pixelArraySize",
+            value = "4000 x 3000",
+            rawValue = "4000x3000",
+            category = "Sensor",
+            description = "The total number of pixels on the camera sensor."
+        ),
+        CameraParameter(
+            key = "android.sensor.info.physicalSize",
+            value = "6.40 x 4.80 mm",
+            rawValue = "6.4x4.8",
+            category = "Sensor",
+            description = "The physical dimensions of the camera sensor."
+        )
+    )
+    
+    val sampleCategories = listOf(
+        ParameterCategory(
+            name = "Sensor",
+            parameters = sampleParameters,
+            expanded = true
+        ),
+        ParameterCategory(
+            name = "Lens",
+            parameters = listOf(
+                CameraParameter(
+                    key = "android.lens.facing",
+                    value = "BACK",
+                    rawValue = "1",
+                    category = "Lens"
+                )
+            ),
+            expanded = false
+        )
+    )
+
+    CameraParamsTheme {
+        Surface(color = MaterialTheme.colorScheme.background) {
+            CategoriesScreenContent(
+                state = CameraParametersState(
+                    categories = sampleCategories,
+                    filteredCategories = sampleCategories,
+                    searchQuery = ""
+                ),
+                onIntent = {},
+                onNavigateToDetail = {}
+            )
+        }
     }
 }
