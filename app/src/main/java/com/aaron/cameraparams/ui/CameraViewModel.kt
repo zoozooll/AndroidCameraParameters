@@ -220,6 +220,41 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
         }
 
         val features = detectFeatureFlags(chars)
+        val capabilities = chars.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
+        val rawSupport = capabilities?.contains(
+            CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW
+        ) ?: false
+
+        val yuvReprocessing = capabilities?.contains(
+            CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_YUV_REPROCESSING
+        ) ?: false
+
+        val manualExp = chars.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_MODES)?.contains(
+            CameraCharacteristics.CONTROL_AE_MODE_OFF
+        ) ?: false
+
+        val minFocusDist = chars.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE) ?: 0f
+        val manualFocus = minFocusDist > 0
+
+        val flashAvailable = chars.get(CameraCharacteristics.FLASH_INFO_AVAILABLE) ?: false
+
+        val oisAvailable = chars.get(CameraCharacteristics.LENS_INFO_AVAILABLE_OPTICAL_STABILIZATION)?.contains(
+            CameraCharacteristics.LENS_OPTICAL_STABILIZATION_MODE_ON
+        ) ?: false
+
+        val faceModes = chars.get(CameraCharacteristics.STATISTICS_INFO_AVAILABLE_FACE_DETECT_MODES)
+        val faceDetection = faceModes?.any {
+            it == CameraCharacteristics.STATISTICS_FACE_DETECT_MODE_SIMPLE ||
+                    it == CameraCharacteristics.STATISTICS_FACE_DETECT_MODE_FULL
+        } ?: false
+
+        val sceneModes = chars.get(CameraCharacteristics.CONTROL_AVAILABLE_SCENE_MODES)
+        val hdrSupport = sceneModes?.contains(CameraCharacteristics.CONTROL_SCENE_MODE_HDR) ?: false
+
+        val aeModes = chars.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_MODES)
+        val redEyeSupport = aeModes?.contains(
+            CameraCharacteristics.CONTROL_AE_MODE_ON_AUTO_FLASH_REDEYE
+        ) ?: false
 
         _uiState.value = _uiState.value.copy(
             header = CameraHeaderState(
@@ -235,15 +270,15 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
                 sensorPhysicalSize = sensorPhysicalSize,
                 maxFps = maxFps,
                 maxFpsDetails = maxFpsDetails,
-                rawFormatSupported = features["RAW"] ?: false,
-                autoFlashSupported = features["Flash"] ?: false,
-                oisSupported = features["OIS"] ?: false,
-                faceDetectionSupported = features["Face Detection"] ?: false,
-                manualExpSupported = features["Manual Exp"] ?: false,
-                manualFocusSupported = features["Manual Focus"] ?: false,
-                hdrSupported = features["HDR"] ?: false,
-                yuvReprocessingSupported = features["YUV Reprocessing"] ?: false,
-                redEyeReductionSupported = features["RedEye"] ?: false,
+                rawFormatSupported = rawSupport,
+                autoFlashSupported = flashAvailable,
+                oisSupported = oisAvailable,
+                faceDetectionSupported = faceDetection,
+                manualExpSupported = manualExp,
+                manualFocusSupported = manualFocus,
+                hdrSupported = hdrSupport,
+                yuvReprocessingSupported = yuvReprocessing,
+                redEyeReductionSupported = redEyeSupport,
             ),
             parameters = CameraParametersState(
                 categories = categories,
