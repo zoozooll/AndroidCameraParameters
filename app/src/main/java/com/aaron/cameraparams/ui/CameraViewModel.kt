@@ -1,19 +1,37 @@
 package com.aaron.cameraparams.ui
 
 import android.app.Application
- import android.content.Context
+import android.content.Context
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
+import android.hardware.camera2.params.StreamConfigurationMap
+import android.os.Build
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.aaron.cameraparams.CameraParamsHelper
 import com.aaron.cameraparams.R
+import com.aaron.cameraparams.camera.getAeAvailableModes
+import com.aaron.cameraparams.camera.getAfAvailableModes
+import com.aaron.cameraparams.camera.getAvailableEffects
+import com.aaron.cameraparams.camera.getAvailableModes
+import com.aaron.cameraparams.camera.getAvailableNoiseReductionModes
+import com.aaron.cameraparams.camera.getAvailableSceneModes
+import com.aaron.cameraparams.camera.getAwbAvailableModes
+import com.aaron.cameraparams.camera.getColorCorrectionAvailableAberrationMode
+import com.aaron.cameraparams.camera.getHardwareLevelInfo
+import com.aaron.cameraparams.camera.getRequestAvailableCapabilities
+import com.aaron.cameraparams.camera.streamConfigurationMapToString
 import com.google.gson.GsonBuilder
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.util.Arrays
 import java.util.TreeMap
+import kotlin.String
 
 data class CameraParameter(
     val key: String,
@@ -40,9 +58,18 @@ data class CameraOverviewState(
     val hardwareLevel: String = "",
     val sensorResolution: String = "",
     val sensorResolutionDetails: String = "",
+    val sensorPhysicalSize: String = "",
     val maxFps: String = "",
     val maxFpsDetails: String = "",
-    val featureFlags: Map<String, Boolean> = emptyMap()
+    val rawFormatSupported: Boolean = false,
+    val autoFlashSupported: Boolean = false,
+    val oisSupported: Boolean = false,
+    val faceDetectionSupported: Boolean = false,
+    val manualExpSupported: Boolean = false,
+    val manualFocusSupported: Boolean = false,
+    val hdrSupported: Boolean = false,
+    val yuvReprocessingSupported: Boolean = false,
+    val redEyeReductionSupported: Boolean = false,
 )
 
 data class CameraParametersState(
@@ -91,8 +118,17 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
     private fun selectCamera(index: Int) {
         viewModelScope.launch {
             val cameraId = uiState.value.header.cameras.getOrNull(index) ?: return@launch
-            val characteristics = cameraManager.getCameraCharacteristics(cameraId)
-            updateParameters(characteristics, cameraId, index)
+            withContext(Dispatchers.Default) {
+                val characteristics = cameraManager.getCameraCharacteristics(cameraId)
+
+                val keyList = characteristics.getKeys()
+                Log.i(TAG, "selectCamera [$index]: ")
+                keyList.forEach {
+                    val value = getCharacteristicInfo(characteristics, it)
+                    Log.i(TAG, "CharacteristicInfo( [$it]: $value")
+                }
+                updateParameters(characteristics, cameraId, index)
+            }
         }
     }
 
@@ -139,6 +175,11 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
             "${pixelArray.width}x${pixelArray.height}"
         } else "N/A"
 
+        val physicalSize = chars.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE)
+        val sensorPhysicalSize = if (physicalSize != null) {
+            "%.1fx%.1f".format(physicalSize.width, physicalSize.height)
+        } else "N/A"
+
         val fpsRanges = chars.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES)
         val maxFpsVal = fpsRanges?.maxByOrNull { it.upper }?.upper ?: 0
         
@@ -149,6 +190,71 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
             CameraCharacteristics.LENS_FACING_EXTERNAL -> getApplication<Application>().getString(R.string.camera_facing_external)
             else -> getApplication<Application>().getString(R.string.camera_facing_unknown)
         }
+
+        val streamConfiguration: StreamConfigurationMap? = chars.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
+        val ranges = streamConfiguration?.highSpeedVideoFpsRanges
+        
+        var maxFps = ""
+        var maxFpsDetails = ""
+        
+        if (ranges != null) {
+            val largestRange = ranges.maxWithOrNull(compareBy({ it.upper }, { it.lower }))
+            if (largestRange != null) {
+                maxFps = "${largestRange.upper} FPS"
+                val videoSizes = streamConfiguration.getHighSpeedVideoSizesFor(largestRange)
+                val maxVideoSize = videoSizes?.maxByOrNull { it.width.toLong() * it.height.toLong() }
+                
+                if (maxVideoSize != null) {
+                    maxFpsDetails = "${maxVideoSize.width}x${maxVideoSize.height}"
+                }
+            }
+        }
+
+        if ("" == maxFps) {
+            val aeRanges = chars.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES)
+            val maxRange = aeRanges?.maxWithOrNull(compareBy({ it.upper }, { it.lower }))
+            if (maxRange != null) {
+                maxFps = "${maxRange.upper} FPS"
+            }
+            maxFpsDetails = ""
+        }
+
+        val features = detectFeatureFlags(chars)
+        val capabilities = chars.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
+        val rawSupport = capabilities?.contains(
+            CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW
+        ) ?: false
+
+        val yuvReprocessing = capabilities?.contains(
+            CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_YUV_REPROCESSING
+        ) ?: false
+
+        val manualExp = chars.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_MODES)?.contains(
+            CameraCharacteristics.CONTROL_AE_MODE_OFF
+        ) ?: false
+
+        val minFocusDist = chars.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE) ?: 0f
+        val manualFocus = minFocusDist > 0
+
+        val flashAvailable = chars.get(CameraCharacteristics.FLASH_INFO_AVAILABLE) ?: false
+
+        val oisAvailable = chars.get(CameraCharacteristics.LENS_INFO_AVAILABLE_OPTICAL_STABILIZATION)?.contains(
+            CameraCharacteristics.LENS_OPTICAL_STABILIZATION_MODE_ON
+        ) ?: false
+
+        val faceModes = chars.get(CameraCharacteristics.STATISTICS_INFO_AVAILABLE_FACE_DETECT_MODES)
+        val faceDetection = faceModes?.any {
+            it == CameraCharacteristics.STATISTICS_FACE_DETECT_MODE_SIMPLE ||
+                    it == CameraCharacteristics.STATISTICS_FACE_DETECT_MODE_FULL
+        } ?: false
+
+        val sceneModes = chars.get(CameraCharacteristics.CONTROL_AVAILABLE_SCENE_MODES)
+        val hdrSupport = sceneModes?.contains(CameraCharacteristics.CONTROL_SCENE_MODE_HDR) ?: false
+
+        val aeModes = chars.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_MODES)
+        val redEyeSupport = aeModes?.contains(
+            CameraCharacteristics.CONTROL_AE_MODE_ON_AUTO_FLASH_REDEYE
+        ) ?: false
 
         _uiState.value = _uiState.value.copy(
             header = CameraHeaderState(
@@ -161,9 +267,18 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
                 hardwareLevel = hardwareLevel,
                 sensorResolution = sensorRes,
                 sensorResolutionDetails = sensorResSum,
-                maxFps = "$maxFpsVal fps",
-                maxFpsDetails = if (pixelArray != null) "1920x1080" else "N/A", // Placeholder for common video res
-                featureFlags = detectFeatureFlags(chars)
+                sensorPhysicalSize = sensorPhysicalSize,
+                maxFps = maxFps,
+                maxFpsDetails = maxFpsDetails,
+                rawFormatSupported = rawSupport,
+                autoFlashSupported = flashAvailable,
+                oisSupported = oisAvailable,
+                faceDetectionSupported = faceDetection,
+                manualExpSupported = manualExp,
+                manualFocusSupported = manualFocus,
+                hdrSupported = hdrSupport,
+                yuvReprocessingSupported = yuvReprocessing,
+                redEyeReductionSupported = redEyeSupport,
             ),
             parameters = CameraParametersState(
                 categories = categories,
@@ -206,12 +321,17 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
         val sceneModes = chars.get(CameraCharacteristics.CONTROL_AVAILABLE_SCENE_MODES)
         val hdrSupport = sceneModes?.contains(CameraCharacteristics.CONTROL_SCENE_MODE_HDR) ?: false
 
+        val aeModes = chars.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_MODES)
+        val redEyeSupport = aeModes?.contains(
+            CameraCharacteristics.CONTROL_AE_MODE_ON_AUTO_FLASH_REDEYE
+        ) ?: false
+
         return mapOf(
             "RAW" to rawSupport,
             "Manual Exp" to manualExp,
             "Manual Focus" to manualFocus,
             "Flash" to flashAvailable,
-            "RedEye" to false,
+            "RedEye" to redEyeSupport,
             "OIS" to oisAvailable,
             "Face Detection" to faceDetection,
             "HDR" to hdrSupport,
@@ -234,21 +354,25 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private fun onSearchQueryChange(query: String) {
-        val filtered = if (query.isEmpty()) {
-            _uiState.value.parameters.categories
-        } else {
-            _uiState.value.parameters.categories.map { category ->
-                category.copy(parameters = category.parameters.filter { 
-                    it.key.contains(query, ignoreCase = true) || it.value.contains(query, ignoreCase = true)
-                })
-            }.filter { it.parameters.isNotEmpty() }
-        }
-        _uiState.value = _uiState.value.copy(
-            parameters = _uiState.value.parameters.copy(
-                searchQuery = query,
-                filteredCategories = filtered
+        viewModelScope.launch {
+            val filtered = withContext(Dispatchers.Default) {
+                if (query.isEmpty()) {
+                    _uiState.value.parameters.categories
+                } else {
+                    _uiState.value.parameters.categories.map { category ->
+                        category.copy(parameters = category.parameters.filter {
+                            it.key.contains(query, ignoreCase = true) || it.value.contains(query, ignoreCase = true)
+                        })
+                    }.filter { it.parameters.isNotEmpty() }
+                }
+            }
+            _uiState.value = _uiState.value.copy(
+                parameters = _uiState.value.parameters.copy(
+                    searchQuery = query,
+                    filteredCategories = filtered
+                )
             )
-        )
+        }
     }
 
     private fun toggleCategoryExpansion(categoryName: String) {
@@ -277,5 +401,50 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
         }
         val gson = GsonBuilder().setPrettyPrinting().create()
         return gson.toJson(map)
+    }
+
+    fun <T> getCharacteristicInfo(characteristics: CameraCharacteristics, key: CameraCharacteristics.Key<T>): String {
+        val value = characteristics.get(key)
+        return keyValueToString(key, value)
+    }
+
+    fun <T> keyValueToString(key: CameraCharacteristics.Key<T>, value: T?): String {
+        if (CameraCharacteristics.COLOR_CORRECTION_AVAILABLE_ABERRATION_MODES == key) {
+            return getColorCorrectionAvailableAberrationMode(getApplication<Application>().applicationContext, (value as kotlin.IntArray?)!!)
+        } else if (CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL == key) {
+            return getHardwareLevelInfo(getApplication<Application>().applicationContext, (value as kotlin.Int?)!!)
+        } else if (CameraCharacteristics.CONTROL_AE_AVAILABLE_MODES == key) {
+            return getAeAvailableModes(getApplication<Application>().applicationContext, (value as kotlin.IntArray?)!!)
+        } else if (CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES == key) {
+            return getAfAvailableModes(getApplication<Application>().applicationContext, (value as kotlin.IntArray?)!!)
+        } else if (CameraCharacteristics.CONTROL_AWB_AVAILABLE_MODES == key) {
+            return getAwbAvailableModes(getApplication<Application>().applicationContext, (value as kotlin.IntArray?)!!)
+        } else if (CameraCharacteristics.CONTROL_AVAILABLE_EFFECTS == key) {
+            return getAvailableEffects(getApplication<Application>().applicationContext, (value as kotlin.IntArray?)!!)
+        } else if (CameraCharacteristics.CONTROL_AVAILABLE_SCENE_MODES == key) {
+            return getAvailableSceneModes(getApplication<Application>().applicationContext, (value as kotlin.IntArray?)!!)
+        } else if (CameraCharacteristics.NOISE_REDUCTION_AVAILABLE_NOISE_REDUCTION_MODES == key) {
+            return getAvailableNoiseReductionModes(getApplication<Application>().applicationContext, (value as kotlin.IntArray?)!!)
+        } else if (CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES == key) {
+            return getRequestAvailableCapabilities((value as kotlin.IntArray?)!!)
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && CameraCharacteristics.CONTROL_AVAILABLE_MODES == key) {
+            return getAvailableModes(getApplication<Application>().applicationContext, (value as kotlin.IntArray?)!!)
+        } else if (value is IntArray) {
+            return (((value as IntArray).contentToString()))
+        } else if (value is FloatArray) {
+            return (((value as FloatArray).contentToString()))
+        } else if (value is BooleanArray) {
+            return (((value as BooleanArray).contentToString()))
+        } else if (value is Array<*>) {
+            return (((value as Array<Any?>).contentToString()))
+        } else if (value is StreamConfigurationMap) {
+            return streamConfigurationMapToString(value as StreamConfigurationMap)
+        } else {
+            return value.toString()
+        }
+    }
+
+    companion object {
+        private const val TAG = "CameraViewModel"
     }
 }
