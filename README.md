@@ -1,5 +1,7 @@
 # Android Camera Parameters
 
+<a href='https://play.google.com/store/apps/details?id=com.minininja.cameraparams&pcampaignid=pcampaignidMKT-Other-global-all-screenshots-pipeline'><img alt='Get it on Google Play' src='https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png' width="240"/></a>
+
 [English] | [简体中文](docs/translations/README_zh-CN.md) | [繁體中文](docs/translations/README_zh-TW.md) | [日本語](docs/translations/README_ja.md) | [한국어](docs/translations/README_ko.md)
 
 Android Camera Parameters is a powerful diagnostic tool for developers and enthusiasts to explore the deep technical capabilities of their device's cameras. It leverages the Android Camera2 API to provide detailed insights into every lens on your device.
@@ -80,3 +82,8 @@ This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) f
 
 Email: kangkang365@gmail.com
 Project Site: [GitHub Pages](https://zoozooll.github.io/AndroidCameraParameters/)
+
+## Official Google Play Release
+The only official Android application for this open-source project is published by [MiniNinjaDiff](https://play.google.com/store/apps/developer?id=MiniNinjaDiff).
+Note for verification: The official Google Play developer contact email is minininjalee@gmail.com.
+This account is fully authorized and managed by the original repository owner, regardless of the different email address used for GitHub commits.
