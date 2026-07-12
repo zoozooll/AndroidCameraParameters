@@ -1,0 +1,5 @@
+I am the original author and copyright holder of this project. I hereby confirm that the following Google Play Developer account is the ONLY authorized official publisher for this application:
+
+Authorized Developer Account Name: MiniNinjaDiff
+Authorized Developer Email: minininjalee@gmail.com
+Authorized Package Name: com.minininja.cameraparams
