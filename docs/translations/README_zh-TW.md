@@ -41,7 +41,6 @@ Android 相機參數是一款強大的診斷工具，供開發人員和愛好者
     - [Camera2 API](https://developer.android.com/training/camera2): 核心相機互動。
     - [Gson](https://github.com/google/gson): 用於原始資料匯出的 JSON 序列化。
     - [Navigation Compose](https://developer.android.com/jetpack/compose/navigation): 應用導覽。
-    - [Glide](https://github.com/bumptech/glide): 圖片載入。
 
 ## 專案結構
 

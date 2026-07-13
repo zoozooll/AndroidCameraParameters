@@ -41,7 +41,6 @@ Android 相机参数是一款强大的诊断工具，供开发人员和爱好者
     - [Camera2 API](https://developer.android.com/training/camera2): 核心相机交互。
     - [Gson](https://github.com/google/gson): 用于原始数据导出的 JSON 序列化。
     - [Navigation Compose](https://developer.android.com/jetpack/compose/navigation): 应用导航。
-    - [Glide](https://github.com/bumptech/glide): 图片加载。
 
 ## 项目结构
 
