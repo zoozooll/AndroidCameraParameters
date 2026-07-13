@@ -43,7 +43,6 @@ The app is localized to support a global audience:
     - [Camera2 API](https://developer.android.com/training/camera2): Core camera interaction.
     - [Gson](https://github.com/google/gson): JSON serialization for raw data export.
     - [Navigation Compose](https://developer.android.com/jetpack/compose/navigation): App navigation.
-    - [Glide](https://github.com/bumptech/glide): Image loading.
 
 ## Project Structure
 
