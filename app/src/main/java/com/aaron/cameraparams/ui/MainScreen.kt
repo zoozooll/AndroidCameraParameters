@@ -126,7 +126,7 @@ fun CameraSelector(
         Spacer(Modifier.width(8.dp))
 
         Surface(
-            color = Color(0xFF2C2E33),
+            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
             shape = RoundedCornerShape(12.dp),
             modifier = Modifier.size(width = 48.dp, height = 32.dp)
         ) {
@@ -135,7 +135,7 @@ fun CameraSelector(
                     state.cameraId,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
         }
@@ -218,13 +218,15 @@ fun MainScreenContent(
             
             if (isMainTab) {
                 Surface(
-                    shadowElevation = 4.dp,
-                    modifier = Modifier.statusBarsPadding()
+                    color = MaterialTheme.colorScheme.surface,
+                    shadowElevation = 4.dp
                 ) {
-                    CameraSelector(
-                        state = headerState,
-                        onIntent = onIntent
-                    )
+                    Box(modifier = Modifier.statusBarsPadding()) {
+                        CameraSelector(
+                            state = headerState,
+                            onIntent = onIntent
+                        )
+                    }
                 }
             }
         },
