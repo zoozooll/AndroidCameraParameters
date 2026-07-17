@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="colorPrimary">#008577</color>
-    <color name="colorPrimaryDark">#00574B</color>
-    <color name="colorAccent">#FD0000</color>
+    <!-- Brand Colors -->
+    <color name="colorPrimary">#7B61FF</color>
+    <color name="colorPrimaryDark">#5E45E0</color>
+    <color name="colorAccent">#7B61FF</color>
+
+    <!-- Theme Colors -->
+    <color name="backgroundColor">#121417</color>
+    <color name="surfaceColor">#1E1F23</color>
+    <color name="textColorPrimary">#FFFFFF</color>
 </resources>

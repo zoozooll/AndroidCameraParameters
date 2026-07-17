@@ -2,6 +2,7 @@ package com.aaron.cameraparams.ui.screens
 
 import android.content.ClipData
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -52,14 +53,15 @@ fun RawJsonScreen(viewModel: CameraViewModel) {
         }
 
         Box(
-            modifier = Modifier.weight(1f).fillMaxWidth().background(Color(0xFF0D0E11))
+            modifier = Modifier.weight(1f).fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
             Text(
                 text = uiState.rawJson,
                 style = MonospaceTypography,
-                color = Color(0xFFCE9178) // JSON String color like VS Code
+                color = if (isSystemInDarkTheme()) Color(0xFFCE9178) else Color(0xFF003366)
             )
         }
     }

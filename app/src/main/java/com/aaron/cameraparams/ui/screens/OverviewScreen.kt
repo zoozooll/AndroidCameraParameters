@@ -336,13 +336,13 @@ fun FeatureValueContent(primary: String, secondary: String) {
             primary,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            color = Color.White,
+            color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center
         )
         Text(
             secondary,
             style = MaterialTheme.typography.bodySmall,
-            color = Color.White.copy(alpha = 0.5f),
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
             textAlign = TextAlign.Center
         )
     }
@@ -354,14 +354,14 @@ fun FeatureStatusContent(supported: Boolean, label: String) {
         Text(
             label,
             style = MaterialTheme.typography.labelSmall,
-            color = if (supported) Color.White else Color.White.copy(alpha = 0.4f),
+            color = if (supported) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
             textAlign = TextAlign.Center
         )
 
         Icon(
             imageVector = if (supported) Icons.Default.CheckCircle else Icons.Default.RemoveCircleOutline,
             contentDescription = null,
-            tint = if (supported) Color(0xFF4CAF50) else Color.White.copy(alpha = 0.3f),
+            tint = if (supported) Color(0xFF4CAF50) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
             modifier = Modifier.size(24.dp)
         )
     }
@@ -379,7 +379,7 @@ fun FeatureSummaryCard(
         modifier = modifier
             .height(112.dp)
             .clickable { onClick() },
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1F23)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
         shape = RoundedCornerShape(16.dp)
     ) {
         Column(
@@ -492,9 +492,9 @@ fun FeatureDetailDialog(
                 Text("Close")
             }
         },
-        containerColor = Color(0xFF1E1F23),
-        titleContentColor = Color.White,
-        textContentColor = Color.White.copy(alpha = 0.7f)
+        containerColor = MaterialTheme.colorScheme.surface,
+        titleContentColor = MaterialTheme.colorScheme.onSurface,
+        textContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
     )
 }
 
