@@ -56,9 +56,9 @@ The app is localized to support a global audience:
 
 Comprehensive documentation is available at [https://zoozooll.github.io/AndroidCameraParameters/](https://zoozooll.github.io/AndroidCameraParameters/).
 
-*   [App Overview](https://zoozooll.github.io/AndroidCameraParameters/docs/overview)
-*   [Developer Guide](https://zoozooll.github.io/AndroidCameraParameters/docs/development)
-*   [Data Safety](https://zoozooll.github.io/AndroidCameraParameters/docs/data-safety)
+*   [App Overview](https://zoozooll.github.io/AndroidCameraParameters/)
+*   [Developer Guide](https://zoozooll.github.io/AndroidCameraParameters/development)
+*   [Data Safety](https://zoozooll.github.io/AndroidCameraParameters/data-safety)
 
 ## Getting Started
 
