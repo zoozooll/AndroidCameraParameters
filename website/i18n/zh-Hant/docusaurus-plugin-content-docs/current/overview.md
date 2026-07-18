@@ -1,6 +1,8 @@
 ---
 sidebar_position: 1
 slug: /
+description: Android 相機參數儀表板概覽及其關鍵診斷功能，包括硬體級別檢測和即時功能追踪。
+keywords: [android 相機儀表板, 硬體級別檢測, 相機診斷]
 ---
 
 # 應用概覽

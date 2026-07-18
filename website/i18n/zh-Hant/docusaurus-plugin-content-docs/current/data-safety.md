@@ -1,5 +1,7 @@
 ---
 sidebar_position: 3
+description: Android 相機參數應用程式的資料安全和隱私實踐。了解相機權限以及如何處理硬體中繼資料。
+keywords: [資料安全, 隱私政策, android 權限]
 ---
 
 # 資料安全指南

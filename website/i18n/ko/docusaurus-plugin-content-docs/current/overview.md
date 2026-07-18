@@ -1,6 +1,8 @@
 ---
 sidebar_position: 1
 slug: /
+description: 하드웨어 레벨 감지 및 실시간 기능 추적을 포함한 Android Camera Parameters 대시보드 및 주요 진단 기능의 개요입니다.
+keywords: [안드로이드 카메라 대시보드, 하드웨어 레벨 감지, 카메라 진단]
 ---
 
 # 앱 개요

@@ -1,6 +1,8 @@
 ---
 sidebar_position: 1
 slug: /
+description: Aperçu du tableau de bord d'Android Camera Parameters et de ses principales fonctions de diagnostic, notamment la détection du niveau matériel et le suivi des fonctionnalités en temps réel.
+keywords: [tableau de bord caméra android, détection du niveau matériel, diagnostic caméra]
 ---
 
 # Aperçu de l'Application

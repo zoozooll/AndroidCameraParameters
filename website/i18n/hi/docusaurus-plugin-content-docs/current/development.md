@@ -1,5 +1,7 @@
 ---
 sidebar_position: 2
+description: Android Camera Parameters ऐप की तकनीकी वास्तुकला, जिसमें MVVM पैटर्न विवरण, Jetpack Compose UI संरचना और विकास दिशानिर्देश शामिल हैं।
+keywords: [एंड्रॉइड विकास, mvvm, जेटpack compose, camera2 api ट्यूटोरियल]
 ---
 
 # डेवलपर दस्तावेज़

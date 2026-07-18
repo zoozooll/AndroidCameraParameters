@@ -1,5 +1,7 @@
 ---
 sidebar_position: 3
+description: Keamanan data dan praktik privasi untuk aplikasi Android Camera Parameters. Pelajari tentang izin kamera dan bagaimana metadata perangkat keras ditangani.
+keywords: [keamanan data, kebijakan privasi, izin android]
 ---
 
 # Panduan Keamanan Data

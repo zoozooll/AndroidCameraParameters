@@ -1,5 +1,7 @@
 ---
 sidebar_position: 3
+description: Data safety and privacy practices for the Android Camera Parameters app. Learn about camera permissions and how hardware metadata is handled.
+keywords: [data safety, privacy policy, android permissions]
 ---
 
 # Data Safety Guide

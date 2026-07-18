@@ -1,5 +1,7 @@
 ---
 sidebar_position: 3
+description: Android Camera Parameters 应用的数据安全和隐私惯例。了解摄像头权限以及如何处理硬件元数据。
+keywords: [数据安全, 隐私政策, 安卓权限]
 ---
 
 # 数据安全指南

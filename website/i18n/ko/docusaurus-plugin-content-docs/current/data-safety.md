@@ -1,5 +1,7 @@
 ---
 sidebar_position: 3
+description: Android Camera Parameters 앱의 데이터 보안 및 개인정보 보호 관행입니다. 카메라 권한 및 하드웨어 메타데이터 처리 방법에 대해 알아보세요.
+keywords: [데이터 보안, 개인정보 처리방침, 안드로이드 권한]
 ---
 
 # 데이터 세이프티 가이드

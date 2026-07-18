@@ -1,5 +1,7 @@
 ---
 sidebar_position: 2
+description: Arquitectura técnica de la aplicación Android Camera Parameters, incluidos detalles del patrón MVVM, estructura de la interfaz de usuario de Jetpack Compose y pautas de desarrollo.
+keywords: [desarrollo android, mvvm, jetpack compose, tutorial de api camera2]
 ---
 
 # Documentación para Desarrolladores

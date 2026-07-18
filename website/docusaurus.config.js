@@ -88,6 +88,10 @@ const config = {
     ({
       // Replace with your project's social card
       image: 'img/AndroidCamera2Params.png',
+      metadata: [
+        {name: 'keywords', content: 'android, camera2 api, camera parameters, diagnostic tool, developer tools'},
+        {name: 'description', content: 'Advanced diagnostic tool for exploring Android Camera2 API capabilities. Inspect sensor details, lens characteristics, and hardware levels for all cameras.'},
+      ],
       navbar: {
         title: 'Camera Parameters',
         logo: {

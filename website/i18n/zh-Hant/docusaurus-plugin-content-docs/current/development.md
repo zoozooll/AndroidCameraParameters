@@ -1,5 +1,7 @@
 ---
 sidebar_position: 2
+description: Android 相機參數應用程式的技術架構，包括 MVVM 模式細節、Jetpack Compose UI 結構和開發指南。
+keywords: [android 開發, mvvm, jetpack compose, camera2 api 教程]
 ---
 
 # 開發者文件

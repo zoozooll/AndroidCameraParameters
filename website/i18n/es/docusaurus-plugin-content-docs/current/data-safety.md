@@ -1,5 +1,7 @@
 ---
 sidebar_position: 3
+description: Prácticas de privacidad y seguridad de datos para la aplicación Android Camera Parameters. Obtenga información sobre los permisos de la cámara y cómo se manejan los metadatos del hardware.
+keywords: [seguridad de datos, política de privacidad, permisos de android]
 ---
 
 # Guía de Seguridad de Datos

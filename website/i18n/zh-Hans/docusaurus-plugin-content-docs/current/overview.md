@@ -1,6 +1,8 @@
 ---
 sidebar_position: 1
 slug: /
+description: Android Camera Parameters 仪表板概览及其关键诊断功能，包括硬件级别检测和实时功能跟踪。
+keywords: [安卓摄像头仪表板, 硬件级别检测, 摄像头诊断]
 ---
 
 # 应用概览

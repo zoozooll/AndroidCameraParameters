@@ -1,5 +1,7 @@
 ---
 sidebar_position: 3
+description: Android Camera Parameters アプリのデータセーフティとプライバシーに関する慣行。カメラの権한とハードウェアメタデータの取り扱いについて説明します。
+keywords: [データセーフティ, プライバシーポリシー, android 権限]
 ---
 
 # データセーフティガイド

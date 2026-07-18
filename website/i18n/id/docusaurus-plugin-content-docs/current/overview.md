@@ -1,6 +1,8 @@
 ---
 sidebar_position: 1
 slug: /
+description: Ringkasan dasbor Android Camera Parameters dan fitur diagnostik utamanya termasuk deteksi tingkat perangkat keras dan pelacakan fitur waktu nyata.
+keywords: [dasbor kamera android, deteksi tingkat perangkat keras, diagnostik kamera]
 ---
 
 # Ringkasan Aplikasi

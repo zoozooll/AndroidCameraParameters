@@ -1,5 +1,7 @@
 ---
 sidebar_position: 3
+description: Datensicherheits- und Datenschutzpraktiken für die Android Camera Parameters App. Erfahren Sie mehr über Kameraberechtigungen und den Umgang mit Hardware-Metadaten.
+keywords: [datensicherheit, datenschutzrichtlinie, android berechtigungen]
 ---
 
 # Datensicherheitsleitfaden

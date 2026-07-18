@@ -1,6 +1,8 @@
 ---
 sidebar_position: 1
 slug: /
+description: Android Camera Parameters ダッシュボードの概要と、ハードウェアレベルの検出やリアルタイムの機能追跡などの主要な診断機能について説明します。
+keywords: [android カメラ ダッシュボード, ハードウェアレベル検出, カメラ診断]
 ---
 
 # アプリの概要

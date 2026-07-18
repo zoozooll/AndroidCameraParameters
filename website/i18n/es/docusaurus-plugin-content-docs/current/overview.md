@@ -1,6 +1,8 @@
 ---
 sidebar_position: 1
 slug: /
+description: Resumen del panel de control de Android Camera Parameters y sus funciones de diagnóstico clave, incluida la detección de nivel de hardware y el seguimiento de funciones en tiempo real.
+keywords: [panel de cámara android, detección de nivel de hardware, diagnóstico de cámara]
 ---
 
 # Resumen de la Aplicación

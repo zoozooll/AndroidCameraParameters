@@ -1,6 +1,8 @@
 ---
 sidebar_position: 1
 slug: /
+description: Visão geral do painel do Android Camera Parameters e seus principais recursos de diagnóstico, incluindo detecção de nível de hardware e rastreamento de recursos em tempo real.
+keywords: [painel da câmera android, detecção de nível de hardware, diagnóstico de câmera]
 ---
 
 # Visão Geral do App

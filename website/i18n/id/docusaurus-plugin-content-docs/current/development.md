@@ -1,5 +1,7 @@
 ---
 sidebar_position: 2
+description: Arsitektur teknis aplikasi Android Camera Parameters, termasuk detail pola MVVM, struktur UI Jetpack Compose, dan pedoman pengembangan.
+keywords: [pengembangan android, mvvm, jetpack compose, tutorial api camera2]
 ---
 
 # Dokumentasi Pengembang

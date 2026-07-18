@@ -1,6 +1,8 @@
 ---
 sidebar_position: 1
 slug: /
+description: Überblick über das Android Camera Parameters Dashboard und seine wichtigsten Diagnosefunktionen, einschließlich Hardware-Level-Erkennung und Echtzeit-Feature-Tracking.
+keywords: [android kamera dashboard, hardware-level-erkennung, kamera-diagnose]
 ---
 
 # App-Übersicht
