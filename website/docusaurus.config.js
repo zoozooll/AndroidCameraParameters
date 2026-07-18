@@ -31,7 +31,21 @@ const config = {
   // may want to replace "en" with "zh-Hans".
   i18n: {
     defaultLocale: 'en',
-    locales: ['en'],
+    locales: ['en', 'zh-Hans', 'zh-Hant', 'es', 'pt-BR', 'fr', 'de', 'ru', 'hi', 'id', 'ja', 'ko'],
+    localeConfigs: {
+      en: { label: 'English' },
+      'zh-Hans': { label: '简体中文' },
+      'zh-Hant': { label: '繁體中文' },
+      es: { label: 'Español' },
+      'pt-BR': { label: 'Português (Brasil)' },
+      fr: { label: 'Français' },
+      de: { label: 'Deutsch' },
+      ru: { label: 'Русский' },
+      hi: { label: 'हिन्दी' },
+      id: { label: 'Bahasa Indonesia' },
+      ja: { label: '日本語' },
+      ko: { label: '한국어' },
+    },
   },
 
   presets: [
@@ -88,6 +102,10 @@ const config = {
             label: 'Documentation',
           },
           {to: '/blog', label: 'Blog', position: 'left'},
+          {
+            type: 'localeDropdown',
+            position: 'right',
+          },
           {
             href: 'https://github.com/zoozooll/AndroidCameraParameters',
             label: 'GitHub',
