@@ -38,7 +38,7 @@
 
     <!-- Feature Labels -->
     <string name="feature_resolution">解像度</string>
-    <string name="feature_max_fps">最大FPS</string>
+    <string name="feature_max_video_fps">最大FPS</string>
     <string name="feature_raw">RAW</string>
     <string name="feature_capture">キャプチャ</string>
     <string name="feature_flash">フラッシュ</string>
@@ -47,6 +47,30 @@
     <string name="feature_stabilization">手ブレ補正</string>
     <string name="feature_face_detection">顔認識</string>
     <string name="feature_ai_feature">AI機能</string>
+    <string name="feature_sensor_size">センサー</string>
+
+    <!-- Feature Descriptions -->
+    <string name="feature_resolution_desc">カメラセンサー上の総画素数。高解像度により、撮影された画像の詳細が向上します。</string>
+    <string name="feature_max_video_fps_desc">カメラがキャプチャできる1秒あたりの最大フレーム数。FPSが高いほど、ビデオ再生がスムーズになります。</string>
+    <string name="feature_sensor_size_desc">カメラセンサーの物理的寸法。通常、センサーが大きいほど、低照度環境でのパフォーマンスが向上します。</string>
+    <string name="feature_raw_desc">生のセンサーデータのキャプチャをサポート。RAWファイルにはより多くの情報が含まれており、後処理での柔軟性が高まります。</string>
+    <string name="feature_flash_desc">カメラデバイスに内蔵フラッシュユニットがあるかどうかを示します。</string>
+    <string name="feature_ois_desc">光学式手ぶれ補正は、レンズエレメントを物理的に動かすことで、カメラの揺れによるブレを軽減します。</string>
+    <string name="feature_face_detection_desc">カメラの視野内の顔を検出する機能。被写体のフォーカスや露出を改善するために使用されます。</string>
+    <string name="feature_manual_exp_desc">シャッタースピードやISOなどの露出設定を手動で制御することをサポートします。</string>
+    <string name="feature_manual_focus_desc">レンズの焦点距離を手動で制御することをサポートします。</string>
+    <string name="feature_hdr_desc">ハイダイナミックレンジモードは、複数の露出をキャプチャして合成し、ハイライトとシャドウの両方の詳細を保持します。</string>
+    <string name="feature_yuv_repro_desc">YUV画像の再処理をサポート。キャプチャ後に高品質なノイズリダクションやシャープネス処理を可能にします。</string>
+    <string name="feature_redeye_desc">フラッシュ撮影時の赤目軽減をサポートします。</string>
+
+    <!-- Dialog Labels -->
+    <string name="dialog_primary_resolution">主要解像度</string>
+    <string name="dialog_pixel_array_size">ピクセルアレイサイズ</string>
+    <string name="dialog_max_frame_rate">最大フレームレート</string>
+    <string name="dialog_high_speed_recording">ハイスピード録画</string>
+    <string name="dialog_at_resolution">解像度</string>
+    <string name="dialog_physical_dimensions">物理的寸法</string>
+    <string name="dialog_api_key_label">Camera2 APIキー：</string>
 
     <!-- Status Strings -->
     <string name="status_supported">対応</string>

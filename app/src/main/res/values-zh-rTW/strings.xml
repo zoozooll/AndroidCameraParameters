@@ -38,7 +38,7 @@
 
     <!-- Feature Labels -->
     <string name="feature_resolution">解析度</string>
-    <string name="feature_max_fps">最大影格率</string>
+    <string name="feature_max_video_fps">最大影格率</string>
     <string name="feature_raw">RAW</string>
     <string name="feature_capture">拍攝</string>
     <string name="feature_flash">閃光燈</string>
@@ -47,6 +47,30 @@
     <string name="feature_stabilization">防手震</string>
     <string name="feature_face_detection">人臉偵測</string>
     <string name="feature_ai_feature">AI 特性</string>
+    <string name="feature_sensor_size">感測器</string>
+
+    <!-- Feature Descriptions -->
+    <string name="feature_resolution_desc">相機感光元件的像素總數。較高的解析度可以在拍攝的影像中保留更多細節。</string>
+    <string name="feature_max_video_fps_desc">相機每秒可以擷取的最大幀數。較高的 FPS 會使影片播放更流暢。</string>
+    <string name="feature_sensor_size_desc">相機感光元件的物理尺寸。較大的感光元件通常在低光條件下表現更好。</string>
+    <string name="feature_raw_desc">支援擷取原始感光元件數據。RAW 檔案包含更多資訊，並在後期處理中提供更大的靈活性。</string>
+    <string name="feature_flash_desc">指示相機裝置是否具有內建閃光燈單元。</string>
+    <string name="feature_ois_desc">光學防手震功能透過物理移動鏡頭元件來幫助減少由相機震動引起的模糊。</string>
+    <string name="feature_face_detection_desc">偵測相機視野內人臉的能力，常用於改善主體的焦點和曝光。</string>
+    <string name="feature_manual_exp_desc">支援手動控制快門速度和 ISO 等曝光設定。</string>
+    <string name="feature_manual_focus_desc">支援手動控制鏡頭焦距。</string>
+    <string name="feature_hdr_desc">高動態範圍模式擷取多次曝光並將其組合，以保留高光和陰影中的細節。</string>
+    <string name="feature_yuv_repro_desc">支援重新處理 YUV 影像，允許在擷取後進行高品質的降噪和銳化。</string>
+    <string name="feature_redeye_desc">支援在閃光燈拍攝期間減輕紅眼。</string>
+
+    <!-- Dialog Labels -->
+    <string name="dialog_primary_resolution">主要解析度</string>
+    <string name="dialog_pixel_array_size">像素陣列尺寸</string>
+    <string name="dialog_max_frame_rate">最大幀率</string>
+    <string name="dialog_high_speed_recording">高速錄影</string>
+    <string name="dialog_at_resolution">解析度下</string>
+    <string name="dialog_physical_dimensions">物理尺寸</string>
+    <string name="dialog_api_key_label">Camera2 API 金鑰：</string>
 
     <!-- Status Strings -->
     <string name="status_supported">已支援</string>

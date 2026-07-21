@@ -38,7 +38,7 @@
 
     <!-- Feature Labels -->
     <string name="feature_resolution">Resolución</string>
-    <string name="feature_max_fps">FPS Máx.</string>
+    <string name="feature_max_video_fps">FPS Máx.</string>
     <string name="feature_raw">RAW</string>
     <string name="feature_capture">Captura</string>
     <string name="feature_flash">Flash</string>
@@ -47,6 +47,30 @@
     <string name="feature_stabilization">Estabilización</string>
     <string name="feature_face_detection">Detección de rostros</string>
     <string name="feature_ai_feature">Función IA</string>
+    <string name="feature_sensor_size">Sensor</string>
+
+    <!-- Feature Descriptions -->
+    <string name="feature_resolution_desc">El número total de píxeles en el sensor de la cámara. Una resolución más alta permite un mayor detalle en las imágenes capturadas.</string>
+    <string name="feature_max_video_fps_desc">El número máximo de fotogramas por segundo que la cámara puede capturar. Un FPS más alto resulta en una reproducción de video más fluida.</string>
+    <string name="feature_sensor_size_desc">Las dimensiones físicas del sensor de la cámara. Los sensores más grandes generalmente funcionan mejor en condiciones de poca luz.</string>
+    <string name="feature_raw_desc">Soporte para capturar datos sin procesar del sensor. Los archivos RAW contienen más información y permiten una mayor flexibilidad en el post-procesamiento.</string>
+    <string name="feature_flash_desc">Indica si el dispositivo de la cámara tiene una unidad de flash incorporada.</string>
+    <string name="feature_ois_desc">La estabilización óptica de imagen ayuda a reducir el desenfoque causado por el movimiento de la cámara al mover físicamente los elementos de la lente.</string>
+    <string name="feature_face_detection_desc">La capacidad de detectar rostros dentro del campo de visión de la cámara, a menudo utilizada para mejorar el enfoque y la exposición en los sujetos.</string>
+    <string name="feature_manual_exp_desc">Soporte para controlar manualmente los ajustes de exposición como la velocidad de obturación y el ISO.</string>
+    <string name="feature_manual_focus_desc">Soporte para controlar manualmente la distancia de enfoque de la lente.</string>
+    <string name="feature_hdr_desc">El modo de alto rango dinámico captura múltiples exposiciones y las combina para preservar el detalle tanto en las luces como en las sombras.</string>
+    <string name="feature_yuv_repro_desc">Soporte para el reprocesamiento de imágenes YUV, lo que permite una reducción de ruido y un afilado de alta calidad después de la captura.</string>
+    <string name="feature_redeye_desc">Soporte para la reducción de ojos rojos durante la captura con flash.</string>
+
+    <!-- Dialog Labels -->
+    <string name="dialog_primary_resolution">Resolución primaria</string>
+    <string name="dialog_pixel_array_size">Tamaño de la matriz de píxeles</string>
+    <string name="dialog_max_frame_rate">Tasa de fotogramas máxima</string>
+    <string name="dialog_high_speed_recording">Grabación de alta velocidad</string>
+    <string name="dialog_at_resolution">En resolución</string>
+    <string name="dialog_physical_dimensions">Dimensiones físicas</string>
+    <string name="dialog_api_key_label">Clave API de Camera2:</string>
 
     <!-- Status Strings -->
     <string name="status_supported">Soportado</string>
