@@ -38,7 +38,7 @@
 
     <!-- Feature Labels -->
     <string name="feature_resolution">Resolução</string>
-    <string name="feature_max_fps">FPS Máx.</string>
+    <string name="feature_max_video_fps">FPS Máx.</string>
     <string name="feature_raw">RAW</string>
     <string name="feature_capture">Captura</string>
     <string name="feature_flash">Flash</string>
@@ -151,4 +151,27 @@
     <string name="mode_minimal">MÍNIMO</string>
     <string name="mode_zero_shutter_lag">Atraso zero do obturador</string>
     <string name="mode_quality">QUALIDADE</string>
+
+    <!-- Feature Descriptions -->
+    <string name="feature_resolution_desc">O número total de pixels no sensor da câmera. Uma resolução mais alta permite mais detalhes nas imagens capturadas.</string>
+    <string name="feature_max_video_fps_desc">O número máximo de quadros por segundo que a câmera pode capturar. Um FPS mais alto resulta em uma reprodução de vídeo mais suave.</string>
+    <string name="feature_sensor_size_desc">As dimensões físicas do sensor da câmera. Sensores maiores geralmente têm melhor desempenho em condições de pouca luz. </string>
+    <string name="feature_raw_desc">Suporte para captura de dados brutos do sensor. Os arquivos RAW contêm mais informações e permitem maior flexibilidade no pós-processamento.</string>
+    <string name="feature_flash_desc">Indica se o dispositivo da câmera possui uma unidade de flash embutida.</string>
+    <string name="feature_ois_desc">A Estabilização Óptica de Imagem ajuda a reduzir o desfoque causado pelo tremor da câmera, movendo fisicamente os elementos da lente.</string>
+    <string name="feature_face_detection_desc">A capacidade de detectar rostos dentro do campo de visão da câmera, frequentemente usada para melhorar o foco e a exposição nos assuntos.</string>
+    <string name="feature_manual_exp_desc">Suporte para controlar manualmente as configurações de exposição, como velocidade do obturador e ISO.</string>
+    <string name="feature_manual_focus_desc">Suporte para controlar manualmente a distância de foco da lente.</string>
+    <string name="feature_hdr_desc">O modo High Dynamic Range captura múltiplas exposições e as combina para preservar detalhes tanto em realces quanto em sombras.</string>
+    <string name="feature_yuv_repro_desc">Suporte para reprocessamento de imagens YUV, permitindo redução de ruído e nitidez de alta qualidade após a captura.</string>
+    <string name="feature_redeye_desc">Suporte para redução de olhos vermelhos durante a captura com flash.</string>
+
+    <!-- Dialogs -->
+    <string name="dialog_primary_resolution">Resolução Primária</string>
+    <string name="dialog_pixel_array_size">Tamanho da Matriz de Pixels</string>
+    <string name="dialog_max_frame_rate">Taxa de Quadros Máxima</string>
+    <string name="dialog_high_speed_recording">Gravação de alta velocidade</string>
+    <string name="dialog_at_resolution">Na Resolução</string>
+    <string name="dialog_physical_dimensions">Dimensões Fisicas</string>
+    <string name="dialog_api_key_label">Chave da API Camera2:</string>
 </resources>

@@ -88,11 +88,9 @@ fun SummaryCard(state: CameraOverviewState) {
         }
     }
     
-    var selectedFeature by remember { mutableStateOf<FeatureDetail?>(null) }
+    var activeDialog by remember { mutableStateOf<FeatureDialog?>(null) }
     
     // Resolve strings here to avoid calling @Composable inside onClick
-    val resTitle = stringResource(R.string.feature_resolution)
-    val fpsTitle = stringResource(R.string.feature_max_fps)
     val sizeTitle = stringResource(R.string.feature_sensor_size)
     val rawTitle = stringResource(R.string.feature_raw)
     val flashTitle = stringResource(R.string.feature_flash)
@@ -104,14 +102,33 @@ fun SummaryCard(state: CameraOverviewState) {
     val yuvTitle = stringResource(R.string.feature_yuv_repro)
     val redEyeTitle = stringResource(R.string.feature_redeye)
 
-    if (selectedFeature != null) {
-        FeatureDetailDialog(
-            feature = selectedFeature!!,
-            onDismiss = { selectedFeature = null }
-        )
+    val rawDesc = stringResource(R.string.feature_raw_desc)
+    val flashDesc = stringResource(R.string.feature_flash_desc)
+    val oisDesc = stringResource(R.string.feature_ois_desc)
+    val faceDesc = stringResource(R.string.feature_face_detection_desc)
+    val manualExpDesc = stringResource(R.string.feature_manual_exp_desc)
+    val manualFocusDesc = stringResource(R.string.feature_manual_focus_desc)
+    val hdrDesc = stringResource(R.string.feature_hdr_desc)
+    val yuvDesc = stringResource(R.string.feature_yuv_repro_desc)
+    val redEyeDesc = stringResource(R.string.feature_redeye_desc)
+
+    when (val dialog = activeDialog) {
+        is FeatureDialog.Resolution -> ResolutionDetailDialog(state, onDismiss = { activeDialog = null })
+        is FeatureDialog.VideoFps -> VideoFpsDetailDialog(state, onDismiss = { activeDialog = null })
+        is FeatureDialog.SensorSize -> SensorSizeDetailDialog(state, onDismiss = { activeDialog = null })
+        is FeatureDialog.Flash -> FlashDetailDialog(state, onDismiss = { activeDialog = null })
+        is FeatureDialog.Status -> StatusDetailDialog(dialog.feature, dialog.supported, onDismiss = { activeDialog = null })
+        null -> {}
     }
 
-    Spacer(Modifier.height(6.dp))
+    Spacer(Modifier.height(16.dp))
+
+    Text(
+        text = stringResource(R.string.key_features_title),
+        style = MaterialTheme.typography.titleLarge,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
+    )
     
     FlowRow(
         modifier = Modifier.fillMaxWidth(),
@@ -126,15 +143,7 @@ fun SummaryCard(state: CameraOverviewState) {
             modifier = itemModifier,
             painter = painterResource(R.drawable.ic_sensor),
             accentColor = Color(0xFF4CAF50),
-            onClick = {
-                selectedFeature = FeatureDetail(
-                    title = resTitle,
-                    description = "The total number of pixels on the camera sensor. Higher resolution allows for more detail in captured images.",
-                    keyName = "android.sensor.info.pixelArraySize",
-                    icon = IconSource.Resource(R.drawable.ic_sensor),
-                    accentColor = Color(0xFF4CAF50)
-                )
-            }
+            onClick = { activeDialog = FeatureDialog.Resolution }
         ) {
             FeatureValueContent(state.sensorResolution, state.sensorResolutionDetails)
         }
@@ -143,15 +152,7 @@ fun SummaryCard(state: CameraOverviewState) {
             modifier = itemModifier,
             painter = painterResource(R.drawable.ic_video),
             accentColor = Color(0xFF2196F3),
-            onClick = {
-                selectedFeature = FeatureDetail(
-                    title = fpsTitle,
-                    description = "The maximum number of frames per second the camera can capture. Higher FPS results in smoother video playback.",
-                    keyName = "android.control.aeAvailableTargetFpsRanges",
-                    icon = IconSource.Resource(R.drawable.ic_video),
-                    accentColor = Color(0xFF2196F3)
-                )
-            }
+            onClick = { activeDialog = FeatureDialog.VideoFps }
         ) {
             FeatureValueContent(state.maxFps, state.maxFpsDetails)
         }
@@ -160,15 +161,7 @@ fun SummaryCard(state: CameraOverviewState) {
             modifier = itemModifier,
             painter = painterResource(R.drawable.ic_sensor),
             accentColor = Color(0xFFFF9800),
-            onClick = {
-                selectedFeature = FeatureDetail(
-                    title = sizeTitle,
-                    description = "The physical dimensions of the camera sensor. Larger sensors generally perform better in low-light conditions.",
-                    keyName = "android.sensor.info.physicalSize",
-                    icon = IconSource.Vector(Icons.Default.Straighten),
-                    accentColor = Color(0xFFFF9800)
-                )
-            }
+            onClick = { activeDialog = FeatureDialog.SensorSize }
         ) {
             FeatureValueContent(sizeTitle, state.sensorPhysicalSize)
         }
@@ -179,12 +172,15 @@ fun SummaryCard(state: CameraOverviewState) {
             painter = painterResource(R.drawable.ic_raw_box),
             accentColor = Color(0xFF7B61FF),
             onClick = {
-                selectedFeature = FeatureDetail(
-                    title = rawTitle,
-                    description = "Support for capturing raw sensor data. RAW files contain more information and allow for greater flexibility in post-processing.",
-                    keyName = "REQUEST_AVAILABLE_CAPABILITIES_RAW",
-                    icon = IconSource.Resource(R.drawable.ic_raw_box),
-                    accentColor = Color(0xFF7B61FF)
+                activeDialog = FeatureDialog.Status(
+                    feature = FeatureDetail(
+                        title = rawTitle,
+                        description = rawDesc,
+                        keyName = "REQUEST_AVAILABLE_CAPABILITIES_RAW",
+                        icon = IconSource.Resource(R.drawable.ic_raw_box),
+                        accentColor = Color(0xFF7B61FF)
+                    ),
+                    supported = state.rawFormatSupported
                 )
             }
         ) {
@@ -195,15 +191,7 @@ fun SummaryCard(state: CameraOverviewState) {
             modifier = itemModifier,
             painter = painterResource(R.drawable.ic_flash_bolt),
             accentColor = Color(0xFFFFEB3B),
-            onClick = {
-                selectedFeature = FeatureDetail(
-                    title = flashTitle,
-                    description = "Indicates if the camera device has a built-in flash unit.",
-                    keyName = "android.flash.info.available",
-                    icon = IconSource.Resource(R.drawable.ic_flash_bolt),
-                    accentColor = Color(0xFFFFEB3B)
-                )
-            }
+            onClick = { activeDialog = FeatureDialog.Flash }
         ) {
             FeatureStatusContent(state.autoFlashSupported, flashTitle)
         }
@@ -213,12 +201,15 @@ fun SummaryCard(state: CameraOverviewState) {
             painter = painterResource(R.drawable.ic_ois_hand),
             accentColor = Color(0xFF00BCD4),
             onClick = {
-                selectedFeature = FeatureDetail(
-                    title = oisTitle,
-                    description = "Optical Image Stabilization helps reduce blur caused by camera shake by physically moving the lens elements.",
-                    keyName = "android.lens.info.availableOpticalStabilization",
-                    icon = IconSource.Resource(R.drawable.ic_ois_hand),
-                    accentColor = Color(0xFF00BCD4)
+                activeDialog = FeatureDialog.Status(
+                    feature = FeatureDetail(
+                        title = oisTitle,
+                        description = oisDesc,
+                        keyName = "android.lens.info.availableOpticalStabilization",
+                        icon = IconSource.Resource(R.drawable.ic_ois_hand),
+                        accentColor = Color(0xFF00BCD4)
+                    ),
+                    supported = state.oisSupported
                 )
             }
         ) {
@@ -230,12 +221,15 @@ fun SummaryCard(state: CameraOverviewState) {
             painter = painterResource(R.drawable.ic_face_detect_smile),
             accentColor = Color(0xFFFF4081),
             onClick = {
-                selectedFeature = FeatureDetail(
-                    title = faceTitle,
-                    description = "The ability to detect faces within the camera's field of view, often used for improving focus and exposure on subjects.",
-                    keyName = "android.statistics.info.availableFaceDetectModes",
-                    icon = IconSource.Resource(R.drawable.ic_face_detect_smile),
-                    accentColor = Color(0xFFFF4081)
+                activeDialog = FeatureDialog.Status(
+                    feature = FeatureDetail(
+                        title = faceTitle,
+                        description = faceDesc,
+                        keyName = "android.statistics.info.availableFaceDetectModes",
+                        icon = IconSource.Resource(R.drawable.ic_face_detect_smile),
+                        accentColor = Color(0xFFFF4081)
+                    ),
+                    supported = state.faceDetectionSupported
                 )
             }
         ) {
@@ -247,12 +241,15 @@ fun SummaryCard(state: CameraOverviewState) {
             painter = rememberVectorPainter(Icons.Default.BrightnessMedium),
             accentColor = Color(0xFF8BC34A),
             onClick = {
-                selectedFeature = FeatureDetail(
-                    title = manualExpTitle,
-                    description = "Support for manually controlling exposure settings like shutter speed and ISO.",
-                    keyName = "CONTROL_AE_MODE_OFF",
-                    icon = IconSource.Vector(Icons.Default.BrightnessMedium),
-                    accentColor = Color(0xFF8BC34A)
+                activeDialog = FeatureDialog.Status(
+                    feature = FeatureDetail(
+                        title = manualExpTitle,
+                        description = manualExpDesc,
+                        keyName = "CONTROL_AE_MODE_OFF",
+                        icon = IconSource.Vector(Icons.Default.BrightnessMedium),
+                        accentColor = Color(0xFF8BC34A)
+                    ),
+                    supported = state.manualExpSupported
                 )
             }
         ) {
@@ -264,12 +261,15 @@ fun SummaryCard(state: CameraOverviewState) {
             painter = rememberVectorPainter(Icons.Default.FilterCenterFocus),
             accentColor = Color(0xFF4CAF50),
             onClick = {
-                selectedFeature = FeatureDetail(
-                    title = manualFocusTitle,
-                    description = "Support for manually controlling the lens focus distance.",
-                    keyName = "android.lens.info.minimumFocusDistance",
-                    icon = IconSource.Vector(Icons.Default.FilterCenterFocus),
-                    accentColor = Color(0xFF4CAF50)
+                activeDialog = FeatureDialog.Status(
+                    feature = FeatureDetail(
+                        title = manualFocusTitle,
+                        description = manualFocusDesc,
+                        keyName = "android.lens.info.minimumFocusDistance",
+                        icon = IconSource.Vector(Icons.Default.FilterCenterFocus),
+                        accentColor = Color(0xFF4CAF50)
+                    ),
+                    supported = state.manualFocusSupported
                 )
             }
         ) {
@@ -281,12 +281,15 @@ fun SummaryCard(state: CameraOverviewState) {
             painter = rememberVectorPainter(Icons.Default.HdrOn),
             accentColor = Color(0xFF2196F3),
             onClick = {
-                selectedFeature = FeatureDetail(
-                    title = hdrTitle,
-                    description = "High Dynamic Range mode captures multiple exposures and combines them to preserve detail in both highlights and shadows.",
-                    keyName = "CONTROL_SCENE_MODE_HDR",
-                    icon = IconSource.Vector(Icons.Default.HdrOn),
-                    accentColor = Color(0xFF2196F3)
+                activeDialog = FeatureDialog.Status(
+                    feature = FeatureDetail(
+                        title = hdrTitle,
+                        description = hdrDesc,
+                        keyName = "CONTROL_SCENE_MODE_HDR",
+                        icon = IconSource.Vector(Icons.Default.HdrOn),
+                        accentColor = Color(0xFF2196F3)
+                    ),
+                    supported = state.hdrSupported
                 )
             }
         ) {
@@ -298,12 +301,15 @@ fun SummaryCard(state: CameraOverviewState) {
             painter = rememberVectorPainter(Icons.Default.Refresh),
             accentColor = Color(0xFF9C27B0),
             onClick = {
-                selectedFeature = FeatureDetail(
-                    title = yuvTitle,
-                    description = "Support for reprocessing YUV images, allowing for high-quality noise reduction and sharpening after capture.",
-                    keyName = "REQUEST_AVAILABLE_CAPABILITIES_YUV_REPROCESSING",
-                    icon = IconSource.Vector(Icons.Default.Refresh),
-                    accentColor = Color(0xFF9C27B0)
+                activeDialog = FeatureDialog.Status(
+                    feature = FeatureDetail(
+                        title = yuvTitle,
+                        description = yuvDesc,
+                        keyName = "REQUEST_AVAILABLE_CAPABILITIES_YUV_REPROCESSING",
+                        icon = IconSource.Vector(Icons.Default.Refresh),
+                        accentColor = Color(0xFF9C27B0)
+                    ),
+                    supported = state.yuvReprocessingSupported
                 )
             }
         ) {
@@ -315,12 +321,15 @@ fun SummaryCard(state: CameraOverviewState) {
             painter = rememberVectorPainter(Icons.Default.RemoveRedEye),
             accentColor = Color(0xFFF44336),
             onClick = {
-                selectedFeature = FeatureDetail(
-                    title = redEyeTitle,
-                    description = "Support for red-eye reduction during flash capture.",
-                    keyName = "CONTROL_AE_MODE_ON_AUTO_FLASH_REDEYE",
-                    icon = IconSource.Vector(Icons.Default.RemoveRedEye),
-                    accentColor = Color(0xFFF44336)
+                activeDialog = FeatureDialog.Status(
+                    feature = FeatureDetail(
+                        title = redEyeTitle,
+                        description = redEyeDesc,
+                        keyName = "CONTROL_AE_MODE_ON_AUTO_FLASH_REDEYE",
+                        icon = IconSource.Vector(Icons.Default.RemoveRedEye),
+                        accentColor = Color(0xFFF44336)
+                    ),
+                    supported = state.redEyeReductionSupported
                 )
             }
         ) {
@@ -409,94 +418,6 @@ fun FeatureSummaryCard(
     }
 }
 
-sealed class IconSource {
-    data class Vector(val imageVector: ImageVector) : IconSource()
-    data class Resource(@DrawableRes val resId: Int) : IconSource()
-    
-    @Composable
-    fun rememberPainter(): Painter {
-        return when (this) {
-            is Vector -> rememberVectorPainter(imageVector)
-            is Resource -> painterResource(resId)
-        }
-    }
-}
-
-data class FeatureDetail(
-    val title: String,
-    val description: String,
-    val keyName: String,
-    val icon: IconSource,
-    val accentColor: Color
-)
-
-@Composable
-fun FeatureDetailDialog(
-    feature: FeatureDetail,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        icon = {
-            Box(
-                modifier = Modifier
-                    .size(64.dp)
-                    .background(feature.accentColor.copy(alpha = 0.1f), RoundedCornerShape(16.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    painter = feature.icon.rememberPainter(),
-                    contentDescription = null,
-                    tint = feature.accentColor,
-                    modifier = Modifier.size(32.dp)
-                )
-            }
-        },
-        title = {
-            Text(
-                feature.title,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
-            )
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(
-                    feature.description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Text(
-                            "Camera2 API Key:",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            feature.keyName,
-                            style = MaterialTheme.typography.bodySmall,
-                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
-                        )
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Close")
-            }
-        },
-        containerColor = MaterialTheme.colorScheme.surface,
-        titleContentColor = MaterialTheme.colorScheme.onSurface,
-        textContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-    )
-}
 
 @Composable
 fun HardwareLevelIcon(level: String) {
@@ -515,6 +436,7 @@ fun HardwareLevelIcon(level: String) {
         )
     }
 }
+
 
 @Preview(showBackground = true)
 @Composable

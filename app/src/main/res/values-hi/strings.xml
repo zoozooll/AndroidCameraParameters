@@ -38,7 +38,7 @@
 
     <!-- Feature Labels -->
     <string name="feature_resolution">रेज़ोल्यूशन</string>
-    <string name="feature_max_fps">अधिकतम FPS</string>
+    <string name="feature_max_video_fps">अधिकतम FPS</string>
     <string name="feature_raw">RAW</string>
     <string name="feature_capture">कैप्चर</string>
     <string name="feature_flash">फ्लैश</string>
@@ -151,4 +151,27 @@
     <string name="mode_minimal">न्यूनतम</string>
     <string name="mode_zero_shutter_lag">शून्य शटर लैग</string>
     <string name="mode_quality">गुणवत्ता</string>
+
+    <!-- Feature Descriptions -->
+    <string name="feature_resolution_desc">कैमरा सेंसर पर पिक्सेल की कुल संख्या। उच्च रेज़ोल्यूशन कैप्चर की गई छवियों में अधिक विवरण की अनुमति देता है।</string>
+    <string name="feature_max_video_fps_desc">प्रति सेकंड फ़्रेम की अधिकतम संख्या जिसे कैमरा कैप्चर कर सकता है। उच्च FPS के परिणामस्वरूप वीडियो प्लेबैक सुचारू होता है।</string>
+    <string name="feature_sensor_size_desc">कैमरा सेंसर के भौतिक आयाम। बड़े सेंसर आम तौर पर कम रोशनी की स्थिति में बेहतर प्रदर्शन करते हैं।</string>
+    <string name="feature_raw_desc">रॉ सेंसर डेटा कैप्चर करने के लिए समर्थन। RAW फ़ाइलों में अधिक जानकारी होती है और पोस्ट-प्रोसेसिंग में अधिक लचीलेपन की अनुमति मिलती है।</string>
+    <string name="feature_flash_desc">इंगित करता है कि कैमरा डिवाइस में बिल्ट-इन फ्लैश यूनिट है या नहीं।</string>
+    <string name="feature_ois_desc">ऑप्टिकल इमेज स्टेबिलाइज़ेशन लेंस तत्वों को भौतिक रूप से हिलाकर कैमरा शेक के कारण होने वाले धुंधलेपन को कम करने में मदद करता है।</string>
+    <string name="feature_face_detection_desc">कैमरे के दृश्य क्षेत्र के भीतर चेहरों का पता लगाने की क्षमता, जिसका उपयोग अक्सर विषयों पर फोकस और एक्सपोज़र को बेहतर बनाने के लिए किया जाता है।</string>
+    <string name="feature_manual_exp_desc">शटर स्पीड और ISO जैसी एक्सपोज़र सेटिंग्स को मैन्युअल रूप से नियंत्रित करने के लिए समर्थन।</string>
+    <string name="feature_manual_focus_desc">लेंस फोकस दूरी को मैन्युअल रूप से नियंत्रित करने के लिए समर्थन।</string>
+    <string name="feature_hdr_desc">हाई डायनेमिक रेंज मोड कई एक्सपोज़र कैप्चर करता है और उन्हें हाइलाइट्स और शैडो दोनों में विवरण सुरक्षित रखने के लिए संयोजित करता है।</string>
+    <string name="feature_yuv_repro_desc">YUV छवियों को पुनर्संसाधित करने के लिए समर्थन, जो कैप्चर के बाद उच्च गुणवत्ता वाले शोर में कमी और शार्पनिंग की अनुमति देता है।</string>
+    <string name="feature_redeye_desc">फ्लैश कैप्चर के दौरान रेड-ई रिडक्शन के लिए समर्थन।</string>
+
+    <!-- Dialogs -->
+    <string name="dialog_primary_resolution">प्राथमिक रेज़ोल्यूशन</string>
+    <string name="dialog_pixel_array_size">पिक्सेल एरे आकार</string>
+    <string name="dialog_max_frame_rate">अधिकतम फ़्रेम दर</string>
+    <string name="dialog_high_speed_recording">हाई स्पीड रिकॉर्डिंग</string>
+    <string name="dialog_at_resolution">रेज़ोल्यूशन पर</string>
+    <string name="dialog_physical_dimensions">भौतिक आयाम</string>
+    <string name="dialog_api_key_label">Camera2 API कुंजी:</string>
 </resources>

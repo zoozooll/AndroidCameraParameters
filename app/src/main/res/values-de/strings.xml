@@ -38,7 +38,7 @@
 
     <!-- Feature Labels -->
     <string name="feature_resolution">Auflösung</string>
-    <string name="feature_max_fps">Max. FPS</string>
+    <string name="feature_max_video_fps">Max. FPS</string>
     <string name="feature_raw">RAW</string>
     <string name="feature_capture">Aufnahme</string>
     <string name="feature_flash">Blitz</string>
@@ -47,6 +47,30 @@
     <string name="feature_stabilization">Stabilisierung</string>
     <string name="feature_face_detection">Gesichtserkennung</string>
     <string name="feature_ai_feature">KI-Funktion</string>
+    <string name="feature_sensor_size">Sensor</string>
+
+    <!-- Feature Descriptions -->
+    <string name="feature_resolution_desc">Die Gesamtzahl der Pixel auf dem Kamerasensor. Eine höhere Auflösung ermöglicht mehr Details in den aufgenommenen Bildern.</string>
+    <string name="feature_max_video_fps_desc">Die maximale Anzahl an Bildern pro Sekunde, die die Kamera aufnehmen kann. Höhere FPS führen zu einer flüssigeren Videowiedergabe.</string>
+    <string name="feature_sensor_size_desc">Die physischen Abmessungen des Kamerasensors. Größere Sensoren schneiden bei schlechten Lichtverhältnissen in der Regel besser ab.</string>
+    <string name="feature_raw_desc">Unterstützung für die Erfassung von Rohsensordaten. RAW-Dateien enthalten mehr Informationen und ermöglichen eine größere Flexibilität bei der Nachbearbeitung.</string>
+    <string name="feature_flash_desc">Gibt an, ob das Kameragerät über eine integrierte Blitzeinheit verfügt.</string>
+    <string name="feature_ois_desc">Die optische Bildstabilisierung hilft, Unschärfen durch Kameraerschütterungen zu reduzieren, indem die Linsenelemente physisch bewegt werden.</string>
+    <string name="feature_face_detection_desc">Die Fähigkeit, Gesichter im Sichtfeld der Kamera zu erkennen, wird häufig verwendet, um den Fokus und die Belichtung von Motiven zu verbessern.</string>
+    <string name="feature_manual_exp_desc">Unterstützung für die manuelle Steuerung der Belichtungseinstellungen wie Verschlusszeit und ISO.</string>
+    <string name="feature_manual_focus_desc">Unterstützung für die manuelle Steuerung des Fokusabstands des Objektivs.</string>
+    <string name="feature_hdr_desc">Der HDR-Modus (High Dynamic Range) erfasst mehrere Belichtungen und kombiniert sie, um Details sowohl in den Lichtern als auch in den Schatten zu erhalten.</string>
+    <string name="feature_yuv_repro_desc">Unterstützung für die Wiederaufbereitung von YUV-Bildern, die eine hochwertige Rauschunterdrückung und Schärfung nach der Aufnahme ermöglicht.</string>
+    <string name="feature_redeye_desc">Unterstützung der Rote-Augen-Reduzierung bei Blitzaufnahmen.</string>
+
+    <!-- Dialog Labels -->
+    <string name="dialog_primary_resolution">Primäre Auflösung</string>
+    <string name="dialog_pixel_array_size">Pixel-Array-Größe</string>
+    <string name="dialog_max_frame_rate">Maximale Bildrate</string>
+    <string name="dialog_high_speed_recording">Hochgeschwindigkeitsaufnahme</string>
+    <string name="dialog_at_resolution">Bei Auflösung</string>
+    <string name="dialog_physical_dimensions">Physische Abmessungen</string>
+    <string name="dialog_api_key_label">Camera2 API-Schlüssel:</string>
 
     <!-- Status Strings -->
     <string name="status_supported">Unterstützt</string>

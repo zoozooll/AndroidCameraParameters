@@ -38,7 +38,7 @@
 
     <!-- Feature Labels -->
     <string name="feature_resolution">分辨率</string>
-    <string name="feature_max_fps">最大帧率</string>
+    <string name="feature_max_video_fps">最大帧率</string>
     <string name="feature_raw">RAW</string>
     <string name="feature_capture">拍摄</string>
     <string name="feature_flash">闪光灯</string>
@@ -47,6 +47,30 @@
     <string name="feature_stabilization">防抖</string>
     <string name="feature_face_detection">人脸检测</string>
     <string name="feature_ai_feature">AI 特性</string>
+    <string name="feature_sensor_size">传感器</string>
+
+    <!-- Feature Descriptions -->
+    <string name="feature_resolution_desc">相机传感器的像素总数。更高的分辨率可以在拍摄的图像中保留更多细节。</string>
+    <string name="feature_max_video_fps_desc">相机每秒可以捕获的最大帧数。更高的 FPS 会使视频播放更流畅。</string>
+    <string name="feature_sensor_size_desc">相机传感器的物理尺寸。较大的传感器通常在低光条件下表现更好。</string>
+    <string name="feature_raw_desc">支持捕获原始传感器数据。RAW 文件包含更多信息，并在后期处理中提供更大的灵活性。</string>
+    <string name="feature_flash_desc">指示相机设备是否具有内置闪光灯单元。</string>
+    <string name="feature_ois_desc">光学图像稳定功能通过物理移动镜头元件来帮助减少由相机抖动引起的模糊。</string>
+    <string name="feature_face_detection_desc">检测相机视野内人脸的能力，常用于改善主体的焦点和曝光。</string>
+    <string name="feature_manual_exp_desc">支持手动控制快门速度和 ISO 等曝光设置。</string>
+    <string name="feature_manual_focus_desc">支持手动控制镜头焦距。</string>
+    <string name="feature_hdr_desc">高动态范围模式捕获多次曝光并将其组合，以保留高光和阴影中的细节。</string>
+    <string name="feature_yuv_repro_desc">支持重新处理 YUV 图像，允许在捕获后进行高质量的降噪和锐化。</string>
+    <string name="feature_redeye_desc">支持在闪光灯拍摄期间减轻红眼。</string>
+
+    <!-- Dialog Labels -->
+    <string name="dialog_primary_resolution">主要分辨率</string>
+    <string name="dialog_pixel_array_size">像素阵列尺寸</string>
+    <string name="dialog_max_frame_rate">最大帧率</string>
+    <string name="dialog_high_speed_recording">高速录像</string>
+    <string name="dialog_at_resolution">分辨率下</string>
+    <string name="dialog_physical_dimensions">物理尺寸</string>
+    <string name="dialog_api_key_label">Camera2 API 密钥：</string>
 
     <!-- Status Strings -->
     <string name="status_supported">已支持</string>

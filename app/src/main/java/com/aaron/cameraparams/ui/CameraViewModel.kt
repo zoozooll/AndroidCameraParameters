@@ -61,8 +61,11 @@ data class CameraOverviewState(
     val sensorPhysicalSize: String = "",
     val maxFps: String = "",
     val maxFpsDetails: String = "",
+    val highSpeedVideoSupported: Boolean = false,
     val rawFormatSupported: Boolean = false,
     val autoFlashSupported: Boolean = false,
+    val flashAutoSupported: Boolean = false,
+    val flashAlwaysSupported: Boolean = false,
     val oisSupported: Boolean = false,
     val faceDetectionSupported: Boolean = false,
     val manualExpSupported: Boolean = false,
@@ -196,8 +199,10 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
         
         var maxFps = ""
         var maxFpsDetails = ""
+        var highSpeedVideoSupported = false
         
-        if (ranges != null) {
+        if (ranges != null && ranges.isNotEmpty()) {
+            highSpeedVideoSupported = true
             val largestRange = ranges.maxWithOrNull(compareBy({ it.upper }, { it.lower }))
             if (largestRange != null) {
                 maxFps = "${largestRange.upper} FPS"
@@ -252,6 +257,12 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
         val hdrSupport = sceneModes?.contains(CameraCharacteristics.CONTROL_SCENE_MODE_HDR) ?: false
 
         val aeModes = chars.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_MODES)
+        val flashAuto = aeModes?.contains(
+            CameraCharacteristics.CONTROL_AE_MODE_ON_AUTO_FLASH
+        ) ?: false
+        val flashAlways = aeModes?.contains(
+            CameraCharacteristics.CONTROL_AE_MODE_ON_ALWAYS_FLASH
+        ) ?: false
         val redEyeSupport = aeModes?.contains(
             CameraCharacteristics.CONTROL_AE_MODE_ON_AUTO_FLASH_REDEYE
         ) ?: false
@@ -270,8 +281,11 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
                 sensorPhysicalSize = sensorPhysicalSize,
                 maxFps = maxFps,
                 maxFpsDetails = maxFpsDetails,
+                highSpeedVideoSupported = highSpeedVideoSupported,
                 rawFormatSupported = rawSupport,
                 autoFlashSupported = flashAvailable,
+                flashAutoSupported = flashAuto,
+                flashAlwaysSupported = flashAlways,
                 oisSupported = oisAvailable,
                 faceDetectionSupported = faceDetection,
                 manualExpSupported = manualExp,

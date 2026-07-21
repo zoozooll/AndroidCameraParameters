@@ -38,7 +38,7 @@
 
     <!-- Feature Labels -->
     <string name="feature_resolution">Resolusi</string>
-    <string name="feature_max_fps">FPS Maks</string>
+    <string name="feature_max_video_fps">FPS Maks</string>
     <string name="feature_raw">RAW</string>
     <string name="feature_capture">Pengambilan</string>
     <string name="feature_flash">Flash</string>
@@ -151,4 +151,27 @@
     <string name="mode_minimal">MINIMAL</string>
     <string name="mode_zero_shutter_lag">Tanpa Penundaan Rana</string>
     <string name="mode_quality">KUALITAS</string>
+
+    <!-- Feature Descriptions -->
+    <string name="feature_resolution_desc">Jumlah total piksel pada sensor kamera. Resolusi yang lebih tinggi memungkinkan detail lebih banyak pada gambar yang diambil.</string>
+    <string name="feature_max_video_fps_desc">Jumlah bingkai per detik maksimum yang dapat ditangkap kamera. FPS yang lebih tinggi menghasilkan pemutaran video yang lebih halus.</string>
+    <string name="feature_sensor_size_desc">Dimensi fisik sensor kamera. Sensor yang lebih besar umumnya berkinerja lebih baik dalam kondisi kurang cahaya.</string>
+    <string name="feature_raw_desc">Dukungan untuk menangkap data sensor mentah. File RAW berisi lebih banyak informasi dan memungkinkan fleksibilitas yang lebih besar dalam pemrosesan akhir.</string>
+    <string name="feature_flash_desc">Menunjukkan apakah perangkat kamera memiliki unit lampu kilat internal.</string>
+    <string name="feature_ois_desc">Penstabil Gambar Optik membantu mengurangi kekaburan yang disebabkan oleh guncangan kamera dengan menggerakkan elemen lensa secara fisik.</string>
+    <string name="feature_face_detection_desc">Kemampuan untuk mendeteksi wajah dalam bidang pandang kamera, sering digunakan untuk meningkatkan fokus dan pencahayaan pada subjek.</string>
+    <string name="feature_manual_exp_desc">Dukungan untuk mengontrol pengaturan pencahayaan secara manual seperti kecepatan rana dan ISO.</string>
+    <string name="feature_manual_focus_desc">Dukungan untuk mengontrol jarak fokus lensa secara manual.</string>
+    <string name="feature_hdr_desc">Mode Rentang Dinamis Tinggi menangkap beberapa pencahayaan dan menggabungkannya untuk menjaga detail baik di sorotan maupun bayangan.</string>
+    <string name="feature_yuv_repro_desc">Dukungan untuk memproses ulang gambar YUV, memungkinkan pengurangan noise dan penajaman berkualitas tinggi setelah pengambilan.</string>
+    <string name="feature_redeye_desc">Dukungan untuk pengurangan mata merah selama pengambilan dengan lampu kilat.</string>
+
+    <!-- Dialogs -->
+    <string name="dialog_primary_resolution">Resolusi Utama</string>
+    <string name="dialog_pixel_array_size">Ukuran Array Piksel</string>
+    <string name="dialog_max_frame_rate">Kecepatan Bingkai Maksimum</string>
+    <string name="dialog_high_speed_recording">Rekaman Kecepatan Tinggi</string>
+    <string name="dialog_at_resolution">Pada Resolusi</string>
+    <string name="dialog_physical_dimensions">Dimensi Fisik</string>
+    <string name="dialog_api_key_label">Kunci API Camera2:</string>
 </resources>

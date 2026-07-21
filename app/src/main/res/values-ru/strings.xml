@@ -38,7 +38,7 @@
 
     <!-- Feature Labels -->
     <string name="feature_resolution">Разрешение</string>
-    <string name="feature_max_fps">Макс. FPS</string>
+    <string name="feature_max_video_fps">Макс. FPS</string>
     <string name="feature_raw">RAW</string>
     <string name="feature_capture">Съемка</string>
     <string name="feature_flash">Вспышка</string>
@@ -151,4 +151,27 @@
     <string name="mode_minimal">МИНИМАЛЬНО</string>
     <string name="mode_zero_shutter_lag">Без задержки затвора</string>
     <string name="mode_quality">КАЧЕСТВО</string>
+
+    <!-- Feature Descriptions -->
+    <string name="feature_resolution_desc">Общее количество пикселей на сенсоре камеры. Более высокое разрешение обеспечивает большую детализацию захваченных изображений.</string>
+    <string name="feature_max_video_fps_desc">Максимальное количество кадров в секунду, которое может захватить камера. Более высокая частота кадров обеспечивает более плавное воспроизведение видео.</string>
+    <string name="feature_sensor_size_desc">Физические размеры сенсора камеры. Датчики большего размера обычно лучше работают в условиях низкой освещенности.</string>
+    <string name="feature_raw_desc">Поддержка захвата необработанных данных сенсора. Файлы RAW содержат больше информации и обеспечивают большую гибкость при постобработке.</string>
+    <string name="feature_flash_desc">Указывает, есть ли у камеры встроенная вспышка.</string>
+    <string name="feature_ois_desc">Оптическая стабилизация изображения помогает уменьшить размытость, вызванную дрожанием камеры, за счет физического перемещения элементов объектива.</string>
+    <string name="feature_face_detection_desc">Способность обнаруживать лица в поле зрения камеры, часто используемая для улучшения фокусировки и экспозиции объектов.</string>
+    <string name="feature_manual_exp_desc">Поддержка ручного управления настройками экспозиции, такими как выдержка и ISO.</string>
+    <string name="feature_manual_focus_desc">Поддержка ручного управления фокусным расстоянием объектива.</string>
+    <string name="feature_hdr_desc">Режим расширенного динамического диапазона (HDR) делает несколько снимков с разной экспозицией и объединяет их для сохранения деталей как в светлых, так и в темных областях.</string>
+    <string name="feature_yuv_repro_desc">Поддержка переработки изображений YUV, обеспечивающая высококачественное шумоподавление и повышение резкости после съемки.</string>
+    <string name="feature_redeye_desc">Поддержка уменьшения эффекта «красных глаз» при съемке со вспышкой.</string>
+
+    <!-- Dialogs -->
+    <string name="dialog_primary_resolution">Основное разрешение</string>
+    <string name="dialog_pixel_array_size">Размер массива пикселей</string>
+    <string name="dialog_max_frame_rate">Максимальная частота кадров</string>
+    <string name="dialog_high_speed_recording">Высокоскоростная запись</string>
+    <string name="dialog_at_resolution">При разрешении</string>
+    <string name="dialog_physical_dimensions">Физические размеры</string>
+    <string name="dialog_api_key_label">Ключ API Camera2:</string>
 </resources>

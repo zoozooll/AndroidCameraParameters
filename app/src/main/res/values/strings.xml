@@ -39,7 +39,7 @@
 
     <!-- Feature Labels -->
     <string name="feature_resolution">Resolution</string>
-    <string name="feature_max_fps">Max FPS</string>
+    <string name="feature_max_video_fps">Max Video FPS</string>
     <string name="feature_raw">RAW</string>
     <string name="feature_capture">Capture</string>
     <string name="feature_flash">Flash</string>
@@ -49,6 +49,29 @@
     <string name="feature_face_detection">Face Detection</string>
     <string name="feature_ai_feature">AI Feature</string>
     <string name="feature_sensor_size">Sensor</string>
+
+    <!-- Feature Descriptions -->
+    <string name="feature_resolution_desc">The total number of pixels on the camera sensor. Higher resolution allows for more detail in captured images.</string>
+    <string name="feature_max_video_fps_desc">The maximum number of frames per second the camera can capture. Higher FPS results in smoother video playback.</string>
+    <string name="feature_sensor_size_desc">The physical dimensions of the camera sensor. Larger sensors generally perform better in low-light conditions.</string>
+    <string name="feature_raw_desc">Support for capturing raw sensor data. RAW files contain more information and allow for greater flexibility in post-processing.</string>
+    <string name="feature_flash_desc">Indicates if the camera device has a built-in flash unit.</string>
+    <string name="feature_ois_desc">Optical Image Stabilization helps reduce blur caused by camera shake by physically moving the lens elements.</string>
+    <string name="feature_face_detection_desc">The ability to detect faces within the camera\'s field of view, often used for improving focus and exposure on subjects.</string>
+    <string name="feature_manual_exp_desc">Support for manually controlling exposure settings like shutter speed and ISO.</string>
+    <string name="feature_manual_focus_desc">Support for manually controlling the lens focus distance.</string>
+    <string name="feature_hdr_desc">High Dynamic Range mode captures multiple exposures and combines them to preserve detail in both highlights and shadows.</string>
+    <string name="feature_yuv_repro_desc">Support for reprocessing YUV images, allowing for high-quality noise reduction and sharpening after capture.</string>
+    <string name="feature_redeye_desc">Support for red-eye reduction during flash capture.</string>
+
+    <!-- Dialog Labels -->
+    <string name="dialog_primary_resolution">Primary Resolution</string>
+    <string name="dialog_pixel_array_size">Pixel Array Size</string>
+    <string name="dialog_max_frame_rate">Maximum Frame Rate</string>
+    <string name="dialog_high_speed_recording">High Speed Recording</string>
+    <string name="dialog_at_resolution">At Resolution</string>
+    <string name="dialog_physical_dimensions">Physical Dimensions</string>
+    <string name="dialog_api_key_label">Camera2 API Key:</string>
 
     <!-- Status Strings -->
     <string name="status_supported">Supported</string>

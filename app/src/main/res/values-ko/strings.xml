@@ -38,7 +38,7 @@
 
     <!-- Feature Labels -->
     <string name="feature_resolution">해상도</string>
-    <string name="feature_max_fps">최대 FPS</string>
+    <string name="feature_max_video_fps">최대 FPS</string>
     <string name="feature_raw">RAW</string>
     <string name="feature_capture">캡처</string>
     <string name="feature_flash">플래시</string>
@@ -151,4 +151,27 @@
     <string name="mode_minimal">최소</string>
     <string name="mode_zero_shutter_lag">셔터 지연 없음</string>
     <string name="mode_quality">품질 우선</string>
+
+    <!-- Feature Descriptions -->
+    <string name="feature_resolution_desc">카메라 센서의 총 픽셀 수입니다. 해상도가 높을수록 캡처된 이미지에서 더 자세한 디테일을 표현할 수 있습니다.</string>
+    <string name="feature_max_video_fps_desc">카메라가 캡처할 수 있는 초당 최대 프레임 수입니다. FPS가 높을수록 동영상 재생이 더 부드러워집니다.</string>
+    <string name="feature_sensor_size_desc">카메라 센서의 물리적 크기입니다. 센서가 클수록 일반적으로 저조도 환경에서 더 나은 성능을 발휘합니다.</string>
+    <string name="feature_raw_desc">원본 센서 데이터 캡처를 지원합니다. RAW 파일은 더 많은 정보를 포함하고 있어 후처리 시 더 큰 유연성을 제공합니다.</string>
+    <string name="feature_flash_desc">카메라 장치에 내장 플래시 유닛이 있는지 여부를 나타냅니다.</string>
+    <string name="feature_ois_desc">광학식 손떨림 보정(OIS)은 렌즈 요소를 물리적으로 움직여 카메라 흔들림으로 인한 흐림 현상을 줄이는 데 도움이 됩니다.</string>
+    <string name="feature_face_detection_desc">카메라의 시야 내에서 얼굴을 감지하는 기능으로, 종종 피사체의 초점과 노출을 개선하는 데 사용됩니다.</string>
+    <string name="feature_manual_exp_desc">셔터 속도 및 ISO와 같은 노출 설정을 수동으로 제어할 수 있도록 지원합니다.</string>
+    <string name="feature_manual_focus_desc">렌즈 초점 거리를 수동으로 제어할 수 있도록 지원합니다.</string>
+    <string name="feature_hdr_desc">하이 다이내믹 레인지(HDR) 모드는 여러 노출을 캡처하고 결합하여 밝은 부분과 어두운 부분 모두의 디테일을 보존합니다.</string>
+    <string name="feature_yuv_repro_desc">YUV 이미지 재처리를 지원하여 캡처 후 고품질 노이즈 제거 및 샤프닝이 가능합니다.</string>
+    <string name="feature_redeye_desc">플래시 촬영 중 적목 현상 방지 기능을 지원합니다.</string>
+
+    <!-- Dialogs -->
+    <string name="dialog_primary_resolution">기본 해상도</string>
+    <string name="dialog_pixel_array_size">픽셀 배열 크기</string>
+    <string name="dialog_max_frame_rate">최대 프레임 속도</string>
+    <string name="dialog_high_speed_recording">고속 녹화</string>
+    <string name="dialog_at_resolution">해상도:</string>
+    <string name="dialog_physical_dimensions">물리적 크기</string>
+    <string name="dialog_api_key_label">Camera2 API 키:</string>
 </resources>
