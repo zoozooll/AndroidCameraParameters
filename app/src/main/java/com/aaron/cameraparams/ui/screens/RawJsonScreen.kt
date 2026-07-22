@@ -17,16 +17,23 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import com.aaron.cameraparams.R
 import com.aaron.cameraparams.ui.CameraViewModel
+import com.aaron.cameraparams.ui.theme.CameraParamsTheme
 import com.aaron.cameraparams.ui.theme.MonospaceTypography
 import kotlinx.coroutines.launch
 
 @Composable
 fun RawJsonScreen(viewModel: CameraViewModel) {
     val uiState by viewModel.uiState.collectAsState()
+    RawJsonScreenContent(rawJson = uiState.rawJson)
+}
+
+@Composable
+fun RawJsonScreenContent(rawJson: String) {
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
 
@@ -42,7 +49,7 @@ fun RawJsonScreen(viewModel: CameraViewModel) {
                 modifier = Modifier.weight(1f)
             )
             IconButton(onClick = {
-                val clipData = ClipData.newPlainText("Raw JSON", uiState.rawJson)
+                val clipData = ClipData.newPlainText("Raw JSON", rawJson)
                 scope.launch { clipboard.setClipEntry(ClipEntry(clipData)) }
             }) {
                 Icon(Icons.Default.Info, contentDescription = stringResource(R.string.cd_copy_info))
@@ -59,10 +66,30 @@ fun RawJsonScreen(viewModel: CameraViewModel) {
                 .padding(16.dp)
         ) {
             Text(
-                text = uiState.rawJson,
+                text = rawJson,
                 style = MonospaceTypography,
                 color = if (isSystemInDarkTheme()) Color(0xFFCE9178) else Color(0xFF003366)
             )
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun RawJsonScreenPreview() {
+    CameraParamsTheme {
+        RawJsonScreenContent(
+            rawJson = """
+                {
+                    "android.sensor.info.pixelArraySize": "4032x3024",
+                    "android.lens.facing": "BACK",
+                    "android.control.aeAvailableModes": "[ON, ON_AUTO_FLASH, ON_ALWAYS_FLASH]",
+                    "android.statistics.info.maxFaceCount": 10,
+                    "android.scaler.availableMaxDigitalZoom": 10.0,
+                    "android.sensor.info.physicalSize": "5.64x4.23",
+                    "android.sensor.orientation": 90
+                }
+            """.trimIndent()
+        )
     }
 }
