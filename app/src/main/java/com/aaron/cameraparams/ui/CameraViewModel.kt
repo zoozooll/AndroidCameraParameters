@@ -409,9 +409,9 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private fun generateRawJson(chars: CameraCharacteristics): String {
-        val map = TreeMap<String, Any?>()
+        val map = TreeMap<String, String>()
         chars.keys.forEach { key ->
-            map[key.name] = chars.get(key)
+            map[key.name] = getCharacteristicInfo(chars, key)
         }
         val gson = GsonBuilder().setPrettyPrinting().create()
         return gson.toJson(map)
