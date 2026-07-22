@@ -38,6 +38,8 @@ import com.aaron.cameraparams.BuildConfig
 import com.aaron.cameraparams.R
 import com.aaron.cameraparams.ui.theme.CameraParamsTheme
 import com.aaron.cameraparams.ui.screens.*
+import com.aaron.cameraparams.ui.components.PrivacyPolicyDialog
+import com.aaron.cameraparams.ui.components.AboutDialog
 
 import androidx.annotation.StringRes
 
@@ -52,12 +54,13 @@ sealed class Screen(val route: String, @StringRes val label: Int, val icon: Int)
 @Composable
 fun CameraSelector(
     state: CameraHeaderState,
+    onPrivacyClick: () -> Unit,
+    onAboutClick: () -> Unit,
     onIntent: (CameraIntent) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
     var menuExpanded by remember { mutableStateOf(false) }
     val context = LocalContext.current
-    val privacyUrl = stringResource(R.string.url_privacy_policy)
     val playStoreUrl = stringResource(R.string.url_play_store)
 
     Row(
@@ -83,8 +86,7 @@ fun CameraSelector(
                 text = { Text(stringResource(R.string.menu_privacy_policy)) },
                 onClick = {
                     menuExpanded = false
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(privacyUrl))
-                    context.startActivity(intent)
+                    onPrivacyClick()
                 }
             )
             
@@ -103,7 +105,7 @@ fun CameraSelector(
                 text = { Text(stringResource(R.string.menu_about)) },
                 onClick = {
                     menuExpanded = false
-                    // Show a simple about dialog or navigate
+                    onAboutClick()
                 }
             )
         }
@@ -208,6 +210,17 @@ fun MainScreenContent(
         Screen.Favorites
     )
 
+    var showPrivacyDialog by remember { mutableStateOf(false) }
+    var showAboutDialog by remember { mutableStateOf(false) }
+
+    if (showPrivacyDialog) {
+        PrivacyPolicyDialog(onDismiss = { showPrivacyDialog = false })
+    }
+
+    if (showAboutDialog) {
+        AboutDialog(onDismiss = { showAboutDialog = false })
+    }
+
     Scaffold(
         topBar = {
             val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -224,6 +237,8 @@ fun MainScreenContent(
                     Box(modifier = Modifier.statusBarsPadding()) {
                         CameraSelector(
                             state = headerState,
+                            onPrivacyClick = { showPrivacyDialog = true },
+                            onAboutClick = { showAboutDialog = true },
                             onIntent = onIntent
                         )
                     }
