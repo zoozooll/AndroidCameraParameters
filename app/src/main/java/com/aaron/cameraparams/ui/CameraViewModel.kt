@@ -441,7 +441,7 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
             return getAvailableNoiseReductionModes(getApplication<Application>().applicationContext, (value as kotlin.IntArray?)!!)
         } else if (CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES == key) {
             return getRequestAvailableCapabilities((value as kotlin.IntArray?)!!)
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && CameraCharacteristics.CONTROL_AVAILABLE_MODES == key) {
+        } else if (CameraCharacteristics.CONTROL_AVAILABLE_MODES == key) {
             return getAvailableModes(getApplication<Application>().applicationContext, (value as kotlin.IntArray?)!!)
         } else if (value is IntArray) {
             return (((value as IntArray).contentToString()))
