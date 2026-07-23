@@ -9,7 +9,7 @@ keywords: [android 相機儀表板, 硬體級別檢測, 相機診斷]
 
 本頁面詳細介紹了應用程式的儀表板及其核心特性。
 
-![應用概覽](/img/designer/page1.png)
+![應用概覽](/img/camera_params_feature_graph.png)
 
 ## 儀表板元件
 

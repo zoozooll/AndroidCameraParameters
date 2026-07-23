@@ -9,7 +9,7 @@ keywords: [android kamera dashboard, hardware-level-erkennung, kamera-diagnose]
 
 Diese Seite bietet eine detaillierte Aufschlüsselung des Dashboards der Anwendung und ihrer wichtigsten Funktionen.
 
-![App-Übersicht](/img/designer/page1.png)
+![App-Übersicht](/img/camera_params_feature_graph.png)
 
 ## Dashboard-Komponenten
 

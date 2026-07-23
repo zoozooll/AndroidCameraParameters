@@ -9,7 +9,7 @@ keywords: [painel da câmera android, detecção de nível de hardware, diagnós
 
 Esta página fornece um detalhamento do painel da aplicação e de seus principais recursos.
 
-![Visão Geral do App](/img/designer/page1.png)
+![Visão Geral do App](/img/camera_params_feature_graph.png)
 
 ## Componentes do Painel
 

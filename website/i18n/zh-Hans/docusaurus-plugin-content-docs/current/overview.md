@@ -9,7 +9,7 @@ keywords: [安卓摄像头仪表板, 硬件级别检测, 摄像头诊断]
 
 本页面详细介绍了应用程序的仪表板和关键功能。
 
-![应用概览](/img/designer/page1.png)
+![应用概览](/img/camera_params_feature_graph.png)
 
 ## 仪表板组件
 

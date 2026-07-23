@@ -9,7 +9,7 @@ keywords: [tableau de bord caméra android, détection du niveau matériel, diag
 
 Cette page fournit une ventilation détaillée du tableau de bord de l'application et de ses fonctionnalités clés.
 
-![Aperçu de l'Application](/img/designer/page1.png)
+![Aperçu de l'Application](/img/camera_params_feature_graph.png)
 
 ## Composants du Tableau de Bord
 

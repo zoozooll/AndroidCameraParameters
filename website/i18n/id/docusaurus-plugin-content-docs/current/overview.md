@@ -9,7 +9,7 @@ keywords: [dasbor kamera android, deteksi tingkat perangkat keras, diagnostik ka
 
 Halaman ini memberikan perincian mendetail tentang dasbor aplikasi dan fitur-fitur utamanya.
 
-![Ringkasan Aplikasi](/img/designer/page1.png)
+![Ringkasan Aplikasi](/img/camera_params_feature_graph.png)
 
 ## Komponen Dasbor
 
