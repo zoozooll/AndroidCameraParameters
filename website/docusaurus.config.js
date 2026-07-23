@@ -10,7 +10,7 @@ import {themes as prismThemes} from 'prism-react-renderer';
 const config = {
   title: 'Android Camera Parameters',
   tagline: 'Advanced Camera2 API Diagnostics Tool for Android',
-  favicon: 'img/favicon.ico',
+  favicon: 'img/camera_params_icon.png',
 
   // Set the production url of your site here
   url: 'https://zoozooll.github.io',
@@ -96,7 +96,7 @@ const config = {
         title: 'Camera Parameters',
         logo: {
           alt: 'Android Camera Parameters Logo',
-          src: 'img/logo.svg',
+          src: 'img/camera_params_icon.png',
         },
         items: [
           {
