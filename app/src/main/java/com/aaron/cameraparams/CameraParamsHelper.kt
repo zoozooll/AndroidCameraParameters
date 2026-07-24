@@ -4,6 +4,7 @@ import android.content.Context
 import android.hardware.camera2.CameraAccessException
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
+import android.hardware.camera2.params.MandatoryStreamCombination
 import android.hardware.camera2.params.StreamConfigurationMap
 import android.os.Build
 import com.aaron.cameraparams.camera.getAeAvailableModes
@@ -15,8 +16,10 @@ import com.aaron.cameraparams.camera.getAvailableSceneModes
 import com.aaron.cameraparams.camera.getAwbAvailableModes
 import com.aaron.cameraparams.camera.getColorCorrectionAvailableAberrationMode
 import com.aaron.cameraparams.camera.getHardwareLevelInfo
+import com.aaron.cameraparams.camera.getMandatoryStreamCombinationsString
 import com.aaron.cameraparams.camera.getRequestAvailableCapabilities
 import com.aaron.cameraparams.camera.streamConfigurationMapToString
+import kotlin.collections.isNotEmpty
 
 
 class CameraParamsHelper(private val context: Context) {
@@ -94,7 +97,9 @@ class CameraParamsHelper(private val context: Context) {
             return getAvailableNoiseReductionModes(context, (value as kotlin.IntArray?)!!)
         } else if (CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES == key) {
             return getRequestAvailableCapabilities((value as kotlin.IntArray?)!!)
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && CameraCharacteristics.CONTROL_AVAILABLE_MODES == key) {
+        } else if (value is Array<*> && value.isArrayOf<MandatoryStreamCombination>()) {
+            return getMandatoryStreamCombinationsString(value)
+        } else if (CameraCharacteristics.CONTROL_AVAILABLE_MODES == key) {
             return getAvailableModes(context, (value as kotlin.IntArray?)!!)
         } else if (value is IntArray) {
             return (((value as IntArray).contentToString()))

@@ -4,17 +4,14 @@ import android.content.Context
 import android.graphics.ImageFormat
 import android.graphics.PixelFormat
 import android.hardware.camera2.CameraCharacteristics
+import android.hardware.camera2.params.MandatoryStreamCombination
 import android.hardware.camera2.params.StreamConfigurationMap
 import android.os.Build
-import com.aaron.cameraparams.CameraParamsHelper
 import java.util.*
 import android.hardware.camera2.CameraCharacteristics.*
-import android.hardware.camera2.CameraMetadata
-import android.hardware.camera2.CameraMetadata.*
 import android.util.Rational
 import android.util.Size
 import com.aaron.cameraparams.R
-import kotlin.collections.HashMap
 
 private val cameraSizeComparator = Comparator<Size> { o1, o2 ->
     o2.width * o2.height - o1.width * o1.height
@@ -347,6 +344,113 @@ fun getHardwareLevelInfo(context: Context, value: Int): String {
         INFO_SUPPORTED_HARDWARE_LEVEL_FULL -> return context.getString(R.string.hw_level_full)
         INFO_SUPPORTED_HARDWARE_LEVEL_3 -> return context.getString(R.string.hw_level_3)
         else -> return ""
+    }
+}
+
+fun getMandatoryStreamCombinationsString(value: Array<*>): String {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return value.contentToString()
+
+    val sb = StringBuilder()
+    sb.append("[\n")
+    for (combination in value) {
+        val className = combination?.javaClass?.name ?: ""
+        if (className.contains("MandatoryStreamCombination")) {
+            sb.append("  {\n")
+            try {
+                // 1. Combination Level Info
+                val description = try {
+                    combination?.javaClass?.getMethod("getDescription")?.invoke(combination) as? CharSequence
+                } catch (_: Exception) { "No description" } ?: "No description"
+
+                val isReprocessable = try {
+                    combination?.javaClass?.getMethod("isReprocessable")?.invoke(combination) as? Boolean ?: false
+                } catch (_: Exception) { false }
+
+                sb.append("    \"description\": \"$description\",\n")
+                sb.append("    \"isReprocessable\": $isReprocessable,\n")
+                sb.append("    \"streams\": [\n")
+
+                // 2. Stream Level Info
+                val streamsInfo = try {
+                    combination?.javaClass?.getMethod("getStreamsInformation")?.invoke(combination) as? List<*>
+                } catch (_: Exception) { null }
+
+                streamsInfo?.let { streams ->
+                    for (i in streams.indices) {
+                        val stream = streams[i] ?: continue
+                        sb.append("      {")
+
+                        val format = try {
+                            stream.javaClass.getMethod("getFormat").invoke(stream) as Int
+                        } catch (_: Exception) { -1 }
+
+                        val sizes = try {
+                            stream.javaClass.getMethod("getAvailableSizes").invoke(stream) as List<Size>
+                        } catch (_: Exception) { emptyList<Size>() }
+
+                        val isInput = try {
+                            stream.javaClass.getMethod("isInput").invoke(stream) as Boolean
+                        } catch (_: Exception) { false }
+
+                        val isMax = try {
+                            stream.javaClass.getMethod("isMaximumSize").invoke(stream) as Boolean
+                        } catch (_: Exception) { false }
+
+                        // API 31+
+                        val isUHR = try {
+                            stream.javaClass.getMethod("isUltraHighResolution").invoke(stream) as Boolean
+                        } catch (_: Exception) { false }
+
+                        // API 33+
+                        val is10Bit = try {
+                            stream.javaClass.getMethod("is10BitCapable").invoke(stream) as Boolean
+                        } catch (_: Exception) { false }
+
+                        val useCase = try {
+                            stream.javaClass.getMethod("getStreamUseCase").invoke(stream) as Long
+                        } catch (_: Exception) { 0L }
+
+                        sb.append("\"format\": \"${formatToString(format)}\"")
+                        if (sizes.isNotEmpty()) {
+                            sb.append(", \"maxSize\": \"${sizes[0].width}x${sizes[0].height}\"")
+                        }
+                        if (isInput) sb.append(", \"isInput\": true")
+                        if (isMax) sb.append(", \"isMax\": true")
+                        if (isUHR) sb.append(", \"isUHR\": true")
+                        if (is10Bit) sb.append(", \"is10Bit\": true")
+                        if (useCase != 0L) sb.append(", \"useCase\": \"${useCaseToString(useCase)}\"")
+
+                        sb.append("}")
+                        if (i < streams.size - 1) sb.append(",")
+                        sb.append("\n")
+                    }
+                }
+                sb.append("    ]\n")
+            } catch (e: Exception) {
+                sb.append("    \"error\": \"Parsing failed: ${e.message}\"\n")
+            }
+            sb.append("  },\n")
+        } else {
+            sb.append("  ").append(combination).append(",\n")
+        }
+    }
+    if (sb.length > 2) {
+        sb.delete(sb.length - 2, sb.length - 1)
+    }
+    sb.append("]")
+    return sb.toString()
+}
+
+private fun useCaseToString(useCase: Long): String {
+    return when (useCase) {
+        0L -> "DEFAULT"
+        1L -> "PREVIEW"
+        2L -> "STILL_CAPTURE"
+        3L -> "VIDEO_RECORD"
+        4L -> "PREVIEW_VIDEO_STILL"
+        5L -> "VIDEO_CALL"
+        6L -> "CROPPED_RAW"
+        else -> "UNKNOWN($useCase)"
     }
 }
 
