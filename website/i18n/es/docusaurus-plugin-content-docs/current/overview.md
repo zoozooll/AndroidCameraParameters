@@ -9,7 +9,7 @@ keywords: [panel de cámara android, detección de nivel de hardware, diagnósti
 
 Esta página proporciona un desglose detallado del panel de control de la aplicación y sus funciones clave.
 
-![Resumen de la Aplicación](/img/designer/page1.png)
+![Resumen de la Aplicación](/img/camera_params_feature_graph.png)
 
 ## Componentes del Panel
 
