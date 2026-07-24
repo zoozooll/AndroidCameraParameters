@@ -20,6 +20,7 @@ import com.aaron.cameraparams.camera.getAvailableSceneModes
 import com.aaron.cameraparams.camera.getAwbAvailableModes
 import com.aaron.cameraparams.camera.getColorCorrectionAvailableAberrationMode
 import com.aaron.cameraparams.camera.getHardwareLevelInfo
+import com.aaron.cameraparams.camera.getMandatoryStreamCombinationsString
 import com.aaron.cameraparams.camera.getRequestAvailableCapabilities
 import com.aaron.cameraparams.camera.streamConfigurationMapToString
 import com.google.gson.GsonBuilder
@@ -141,7 +142,14 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
             val value = chars.get(key)
             @Suppress("UNCHECKED_CAST")
             val formattedValue = helper.keyValue(key as CameraCharacteristics.Key<Any?>, value)
-            val rawValue = value?.toString() ?: "null"
+            
+            // For complex objects like MandatoryStreamCombination, use the formatted value as rawValue too
+            val rawValue = if (value is Array<*> && value.isNotEmpty() && value[0]?.javaClass?.name?.contains("MandatoryStreamCombination") == true) {
+                formattedValue
+            } else {
+                value?.toString() ?: "null"
+            }
+            
             val category = getCategoryForKey(key.name)
             CameraParameter(key.name, formattedValue, rawValue, category)
         }
@@ -443,6 +451,9 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
             return getRequestAvailableCapabilities((value as kotlin.IntArray?)!!)
         } else if (CameraCharacteristics.CONTROL_AVAILABLE_MODES == key) {
             return getAvailableModes(getApplication<Application>().applicationContext, (value as kotlin.IntArray?)!!)
+        } else if (value is Array<*> && (key.name.contains("mandatoryStreamCombinations") || 
+            (value.isNotEmpty() && value[0]?.javaClass?.name?.contains("MandatoryStreamCombination") == true))) {
+            return getMandatoryStreamCombinationsString(value)
         } else if (value is IntArray) {
             return (((value as IntArray).contentToString()))
         } else if (value is FloatArray) {
