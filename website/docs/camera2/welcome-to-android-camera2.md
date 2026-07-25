@@ -1,6 +1,6 @@
 ---
 sidebar_position: 1
-title: Welcome to Android Camera2
+title: "Chapter 1: Welcome to Android Camera2"
 description: Learn why Android Camera2 matters, how it differs from CameraX, and what this series will cover.
 keywords: [Android Camera2, CameraX, camera capabilities, Android camera development]
 ---
