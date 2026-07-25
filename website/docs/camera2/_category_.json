@@ -1,0 +1,8 @@
+{
+  "label": "Camera2 Tutorial",
+  "position": 3,
+  "link": {
+    "type": "generated-index",
+    "description": "Learn the Android Camera2 API from the foundations of smartphone camera hardware to advanced capabilities and metadata."
+  }
+}
