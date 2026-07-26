@@ -67,3 +67,4 @@ fastlane/readme.md
 release/
 
 .templates/
+.trae/
