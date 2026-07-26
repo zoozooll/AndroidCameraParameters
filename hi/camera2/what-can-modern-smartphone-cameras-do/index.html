@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="hi" dir="ltr" class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-camera2/what-can-modern-smartphone-cameras-do" data-has-hydrated="false">
+<head>
+<meta charset="UTF-8">
+<meta name="generator" content="Docusaurus v3.10.2">
+<title data-rh="true">अध्याय 3: आधुनिक स्मार्टफोन कैमरे क्या कर सकते हैं? | Android Camera Parameters</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:image" content="https://zoozooll.github.io/AndroidCameraParameters/hi/img/AndroidCamera2Params.png"><meta data-rh="true" name="twitter:image" content="https://zoozooll.github.io/AndroidCameraParameters/hi/img/AndroidCamera2Params.png"><meta data-rh="true" property="og:url" content="https://zoozooll.github.io/AndroidCameraParameters/hi/camera2/what-can-modern-smartphone-cameras-do"><meta data-rh="true" property="og:locale" content="hi"><meta data-rh="true" property="og:locale:alternate" content="en"><meta data-rh="true" property="og:locale:alternate" content="zh_Hans"><meta data-rh="true" property="og:locale:alternate" content="zh_Hant"><meta data-rh="true" property="og:locale:alternate" content="es"><meta data-rh="true" property="og:locale:alternate" content="pt_BR"><meta data-rh="true" property="og:locale:alternate" content="fr"><meta data-rh="true" property="og:locale:alternate" content="de"><meta data-rh="true" property="og:locale:alternate" content="ru"><meta data-rh="true" property="og:locale:alternate" content="id"><meta data-rh="true" property="og:locale:alternate" content="ja"><meta data-rh="true" property="og:locale:alternate" content="ko"><meta data-rh="true" name="docusaurus_locale" content="hi"><meta data-rh="true" name="docsearch:language" content="hi"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="अध्याय 3: आधुनिक स्मार्टफोन कैमरे क्या कर सकते हैं? | Android Camera Parameters"><meta data-rh="true" name="description" content="आधुनिक स्मार्टफोन कैमरे की अद्भुत क्षमताओं को जानें जिनमें पोर्ट्रेट मोड, HDR, नाइट मोड, RAW कैप्चर और बहुत कुछ शामिल है।"><meta data-rh="true" property="og:description" content="आधुनिक स्मार्टफोन कैमरे की अद्भुत क्षमताओं को जानें जिनमें पोर्ट्रेट मोड, HDR, नाइट मोड, RAW कैप्चर और बहुत कुछ शामिल है।"><meta data-rh="true" name="keywords" content="स्मार्टफोन कैमरा फीचर्स,पोर्ट्रेट मोड,HDR,नाइट मोड,RAW,8K वीडियो"><link data-rh="true" rel="icon" href="/AndroidCameraParameters/hi/img/camera_params_icon.png"><link data-rh="true" rel="canonical" href="https://zoozooll.github.io/AndroidCameraParameters/hi/camera2/what-can-modern-smartphone-cameras-do"><link data-rh="true" rel="alternate" href="https://zoozooll.github.io/AndroidCameraParameters/camera2/what-can-modern-smartphone-cameras-do" hreflang="en"><link data-rh="true" rel="alternate" href="https://zoozooll.github.io/AndroidCameraParameters/zh-Hans/camera2/what-can-modern-smartphone-cameras-do" hreflang="zh-Hans"><link data-rh="true" rel="alternate" href="https://zoozooll.github.io/AndroidCameraParameters/zh-Hant/camera2/what-can-modern-smartphone-cameras-do" hreflang="zh-Hant"><link data-rh="true" rel="alternate" href="https://zoozooll.github.io/AndroidCameraParameters/es/camera2/what-can-modern-smartphone-cameras-do" hreflang="es"><link data-rh="true" rel="alternate" href="https://zoozooll.github.io/AndroidCameraParameters/pt-BR/camera2/what-can-modern-smartphone-cameras-do" hreflang="pt-BR"><link data-rh="true" rel="alternate" href="https://zoozooll.github.io/AndroidCameraParameters/fr/camera2/what-can-modern-smartphone-cameras-do" hreflang="fr"><link data-rh="true" rel="alternate" href="https://zoozooll.github.io/AndroidCameraParameters/de/camera2/what-can-modern-smartphone-cameras-do" hreflang="de"><link data-rh="true" rel="alternate" href="https://zoozooll.github.io/AndroidCameraParameters/ru/camera2/what-can-modern-smartphone-cameras-do" hreflang="ru"><link data-rh="true" rel="alternate" href="https://zoozooll.github.io/AndroidCameraParameters/hi/camera2/what-can-modern-smartphone-cameras-do" hreflang="hi"><link data-rh="true" rel="alternate" href="https://zoozooll.github.io/AndroidCameraParameters/id/camera2/what-can-modern-smartphone-cameras-do" hreflang="id"><link data-rh="true" rel="alternate" href="https://zoozooll.github.io/AndroidCameraParameters/ja/camera2/what-can-modern-smartphone-cameras-do" hreflang="ja"><link data-rh="true" rel="alternate" href="https://zoozooll.github.io/AndroidCameraParameters/ko/camera2/what-can-modern-smartphone-cameras-do" hreflang="ko"><link data-rh="true" rel="alternate" href="https://zoozooll.github.io/AndroidCameraParameters/camera2/what-can-modern-smartphone-cameras-do" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Mastering Android Camera2 API","item":"https://zoozooll.github.io/AndroidCameraParameters/hi/category/mastering-android-camera2-api"},{"@type":"ListItem","position":2,"name":"अध्याय 3: आधुनिक स्मार्टफोन कैमरे क्या कर सकते हैं?","item":"https://zoozooll.github.io/AndroidCameraParameters/hi/camera2/what-can-modern-smartphone-cameras-do"}]}</script><link rel="stylesheet" href="/AndroidCameraParameters/hi/assets/css/styles.570997ad.css">
+<script src="/AndroidCameraParameters/hi/assets/js/runtime~main.1cde99cb.js" defer="defer"></script>
+<script src="/AndroidCameraParameters/hi/assets/js/main.dd4d999c.js" defer="defer"></script>
+</head>
+<body>
+<svg style="display: none;"><defs>
+<symbol id="theme-svg-external-link" viewBox="0 0 24 24"><path fill="currentColor" d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
+</defs></svg>
+<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||"light"),document.documentElement.setAttribute("data-theme-choice",t||"light")}(),function(){try{const c=new URLSearchParams(window.location.search).entries();for(var[t,e]of c)if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id="__docusaurus"><link rel="preload" as="image" href="/AndroidCameraParameters/hi/img/camera_params_icon.png"><div role="region" aria-label="मुख्य कंटेंट तक स्किप करें"><a class="skipToContent_fXgn" href="#__docusaurus_skipToContent_fallback">मुख्य कंटेंट तक स्किप करें</a></div><nav aria-label="Main" class="theme-layout-navbar navbar navbar--fixed-top"><div class="navbar__inner"><div class="theme-layout-navbar-left navbar__items"><button aria-label="Toggle navigation bar" aria-expanded="false" class="navbar__toggle clean-btn" type="button"><svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><path stroke="currentColor" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M4 7h22M4 15h22M4 23h22"></path></svg></button><a class="navbar__brand" href="/AndroidCameraParameters/hi/"><div class="navbar__logo"><img src="/AndroidCameraParameters/hi/img/camera_params_icon.png" alt="Android Camera Parameters Logo" class="themedComponent_mlkZ themedComponent--light_NVdE"><img src="/AndroidCameraParameters/hi/img/camera_params_icon.png" alt="Android Camera Parameters Logo" class="themedComponent_mlkZ themedComponent--dark_xIcU"></div><b class="navbar__title text--truncate">Camera Parameters</b></a><a aria-current="page" class="navbar__item navbar__link navbar__link--active" href="/AndroidCameraParameters/hi/">Documentation</a><a class="navbar__item navbar__link" href="/AndroidCameraParameters/hi/blog">Blog</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href="#" aria-haspopup="true" aria-expanded="false" role="button" class="navbar__link"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" class="iconLanguage_nlXk"><path fill="currentColor" d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"></path></svg>हिन्दी</a><ul class="dropdown__menu"><li><a href="/AndroidCameraParameters/camera2/what-can-modern-smartphone-cameras-do" target="_self" rel="noopener noreferrer" class="dropdown__link" lang="en">English</a></li><li><a href="/AndroidCameraParameters/zh-Hans/camera2/what-can-modern-smartphone-cameras-do" target="_self" rel="noopener noreferrer" class="dropdown__link" lang="zh-Hans">简体中文</a></li><li><a href="/AndroidCameraParameters/zh-Hant/camera2/what-can-modern-smartphone-cameras-do" target="_self" rel="noopener noreferrer" class="dropdown__link" lang="zh-Hant">繁體中文</a></li><li><a href="/AndroidCameraParameters/es/camera2/what-can-modern-smartphone-cameras-do" target="_self" rel="noopener noreferrer" class="dropdown__link" lang="es">Español</a></li><li><a href="/AndroidCameraParameters/pt-BR/camera2/what-can-modern-smartphone-cameras-do" target="_self" rel="noopener noreferrer" class="dropdown__link" lang="pt-BR">Português (Brasil)</a></li><li><a href="/AndroidCameraParameters/fr/camera2/what-can-modern-smartphone-cameras-do" target="_self" rel="noopener noreferrer" class="dropdown__link" lang="fr">Français</a></li><li><a href="/AndroidCameraParameters/de/camera2/what-can-modern-smartphone-cameras-do" target="_self" rel="noopener noreferrer" class="dropdown__link" lang="de">Deutsch</a></li><li><a href="/AndroidCameraParameters/ru/camera2/what-can-modern-smartphone-cameras-do" target="_self" rel="noopener noreferrer" class="dropdown__link" lang="ru">Русский</a></li><li><a href="/AndroidCameraParameters/hi/camera2/what-can-modern-smartphone-cameras-do" target="_self" rel="noopener noreferrer" class="dropdown__link dropdown__link--active" lang="hi">हिन्दी</a></li><li><a href="/AndroidCameraParameters/id/camera2/what-can-modern-smartphone-cameras-do" target="_self" rel="noopener noreferrer" class="dropdown__link" lang="id">Bahasa Indonesia</a></li><li><a href="/AndroidCameraParameters/ja/camera2/what-can-modern-smartphone-cameras-do" target="_self" rel="noopener noreferrer" class="dropdown__link" lang="ja">日本語</a></li><li><a href="/AndroidCameraParameters/ko/camera2/what-can-modern-smartphone-cameras-do" target="_self" rel="noopener noreferrer" class="dropdown__link" lang="ko">한국어</a></li></ul></div><a href="https://github.com/zoozooll/AndroidCameraParameters" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><div class="toggle_vylO colorModeToggle_DEke"><button class="clean-btn toggleButton_gllP toggleButtonDisabled_aARS" type="button" disabled="" title="system mode" aria-label="Switch between dark and light mode (currently system mode)"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="toggleIcon_g3eP lightToggleIcon_pyhR"><path fill="currentColor" d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"></path></svg><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="toggleIcon_g3eP darkToggleIcon_wfgR"><path fill="currentColor" d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"></path></svg><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="toggleIcon_g3eP systemToggleIcon_QzmC"><path fill="currentColor" d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"></path></svg></button></div><div class="navbarSearchContainer_Bca1"></div></div></div><div role="presentation" class="navbar-sidebar__backdrop"></div></nav><div id="__docusaurus_skipToContent_fallback" class="theme-layout-main main-wrapper mainWrapper_z2l0"><div class="docsWrapper_hBAB"><button aria-label="Scroll back to top" class="clean-btn theme-back-to-top-button backToTopButton_sjWU" type="button"></button><div class="docRoot_UBD9"><aside class="theme-doc-sidebar-container docSidebarContainer_YfHR"><div class="sidebarViewport_aRkj"><div class="sidebar_njMd"><nav aria-label="Docs sidebar" class="menu thin-scrollbar menu_SIkG"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/AndroidCameraParameters/hi/"><span class="linkLabel_WmDU">ऐप अवलोकन</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/AndroidCameraParameters/hi/development"><span class="linkLabel_WmDU">डेवलपर दस्तावेज़</span></a></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--active" href="/AndroidCameraParameters/hi/category/mastering-android-camera2-api"><span class="categoryLinkLabel_W154">Mastering Android Camera2 API</span></a><button aria-label="Collapse sidebar category &#x27;Mastering Android Camera2 API&#x27;" aria-expanded="true" type="button" class="clean-btn menu__caret"></button></div><ul class="menu__list"><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/AndroidCameraParameters/hi/camera2/welcome-to-android-camera2"><span class="linkLabel_WmDU">अध्याय 1: Android Camera2 में आपका स्वागत है</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/AndroidCameraParameters/hi/camera2/understanding-smartphone-cameras"><span class="linkLabel_WmDU">अध्याय 2: स्मार्टफोन कैमरों को समझना</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current="page" tabindex="0" href="/AndroidCameraParameters/hi/camera2/what-can-modern-smartphone-cameras-do"><span class="linkLabel_WmDU">अध्याय 3: आधुनिक स्मार्टफोन कैमरे क्या कर सकते हैं?</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/AndroidCameraParameters/hi/camera2/exploring-your-phones-camera"><span class="linkLabel_WmDU">अध्याय 4: अपने फ़ोन के कैमरे की खोज करें</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/AndroidCameraParameters/hi/camera2/getting-started-with-camera2"><span class="linkLabel_WmDU">अध्याय 5: Camera2 के साथ आरंभ करें</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/AndroidCameraParameters/hi/camera2/listing-cameras"><span class="linkLabel_WmDU">अध्याय 6: कैमरों की सूची बनाना</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/AndroidCameraParameters/hi/camera2/understanding-cameracharacteristics"><span class="linkLabel_WmDU">अध्याय 7: CameraCharacteristics को समझना</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/AndroidCameraParameters/hi/camera2/opening-your-first-camera"><span class="linkLabel_WmDU">अध्याय 8: अपना पहला कैमरा खोलना</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/AndroidCameraParameters/hi/camera2/showing-camera-preview"><span class="linkLabel_WmDU">अध्याय 9: कैमरा पूर्वावलोकन दिखाना</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/AndroidCameraParameters/hi/camera2/capturing-photos-with-imagereader"><span class="linkLabel_WmDU">अध्याय 10: ImageReader के साथ फोटो कैप्चर करना</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/AndroidCameraParameters/hi/camera2/raw-capture-and-capture-request"><span class="linkLabel_WmDU">अध्याय 11: RAW कैप्चर और CaptureRequest</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/AndroidCameraParameters/hi/camera2/manual-camera-iso-and-exposure"><span class="linkLabel_WmDU">अध्याय 12: मैनुअल कैमरा - ISO और एक्सपोजर</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/AndroidCameraParameters/hi/camera2/manual-camera-focus-and-white-balance"><span class="linkLabel_WmDU">अध्याय 13: मैनुअल कैमरा - फोकस और व्हाइट बैलेंस</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/AndroidCameraParameters/hi/camera2/professional-features-high-speed-video"><span class="linkLabel_WmDU">अध्याय 14: प्रोफेशनल फीचर्स - हाई-स्पीड वीडियो</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/AndroidCameraParameters/hi/camera2/cameracharacteristics-encyclopedia"><span class="linkLabel_WmDU">अध्याय 15: CameraCharacteristics विश्वकोश</span></a></li></ul></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/AndroidCameraParameters/hi/data-safety"><span class="linkLabel_WmDU">डेटा सुरक्षा गाइड</span></a></li></ul></nav></div></div></aside><main class="docMainContainer_TBSr"><div class="container padding-top--md padding-bottom--lg"><div class="row"><div class="col docItemCol_VOVn"><div class="docItemContainer_Djhp"><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_Z_bl" aria-label="Breadcrumbs"><ul class="breadcrumbs"><li class="breadcrumbs__item"><a aria-label="Home page" class="breadcrumbs__link" href="/AndroidCameraParameters/hi/"><svg viewBox="0 0 24 24" class="breadcrumbHomeIcon_YNFT"><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill="currentColor"></path></svg></a></li><li class="breadcrumbs__item"><a class="breadcrumbs__link" href="/AndroidCameraParameters/hi/category/mastering-android-camera2-api"><span>Mastering Android Camera2 API</span></a></li><li class="breadcrumbs__item breadcrumbs__item--active"><span class="breadcrumbs__link">अध्याय 3: आधुनिक स्मार्टफोन कैमरे क्या कर सकते हैं?</span></li></ul></nav><div class="tocCollapsible_ETCw theme-doc-toc-mobile tocMobile_ITEo"><button type="button" class="clean-btn tocCollapsibleButton_TO0P">इस पेज पर</button></div><div class="theme-doc-markdown markdown"><header><h1>अध्याय 3: आधुनिक स्मार्टफोन कैमरे क्या कर सकते हैं?</h1></header><p>आधुनिक स्मार्टफोन ऐसी फोटोग्राफी करने में सक्षम हैं जो कभी केवल प्रोफेशनल कैमरों से ही संभव थी।</p>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="परिचय">परिचय<a href="#परिचय" class="hash-link" aria-label="परिचय का सीधा लिंक" title="परिचय का सीधा लिंक" translate="no">​</a></h2>
+<p>देखिए कि आज एक स्मार्टफोन कैमरा क्या कर सकता है:</p>
+<ul>
+<li class=""><strong>पोर्ट्रेट फोटो</strong> जिनमें प्रोफेशनल जैसा बैकग्राउंड ब्लर हो</li>
+<li class=""><strong>नाइट मोड</strong> जो लगभग अंधेरे में भी डिटेल कैप्चर करता है</li>
+<li class=""><strong>HDR</strong> जो चमकदार हाइलाइट्स और गहरी परछाइयों दोनों को सुरक्षित रखता है</li>
+<li class=""><strong>8K वीडियो</strong> रिकॉर्डिंग</li>
+<li class=""><strong>स्लो-मोशन</strong> सैकड़ों फ्रेम प्रति सेकंड की दर से</li>
+<li class=""><strong>RAW इमेज कैप्चर</strong> प्रोफेशनल एडिटिंग के लिए</li>
+<li class="">छोटी वस्तुओं की <strong>मैक्रो फोटोग्राफी</strong></li>
+<li class=""><strong>टेलीफोटो ज़ूम</strong> 10x या उससे भी अधिक</li>
+<li class=""><strong>अल्ट्रा-वाइड</strong> लैंडस्केप शॉट्स</li>
+</ul>
+<p>ये फीचर्स कोई जादू नहीं हैं। ये परिष्कृत हार्डवेयर और सॉफ्टवेयर के साथ काम करने का परिणाम हैं। और Camera2 आपको इनमें से कई पर नियंत्रण देता है।</p>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="पोर्ट्रेट-मोड">पोर्ट्रेट मोड<a href="#पोर्ट्रेट-मोड" class="hash-link" aria-label="पोर्ट्रेट मोड का सीधा लिंक" title="पोर्ट्रेट मोड का सीधा लिंक" translate="no">​</a></h2>
+<p>पोर्ट्रेट मोड खूबसूरत बैकग्राउंड ब्लर बनाता है, जिसे <strong>बोकेह</strong> के नाम से भी जाना जाता है। इससे विषय नाटकीय रूप से सामने आता है।</p>
+<p>यह कैसे काम करता है?</p>
+<p>अधिकांश फ़ोन गहराई की जानकारी बनाने के लिए <strong>एकाधिक कैमरों</strong> का उपयोग करते हैं। एक कैमरा मुख्य छवि कैप्चर करता है जबकि दूसरा गहराई की गणना करता है। फिर सॉफ्टवेयर इन्हें मिलाकर बैकग्राउंड को चुनिंदा रूप से ब्लर कर देता है।</p>
+<p>Camera2 एप्लिकेशन को अनुमति देता है:</p>
+<ul>
+<li class="">एक साथ कई कैमरों तक पहुंच प्राप्त करने के लिए</li>
+<li class="">गहराई क्षमताओं की जांच करने के लिए</li>
+<li class="">बोकेह प्रभावों को नियंत्रित करने के लिए</li>
+</ul>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="hdr--उच्च-गतिशील-सीमा">HDR — उच्च गतिशील सीमा<a href="#hdr--उच्च-गतिशील-सीमा" class="hash-link" aria-label="HDR — उच्च गतिशील सीमा का सीधा लिंक" title="HDR — उच्च गतिशील सीमा का सीधा लिंक" translate="no">​</a></h2>
+<p>मानव आंखें कैमरा सेंसर की तुलना में चमक की बहुत विस्तृत सीमा देख सकती हैं। HDR कई एक्सपोज़र कैप्चर करके और उन्हें मिलाकर इस समस्या का समाधान करता है।</p>
+<ul>
+<li class=""><strong>चमकदार एक्सपोज़र</strong> हाइलाइट्स कैप्चर करता है</li>
+<li class=""><strong>गहरी एक्सपोज़र</strong> परछाइयां कैप्चर करती है</li>
+<li class=""><strong>मध्यम एक्सपोज़र</strong> डिटेल कैप्चर करती है</li>
+</ul>
+<p>ISP इन्हें अविश्वसनीय गतिशील सीमा के साथ एक ही छवि में मिला देता है।</p>
+<p>Camera2 प्रदान करता है:</p>
+<ul>
+<li class="">HDR कैप्चर मोड</li>
+<li class="">एक्सपोज़र ब्रैकेट नियंत्रण</li>
+<li class="">मैनुअल एक्सपोज़र सेटिंग्स</li>
+</ul>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="नाइट-मोड">नाइट मोड<a href="#नाइट-मोड" class="hash-link" aria-label="नाइट मोड का सीधा लिंक" title="नाइट मोड का सीधा लिंक" translate="no">​</a></h2>
+<p>नाइट मोड आधुनिक स्मार्टफोन के सबसे प्रभावशाली फीचर्स में से एक है। यह लगभग अंधेरे में भी तेज, विस्तृत फोटो कैप्चर कर सकता है।</p>
+<p>तकनीक अवधारणा में सरल है:</p>
+<ol>
+<li class="">कई फ्रेम कैप्चर करें</li>
+<li class="">गति ब्लर को कम करने के लिए उन्हें संरेखित करें</li>
+<li class="">प्रकाश संवेदनशीलता बढ़ाने के लिए उन्हें मिलाएं</li>
+<li class="">नॉइज़ रिडक्शन लागू करें</li>
+</ol>
+<p>कुछ फ़ोन इतने अंधेरे वातावरण में भी फोटो कैप्चर कर सकते हैं कि मनुष्य मुश्किल से देख सकते हैं।</p>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="स्लो-मोशन">स्लो मोशन<a href="#स्लो-मोशन" class="hash-link" aria-label="स्लो मोशन का सीधा लिंक" title="स्लो मोशन का सीधा लिंक" translate="no">​</a></h2>
+<p>स्लो-मोशन वीडियो आपको उन क्षणों को देखने की अनुमति देता है जो मानव आंख के लिए बहुत तेजी से होते हैं:</p>
+<ul>
+<li class="">पानी की बूंदें</li>
+<li class="">गुब्बारा फटना</li>
+<li class="">खेल की कार्रवाई</li>
+<li class="">प्रकृति की घटनाएं</li>
+</ul>
+<p>फ़ोन इन दरों पर रिकॉर्ड कर सकते हैं:</p>
+<ul>
+<li class="">120 fps — स्मूथ स्लो मोशन</li>
+<li class="">240 fps — स्टैंडर्ड स्लो मोशन</li>
+<li class="">480 fps — एक्सट्रीम स्लो मोशन</li>
+<li class="">960 fps — सुपर स्लो मोशन</li>
+</ul>
+<p>Camera2 हाई-स्पीड वीडियो क्षमताओं को इनके माध्यम से प्रकट करता है:</p>
+<ul>
+<li class="">उच्च फ्रेम दर कॉन्फ़िगरेशन</li>
+<li class="">विशेष कैप्चर अनुरोध</li>
+<li class="">हार्डवेयर स्तर की आवश्यकताएं</li>
+</ul>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="8k-वीडियो">8K वीडियो<a href="#8k-वीडियो" class="hash-link" aria-label="8K वीडियो का सीधा लिंक" title="8K वीडियो का सीधा लिंक" translate="no">​</a></h2>
+<p>8K वीडियो में 4K की तुलना में चार गुना और HD की तुलना में 16 गुना रिज़ॉल्यूशन होता है। इससे ये संभव होते हैं:</p>
+<ul>
+<li class="">गुणवत्ता हानि के बिना क्रॉपिंग और रिफ्रेमिंग</li>
+<li class="">विस्तृत क्लोज-अप</li>
+<li class="">प्रोफेशनल वीडियो प्रोडक्शन</li>
+</ul>
+<p>सभी फ़ोन 8K का समर्थन नहीं करते हैं, लेकिन Camera2 आपको पता लगाने देता है कि कौन से करते हैं।</p>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="raw-कैप्चर">RAW कैप्चर<a href="#raw-कैप्चर" class="hash-link" aria-label="RAW कैप्चर का सीधा लिंक" title="RAW कैप्चर का सीधा लिंक" translate="no">​</a></h2>
+<p>RAW छवियों में ISP प्रोसेसिंग से पहले सेंसर द्वारा कैप्चर किए गए सभी डेटा होते हैं। यह फोटोग्राफर्स को इन पर पूर्ण नियंत्रण देता है:</p>
+<ul>
+<li class="">एक्सपोज़र</li>
+<li class="">व्हाइट बैलेंस</li>
+<li class="">कंट्रास्ट</li>
+<li class="">सैचुरेशन</li>
+<li class="">नॉइज़ रिडक्शन</li>
+</ul>
+<p>RAW फ़ाइलें बड़ी होती हैं लेकिन अतुलनीय एडिटिंग लचीलापन प्रदान करती हैं।</p>
+<p>Camera2 अनुमति देता है:</p>
+<ul>
+<li class="">RAW इमेज कैप्चर</li>
+<li class="">RAW फ़ॉर्मेट चयन</li>
+<li class="">इष्टतम RAW परिणामों के लिए मैनुअल नियंत्रण</li>
+</ul>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="मैक्रो-फोटोग्राफी">मैक्रो फोटोग्राफी<a href="#मैक्रो-फोटोग्राफी" class="hash-link" aria-label="मैक्रो फोटोग्राफी का सीधा लिंक" title="मैक्रो फोटोग्राफी का सीधा लिंक" translate="no">​</a></h2>
+<p>मैक्रो लेंस कैमरे के बहुत करीब की वस्तुओं पर फोकस करते हैं — कभी-कभी केवल कुछ सेंटीमीटर दूर। यह फोटोग्राफी की एक नई दुनिया खोलता है:</p>
+<ul>
+<li class="">फूल और कीड़े</li>
+<li class="">बनावट और पैटर्न</li>
+<li class="">छोटी वस्तुएं</li>
+</ul>
+<p>Camera2 आपको अनुमति देता है:</p>
+<ul>
+<li class="">मैक्रो सहित कैमरों के बीच स्विच करने के लिए</li>
+<li class="">फोकस दूरी को नियंत्रित करने के लिए</li>
+<li class="">क्लोज-अप के लिए लाइटिंग को समायोजित करने के लिए</li>
+</ul>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="टेलीफोटो">टेलीफोटो<a href="#टेलीफोटो" class="hash-link" aria-label="टेलीफोटो का सीधा लिंक" title="टेलीफोटो का सीधा लिंक" translate="no">​</a></h2>
+<p>टेलीफोटो लेंस शारीरिक रूप से हिले बिना दूर की वस्तुओं को करीब लाते हैं। फ्लैगशिप फ़ोन में अक्सर होते हैं:</p>
+<ul>
+<li class="">2x ऑप्टिकल ज़ूम</li>
+<li class="">3x ऑप्टिकल ज़ूम</li>
+<li class="">10x तक हाइब्रिड ज़ूम</li>
+<li class="">100x तक डिजिटल ज़ूम</li>
+</ul>
+<p>Camera2 प्रदान करता है:</p>
+<ul>
+<li class="">ज़ूम नियंत्रण</li>
+<li class="">फोकल लंबाई जानकारी</li>
+<li class="">ऑप्टिकल बनाम डिजिटल ज़ूम का पता लगाना</li>
+</ul>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="अल्ट्रा-वाइड">अल्ट्रा-वाइड<a href="#अल्ट्रा-वाइड" class="hash-link" aria-label="अल्ट्रा-वाइड का सीधा लिंक" title="अल्ट्रा-वाइड का सीधा लिंक" translate="no">​</a></h2>
+<p>अल्ट्रा-वाइड लेंस स्टैंडर्ड लेंस की तुलना में बहुत विस्तृत दृश्य क्षेत्र कैप्चर करते हैं। ये इनके लिए बिल्कुल सही हैं:</p>
+<ul>
+<li class="">लैंडस्केप</li>
+<li class="">आर्किटेक्चर</li>
+<li class="">समूह फोटो</li>
+<li class="">इनडोर स्पेस</li>
+</ul>
+<p>कुछ अल्ट्रा-वाइड लेंस 120 डिग्री या उससे अधिक कैप्चर कर सकते हैं।</p>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="मैनुअल-मोड">मैनुअल मोड<a href="#मैनुअल-मोड" class="hash-link" aria-label="मैनुअल मोड का सीधा लिंक" title="मैनुअल मोड का सीधा लिंक" translate="no">​</a></h2>
+<p>मैनुअल मोड उपयोगकर्ताओं को इन पर पूर्ण नियंत्रण देता है:</p>
+<ul>
+<li class=""><strong>ISO</strong> — सेंसर संवेदनशीलता</li>
+<li class=""><strong>एक्सपोज़र समय</strong> — सेंसर कितने समय तक प्रकाश एकत्र करता है</li>
+<li class=""><strong>फोकस</strong> — मैनुअल फोकस नियंत्रण</li>
+<li class=""><strong>व्हाइट बैलेंस</strong> — रंग तापमान</li>
+</ul>
+<p>Camera2 सभी मैनुअल कैमरा एप्लिकेशन की नींव है।</p>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="camera2-यह-सब-नियंत्रित-कर-सकता-है">Camera2 यह सब नियंत्रित कर सकता है<a href="#camera2-यह-सब-नियंत्रित-कर-सकता-है" class="hash-link" aria-label="Camera2 यह सब नियंत्रित कर सकता है का सीधा लिंक" title="Camera2 यह सब नियंत्रित कर सकता है का सीधा लिंक" translate="no">​</a></h2>
+<p>रोमांचक बात क्या है? <strong>आप इन सभी फीचर्स को Camera2 के साथ नियंत्रित कर सकते हैं।</strong></p>
+<p>इस श्रृंखला के अंत तक, आप समझेंगे:</p>
+<ul>
+<li class="">आपका फ़ोन कौन से फीचर्स सपोर्ट करता है</li>
+<li class="">उन्हें प्रोग्रामेटिक रूप से कैसे सक्षम करें</li>
+<li class="">शानदार परिणामों के लिए उन्हें कैसे मिलाएं</li>
+</ul>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="android-कैमरा-पैरामीटर्स-के-साथ-खोजें">Android कैमरा पैरामीटर्स के साथ खोजें<a href="#android-कैमरा-पैरामीटर्स-के-साथ-खोजें" class="hash-link" aria-label="Android कैमरा पैरामीटर्स के साथ खोजें का सीधा लिंक" title="Android कैमरा पैरामीटर्स के साथ खोजें का सीधा लिंक" translate="no">​</a></h2>
+<p>इससे पहले कि हम कोडिंग शुरू करें, जांचें कि आपका फ़ोन क्या सपोर्ट करता है:</p>
+<ol>
+<li class="">Android कैमरा पैरामीटर्स खोलें</li>
+<li class="">इन्हें ढूंढें:<!-- -->
+<ul>
+<li class="">उपलब्ध क्षमताएं</li>
+<li class="">ज़ूम लेवल</li>
+<li class="">फ्रेम दरें</li>
+<li class="">हार्डवेयर स्तर</li>
+<li class="">RAW समर्थन</li>
+<li class="">फ्लैश क्षमताएं</li>
+</ul>
+</li>
+</ol>
+<p>आपके डिवाइस के करने की क्षमता से आप आश्चर्यचकित हो सकते हैं!</p>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="अगला-अध्याय">अगला अध्याय<a href="#अगला-अध्याय" class="hash-link" aria-label="अगला अध्याय का सीधा लिंक" title="अगला अध्याय का सीधा लिंक" translate="no">​</a></h2>
+<p>अगले अध्याय में, हम आपके फ़ोन की कैमरा क्षमताओं की खोज में गहराई से जाएंगे। आप सीखेंगे कि Android कैमरा पैरामीटर्स का उपयोग कैसे करें ताकि पता चल सके:</p>
+<ul>
+<li class="">कैमरा ID और उनके अर्थ</li>
+<li class="">रिज़ॉल्यूशन विकल्प</li>
+<li class="">फ्रेम दर क्षमताएं</li>
+<li class="">हार्डवेयर स्तर</li>
+<li class="">और बहुत कुछ</li>
+</ul>
+<p>यह व्यावहारिक खोज Camera2 के साथ कोडिंग को बहुत आसान बना देगी।</p>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="सारांश">सारांश<a href="#सारांश" class="hash-link" aria-label="सारांश का सीधा लिंक" title="सारांश का सीधा लिंक" translate="no">​</a></h2>
+<p>आधुनिक स्मार्टफोन कैमरे अविश्वसनीय रूप से शक्तिशाली हैं। वे पोर्ट्रेट फोटो, HDR इमेज, नाइट शॉट, स्लो-मोशन वीडियो, 8K वीडियो, RAW इमेज और बहुत कुछ कैप्चर कर सकते हैं।</p>
+<p>Camera2 इन फीचर्स को प्रोग्रामेटिक रूप से नियंत्रित करने के टूल प्रदान करता है। अगले अध्याय में, हम Android कैमरा पैरामीटर्स का उपयोग करके आपके फ़ोन की विशिष्ट क्षमताओं का पता लगाएंगे।</p></div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_WFHX"><a href="https://github.com/zoozooll/AndroidCameraParameters/tree/main/website/docs/camera2/what-can-modern-smartphone-cameras-do.md" target="_blank" rel="noopener noreferrer" class="theme-edit-this-page"><svg fill="currentColor" height="20" width="20" viewBox="0 0 40 40" class="iconEdit_Z9Sw" aria-hidden="true"><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"></path></g></svg>इस पेज को बदलें</a></div><div class="col lastUpdated_JAkA"></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="डॉक्स पेज"><a class="pagination-nav__link pagination-nav__link--prev" href="/AndroidCameraParameters/hi/camera2/understanding-smartphone-cameras"><div class="pagination-nav__sublabel">पिछ्ला</div><div class="pagination-nav__label">अध्याय 2: स्मार्टफोन कैमरों को समझना</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/AndroidCameraParameters/hi/camera2/exploring-your-phones-camera"><div class="pagination-nav__sublabel">अगला</div><div class="pagination-nav__label">अध्याय 4: अपने फ़ोन के कैमरे की खोज करें</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#परिचय" class="table-of-contents__link toc-highlight">परिचय</a></li><li><a href="#पोर्ट्रेट-मोड" class="table-of-contents__link toc-highlight">पोर्ट्रेट मोड</a></li><li><a href="#hdr--उच्च-गतिशील-सीमा" class="table-of-contents__link toc-highlight">HDR — उच्च गतिशील सीमा</a></li><li><a href="#नाइट-मोड" class="table-of-contents__link toc-highlight">नाइट मोड</a></li><li><a href="#स्लो-मोशन" class="table-of-contents__link toc-highlight">स्लो मोशन</a></li><li><a href="#8k-वीडियो" class="table-of-contents__link toc-highlight">8K वीडियो</a></li><li><a href="#raw-कैप्चर" class="table-of-contents__link toc-highlight">RAW कैप्चर</a></li><li><a href="#मैक्रो-फोटोग्राफी" class="table-of-contents__link toc-highlight">मैक्रो फोटोग्राफी</a></li><li><a href="#टेलीफोटो" class="table-of-contents__link toc-highlight">टेलीफोटो</a></li><li><a href="#अल्ट्रा-वाइड" class="table-of-contents__link toc-highlight">अल्ट्रा-वाइड</a></li><li><a href="#मैनुअल-मोड" class="table-of-contents__link toc-highlight">मैनुअल मोड</a></li><li><a href="#camera2-यह-सब-नियंत्रित-कर-सकता-है" class="table-of-contents__link toc-highlight">Camera2 यह सब नियंत्रित कर सकता है</a></li><li><a href="#android-कैमरा-पैरामीटर्स-के-साथ-खोजें" class="table-of-contents__link toc-highlight">Android कैमरा पैरामीटर्स के साथ खोजें</a></li><li><a href="#अगला-अध्याय" class="table-of-contents__link toc-highlight">अगला अध्याय</a></li><li><a href="#सारांश" class="table-of-contents__link toc-highlight">सारांश</a></li></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title">Docs</div><ul class="footer__items clean-list"><li class="footer__item"><a class="footer__link-item" href="/AndroidCameraParameters/hi/">Overview</a></li><li class="footer__item"><a class="footer__link-item" href="/AndroidCameraParameters/hi/development">Development</a></li></ul></div><div class="theme-layout-footer-column col footer__col"><div class="footer__title">Community</div><ul class="footer__items clean-list"><li class="footer__item"><a href="https://play.google.com/store/apps/details?id=com.minininja.cameraparams" target="_blank" rel="noopener noreferrer" class="footer__link-item">Google Play<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a></li><li class="footer__item"><a href="https://github.com/zoozooll/AndroidCameraParameters/issues" target="_blank" rel="noopener noreferrer" class="footer__link-item">GitHub Issues<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a></li></ul></div><div class="theme-layout-footer-column col footer__col"><div class="footer__title">More</div><ul class="footer__items clean-list"><li class="footer__item"><a class="footer__link-item" href="/AndroidCameraParameters/hi/blog">Blog</a></li><li class="footer__item"><a href="https://github.com/zoozooll/AndroidCameraParameters" target="_blank" rel="noopener noreferrer" class="footer__link-item">GitHub<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a></li></ul></div></div><div class="footer__bottom text--center"><div class="footer__copyright">Copyright © 2026 Android Camera Parameters. Built with Docusaurus.</div></div></div></footer></div>
+</body>
+</html>
