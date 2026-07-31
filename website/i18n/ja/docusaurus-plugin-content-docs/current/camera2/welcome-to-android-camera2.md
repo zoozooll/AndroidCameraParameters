@@ -36,7 +36,7 @@ Android開発者として、デフォルトのカメラアプリを超えるア�
 - 生フレームアクセスを必要とする**コンピュータビジョンアプリケーション**
 - 深度センサーを使用した**3Dスキャンアプリケーション**
 - コーデック選択とビットレート制御に対応した**プロ仕様のビデオレコーダー**
-- 私たち自身の[Android Camera Parameters](/)のような**カメラ機能アナライザー**
+- 私たち自身の[Android Camera Parameters](https://github.com/zoozooll/AndroidCameraParameters)のような**カメラ機能アナライザー**
 
 これらのシナリオのいずれかが思い当たる場合、Camera2は習得する必要があるAPIです。
 
@@ -810,7 +810,7 @@ mindmap
 
 ## 1.11 Android Camera Parametersを使った学習
 
-ドキュメントを読むことは有用ですが、カメラ機能は実際の電話からのリアルなデータを見ることができれば、より理解しやすくなります。このシリーズ全体を通して、[Android Camera Parameters](/)を使用して実際のカメラ情報を探索します。
+ドキュメントを読むことは有用ですが、カメラ機能は実際の電話からのリアルなデータを見ることができれば、より理解しやすくなります。このシリーズ全体を通して、[Android Camera Parameters](https://github.com/zoozooll/AndroidCameraParameters)を使用して実際のカメラ情報を探索します。
 
 アプリを使用して以下を発見できます：
 

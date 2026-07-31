@@ -36,7 +36,7 @@ Sebagai pengembang Android, kita mungkin ingin membangun aplikasi yang melampaui
 - **Aplikasi visi komputer** yang membutuhkan akses bingkai mentah
 - **Aplikasi pemindaian 3D** menggunakan sensor kedalaman
 - **Perekam video profesional** dengan pemilihan codec dan kontrol bitrate
-- **Penganalisis kemampuan kamera** seperti [Android Camera Parameters](/)[^1^] milik kami sendiri
+- **Penganalisis kemampuan kamera** seperti [Android Camera Parameters](https://github.com/zoozooll/AndroidCameraParameters) milik kami sendiri
 
 Jika salah satu dari skenario ini terdengar familiar, Camera2 adalah API yang perlu Anda kuasai.
 
@@ -810,7 +810,7 @@ mindmap
 
 ## 1.11 Belajar dengan Android Camera Parameters
 
-Membaca dokumentasi itu berguna, tetapi kemampuan kamera lebih mudah dipahami saat Anda dapat melihat data nyata dari ponsel nyata. Sepanjang seri ini, kita akan menggunakan [Android Camera Parameters](/)[^2^] untuk menjelajahi informasi kamera aktual dari perangkat Anda sendiri.
+Membaca dokumentasi itu berguna, tetapi kemampuan kamera lebih mudah dipahami saat Anda dapat melihat data nyata dari ponsel nyata. Sepanjang seri ini, kita akan menggunakan [Android Camera Parameters](https://github.com/zoozooll/AndroidCameraParameters) untuk menjelajahi informasi kamera aktual dari perangkat Anda sendiri.
 
 Anda dapat menggunakan aplikasi untuk menemukan:
 

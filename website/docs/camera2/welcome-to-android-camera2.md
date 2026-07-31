@@ -36,7 +36,7 @@ As Android developers, we may want to build applications that go beyond the defa
 - A **computer vision application** that needs raw frame access
 - A **3D scanning application** using depth sensors
 - A **professional video recorder** with codec selection and bitrate control
-- A **camera capability analyzer** like our very own [Android Camera Parameters](/)
+- A **camera capability analyzer** like our very own [Android Camera Parameters](https://github.com/zoozooll/AndroidCameraParameters)
 
 If any of these scenarios sound familiar, Camera2 is the API you need to master.
 
@@ -810,7 +810,7 @@ mindmap
 
 ## 1.11 Learning with Android Camera Parameters
 
-Reading documentation is useful, but camera capabilities are easier to understand when you can see real data from a real phone. Throughout this series, we will use [Android Camera Parameters](/) to explore actual camera information from your own device.
+Reading documentation is useful, but camera capabilities are easier to understand when you can see real data from a real phone. Throughout this series, we will use [Android Camera Parameters](https://github.com/zoozooll/AndroidCameraParameters) to explore actual camera information from your own device.
 
 You can use the app to discover:
 

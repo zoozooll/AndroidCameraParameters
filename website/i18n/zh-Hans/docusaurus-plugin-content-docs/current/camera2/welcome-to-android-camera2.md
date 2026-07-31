@@ -36,7 +36,7 @@ keywords: [Android Camera2, Camera2 Pipeline, CaptureRequest, 硬件级别, Came
 - 一个**计算机视觉应用程序**，需要原始帧访问权限
 - 一个**3D 扫描应用程序**，使用深度传感器
 - 一个**专业视频录像机**，支持编解码器选择和码率控制
-- 一个**摄像头能力分析器**，就像我们自己的 [Android Camera Parameters](/zh-Hans) 一样
+- 一个**摄像头能力分析器**，就像我们自己的 [Android Camera Parameters](https://github.com/zoozooll/AndroidCameraParameters) 一样
 
 如果这些场景中有任何一个听起来很熟悉，那么 Camera2 就是你需要掌握的 API。
 
@@ -810,7 +810,7 @@ mindmap
 
 ## 1.11 使用 Android Camera Parameters 学习
 
-阅读文档很有用，但当你能看到来自真实手机的真实数据时，摄像头能力更容易理解。在整个系列中，我们将使用 [Android Camera Parameters](/zh-Hans) 来探索来自你自己设备的实际摄像头信息。
+阅读文档很有用，但当你能看到来自真实手机的真实数据时，摄像头能力更容易理解。在整个系列中，我们将使用 [Android Camera Parameters](https://github.com/zoozooll/AndroidCameraParameters) 来探索来自你自己设备的实际摄像头信息。
 
 你可以使用该应用来发现：
 

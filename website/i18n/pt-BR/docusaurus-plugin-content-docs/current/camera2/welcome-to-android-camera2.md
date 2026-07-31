@@ -36,7 +36,7 @@ Como desenvolvedores Android, podemos querer construir aplicações que vão al�
 - Um **aplicativo de visão computacional** que precisa de acesso a quadros brutos
 - Um **aplicativo de varredura 3D** usando sensores de profundidade
 - Um **gravador de vídeo profissional** com seleção de codec e controle de taxa de bits
-- Um **analisador de capacidades de câmera** como o nosso próprio [Android Camera Parameters](/)
+- Um **analisador de capacidades de câmera** como o nosso próprio [Android Camera Parameters](https://github.com/zoozooll/AndroidCameraParameters)
 
 Se algum desses cenários parece familiar, o Camera2 é a API que você precisa dominar.
 
@@ -810,7 +810,7 @@ mindmap
 
 ## 1.11 Aprendendo com Android Camera Parameters
 
-Ler documentação é útil, mas as capacidades da câmera são mais fáceis de entender quando você pode ver dados reais de um telefone real. Ao longo desta série, usaremos o [Android Camera Parameters](/) para explorar informações reais de câmera do seu próprio dispositivo.
+Ler documentação é útil, mas as capacidades da câmera são mais fáceis de entender quando você pode ver dados reais de um telefone real. Ao longo desta série, usaremos o [Android Camera Parameters](https://github.com/zoozooll/AndroidCameraParameters) para explorar informações reais de câmera do seu próprio dispositivo.
 
 Você pode usar o app para descobrir:
 

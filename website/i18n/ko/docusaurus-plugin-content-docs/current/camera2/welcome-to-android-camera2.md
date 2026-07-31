@@ -36,7 +36,7 @@ Android 개발자로서 기본 카메라 앱 이상의 애플리케이션을 만
 - 원시 프레임 접근이 필요한 **컴퓨터 비전 애플리케이션**
 - 깊이 센서를 사용하는 **3D 스캔 애플리케이션**
 - 코덱 선택과 비트레이트 제어가 가능한 **전문 동영상 녹화기**
-- 저희의 [Android Camera Parameters](/)와 같은 **카메라 성능 분석기**
+- 저희의 [Android Camera Parameters](https://github.com/zoozooll/AndroidCameraParameters)와 같은 **카메라 성능 분석기**
 
 이러한 시나리오 중 어느 하나라도 익숙하다면, Camera2가 마스터해야 할 API입니다.
 
@@ -810,7 +810,7 @@ mindmap
 
 ## 1.11 Android Camera Parameters로 학습하기
 
-문서를 읽는 것은 유용하지만, 실제 휴대폰의 실제 데이터를 볼 수 있을 때 카메라 성능을 더 쉽게 이해할 수 있습니다. 이 시리즈 전반에서 [Android Camera Parameters](/)를 사용하여 사용자 자신의 기기에서 실제 카메라 정보를 탐구할 것입니다.
+문서를 읽는 것은 유용하지만, 실제 휴대폰의 실제 데이터를 볼 수 있을 때 카메라 성능을 더 쉽게 이해할 수 있습니다. 이 시리즈 전반에서 [Android Camera Parameters](https://github.com/zoozooll/AndroidCameraParameters)를 사용하여 사용자 자신의 기기에서 실제 카메라 정보를 탐구할 것입니다.
 
 이 앱을 사용하여 다음을 발견할 수 있습니다:
 
