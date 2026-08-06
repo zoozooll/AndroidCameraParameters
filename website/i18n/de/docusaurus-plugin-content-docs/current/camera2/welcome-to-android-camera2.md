@@ -1,874 +1,234 @@
 ---
 sidebar_position: 1
-title: "Kapitel 1: Willkommen bei Android Camera2"
-description: Erfahren Sie, warum Android Camera2 wichtig ist, seine Architektur, das Pipeline-Modell, die Capture-Typen, die Hardware-Level und wie es sich von Camera1 und CameraX unterscheidet.
-keywords: [Android Camera2, Camera2-Pipeline, CaptureRequest, Hardware-Level, Camera1 vs Camera2, Camera2-Architektur]
+title: "Chapter 1: Welcome to Android Camera2"
+description: Learn why Android Camera2 matters, how it compares to Camera1 and CameraX, what it enables, and what you'll build in this series.
+keywords: [Android Camera2, Camera1 vs Camera2, CameraX, why learn Camera2, Android camera development]
 ---
 
-# Kapitel 1: Willkommen bei Android Camera2
+# Chapter 1: Welcome to Android Camera2
 
-> **Kapitelübersicht:** In diesem Kapitel werden wir die Welt von Android Camera2 von Grund auf erkunden. Sie werden nicht nur verstehen, *was* Camera2 ist, sondern auch *warum* es entwickelt wurde, *wie* es funktioniert und *wo* es im Android-Kamera-Ökosystem angesiedelt ist. Wir werden das Pipeline-Modell, die Capture-Typen, die Hardware-Level-Klassifizierung und die vollständige Architektur von der App bis zum HAL behandeln.
+> **Chapter Overview:** In this opening chapter, we step back and look at the big picture. Why does Camera2 exist? What problems does it solve compared to the older Camera API and the newer CameraX library? Who should invest time in learning Camera2? And, most importantly, what will you actually build by the end of this series? No deep architecture, no HAL layers, and no pipeline diagrams yet — just clear answers to the questions every developer asks before diving in.
 
----
+***
 
-## 1.1 Warum Camera2 lernen?
+## 1.1 Why Camera2?
 
-Fast jedes Smartphone verfügt heute über ein leistungsstarkes Kamerasystem. Ein modernes Telefon kann:
+Take out your smartphone.
 
-- Professionell aussehende Fotos mit Computergrafik erfassen
-- 4K- und 8K-Videos mit hohen Bildraten aufnehmen
-- Porträtteffekte mit Tiefensensorik erzeugen
-- Bei extremem Schwachlicht mit Nachtruhe-Modus aufnehmen
-- Zeitlupenvideos mit 960 fps aufnehmen
-- 3D-Tiefeninformationen für AR-Anwendungen generieren
-- Mehrere Kameras nahtlos zusammenführen
+Look at the back. You probably see two, three, or even more camera lenses. That little rectangular bump houses more optical and silicon power than a professional DSLR from the mid-2000s.
 
-Aber wenn Sie die Standard-Kamera-App öffnen, sehen Sie nur eine einfache Oberfläche: einen Auslöser, eine Zoom-Steuerung und einige Aufnahmemodi.
+Now open the default camera app.
 
-Hinter dieser einfachen Oberfläche verbirgt sich ein überraschend komplexes System. Die Kamera-App kommuniziert mit Hardwarekomponenten, Bildprozessoren und Android-Frameworks, um jedes einzelne Bild zu erzeugen.
+Tap the shutter. Instantly, a high-resolution photo is stored in your gallery. The picture likely looks great — vibrant colors, sharp subjects, smooth background blur, and bright shadows even in indoor light.
 
-### Für wen ist Camera2 interessant?
+But the camera app you're using only scratches the surface of what the hardware can do. Hidden beneath that friendly shutter button is an incredibly sophisticated imaging pipeline: one that can shoot RAW photos, record 240 fps slow-motion video, fuse 10 frames for a single night shot, or independently control every micron of lens movement.
 
-Als Android-Entwickler möchten wir möglicherweise Anwendungen entwickeln, die über die Standard-Kamera-App hinausgehen:
+Most third-party Android apps never access this power. Why? Because **the old Android camera API (retroactively called Camera1) was extremely limited**. Camera1 was designed for a world of single-camera phones with basic photo and video capture. It couldn't:
 
-- Eine **manuelle Fotografieanwendung** mit vollständiger Kontrolle über Belichtung, ISO und Fokus
-- Ein **Kamera-Testwerkzeug** für Techniker zur Überprüfung der Gerätefunktionen
-- Eine **Computer-Vision-Anwendung**, die Zugriff auf Rohbilder benötigt
-- Eine **3D-Scan-Anwendung** unter Verwendung von Tiefensensoren
-- Ein **professioneller Videorecorder** mit Codec-Auswahl und Bitratenkontrolle
-- Ein **Kamera-Fähigkeitsanalysator** wie unser eigenes [Android Camera Parameters](https://github.com/zoozooll/AndroidCameraParameters)
+- Control exposure time or ISO manually
+- Capture RAW sensor data
+- Record slow-motion at high frame rates
+- Use multiple cameras simultaneously
+- Access per-frame metadata mid-capture
+- Shoot burst photography reliably
 
-Wenn eines dieser Szenarien vertraut klingt, ist Camera2 die API, die Sie beherrschen müssen.
+Starting in **Android 5.0 (API level 21)**, Google introduced **Camera2 (android.hardware.camera2)** to tear down these walls. Camera2 is not an incremental update — it is a **full redesign**, built from scratch to expose the raw capabilities of modern camera silicon to every Android developer.
 
----
+In short: **Camera2 exists because smartphone cameras became professional-grade, and the old API couldn't keep up.**
 
-## 1.2 Was ist Android Camera2?
+***
 
-**Android Camera2** ist das moderne Kamera-Framework, das von Google in **Android 5.0 (API-Level 21)** eingeführt wurde. Es ersetzte die ursprüngliche `android.hardware.Camera`-API (heute retrospektiv als **Camera1** bezeichnet).
+## 1.2 Camera1 vs Camera2 vs CameraX
 
-### Das Problem, das Camera2 löst
+Over a decade of Android camera development has produced **three generations** of camera APIs. Before you write a single line of code, it's essential to understand which API solves which problem.
 
-Die alte Kamera-API (Camera1) war für eine einfachere Welt konzipiert: eine Kamera, einfache Fotoaufnahmen und einfache Videoaufzeichnung. Aber die Smartphone-Kameras entwickelten sich dramatisch weiter:
+### Three Generations, Three Philosophies
 
-| Ära | Typisches Gerät | Kamera-API |
-|-----|----------------|------------|
-| 2010-2014 | Einzelkamera, einfacher Sensor | Camera1 |
-| 2015-2018 | Dualkameras, OIS, HDR | Camera2 (eingeschränkte Nutzung) |
-| 2019-2022 | Dreifachkameras, Tiefe, Telefoto | Camera2 (Standard) |
-| 2023+ | Vierfachkameras, Periskop, LiDAR, UWB | Camera2 (essentiell) |
+```mermaid
+flowchart LR
+    subgraph YEAR ["Release Timeline"]
+        direction LR
+        C1["Camera1<br/>2008"] --> C2["Camera2<br/>2014"] --> CX["CameraX<br/>2019"]
+    end
+    
+    subgraph LEVEL ["Abstraction Level"]
+        direction TB
+        L1["Low / Deprecated"] --> L2["Low / Powerful"] --> L3["High / Convenient"]
+    end
+    
+    YEAR ~~~ LEVEL
+    
+    style C1 fill:#FFCDD2
+    style C2 fill:#C8E6C9
+    style CX fill:#BBDEFB
+```
 
-Moderne Geräte können mehrere Rückkameras (Weitwinkel, Ultraweitwinkel, Telefoto, Periskop), Tiefensensoren und sogar externe USB-Kameras enthalten. Sie unterstützen erweiterte Funktionen wie:
+### Camera1 — `android.hardware.Camera`
 
-- Manuelle Belichtung und Fokus
-- RAW-Bildaufnahme
-- Hochgeschwindigkeitsvideoaufnahme
-- HDR-Verarbeitung
-- Optische Stabilisierung (OIS)
-- Mehrkamerafusion
+The original camera API, introduced with Android 1.0 and **deprecated in Android 5.0**.
 
-Camera2 wurde entwickelt, um Entwicklern **tiefe, präzise und granulare Kontrolle** über die Kamera-Hardware zu geben.
+- **Model:** Procedural commands. You call methods like `startPreview()`, `takePicture()`, `setFlashMode()`.
+- **Design philosophy:** "The camera is a state machine you command."
+- **Best for:** Legacy apps targeting very old devices (pre-Lollipop). That's it.
+- **Why avoid it:** Google no longer updates it. New hardware features (multi-camera, RAW, HDR) are never back-ported to Camera1. The API surface is tiny. On modern devices, Camera1 is actually **emulated by a Camera2 wrapper** internally, so you pay Camera2 complexity without Camera2 benefits.
 
----
+### Camera2 — `android.hardware.camera2.*`
 
-## 1.3 Camera2 vs Camera1 vs CameraX
+The modern low-level framework, introduced in Android 5.0 and continuously expanded through every Android version since.
 
-Bevor wir tief in Camera2 eintauchen, klären wir die Beziehung zwischen den drei wichtigsten Kamera-APIs.
+- **Model:** A request/response pipeline. You build immutable `CaptureRequest` objects, submit them to a `CameraCaptureSession`, and receive `CaptureResult` metadata + image buffers asynchronously.
+- **Design philosophy:** "The camera is a programmable pipeline. You control every parameter of every frame."
+- **Best for:** Advanced camera apps, manual photography tools, computer vision pipelines, RAW capture, multi-camera research, high-speed video, and any use case where you need hardware-proximate control.
+- **Why use it:** Full access to every capability the OEM HAL exposes. Direct frame control. The only API path for professional features. Camera2 is what CameraX calls internally.
 
-### Camera1 (`android.hardware.Camera`)
+### CameraX — `androidx.camera.*`
 
-- **Eingeführt:** Android 1.0 (in Android 5.0 deprecated)
-- **Modell:** Verfahrensorientiert, zustandsbehaftet, einzelkameraorientiert
-- **Stärken:** Einfach, gut verstanden, weitgehend kompatibel
-- **Schwächen:** Begrenzte Kontrolle, keine RAW-Unterstützung, keine Mehrkamera, keine Burst-Modus
+A **Jetpack library** (not a platform API) introduced in beta in 2019 and stabilized around Android 11.
 
-### Camera2 (`android.hardware.camera2`)
+- **Model:** Declarative use cases. You `bindToLifecycle()` a set of `Preview`, `ImageCapture`, `ImageAnalysis`, or `VideoCapture` use cases and the library does the rest.
+- **Design philosophy:** "We've solved the 10,000 edge cases for you. Just tell us what output you need."
+- **Best for:** Most applications that need a camera. QR/barcode scanners, photo uploads, document scanning, simple video recording — any scenario where convenience and reliability beat raw control.
+- **Why use it:** Lifecycle-aware (no resource leaks), resolution selection is automatic, OEM quirks have built-in workarounds, the exact same code runs on thousands of device models with zero `if` statements.
 
-- **Eingeführt:** Android 5.0 (API 21)
-- **Modell:** Objektorientiert, zustandslos, Anfrage/Antwort-Pipeline
-- **Stärken:** Tiefe Hardwarekontrolle, RAW-Unterstützung, Mehrkamera, Hochgeschwindigkeitsvideo
-- **Schwächen:** Komplex, ausführlich, erfordert Verständnis der Kamerainterna
-
-### CameraX (`androidx.camera.*`)
-
-- **Eingeführt:** Android 10 (Vorabversion), stabil in Android 11+
-- **Modell:** Deklarativ, lebenszyklusbewusst, anwendungsfallorientiert
-- **Stärken:** Einfach zu verwenden, automatische Kompatibilität, Lebenszyklusverwaltung
-- **Schwächen:** Begrenzte erweiterte Kontrolle, möglicherweise nicht alle Hardwarefunktionen verfügbar
-
-### Vergleichstabelle
+### Side-by-Side Comparison
 
 | Dimension | Camera1 | Camera2 | CameraX |
-|-----------|---------|---------|---------|
-| **Level** | Niedrig (deprecated) | Niedrig (aktuell) | Hoch (Jetpack) |
-| **Schwierigkeit** | Einfach | Schwer | Einfach |
-| **Kontrolle** | Minimal | Maximum | Moderat |
-| **RAW-Unterstützung** | Nein | Ja | Begrenzt |
-| **Mehrkamera** | Nein | Ja | Begrenzt |
-| **Burst-Modus** | Nein | Ja | Nein |
-| **Manuelle Steuerung** | Begrenzt | Voll | Begrenzt |
-| **Geeignet für** | Legacy-Apps | Erweiterte Kamera-Apps | Die meisten Kamera-Apps |
-| **Status** | Deprecated | Aktiv | Empfohlen |
+|:---|:---|:---|:---|
+| **Introduced** | Android 1.0 (2008) | Android 5.0 (2014) | Android 10 (Jetpack) |
+| **Status** | Deprecated | Active, maintained | Recommended (Jetpack) |
+| **Abstraction** | Low (legacy) | Low | High |
+| **Learning curve** | Easy | Very steep | Very gentle |
+| **Manual exposure / ISO / focus** | Limited | Full control | Limited via Interop |
+| **RAW capture** | No | Yes | With Interop workarounds |
+| **Multi-camera (physical streams)** | No | Yes | No |
+| **High-speed video (120+ fps)** | No | Yes | Limited |
+| **Burst / bracketing** | No | Full control | No |
+| **Per-frame metadata** | No | Yes, full + partial results | Exposed via Interop callbacks |
+| **Lifecycle safety** | Manual, error-prone | Manual, error-prone | Automatic, lifecycle-bound |
+| **OEM quirk handling** | None | None | Built-in (1000+ devices tested) |
+| **Code volume for a working app** | Medium | Very high (verbose) | Very low |
+| **Performance** | OK (indirect wrapper) | Maximum possible | Near-maximum (thin overhead) |
 
-### Warum sich diese Reihe auf Camera2 konzentriert
+***
 
-Während CameraX für die meisten Anwendungen empfohlen wird, ist das Verständnis von Camera2 unerlässlich, weil:
+## 1.3 What Can Camera2 Do?
 
-1. **CameraX basiert auf Camera2** — CameraX verwendet Camera2 im Hintergrund. Das Verständnis von Camera2 hilft Ihnen zu verstehen, was CameraX tut.
-2. **Einige Funktionen sind nur in Camera2 verfügbar** — RAW-Aufnahme, manuelle Sensorsteuerung und erweiterte Mehrkamera-Szenarien erfordern Camera2.
-3. **Debugging erfordert Camera2-Kenntnisse** — Wenn eine CameraX-App nicht wie erwartet funktioniert, müssen Sie oft das zugrunde liegende Camera2-Verhalten verstehen, um Probleme zu diagnostizieren.
-4. **Camera2-Verständnis ist grundlegend** — Selbst wenn Sie CameraX für Ihre App verwenden, macht das Verständnis von Camera2 Sie zu einem besseren Android-Kamera-Entwickler.
+To concretely understand Camera2's power, imagine features you've seen on flagship phones. Camera2 makes **all of these programmatically accessible**:
 
----
+### Professional-Grade Capture
 
-## 1.4 Camera2 Architektur: Das Gesamtbild
+- **Full Manual Exposure:** Dial in shutter speed from 1/8000 s to 30 s, and ISO from 50 to 102,400. Build a real Pro mode UI.
+- **RAW Photography:** Extract 10-bit, 12-bit, 14-bit, or 16-bit **unprocessed Bayer data** directly from the sensor (no demosaic, no noise reduction, no color correction). Write Adobe DNG files using the bundled `DngCreator` for Lightroom editing.
+- **Exposure Bracketing:** Shoot 3, 5, 7, or 9 frames at precisely stepped EV values. Feed them into an HDR fusion algorithm.
+- **Timelapse Locking:** Freeze exposure, focus, and white balance across **thousands of frames** — no flicker as the sun moves or clouds pass.
 
-Camera2 sitzt in der Mitte des Android-Kamera-Stacks und verbindet Anwendungscode mit Hardware-Treibern. Das Verständnis dieser Architektur ist entscheidend für Debugging und Optimierung.
+### Computational Photography Hardware Access
 
-### Schichtarchitektur
+- **High-Speed Video:** Configure `CameraConstrainedHighSpeedCaptureSession` for 120 fps, 240 fps, or even 960 fps capture. Build slow-motion editors.
+- **Logical Multi-Camera:** Access **both** physical cameras under a logical multi-camera ID **simultaneously**. Grab synchronized YUV frames from a wide and a telephoto lens to compute depth maps on-device.
+- **YUV / PRIVATE Reprocessing (LEVEL_3 devices):** Maintain a full-resolution **circular buffer in the ISP**, then on shutter tap, grab a frame from the past and re-run heavy noise reduction and sharpening. This is how OEMs implement **Zero Shutter Lag (ZSL)**.
+- **Ultra HDR / JPEG_R (Android 14+):** Request and write `ImageFormat.JPEG_R` files that store an 8-bit SDR JPEG **plus** a secondary HDR gain map. Legacy viewers see a normal photo; HDR panels render 1,000+ nit highlights.
+- **Camera Extensions (Android 12+):** Delegate Night, Bokeh (portrait), HDR, and Face Retouch modes **to the OEM HAL** — using the exact same multi-frame AI pipeline the stock camera uses.
 
-```mermaid
-graph TB
-    subgraph APP ["Anwendungsschicht"]
-        A["Ihre App - Camera2 API-Aufrufe"]
-    end
-    
-    subgraph FRAMEWORK ["Framework-Schicht (Java/Kotlin)"]
-        B[CameraManager]
-        C[CameraDevice]
-        D[CameraCaptureSession]
-        E[CaptureRequest]
-        F[CaptureResult]
-    end
-    
-    subgraph NATIVE ["Native Framework-Schicht (C++)"]
-        G[CameraService]
-        H[Camera3Device]
-    end
-    
-    subgraph HAL ["HAL-Schicht (C - Herstellerimplementierung)"]
-        I[camera3_device_t]
-        J[camera3_capture_request_t]
-        K[camera3_capture_result_t]
-    end
-    
-    subgraph KERNEL ["Kernel-Schicht"]
-        L["/dev/videoX V4L2-Treiber"]
-    end
-    
-    subgraph HARDWARE ["Hardware"]
-        M[Kamerasensor]
-        N[ISP-Prozessor]
-        O[Linsenaktuator]
-        P[Flash-LED]
-    end
-    
-    A --> B
-    B --> C
-    C --> D
-    D --> E
-    D --> F
-    E --> G
-    G --> H
-    H --> I
-    I --> J
-    J --> L
-    L --> M
-    M --> N
-    N --> O
-    N --> P
-    
-    style APP fill:#E8F5E9
-    style FRAMEWORK fill:#E3F2FD
-    style NATIVE fill:#FFF3E0
-    style HAL fill:#F3E5F5
-    style KERNEL fill:#ECEFF1
-    style HARDWARE fill:#D7CCC8
-    
-    style A fill:#4CAF50,color:white
-    style B fill:#2196F3,color:white
-    style C fill:#2196F3,color:white
-    style D fill:#2196F3,color:white
-    style E fill:#2196F3,color:white
-    style F fill:#2196F3,color:white
-    style G fill:#FF9800,color:white
-    style H fill:#FF9800,color:white
-    style I fill:#9C27B0,color:white
-    style J fill:#9C27B0,color:white
-    style K fill:#9C27B0,color:white
-    style L fill:#607D8B,color:white
-    style M fill:#795548,color:white
-    style N fill:#795548,color:white
-    style O fill:#795548,color:white
-    style P fill:#795548,color:white
-```
+### Advanced Video and Vision Pipelines
 
-### Erklärung der Architekturschichten
+- **Multi-Stream Concurrent Output:** Drive a **preview** Surface, a **YUV analysis** Surface (for ML object detection running at 30 fps), and a **JPEG still** Surface from a single capture request — all without copying memory.
+- **Flash Timing Precision:** Explicitly coordinate pre-flash metering, main-flash firing, and rolling-shutter readout on a per-frame basis.
+- **Partial Capture Results:** Receive AE state and focus distance metadata **milliseconds before** the final image buffer is ready — enabling "tap anywhere and the UI updates instantly" responsiveness.
+- **Offline Sessions (API 30+):** If the user backgrounds your app mid-Night-Mode, hand the inflight multi-frame merge to an isolated `CameraOfflineSession` and the HAL finishes processing asynchronously; your app wakes up to the final picture.
 
-| Schicht | Ort | Sprache | Verantwortung |
-|---------|-----|---------|---------------|
-| **Anwendung** | Ihr App-Code | Kotlin/Java | CaptureRequests erstellen, CaptureResults handhaben |
-| **Framework (Java)** | `android.hardware.camera2.*` | Java | Öffentliche API, verwaltet Sitzungen, konvertiert Daten |
-| **Native Framework** | `frameworks/av/` | C++ | Binder-IPC, CameraService, Camera3Device |
-| **HAL** | `hardware/libhardware/` + Hersteller | C | Hardware-Abstraktion, herstellerspezifische Implementierung |
-| **Kernel** | `/dev/videoX` | C | V4L2-Treiber, Hardware-Kommunikation |
-| **Hardware** | Physisches Kameramodul | — | Sensor, ISP, Linse, Blitz |
+### And That Is Just the Start
 
-### Schlüsselprinzip des Designs: Camera2 ist eine Pipeline
+Every new Android version expands Camera2. Android 15 (API 35) added `CameraDeviceSetup` so you can probe session configurations **without powering on the sensor at all**, cutting capability-check latency by 10×. The API is alive, evolving, and always one step ahead of the latest camera hardware.
 
-Das wichtigste Konzept, das man über Camera2 verstehen muss, ist, dass es Kameraoperationen als **Pipeline** modelliert. Jede Aktion — Vorschau, Fotoaufnahme, Videoaufzeichnung — wird als **Capture Request** ausgedrückt, der durch die Pipeline fließt und ein **Capture Result** erzeugt.
+***
 
----
+## 1.4 Who Should Learn Camera2?
 
-## 1.5 Das Camera2-Pipeline-Modell
+Learning Camera2 properly takes time. The API surface is enormous — 300+ metadata keys, dozens of callbacks, multiple session types, and hundreds of OEM corner cases. You should invest that time if any of these describe you or your project:
 
-Die Pipeline ist das Herzstück von Camera2s Design. Sie ersetzt das zustandsbehaftete Modell von Camera1 durch ein zustandsloses Anfrage/Antwort-Modell.
+### You Are Building an Advanced Camera Application
 
-### Wie die Pipeline funktioniert
+Your app offers **Pro mode** with manual ISO/shutter/focus/WB dials. Or it captures **RAW photos** and lets users export them for desktop editing. Or it records **slow-motion video**. None of these are possible (or are severely crippled) with CameraX.
 
-```mermaid
-flowchart LR
-    subgraph APP ["Ihre Anwendung"]
-        A[CaptureRequest]
-    end
-    
-    subgraph PIPELINE ["Camera2-Pipeline"]
-        direction TB
-        B["Ausstehende Anfragewarteschlange"]
-        C{{"In-Flight Capture Queue"}}
-        D["HAL-Verarbeitung"]
-        E["Ausgabeoberflächen"]
-        F["CaptureResult"]
-    end
-    
-    subgraph OUTPUT ["Ausgabe"]
-        G["Bilddaten auf Oberflächen"]
-        H["Metadaten in CaptureResult"]
-    end
-    
-    A --> B
-    B --> C
-    C --> D
-    D --> E
-    D --> F
-    E --> G
-    F --> H
-    
-    style APP fill:#E8F5E9
-    style PIPELINE fill:#E3F2FD
-    style OUTPUT fill:#FFF3E0
-    
-    style A fill:#4CAF50,color:white
-    style B fill:#FFC107
-    style C fill:#FF9800,color:white
-    style D fill:#9C27B0,color:white
-    style E fill:#2196F3,color:white
-    style F fill:#00BCD4,color:white
-    style G fill:#4CAF50,color:white
-    style H fill:#4CAF50,color:white
-```
+### You Are Building a Computer Vision or Research Application
 
-### Pipeline-Komponenten erklärt
+You need **zero-copy, lowest-latency YUV frames** to feed an on-device ML pipeline. Or you require **frame-locked sensor data** (the gyro timestamp in `SENSOR_TIMESTAMP` must match the image within ±1 ms for accurate SLAM / visual-inertial odometry). Or you must control **exact shutter duration per frame** for structured light / depth sensing.
 
-| Komponente | Beschreibung |
-|-----------|-------------|
-| **CaptureRequest** | Ein Konfigurationsobjekt, das *ein Bild* der Aufnahme beschreibt. Enthält alle Parameter: Belichtungszeit, Fokusmodus, Blitz, Ausgabeoberflächen usw. |
-| **Ausstehende Anfragewarteschlange** | Eine FIFO-Warteschlange, in der neue CaptureRequests auf die Verarbeitung warten |
-| **In-Flight Capture Queue** | Anfragen, die derzeit vom HAL verarbeitet werden. Normalerweise auf 1-4 Anfragen begrenzt, je nach Gerät |
-| **HAL-Verarbeitung** | Die Hardware-Abstraktionsschicht verarbeitet die Anfrage: steuert Sensor, ISP, Linse usw. |
-| **Ausgabeoberflächen** | Bilder werden auf konfigurierten Oberflächen geschrieben (Vorschau-Oberfläche, ImageReader-Oberfläche usw.) |
-| **CaptureResult** | Metadaten über die Aufnahme: tatsächliche Belichtungszeit, AF-Zustand, Zeitstempel usw. Enthält KEINE Bilddaten |
+### You Are Building a Camera Capability Diagnostic Tool
 
-### Schlüsseleigenschaften der Pipeline
+Like the companion app to this series — **Android Camera Parameters** ([GitHub](https://github.com/zoozooll/AndroidCameraParameters), [Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)) — you need to exhaustively dump every `CameraCharacteristics` key to visualize what each device supports. CameraX intentionally hides most of this detail.
 
-1. **Anfragen sind zustandslos** — Jede CaptureRequest enthält alle notwendigen Informationen. Die Pipeline hat kein Gedächtnis an vorherige Anfragen.
-2. **Verarbeitung ist sequentiell** — Anfragen werden in FIFO-Reihenfolge vom HAL verarbeitet.
-3. **Ergebnisse sind asynchron** — CaptureResults treffen über Rückrufe ein, nicht synchron zurückgegeben.
-4. **Mehrere Ausgaben pro Anfrage** — Eine CaptureRequest kann auf mehrere Oberflächen schreiben (z. B. Vorschau + Foto gleichzeitig).
-5. **Pipeline kann konfiguriert werden** — Sie können Vorlagen (Vorschau, Stillaufnahme, Aufzeichnung) oder vollständig manuellen Modus wählen.
+### You Are Debugging a CameraX or OEM Camera Issue
 
-### Konkretes Beispiel: Ein Foto mit Blitz aufnehmen
+CameraX does break sometimes on obscure devices. When your CameraX preview is stretched, or a specific Galaxy model returns green frames on night mode, or the Pixel 9 crashes on `VideoCapture`, you **must** drop to Camera2 to reproduce and isolate the bug.
 
-Um die Pipeline zu verstehen, verfolgen wir, was passiert, wenn Sie ein Foto mit Blitz aufnehmen:
+### You Work in Mobile Imaging, OEM Camera Stacks, or Automotive Camera Pipelines
 
-```mermaid
-sequenceDiagram
-    participant App as Ihre App
-    participant Session as CameraCaptureSession
-    participant Pipeline as Camera2 Pipeline
-    participant HAL as Camera HAL
-    participant Sensor as Kamerasensor
-    
-    App->>Session: capture(CaptureRequest)
-    Note over App: Anfrage konfiguriert mit\nBlitzmodus: ON\nAusgabe: JPEG-Oberfläche\nFokus: AUTO\nBelichtung: AUTO
-    
-    Session->>Pipeline: Zur ausstehenden Warteschlange hinzufügen
-    Pipeline->>HAL: process_capture_request()
-    HAL->>Sensor: Blitztrigger setzen
-    Sensor-->>HAL: Blitz bereit
-    HAL->>Sensor: Bild aufnehmen
-    Sensor-->>HAL: Bilddaten
-    HAL->>Pipeline: process_capture_result()
-    Pipeline->>Session: CaptureResult (Metadaten)
-    Pipeline->>Session: Bilddaten auf Oberfläche
-    
-    Session-->>App: CaptureCallback.onCaptureCompleted()
-    Note over App: Bild auf Oberfläche gespeichert\nMetadaten in CaptureResult verfügbar
-```
+If you touch vendor HAL code, `frameworks/av/camera`, the Camera NDK, or automotive EVS→Camera2 migration — Camera2 fluency is table stakes.
 
----
+### Who Does **Not** Need to Learn Camera2?
 
-## 1.6 Capture-Typen: One-Shot, Burst und Repeating
+If your requirements are: *"I need to let users take a profile photo or scan a QR code"* — **use CameraX**. Seriously. CameraX is a masterpiece of engineering. It will save you months of work on device compatibility. Camera2 is a power tool; reach for it when you specifically need that power.
 
-Camera2 definiert drei grundlegende Capture-Typen, die jeweils unterschiedlichen Anwendungsfällen dienen. Das Verständnis dieser ist entscheidend für das korrekte Design von Kameraanwendungen.
+***
 
-### Typ 1: One-Shot-Capture
+## 1.5 What You'll Build Throughout This Book
 
-**One-Shot**-Aufnahmen werden genau einmal ausgeführt. Sie sind ideal für einzelne Aktionen wie das Aufnehmen eines Fotos oder das Anwenden einer einmaligen Einstellungsänderung.
+Theory without code is abstract. Code without progression is confusing.
 
-```mermaid
-flowchart LR
-    A["One-Shot-Anfrage"] --> B["Ausstehende Warteschlange"]
-    B --> C["Einmal verarbeiten"]
-    C --> D["Ergebnis und Bild"]
-    D --> E["Fertig - Anfrage entfernt"]
-    
-    style A fill:#4CAF50,color:white
-    style E fill:#4CAF50,color:white
-```
-
-**Anwendungsfälle:**
-- Aufnahme eines einzelnen Fotos
-- Anwenden eines temporären Blitzes
-- Aufnahme eines Bildes zur Analyse
-- Einmaliges Auslösen des Autofokus
-
-**API-Aufruf:**
-```kotlin
-cameraCaptureSession.capture(captureRequest, callback, handler)
-```
-
-### Typ 2: Burst-Capture
-
-**Burst**-Aufnahmen werden mehrere Mal nacheinander ohne Unterbrechung ausgeführt. Sobald gestartet, können keine anderen Anfragen eingefügt werden, bis der Burst abgeschlossen ist.
-
-```mermaid
-flowchart LR
-    subgraph BURST ["Burst-Sequenz"]
-        direction TB
-        A1["Bild 1"] --> A2["Bild 2"]
-        A2 --> A3["Bild 3"]
-        A3 --> An["Bild N"]
-    end
-    
-    B["Burst-Start"] --> A1
-    An --> C["Burst abgeschlossen"]
-    
-    style BURST fill:#FFF3E0
-    style B fill:#FF9800,color:white
-    style C fill:#4CAF50,color:white
-```
-
-### Schlüsseleigenschaften:
-- Alle Bilder in einem Burst haben identische oder schrittweise unterschiedliche Einstellungen
-- Keine anderen Anfragen können während eines Burst verarbeitet werden
-- Die Burst-Warteschlange ist von der ausstehenden Anfragewarteschlange getrennt
-- Höhere Priorität als Repeating-Anfragen
-
-**Anwendungsfälle:**
-- Kontinuierliche Fotoaufnahme (Burst-Modus)
-- Bracketing (Aufnahme derselben Szene mit unterschiedlichen Belichtungen)
-- Bewegungsanalyse (Aufnahme schnell bewegter Motive)
-- Sequentielle Mehrbildaufnahme für Compositing
-
-**API-Aufruf:**
-```kotlin
-cameraCaptureSession.captureBurst(burstRequests, callback, handler)
-```
-
-### Typ 3: Repeating-Capture
-
-**Repeating**-Aufnahmen werden kontinuierlich ausgeführt und bilden die Grundlage für Live-Vorschau und Videoaufzeichnung. Wenn eine Repeating-Anfrage aktiv ist, belegt sie die Pipeline zwischen anderen Aufnahmen.
+Throughout this book you will **progressively build a real, fully functional Camera2 application**. Every chapter adds a feature, and every feature compiles and runs on a real phone. By the final chapter, you will have assembled this complete app:
 
 ```mermaid
 flowchart TB
-    subgraph PIPELINE ["Repeating Capture Pipeline"]
+    subgraph LAYERED ["Full Application Architecture"]
         direction TB
-        A["Repeating-Anfrage"]
-        B["Bild 1 verarbeitet"]
-        C["Bild 2 verarbeitet"]
-        D["Bild 3 verarbeitet"]
-        E["..."]
-        F["Bild N verarbeitet"]
+        UI["Jetpack Compose UI\nHome / Preview / Settings"] --> VM["ViewModel\n3A State Machine"]
+        VM --> CAM["Camera2 Engine\nSession + Repeating Request"]
+        CAM --> HW["Physical Camera\nSensor + Lens + ISP"]
+        CAM --> OUT["Output Streams\nPreview (TextureView)\nJPEG (ImageReader)\nRAW_SENSOR (ImageReader)\nYUV (ImageAnalysis)"]
     end
     
-    A --> B
-    B --> C
-    C --> D
-    D --> E
-    E --> F
-    
-    subgraph INTERRUPT ["Unterbrechung"]
-        G["One-Shot-Foto"]
-    end
-    
-    B -.->|Pause für Foto| G
-    G -.->|Repeating fortsetzen| C
-    
-    style PIPELINE fill:#E3F2FD
-    style INTERRUPT fill:#FFEBEE
-    
-    style A fill:#2196F3,color:white
-    style G fill:#FF5722,color:white
-```
-
-### Schlüsseleigenschaften:
-- Es kann nur eine Repeating-Anfrage gleichzeitig aktiv sein (ersetzt die vorherige)
-- Wird von One-Shot- und Burst-Anfragen unterbrochen, anschließend automatisch fortgesetzt
-- Bildet die Grundlage für Vorschau und Videoaufzeichnung
-- Erzeugt keine einzelnen CaptureResults für jedes Bild (verwendet teilweise Ergebnisse aus Effizienzgründen)
-
-**Anwendungsfälle:**
-- Live-Kameravorschau
-- Videoaufzeichnung
-- Kontinuierliche Fokusüberwachung
-- Echtzeit-Bildanalyse
-
-**API-Aufruf:**
-```kotlin
-cameraCaptureSession.setRepeatingRequest(captureRequest, callback, handler)
-// oder für Video:
-cameraCaptureSession.setRepeatingBurstRequest(burstRequests, callback, handler)
-```
-
-### Vergleich der Capture-Typen
-
-| Funktion | One-Shot | Burst | Repeating |
-|---------|----------|-------|-----------|
-| **Ausführung** | Einmal | Mehrfach (zusammenhängend) | Kontinuierlich |
-| **Priorität** | Hoch | Am höchsten | Am niedrigsten |
-| **Unterbrechung** | Nicht unterbrechbar | Nicht unterbrechbar | Kann unterbrochen werden |
-| **Warteschlange** | Ausstehende Warteschlange | Separate Burst-Warteschlange | Pipeline-Belegung |
-| **Typischer Anwendungsfall** | Foto, einzelnes Bild | Burst-Modus, Bracketing | Vorschau, Video |
-| **Ergebnisrückruf** | Ein Ergebnis pro Aufruf | Ein Ergebnis pro Bild | Ergebnisse periodisch |
-
-### Das Capture-Template-System
-
-Camera2 stellt vordefinierte Vorlagen für gängige Aufnahmeszenarien bereit:
-
-| Vorlage | Beschreibung | Anwendungsfall |
-|---------|-------------|---------------|
-| `TEMPLATE_PREVIEW` | Für Live-Vorschau optimiert | Kamera-Vorschau |
-| `TEMPLATE_STILL_CAPTURE` | Für Fotoaufnahme optimiert | Fotos aufnehmen |
-| `TEMPLATE_RECORD` | Für Videoaufzeichnung optimiert | Videoaufnahme |
-| `TEMPLATE_VIDEO_SNAPSHOT` | Foto während Videoaufzeichnung | Schnappschuss während der Aufnahme |
-| `TEMPLATE_ZERO_SHUTTER_LAG` | Hohe Qualität, minimaler Verzug | Burst-Fotografie |
-| `TEMPLATE_MANUAL` | Alle Automatiksteuerungen deaktiviert | Vollständige manuelle Kontrolle |
-
-Vorlagen sind Abkürzungen, die gängige Parameter vorkonfigurieren. Sie können dann einzelne Einstellungen aus der Vorlage modifizieren.
-
----
-
-## 1.7 Unterstützte Hardware-Level
-
-Nicht alle Android-Geräte unterstützen den vollständigen Camera2-Funktionsumfang. Um dies zu adressieren, definierte Google **Unterstützte Hardware-Level** — ein Klassifizierungssystem, das Entwicklern sagt, was sie von der Kameraimplementierung eines Geräts erwarten können.
-
-### Hardware-Level-Klassifizierung
-
-```mermaid
-flowchart LR
-    subgraph LEVELS ["Steigende Fähigkeit"]
+    subgraph FEATURES ["Features Implemented Per Chapter Group"]
         direction LR
-        L1["LEGACY"] --> L2["LIMITED"]
-        L2 --> L3["FULL"]
-        L3 --> L4["LEVEL_3"]
-        L4 --> L5["EXTERNAL"]
+        P2["Ch 5-9\nCore App:\nPermissions\nCameraManager\nCamera Open\nLive Preview\nPhoto Capture"]
+        P4["Ch 13-17\nManual Modes:\nExposure Dial\nISO Slider\nAF + MF Slider\nWB Presets\nFull 3A Orchestration"]
+        P5["Ch 18-23\nPro Features:\nRAW + DNG\n120/240fps Video\nMulti-Camera Sync\nJPEG_R Ultra HDR\nCamera Extensions\nZero Shutter Lag"]
+        P6["Ch 24-28\nModern Hardening:\nCameraX Interop\nNDK Zero-Copy\nCoroutine + Flow\nCTS / ITS Testing\nFull HAL Arch"]
     end
     
-    style LEVELS fill:#F5F5F5
-    style L1 fill:#F44336,color:white
-    style L2 fill:#FF9800,color:white
-    style L3 fill:#4CAF50,color:white
-    style L4 fill:#2196F3,color:white
-    style L5 fill:#9C27B0,color:white
+    LAYERED ~~~ FEATURES
+    
+    style P2 fill:#C8E6C9
+    style P4 fill:#FFF9C4
+    style P5 fill:#FFE0B2
+    style P6 fill:#BBDEFB
 ```
 
-### Level-Beschreibungen
+### The Milestones
 
-| Level | Beschreibung | Camera2-Unterstützung |
-|-------|-------------|----------------------|
-| **LEGACY** | Rückwärtskompatibel mit Camera1. Camera2-Aufrufe werden im Hintergrund in Camera1 konvertiert. | Nur grundlegende Camera1-Funktionen |
-| **LIMITED** | Einige Camera2-Funktionen unterstützt. Vollständige Camera2-Pipeline nicht garantiert. | Teilweise Camera2-Funktionen |
-| **FULL** | Vollständiger Camera2-Funktionsumfang. Vollständige Pipeline, manuelle Steuerung, Mehrkamera. | Alle Camera2-Funktionen |
-| **LEVEL_3** | Alles in FULL, plus YUV-Reprocessing und zusätzliche Ausgabestreams. | FULL + erweiterte Funktionen |
-| **EXTERNAL** | Ähnlich wie LIMITED, aber für externe Kameras (USB usw.). | Externe Kamera-Unterstützung |
+| Chapter Range | What You Can Do After |
+|:---|:---|
+| **Ch 1–4** | You understand the hardware. You know how a lens, a sensor, and an ISP interact. You can read the spec sheet of any phone and tell which Camera2 features it supports. You've installed the Android Camera Parameters companion app and explored your own device. |
+| **Ch 5–9** | You have a **working camera app**. It opens the back camera, shows a live preview on screen, and saves a JPEG photo when you tap the shutter button. Full aspect-ratio correction, correct portrait rotation, and proper lifecycle cleanup all work. |
+| **Ch 10–12** | You understand **why** the code works the way it does. You can trace a CaptureRequest through the pending queue, in-flight queue, HAL, and back out as a CaptureResult. You know how to gate features on the actual hardware level and capabilities reported. |
+| **Ch 13–17** | Your app has a **full Pro Mode**. Manual ISO, shutter, focus distance, and WB color temperature dials. Live histogram / EV readback. Full one-shot-AF → precapture-AE → capture sequence that exactly mimics how OEM stock cameras get perfect results. |
+| **Ch 18–23** | Your app is now **flagship-grade**: saves RAW+JPEG simultaneously, records 120 fps slow-motion video, can capture dual physical YUV streams for portrait depth, writes Ultra HDR JPEG_R files, delegates Bokeh and Night mode to Camera Extensions, and implements Zero-Shutter-Lag reprocessing on LEVEL_3 devices. |
+| **Ch 24–28** | You are a **senior Android Camera engineer**. You can drop-in CameraX via Interop for 90% of apps while using Camera2 for the 10% that need it. You can author NDK native camera pipelines with zero-copy. You wrap all the callbacks in Kotlin Coroutines and Flow for clean, testable code. You understand how to write camera tests that pass CTS ITS. And you can whiteboard the full App→Framework→Binder→Native→HAL→Kernel→Hardware stack on a whiteboard. |
+| **Ch 29 (Encyclopedia)** | You have a **desk reference** of 29 of the most important `CameraCharacteristics` keys, each explained with rationale, a Kotlin query, an Android Camera Parameters pointer, and the OEM pitfalls. This chapter stays open as you ship production code. |
 
-### So prüfen Sie den Hardware-Level
+That is a genuinely rare skill set. Let's start the journey.
 
-Sie können den Hardware-Level mit `CameraCharacteristics` abfragen:
+***
 
-```kotlin
-val cameraManager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
-val cameraId = cameraManager.cameraIdList[0]
-val characteristics = cameraManager.getCameraCharacteristics(cameraId)
+## 1.6 Summary
 
-val hardwareLevel = characteristics.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL)
-val levelName = when (hardwareLevel) {
-    CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY -> "LEGACY"
-    CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED -> "LIMITED"
-    CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL -> "FULL"
-    CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_3 -> "LEVEL_3"
-    CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL -> "EXTERNAL"
-    else -> "UNKNOWN"
-}
-Log.d("Camera", "Hardware Level: $levelName")
-```
+- **Camera2** is the modern low-level Android camera framework, introduced in Android 5.0 to expose the full capability of today's multi-camera, ISP-rich smartphones.
+- **Camera1** is deprecated; **CameraX** is convenient for most use cases but hides power that only Camera2 exposes. You choose based on requirements.
+- Camera2 unlocks **manual controls, RAW photography, high-speed video, logical multi-camera, YUV reprocessing/ZSL, Ultra HDR, OEM Extensions**, and **Offline Sessions**.
+- Invest in Camera2 when you are building Pro-photo tools, vision/research pipelines, diagnostic apps, or debugging deeper layers.
+- Throughout this book you will **incrementally build a full-featured Camera2 application** — from a one-button camera in Chapter 9 to a flagship-grade imaging tool by Chapter 23, hardened by modern Android patterns by Chapter 28.
 
-### Praktische Implikationen
+## 1.7 What's Next
 
-| Level | Was es für Ihre App bedeutet |
-|-------|------------------------------|
-| **LEGACY** | Camera2 funktioniert möglicherweise mit Einschränkungen. Erwägen Sie Camera1 als Fallback. |
-| **LIMITED** | Grundlegende Camera2-Funktionen funktionieren. Einige erweiterte Funktionen fehlen möglicherweise. |
-| **FULL** | Vollständige Camera2-Unterstützung. Alle Camera2-Funktionen können sicher verwendet werden. |
-| **LEVEL_3** | Kann YUV-Reprocessing und erweiterte Mehrstream-Funktionen verwenden. |
-| **EXTERNAL** | Kann USB-Kameras und andere externe Eingänge unterstützen. |
-
-### Laufzeitfähigkeitsabfrage
-
-Neben dem Hardware-Level sollten Sie immer spezifische Fähigkeiten zur Laufzeit prüfen:
-
-```kotlin
-val capabilities = characteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
-capabilities?.forEach { capability ->
-    when (capability) {
-        CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_BACKWARD_COMPATIBLE ->
-            Log.d("Camera", "Supports backward compatible mode")
-        CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR ->
-            Log.d("Camera", "Supports manual sensor control")
-        CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_POST_PROCESSING ->
-            Log.d("Camera", "Supports manual post-processing")
-        CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_RAW ->
-            Log.d("Camera", "Supports RAW capture")
-        CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_PRIVATE_REPROCESSING ->
-            Log.d("Camera", "Supports private reprocessing")
-        CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_DEEP_OUTPUT ->
-            Log.d("Camera", "Supports deep output")
-    }
-}
-```
-
----
-
-## 1.8 Übersicht der Camera2-Kernklassen
-
-Die API von Camera2 basiert auf einer kleinen Gruppe von Kernklassen. Lernen wir sie kennen, bevor wir tief in jede einzelne eintauchen.
-
-### Beziehungsdiagramm der Kernklassen
-
-```mermaid
-classDiagram
-    class CameraManager {
-        +getCameraIdList() String[]
-        +getCameraCharacteristics(id) CameraCharacteristics
-        +openCamera(id, callback, handler) void
-        +registerAvailabilityCallback(callback, handler) void
-    }
-    
-    class CameraCharacteristics {
-        +get(key) T
-        +getKeys() Set~Key~
-    }
-    
-    class CameraDevice {
-        +createCaptureSession(outputs, callback, handler) void
-        +createCaptureRequest(template) CaptureRequest.Builder
-        +close() void
-    }
-    
-    class CameraCaptureSession {
-        +capture(request, callback, handler) void
-        +setRepeatingRequest(request, callback, handler) void
-        +captureBurst(requests, callback, handler) void
-        +setRepeatingBurstRequest(requests, callback, handler) void
-        +stopRepeating() void
-        +close() void
-    }
-    
-    class CaptureRequest {
-        +get(key) T
-        +getTargets() List~Surface~
-    }
-    
-    class CaptureRequest.Builder {
-        +set(key, value) Builder
-        +addTarget(surface) Builder
-        +removeTarget(surface) Builder
-        +build() CaptureRequest
-    }
-    
-    class CaptureResult {
-        +get(key) T
-        +getFrameNumber() long
-        +getTimestamp() long
-    }
-    
-    class TotalCaptureResult {
-        <<extends>>
-        CaptureResult
-        +getPartialResults() List~CaptureResult~
-    }
-    
-    CameraManager --> CameraCharacteristics : liest
-    CameraManager --> CameraDevice : öffnet
-    CameraDevice --> CameraCaptureSession : erstellt
-    CameraDevice --> CaptureRequest.Builder : erstellt
-    CaptureRequest.Builder --> CaptureRequest : baut
-    CameraCaptureSession --> CaptureRequest : reicht ein
-    CameraCaptureSession --> CaptureResult : gibt zurück
-    CaptureResult <|-- TotalCaptureResult
-```
-
-### Klassenverantwortlichkeiten
-
-| Klasse | Paket | Verantwortung |
-|--------|-------|---------------|
-| `CameraManager` | `android.hardware.camera2` | Top-Level-Systemdienst. Zählt Kameras auf, bietet Zugriff auf CameraDevice. |
-| `CameraCharacteristics` | `android.hardware.camera2` | Schreibgeschützte Metadaten der Kamerafunktionen. |
-| `CameraDevice` | `android.hardware.camera2` | Stellt eine verbundene Kamera dar. Erstellt Sitzungen und Capture-Request-Builder. |
-| `CameraCaptureSession` | `android.hardware.camera2` | Die Pipeline-Instanz. Reicht CaptureRequests ein, verwaltet Repeating-Aufnahmen. |
-| `CaptureRequest` | `android.hardware.camera2` | Unveränderliche Aufnahmekonfiguration. Alle Parameter für ein Bild. |
-| `CaptureRequest.Builder` | `android.hardware.camera2` | Builder zum Erstellen von CaptureRequest-Objekten. |
-| `CaptureResult` | `android.hardware.camera2` | Metadatenausgabe einer abgeschlossenen Aufnahme. |
-| `TotalCaptureResult` | `android.hardware.camera2` | Vollständiges Aufnahmeergebnis einschließlich aller teilweisen Ergebnisse. |
-
-### Der Camera2-Workflow
-
-```mermaid
-flowchart TD
-    A[Start] --> B[CameraManager holen]
-    B --> C[Kameras aufzählen]
-    C --> D[CameraCharacteristics holen]
-    D --> E{Hardware-Level prüfen}
-    E -->|LEGACY oder LIMITED| F[Camera1-Fallback erwägen]
-    E -->|FULL oder LEVEL_3| G[Camera2 vollständig verwenden]
-    G --> H[CameraDevice öffnen]
-    H --> I[CaptureSession erstellen]
-    I --> J[CaptureRequest erstellen]
-    J --> K[An Sitzung einreichen]
-    K --> L[CaptureResult empfangen]
-    L --> M[Bilddaten verarbeiten]
-    M --> N[Fertig]
-    
-    style A fill:#4CAF50,color:white
-    style N fill:#2196F3,color:white
-    style F fill:#FF9800,color:white
-    style G fill:#4CAF50,color:white
-```
-
----
-
-## 1.9 Camera2 vs Camera1: Detaillierter Vergleich
-
-Wenn Sie bereits mit Camera1 gearbeitet haben, werden Sie die Unterschiede zu schätzen wissen. Wenn nicht, hilft Ihnen dieser Abschnitt zu verstehen, warum Camera2 eine grundlegende Neukonzeption ist.
-
-### Architekturvergleich
-
-| Aspekt | Camera1 | Camera2 |
-|--------|---------|---------|
-| **Programmiermodell** | Verfahrensorientiert (imperativ) | Objektorientiert (deklarativ) |
-| **Zustandsverwaltung** | Zustandsbehaftet (Kamera verwaltet Zustand) | Zustandslos (jede Anfrage ist in sich geschlossen) |
-| **Aufnahmemodell** | Befehle (takePicture(), startPreview()) | Pipeline (CaptureRequest → CaptureResult) |
-| **Threading** | Meist single-threaded | Für Multi-Threading-Einsatz konzipiert |
-| **Fehlerbehandlung** | Ausnahmen, schwer zu recoveren | Fehlercodes + Ausnahmen, granularer |
-| **Metadaten** | Schreibgeschützt nach der Aufnahme | Verfügbar in Echtzeit während der Aufnahme |
-| **Mehrere Ausgaben** | Nicht unterstützt | Eine Anfrage → mehrere Oberflächen |
-| **Zero-Copy** | Nicht unterstützt | Unterstützt über ImageReader |
-
-### API-Vergleich nebeneinander
-
-#### Eine Kamera öffnen
-
-```kotlin
-// Camera1 (alte API)
-val camera = Camera.open()
-camera.setPreviewDisplay(surfaceHolder)
-camera.startPreview()
-
-// Camera2 (neue API)
-val cameraManager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
-cameraManager.openCamera(cameraId, object : CameraDevice.StateCallback() {
-    override fun onOpened(camera: CameraDevice) {
-        mCameraDevice = camera
-        // Sitzung und Anfragen erstellen...
-    }
-    override fun onDisconnected(camera: CameraDevice) { camera.close() }
-    override fun onError(camera: CameraDevice, error: Int) { camera.close() }
-}, handler)
-```
-
-#### Ein Foto aufnehmen
-
-```kotlin
-// Camera1 (alte API)
-camera.takePicture(null, null, object : Camera.PictureCallback() {
-    override fun onPictureTaken(data: ByteArray, camera: Camera) {
-        // Bilddaten verarbeiten
-    }
-})
-
-// Camera2 (neue API)
-val requestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
-requestBuilder.addTarget(imageReader.surface)
-val captureRequest = requestBuilder.build()
-mCameraCaptureSession.capture(captureRequest, object : CameraCaptureSession.CaptureCallback() {
-    override fun onCaptureCompleted(session: CameraCaptureSession, 
-                                    request: CaptureRequest, 
-                                    result: TotalCaptureResult) {
-        // Metadaten in result
-        val exposureTime = result.get(CaptureResult.SENSOR_EXPOSURE_TIME)
-    }
-}, handler)
-// Bilddaten treffen über ImageReader.OnImageAvailableListener ein
-```
-
-#### Hauptunterschiede in der Praxis
-
-| Vorgang | Camera1 | Camera2 |
-|---------|---------|---------|
-| **Vorschau + Foto** | Vorschau muss gestoppt werden, um Foto aufzunehmen, dann neu gestartet | Foto kann ohne Stoppen der Vorschau aufgenommen werden |
-| **Mehrere Fotos** | Nur ein Foto gleichzeitig | Burst-Modus mit beliebiger Anzahl |
-| **Manuelle Belichtung** | Nicht verfügbar | Vollständige Kontrolle über Belichtungszeit und Gain |
-| **Manueller Fokus** | Nur vordefinierte Modi | Vollständige Kontrolle über Linsenposition |
-| **RAW-Aufnahme** | Nicht verfügbar | Unterstützt auf FULL+-Geräten |
-| **Echtzeit-Metadaten** | Nicht verfügbar | Verfügbar über teilweise CaptureResults |
-
-### Migrations-Tipps von Camera1
-
-Wenn Sie von Camera1 zu Camera2 migrieren, beachten Sie diese Tipps:
-
-1. **Denken Sie in CaptureRequests**, nicht in Befehlen. Jede Aktion — Fokus, Blitz, Foto — ist eine CaptureRequest.
-2. **Trennen Sie Vorschau und Aufnahme**. Bei Camera1 mussten Sie die Vorschau stoppen, um aufzunehmen. Bei Camera2 reichen Sie eine separate Anfrage ein, während die Repeating-Anfrage fortläuft.
-3. **Verwenden Sie Handler für Rückrufe**. Camera2-Rückrufe laufen auf dem Thread eines Handlers. Geben Sie immer einen an, um ANRs zu vermeiden.
-4. **Prüfen Sie zuerst den Hardware-Level**. Wenn ein Gerät LEGACY ist, erwägen Sie die Verwendung von Camera1 stattdessen.
-5. **Verwenden Sie CaptureRequest-Vorlagen** für gängige Vorgänge. Modifizieren Sie aus Vorlagen statt von Grund auf neu zu bauen.
-6. **Blockieren Sie nicht den Haupt-Thread**. Alle Camera2-Vorgänge sollten auf einem Hintergrund-Thread ausgeführt werden.
-
----
-
-## 1.10 Camera2 im Android-Ökosystem
-
-Camera2 existiert nicht isoliert. Es ist Teil eines größeren Ökosystems kamerabezogener APIs und Bibliotheken.
-
-### Kamera-API-Ökosystem
-
-```mermaid
-mindmap
-  root((Android Kamera))
-    Camera2 API
-      android.hardware.camera2
-      Niedrige Hardwarekontrolle
-      Vollständige manuelle Kontrolle
-      RAW-Aufnahme
-    CameraX
-      androidx.camera.*
-      Hochstufige Bibliothek
-      Lebenszyklusbewusst
-      Kompatibilitätsbehandlung
-    Camera1 API
-      android.hardware.Camera
-      Deprecated
-      Legacy-Unterstützung
-      Einfache API
-    Open Camera
-      AOSP-Kamera-App
-      Referenzimplementierung
-      Camera2-basiert
-    Hersteller-HAL
-      camera3_device_t
-      Hardwarespezifisch
-      Qualcomm/MediaTek
-    Native APIs
-      ndk_camera.h
-      NDK camera2
-      C/C++-Zugriff
-```
-
-### Welche API wann verwenden
-
-| Anforderung | Empfohlene API | Grund |
-|-------------|---------------|-------|
-| Einfache Foto-App | CameraX | Am einfachsten, am kompatibelsten |
-| Videoaufzeichnung | CameraX | Eingebaute Video-Unterstützung |
-| Manuelle Fotografie | Camera2 | Vollständige Kontrolle über alle Parameter |
-| Computer Vision | Camera2 | Direkter Bildzugriff, minimaler Verzug |
-| Mehrkamerafusion | Camera2 | Nur API mit vollständiger Mehrkamera-Unterstützung |
-| RAW-Aufnahme | Camera2 | Nur API mit RAW-Unterstützung |
-| Externe Kamera | Camera2 | Externe Kamera-Unterstützung (EXTERNAL-Level) |
-| Legacy-Geräte-Unterstützung | Camera1 | Kompatibilität mit älteren Geräten |
-
----
-
-## 1.11 Lernen mit Android Camera Parameters
-
-Das Lesen von Dokumentation ist nützlich, aber Kamerafunktionen sind leichter zu verstehen, wenn Sie echte Daten von einem echten Telefon sehen können. Während dieser Reihe werden wir [Android Camera Parameters](https://github.com/zoozooll/AndroidCameraParameters) verwenden, um tatsächliche Kamerainformationen von Ihrem eigenen Gerät zu erkunden.
-
-Sie können die App verwenden, um Folgendes zu entdecken:
-
-- Verfügbare Kameras (ID, Ausrichtung, Hardware-Level)
-- Unterstützte Auflösungen und Bildraten
-- Sensorinformationen (aktive Array-Größe, Brennweite)
-- Unterstützung manueller Steuerung (ISO-Bereich, Belichtungszeitbereich)
-- RAW-Fähigkeit und Formate
-- Hardware-Level und unterstützte Fähigkeiten
-- Kompletter CameraCharacteristics-Dump
-
-Statt von abstrakten Beispielen zu lernen, können Sie direkt Ihr eigenes Gerät untersuchen und sehen, wie die Konzepte in diesem Kapitel auf echte Hardware zutreffen.
-
----
-
-## 1.12 Kernaussagen
-
-Herzlichen Glückwunsch zum Abschluss von Kapitel 1! Hier ist, was Sie sich merken sollten:
-
-### Kernkonzepte
-
-1. **Camera2 ist eine Pipeline** — Jede Kameraoperation ist eine CaptureRequest, die durch die Pipeline fließt und ein CaptureResult erzeugt.
-2. **Capture-Typen** — One-Shot (einzeln), Burst (mehrere zusammenhängend), Repeating (kontinuierlich)
-3. **Hardware-Level** — LEGACY → LIMITED → FULL → LEVEL_3 → EXTERNAL
-4. **Architekturschichten** — App → Framework → Native Framework → HAL → Kernel → Hardware
-
-### Praktische Grundsätze
-
-1. **Hardware-Level immer prüfen** — Nicht alle Geräte unterstützen vollständige Camera2-Funktionen
-2. **Fähigkeiten zur Laufzeit prüfen** — Nicht davon ausgehen, dass Funktionen verfügbar sind
-3. **Vorlagen für gängige Vorgänge verwenden** — `TEMPLATE_PREVIEW`, `TEMPLATE_STILL_CAPTURE` usw.
-4. **Auf Hintergrund-Threads ausführen** — Camera2-Vorgänge dürfen den Haupt-Thread nicht blockieren
-5. **Vorschau und Aufnahme trennen** — Repeating-Anfrage für Vorschau, One-Shot für Fotos
-
-### Was als Nächstes kommt
-
-Im nächsten Kapitel, **Smartphone-Kameras verstehen**, werden wir Android kurz verlassen und die Kamera-Hardware selbst erkunden. Sie werden lernen über:
-
-- Kamerasensortechnologie (CMOS vs CCD)
-- Linsendesign und Brennweite
-- ISP (Image Signal Processor) Verarbeitungspipeline
-- Warum zwei Telefone mit ähnlicher Megapixelanzahl völlig unterschiedliche Fotos erzeugen können
-- Die komplette Bildpipeline vom Licht bis zum fertigen Foto
-
-Sobald Sie die Hardware verstehen, werden die Camera2-Konzepte viel intuitiver.
-
----
-
-## 1.13 Zusammenfassung
-
-Android Camera2 ist ein leistungsstarkes, niedrigstufiges Kamera-Framework, das Entwicklern eine beispiellose Kontrolle über die Kamera-Hardware gibt. Seine Pipeline-basierte Architektur, drei Capture-Typen und die Hardware-Level-Klassifizierung bilden eine robuste Grundlage für den Aufbau erweiterter Kameraanwendungen.
-
-In diesem Kapitel haben wir behandelt:
-- ✅ Camera2-Architektur und Ökosystemposition
-- ✅ Pipeline-Modell mit Anfrage/Ergebnis-Fluss
-- ✅ Capture-Typen: One-Shot, Burst, Repeating
-- ✅ Hardware-Level-Klassifizierung und Laufzeitprüfung
-- ✅ Übersicht und Beziehungen der Kernklassen
-- ✅ Detaillierter Vergleich von Camera1 vs Camera2
-
-Tauchen wir nun in Kapitel 2 in die Kamera-Hardware selbst ein! 🚀
+Before writing a single line of Camera2 code, we need to understand the hardware we're commanding. In **Chapter 2: Understanding Smartphone Cameras**, you will learn what each part of a phone camera module actually does: the lens, the image sensor, the ISP, and how raw light becomes a compressed JPEG. By the end, you will see why a "48 MP" label on the box tells you almost nothing about real image quality.
