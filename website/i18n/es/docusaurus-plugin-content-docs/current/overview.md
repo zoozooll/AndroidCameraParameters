@@ -1,39 +1,39 @@
 ---
 sidebar_position: 1
 slug: /
-description: Resumen del panel de control de Android Camera Parameters y sus funciones de diagnóstico clave, incluida la detección de nivel de hardware y el seguimiento de funciones en tiempo real.
+description: Resumen del panel de Android Camera Parameters y sus funciones clave de diagnóstico, incluyendo detección de nivel de hardware y seguimiento de funciones en tiempo real.
 keywords: [panel de cámara android, detección de nivel de hardware, diagnóstico de cámara]
 ---
 
 # Resumen de la Aplicación
 
-Esta página proporciona un desglose detallado del panel de control de la aplicación y sus funciones clave.
+Esta página proporciona un desglose detallado del panel de la aplicación y sus funciones clave.
 
 ![Resumen de la Aplicación](/img/camera_params_feature_graph.png)
 
 ## Componentes del Panel
 
 ### 1. Navegación y Selección
-- **Menú de Navegación**: Acceso rápido a Configuración, Exportar/Importar, alternar Temas e información Acerca de.
-- **Selección de Cámara**: Haga clic en el Nombre de la Cámara o en la Etiqueta de ID para cambiar entre lentes traseros, frontales y externos.
+- **Menú lateral**: Acceda a la Política de privacidad, Calificar aplicación e información Sobre nosotros a través del icono de menú en la parte superior izquierda.
+- **Selección de cámara**: Toque el nombre de la cámara o la insignia de ID (por ejemplo, "0") para abrir un desplegable y cambiar entre las lentes disponibles (trasera, frontal, ultra gran angular, etc.).
+- **Navegación inferior**: Cambie sin problemas entre **Resumen**, **Categorías**, **JSON sin procesar** y **Favoritos**.
 
 ### 2. Tarjeta de Resumen
-La Tarjeta de Resumen proporciona una instantánea de alto nivel de la cámara seleccionada:
-- **Nivel de Hardware**: Indica el nivel de soporte de la API Camera2 (LEGACY, LIMITED, FULL, LEVEL_3).
-- **Resolución del Sensor**: El recuento total de megapíxeles del sensor.
-- **FPS Máximo de Video**: La frecuencia de fotogramas más alta admitida para la grabación de video.
+La tarjeta de resumen en la parte superior proporciona la información más crítica:
+- **Nivel de hardware**: El nivel de soporte de la API Camera2 (LEGACY, LIMITED, FULL o LEVEL_3). Esto determina las capacidades generales de la lente.
 
 ### 3. Cuadrícula de Funciones Clave
-Una cuadrícula de vista rápida que muestra el soporte para funciones profesionales críticas:
-- **Soporte RAW**: Capacidad para capturar datos del sensor sin comprimir.
-- **Exposición y Enfoque Manual**: Control de nivel profesional sobre la captura de imágenes.
-- **Capacidades de Flash**: Soporte para Flash Automático y reducción de ojos rojos.
-- **OIS (Estabilización Óptica de Imagen)**: Reducción de vibraciones basada en hardware.
-- **HDR y Detección de Rostros**: Capacidades de procesamiento de escenas inteligente.
+Una cuadrícula visual que proporciona el estado instantáneo de funciones de grado profesional:
+- **Resolución y tamaño del sensor**: Características físicas del sensor.
+- **FPS de video máximo**: Capacidades máximas de velocidad de fotogramas.
+- **Soporte RAW**: Indica si el sensor puede emitir datos sin comprimir.
+- **OIS (Estabilización Óptica de Imagen)**: Disponibilidad de estabilización física de la lente.
+- **Control manual**: Estado del soporte de exposición manual y enfoque manual.
+- **Procesamiento**: Soporte para HDR, detección de rostros y reducción de ojos rojos.
 
-### 4. Categorías de Parámetros
-Las características detalladas de la cámara se agrupan en categorías lógicas para una exploración sencilla:
-- **Sensor**: Tamaño de matriz activa, sensibilidad, rangos de tiempo de exposición.
-- **Lente**: Apertura, distancia focal, distancia de enfoque.
-- **AE/AF/AWB**: Controles detallados para Exposición Automática, Enfoque Automático y Balance de Blancos Automático.
-- **Salida**: Tamaños admitidos para JPEG, RAW y YUV.
+### 4. Parámetros categorizados (Pestaña Categorías)
+Explore la lista completa de CameraCharacteristics organizada en grupos lógicos:
+- **Sensor**: Resolución, tamaño físico, rangos de sensibilidad.
+- **Lente**: Distancia focal, apertura, modos de estabilización.
+- **AE/AF/AWB**: Modos de control detallados para exposición, enfoque y balance de blancos.
+- **Búsqueda**: Utilice la barra de búsqueda integrada para encontrar rápidamente claves o valores específicos de la API.

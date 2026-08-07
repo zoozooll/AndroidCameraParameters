@@ -1,136 +1,136 @@
 ---     
 sidebar_position: 18
-title: "Chapter 18: RA W Photography"
-description: "Master RAW_SENSOR format, DNG file creation with DngCreator, Bayer patterns, and simultaneous RAW+JPEG capture in Android Camera2 API"
-keywords: [Android Camera2, RAW photography, RAW_SENSOR, DngCreator, DNG, Bayer pattern, RGGB, JPEG_R, camera metadata]
+title: "Capítulo 18: Fotografia RAW"
+description: "Domine o formato RAW_SENSOR, a criação de arquivos DNG com o DngCreator, padrões Bayer e a captura simultânea de RAW+JPEG na API Camera2 do Android"
+keywords: [Android Camera2, fotografia RAW, RAW_SENSOR, DngCreator, DNG, padrão Bayer, RGGB, JPEG_R, metadados da câmera]
 ---
 
-# Chapter 18: RAW Photography
+# Capítulo 18: Fotografia RAW
 
-Professional mobile photography demands more than the processed JPEGs that Android's ISP (Image Signal Processor) produces by default. When you capture a JPEG, the sensor's raw data has already been filtered, interpolated, color-corrected, noise-reduced, and tone-mapped — destroying most of the editing headroom that photographers rely on. The Camera2 API gives you direct access to the **RAW_SENSOR** format: 16-bit unprocessed Bayer-pattern data straight from the sensor, with zero ISP interference. Combined with **DngCreator**, the Android framework provides everything you need to produce standards-compliant Adobe DNG (Digital Negative) files that open directly in Lightroom, Capture One, Photoshop, and every professional RAW editor.
+A fotografia móvel profissional exige mais do que os JPEGs processados que o ISP (Processador de Sinal de Imagem) do Android produz por padrão. Quando você captura um JPEG, os dados brutos do sensor já foram filtrados, interpolados, corrigidos em termos de cor, reduzidos em ruído e mapeados em tons — destruindo a maior parte da margem de edição na qual os fotógrafos confiam. A API Camera2 oferece acesso direto ao formato **RAW_SENSOR**: dados de padrão Bayer não processados de 16 bits vindos diretamente do sensor, com zero interferência do ISP. Combinado com o **DngCreator**, o framework Android fornece tudo o que você precisa para produzir arquivos Adobe DNG (Digital Negative) compatíveis com os padrões que abrem diretamente no Lightroom, Capture One, Photoshop e em todos os editores RAW profissionais.
 
-This chapter builds on the research documented in the *RAW / DngCreator* section of the project's internal reference, and extends it with practical code you can plug into your own app. You can see these capabilities enumerated for every supported device in the [Android Camera Parameters](https://github.com/zoozooll/AndroidCameraParameters) app — also available on the [Google Play Store](https://play.google.com/store/apps/details?id=com.zoozooll.cameraparameters) — which reports the maximum RAW size, available RAW variants (RAW10, RAW12, RAW14), and whether DngCreator metadata is fully populated for each camera ID.
+Este capítulo se baseia na pesquisa documentada na seção *RAW / DngCreator* da referência interna do projeto e a estende com código prático que você pode inserir em seu próprio aplicativo. Você pode ver essas capacidades enumeradas para cada dispositivo suportado no aplicativo [Android Camera Parameters](https://github.com/zoozooll/AndroidCameraParameters) — também disponível na [Google Play Store](https://play.google.com/store/apps/details?id=com.zoozooll.cameraparameters) — que relata o tamanho máximo de RAW, as variantes de RAW disponíveis (RAW10, RAW12, RAW14) e se os metadados do DngCreator estão totalmente preenchidos para cada ID de câmera.
 
-## Why RAW? The Cost of ISP Processing
+## Por que RAW? O Custo do Processamento do ISP
 
-Before diving into API details, it is critical to understand exactly what the ISP does when it produces a JPEG, and why bypassing it matters. A typical smartphone ISP pipeline applies the following stages in order:
+Antes de mergulhar nos detalhes da API, é fundamental entender exatamente o que o ISP faz quando produz um JPEG e por que ignorá-lo é importante. Um pipeline típico de ISP de smartphone aplica os seguintes estágios em ordem:
 
-1. **Black level clamping** — subtracts the sensor's dark-current baseline
-2. **Lens shading correction** — removes vignetting using per-pixel gain maps
-3. **Demosaicing** — interpolates the 1-color-per-pixel Bayer grid into a full RGB image
-4. **Noise reduction** — applies spatial/temporal filtering that erases fine detail along with noise
-5. **Color correction** — applies a 3×3 matrix to map sensor color space to sRGB
-6. **Gamma / tone mapping** — compresses the scene's linear 14 stops into a non-linear 8-bit curve
-7. **Edge enhancement** — sharpens to compensate for the optical low-pass filter
-8. **JPEG compression** — applies lossy chroma subsampling (typically 4:2:0) and quantization
+1. **Fixação do nível de preto (Black level clamping)** — subtrai a linha de base da corrente escura do sensor.
+2. **Correção de sombreamento da lente (Lens shading correction)** — remove vinhetas usando mapas de ganho por pixel.
+3. **Demosaicing** — interpola a grade Bayer de 1 cor por pixel em uma imagem RGB completa.
+4. **Redução de ruído** — aplica filtragem espacial/temporal que apaga detalhes finos junto com o ruído.
+5. **Correção de cor** — aplica uma matriz 3×3 para mapear o espaço de cor do sensor para sRGB.
+6. **Mapeamento de gama / tons** — compacta as 14 paradas lineares da cena em uma curva não linear de 8 bits.
+7. **Aprimoramento de bordas (Edge enhancement)** — nitidez para compensar o filtro óptico passa-baixa.
+8. **Compressão JPEG** — aplica subamostragem de croma com perdas (geralmente 4:2:0) e quantização.
 
-The problem with this pipeline is that every stage is **irreversible** and tuned for consumer *previews*, not professional *post-processing*. A JPEG clamps highlights to 100:1 contrast ratios and wraps 14 bits of sensor DR into 8 bits — so when you pull up shadows 2 stops in post, you get banding instead of detail. RAW preserves the entire linear sensor output, enabling 4–6 stops of shadow/highlight recovery and custom white-balance shifts that don't introduce color artifacts.
+O problema com este pipeline é que cada estágio é **irreversível** e ajustado para *pré-visualizações* de consumo, não para *pós-processamento* profissional. Um JPEG fixa os realces em taxas de contraste de 100:1 e envolve 14 bits de faixa dinâmica (DR) do sensor em 8 bits — de modo que, quando você aumenta as sombras em 2 paradas na pós-produção, obtém listras (banding) em vez de detalhes. O RAW preserva toda a saída linear do sensor, permitindo a recuperação de 4 a 6 paradas de sombra/realce e mudanças personalizadas de balanço de branco que não introduzem artefatos de cor.
 
 ```mermaid
 flowchart TD
-    subgraph ISP["ISP Processing Pipeline (JPEG Path)"]
-        S1[Sensor RAW Data] --> S2[Black Level Clamp]
-        S2 --> S3[Lens Shading Correction]
+    subgraph ISP["Pipeline de Processamento ISP (Caminho JPEG)"]
+        S1[Dados RAW do Sensor] --> S2[Fixação do Nível de Preto]
+        S2 --> S3[Correção de Sombreamento da Lente]
         S3 --> S4[Demosaic]
-        S4 --> S5[Noise Reduction]
-        S5 --> S6[Color Correction]
-        S6 --> S7[Gamma / Tone Mapping]
-        S7 --> S8[Edge Enhancement]
-        S8 --> S9[JPEG Compression]
-        S9 --> S10["8-bit sRGB JPEG\n(≈6 stops usable DR)"]
+        S4 --> S5[Redução de Ruído]
+        S5 --> S6[Correção de Cor]
+        S6 --> S7[Mapeamento de Gama / Tons]
+        S7 --> S8[Aprimoramento de Bordas]
+        S8 --> S9[Compressão JPEG]
+        S9 --> S10["JPEG sRGB de 8 bits<br/>(≈6 paradas de DR utilizáveis)"]
     end
 
-    subgraph RAW["RAW Path (No ISP Processing)"]
-        R1[Sensor RAW Data] --> R2["16-bit Linear Bayer Pattern\n(10–14 stops usable DR)"]
-        R2 --> R3["DngCreator Writes\nMetadata + Pixel Data"]
-        R3 --> R4[".dng File\nEditable in Lightroom/PS"]
+    subgraph RAW["Caminho RAW (Sem Processamento ISP)"]
+        R1[Dados RAW do Sensor] --> R2["Padrão Bayer Linear de 16 bits<br/>(10–14 paradas de DR utilizáveis)"]
+        R2 --> R3["DngCreator Grava<br/>Metadados + Dados de Pixel"]
+        R3 --> R4["Arquivo .dng<br/>Editável no Lightroom/PS"]
     end
 ```
 
-Compare the two paths visually above: the JPEG path strips data at every step, while the RAW path preserves the full sensor payload. The tradeoff is that RAW files are **not directly displayable** — they require a separate rendering pass (the "develop" step in Lightroom) to interpret the Bayer grid and convert to a colorspace like sRGB or Rec.2020.
+Compare visualmente os dois caminhos acima: o caminho JPEG remove dados em cada etapa, enquanto o caminho RAW preserva toda a carga útil do sensor. A compensação é que os arquivos RAW **não são diretamente exibíveis** — eles requerem uma passagem de renderização separada (a etapa de "revelação" no Lightroom) para interpretar a grade Bayer e converter para um espaço de cores como sRGB ou Rec.2020.
 
-## The Bayer Color Filter Array
+## A Matriz de Filtros de Cores Bayer
 
-RAW data is not RGB. Each photosite on the sensor records only **one color** — red, green, or blue — because a silicon photodiode itself is color-blind and can only measure photon count (luminance). To reconstruct color, manufacturers deposit a **Color Filter Array (CFA)** over the sensor, and the resulting single-channel grid is named after its inventor: the Bayer pattern.
+Os dados RAW não são RGB. Cada fotossítio no sensor registra apenas **uma cor** — vermelho, verde ou azul — porque um fotodiodo de silício por si só é daltônico e só pode medir a contagem de fótons (luminância). Para reconstruir a cor, os fabricantes depositam uma **Matriz de Filtros de Cores (CFA)** sobre o sensor, e a grade de canal único resultante recebe o nome de seu inventor: o padrão Bayer.
 
-Four common CFA layouts exist in Android devices, identified by the order of the top-left 2×2 tile:
+Existem quatro layouts de CFA comuns em dispositivos Android, identificados pela ordem do bloco 2×2 superior esquerdo:
 
-| Pattern | Tile Layout | Typical Use Case |
+| Padrão | Layout do Bloco | Caso de Uso Típico |
 |---------|-------------|------------------|
-| **RGGB** | `R G / G B` | Most smartphones (Samsung, Sony Exmor RS default) |
-| **BGGR** | `B G / G R` | Sony IMX sensors in some Xiaomi/OnePlus devices |
-| **GRBG** | `G R / B G` | Certain OmniVision sensors |
-| **GBRG** | `G B / R G` | Rare; found in some Motorola mid-range devices |
+| **RGGB** | `R G / G B` | Maioria dos smartphones (padrão Samsung, Sony Exmor RS) |
+| **BGGR** | `B G / G R` | Sensores Sony IMX em alguns dispositivos Xiaomi/OnePlus |
+| **GRBG** | `G R / B G` | Certos sensores OmniVision |
+| **GBRG** | `G B / R G` | Raro; encontrado em alguns dispositivos Motorola intermediários |
 
-The most striking feature of the Bayer grid is that **50% of pixels are green**, while red and blue each get 25%. This is not an arbitrary choice — the human eye's photopic luminance response peaks in the green wavelengths (around 555 nm), so devoting twice the samples to green maximizes perceived sharpness and noise performance. The luminance channel in any resulting JPEG is derived ~60% from green photosites, so green sampling density directly translates to resolved detail.
+A característica mais marcante da grade Bayer é que **50% dos pixels são verdes**, enquanto o vermelho e o azul recebem 25% cada. Esta não é uma escolha arbitrária — a resposta de luminância fotópica do olho humano atinge o pico nos comprimentos de onda verdes (em torno de 555 nm), portanto, dedicar o dobro de amostras ao verde maximiza a nitidez percebida e o desempenho de ruído. O canal de luminância em qualquer JPEG resultante é derivado em ~60% dos fotossítios verdes, de modo que a densidade de amostragem verde se traduz diretamente em detalhes resolvidos.
 
 ```mermaid
 graph LR
-    subgraph CFA["Bayer RGGB 4x4 Grid"]
+    subgraph CFA["Grade Bayer RGGB 4x4"]
         direction TB
         R11["R"] --- G12["G"] --- R13["R"] --- G14["G"]
         G21["G"] --- B22["B"] --- G23["G"] --- B24["B"]
         R31["R"] --- G32["G"] --- R33["R"] --- G34["G"]
         G41["G"] --- B42["B"] --- G43["G"] --- B44["B"]
     end
-    subgraph DEMO["After Demosaicing (Interpolated)"]
+    subgraph DEMO["Após Demosaicing (Interpolado)"]
         direction TB
         P11["R,G,B"] --- P12["R,G,B"] --- P13["R,G,B"] --- P14["R,G,B"]
         P21["R,G,B"] --- P22["R,G,B"] --- P23["R,G,B"] --- P24["R,G,B"]
         P31["R,G,B"] --- P32["R,G,B"] --- P33["R,G,B"] --- P34["R,G,B"]
         P41["R,G,B"] --- P42["R,G,B"] --- P43["R,G,B"] --- P44["R,G,B"]
     end
-    CFA -->|"Demosaic Algorithm\n(bilinear, AHD, LMMSE, or ML-based)"| DEMO
+    CFA -->|"Algoritmo de Demosaic<br/>(bilinear, AHD, LMMSE ou baseado em ML)"| DEMO
 ```
 
-The demosaic block above (P11–P44) shows how each pixel is reconstructed: an `R` photosite uses its neighbor `G` and `B` values via interpolation, and vice versa. This interpolation is the single biggest source of image softening in the JPEG pipeline — and exactly why you want to do it yourself in post-production, where modern AI demosaicing (Lightroom's AI Enhance, Topaz DeNoise AI, etc.) can deliver sharper results than the smartphone's real-time hardware ISP.
+O bloco de demosaic acima (P11–P44) mostra como cada pixel é reconstruído: um fotossítio `R` usa os valores `G` e `B` de seus vizinhos via interpolação, e vice-versa. Esta interpolação é a maior fonte individual de suavização de imagem no pipeline JPEG — e exatamente por isso que você deseja fazer isso sozinho na pós-produção, onde o demosaicing de IA moderno (AI Enhance do Lightroom, Topaz DeNoise AI, etc.) pode entregar resultados mais nítidos do que o ISP de hardware em tempo real do smartphone.
 
-## RAW_SENSOR Format and Packed Variants (RAW10 / RAW12 / RAW14)
+## Formato RAW_SENSOR e Variantes Compactadas (RAW10 / RAW12 / RAW14)
 
-Android's canonical RAW format identifier is `ImageFormat.RAW_SENSOR`, which enumerates as a 16-bit-per-pixel buffer stored in the `Plane` returned by `Image.getPlanes()`. However, the *effective* bit depth is device-dependent and reported via `CameraCharacteristics.SENSOR_INFO_BIT_DEPTH` — the upper bits beyond the sensor's actual ADC resolution are zero-padded.
+O identificador canônico de formato RAW do Android é `ImageFormat.RAW_SENSOR`, que se enumera como um buffer de 16 bits por pixel armazenado no `Plane` retornado por `Image.getPlanes()`. No entanto, a profundidade de bits *efetiva* depende do dispositivo e é relatada via `CameraCharacteristics.SENSOR_INFO_BIT_DEPTH` — os bits superiores além da resolução real do ADC do sensor são preenchidos com zero.
 
-Most contemporary smartphones use one of three packed raw variants, which are exposed through `StreamConfigurationMap.getOutputSizes()` with dedicated format constants:
+A maioria dos smartphones contemporâneos usa uma das três variantes de RAW compactadas, que são expostas através de `StreamConfigurationMap.getOutputSizes()` com constantes de formato dedicadas:
 
-| Format Constant | Bits/sample | Storage Layout | Typical Sensor Generation |
+| Constante de Formato | Bits/amostra | Layout de Armazenamento | Geração de Sensor Típica |
 |-----------------|-------------|----------------|---------------------------|
-| `RAW10`         | 10          | Packed: 4 samples per 5 bytes (MSB-aligned) | Mid-range 2019–2022 sensors (e.g. IMX586, IMX682) |
-| `RAW12`         | 12          | Packed: 2 samples per 3 bytes | Flagship 2021–2024 (e.g. IMX800, IMX989 1-inch type) |
-| `RAW14`         | 14          | 16-bit padded (MSB-aligned) | Professional-tier / 1-inch+ sensors (IMX989 with DOL-HDR) |
+| `RAW10`         | 10          | Compactado: 4 amostras por 5 bytes (alinhado ao MSB) | Sensores intermediários 2019–2022 (ex: IMX586, IMX682) |
+| `RAW12`         | 12          | Compactado: 2 amostras por 3 bytes | Flagships 2021–2024 (ex: IMX800, IMX989 tipo 1 polegada) |
+| `RAW14`         | 14          | Preenchimento de 16 bits (alinhado ao MSB) | Nível profissional / sensores de 1 polegada+ (IMX989 com DOL-HDR) |
 
-The packed formats are the reason you **must use `Buffer.getByte()` / `Buffer.getShort()` with pixel-stride awareness**, rather than treating the RAW buffer as a flat short[] array — RAW10 and RAW12 samples cross byte boundaries and require bit-shifting to extract. `DngCreator` handles all of this packing/unpacking transparently if you pass the `Image` object directly, which is the recommended approach.
+Os formatos compactados são o motivo pelo qual você **deve usar `Buffer.getByte()` / `Buffer.getShort()` com ciência do pixel-stride**, em vez de tratar o buffer RAW como uma matriz short[] plana — as amostras RAW10 e RAW12 cruzam os limites de byte e exigem deslocamento de bits para extração. O `DngCreator` lida com toda essa compactação/descompactação de forma transparente se você passar o objeto `Image` diretamente, que é a abordagem recomendada.
 
-## DNG: Adobe Digital Negative Standard 1.4
+## DNG: Padrão Digital Negative da Adobe 1.4
 
-Why write `.dng` files instead of a proprietary format like `.arw` (Sony) or `.cr3` (Canon)? Because **DNG is the only universal RAW format**, published as ISO 12234-2 and accepted by every professional photo toolchain. DNG v1.4 (the version Android targets) specifies:
+Por que gravar arquivos `.dng` em vez de um formato proprietário como `.arw` (Sony) ou `.cr3` (Canon)? Porque o **DNG é o único formato RAW universal**, publicado como ISO 12234-2 e aceito por todas as cadeias de ferramentas fotográficas profissionais. O DNG v1.4 (a versão que o Android visa) especifica:
 
-- A TIFF/EP-compatible container (little-endian IFD structure)
-- Mandatory TIFF tags for CFA pattern, black levels, and color matrices
-- Optional `ColorMatrix2` / `CalibrationIlluminant2` for dual-illuminant profiles
-- Optional lens shading map (tag 0xC618) for per-pixel flat-field correction
-- Optional "makernotes" IFD for OEM-specific calibration data
+- Um contêiner compatível com TIFF/EP (estrutura IFD little-endian).
+- Tags TIFF obrigatórias para padrão CFA, níveis de preto e matrizes de cores.
+- `ColorMatrix2` / `CalibrationIlluminant2` opcionais para perfis de iluminante duplo.
+- Mapa de sombreamento de lente opcional (tag 0xC618) para correção de campo plano por pixel.
+- IFD "makernotes" opcional para dados de calibração específicos do fabricante (OEM).
 
-Without this metadata, a RAW buffer is just an unlabeled grid of numbers — no RAW editor could correctly render it. The `DngCreator` class in Android's `android.hardware.camera2` package is purpose-built to populate **all required DNG 1.4 metadata automatically** from `CameraCharacteristics` and `CaptureResult`, which means your app does not need to ship sensor calibration data for every device.
+Sem esses metadados, um buffer RAW é apenas uma grade de números sem rótulo — nenhum editor RAW poderia renderizá-lo corretamente. A classe `DngCreator` no pacote `android.hardware.camera2` do Android foi construída especificamente para preencher **todos os metadados DNG 1.4 obrigatórios automaticamente** a partir de `CameraCharacteristics` e `CaptureResult`, o que significa que seu aplicativo não precisa enviar dados de calibração de sensor para cada dispositivo.
 
-The specific metadata fields `DngCreator` writes include:
+Os campos de metadados específicos que o `DngCreator` grava incluem:
 
-| DNG Tag | Source | Purpose |
+| Tag DNG | Fonte | Propósito |
 |---------|--------|---------|
-| **BlackLevel** (SENSOR_BLACK_LEVEL_PATTERN) | `CameraCharacteristics` | 4-element per-channel dark-current baseline |
-| **ColorMatrix1 / ColorMatrix2** (SENSOR_COLOR_TRANSFORM1 / 2) | `CameraCharacteristics` | 3×3 matrices mapping sensor RGB → XYZ at Illuminant A (D65) |
-| **CalibrationIlluminant1 / 2** | `CameraCharacteristics` | Standard illuminant enum (17 = Standard A, 21 = D65) |
-| **ForwardMatrix1 / ForwardMatrix2** (SENSOR_FORWARD_MATRIX1 / 2) | `CameraCharacteristics` | XYZ → sensor RGB inverse transform |
-| **NeutralColorPoint** (SENSOR_NEUTRAL_COLOR_POINT) | `CameraCharacteristics` | Native white-balance (r/g, b/g ratios) |
-| **LensShadingMap** (STATISTICS_LENS_SHADING_MAP) | `CaptureResult` | 4-channel per-channel gain grid for vignetting removal |
-| **CFA Pattern 2** | `CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT` | Bayer tile encoding |
-| **BaselineExposure** | `SENSOR_REFERENCE_ILLUMINANT1` | Default exposure offset to apply during rendering |
+| **BlackLevel** (SENSOR_BLACK_LEVEL_PATTERN) | `CameraCharacteristics` | Linha de base da corrente escura de 4 elementos por canal |
+| **ColorMatrix1 / ColorMatrix2** (SENSOR_COLOR_TRANSFORM1 / 2) | `CameraCharacteristics` | Matrizes 3×3 mapeando RGB do sensor → XYZ no Iluminante A (D65) |
+| **CalibrationIlluminant1 / 2** | `CameraCharacteristics` | Enum de iluminante padrão (17 = Standard A, 21 = D65) |
+| **ForwardMatrix1 / ForwardMatrix2** (SENSOR_FORWARD_MATRIX1 / 2) | `CameraCharacteristics` | Transformação inversa XYZ → RGB do sensor |
+| **NeutralColorPoint** (SENSOR_NEUTRAL_COLOR_POINT) | `CameraCharacteristics` | Balanço de branco nativo (proporções r/g, b/g) |
+| **LensShadingMap** (STATISTICS_LENS_SHADING_MAP) | `CaptureResult` | Grade de ganho de 4 canais por canal para remoção de vinhetas |
+| **CFA Pattern 2** | `CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT` | Codificação do bloco Bayer |
+| **BaselineExposure** | `SENSOR_REFERENCE_ILLUMINANT1` | Offset de exposição padrão para aplicar durante a renderização |
 
-This list is taken directly from the *RAW / DngCreator* specification in the project research doc. If any of these fields are reported as `null` by the Camera2 API, `DngCreator` will still produce a valid DNG but the resulting file may require manual calibration in post. You can check which fields are populated for each camera ID using the Android Camera Parameters app.
+Esta lista é extraída diretamente da especificação *RAW / DngCreator* no documento de pesquisa do projeto. Se qualquer um desses campos for relatado como `null` pela API Camera2, o `DngCreator` ainda produzirá um DNG válido, mas o arquivo resultante pode exigir calibração manual na pós-produção. Você pode verificar quais campos são preenchidos para cada ID de câmera usando o aplicativo Android Camera Parameters.
 
-## Setting Up Simultaneous RAW + JPEG Capture
+## Configurando a Captura Simultânea de RAW + JPEG
 
-The correct workflow for RAW capture uses **multiple output targets in a single `CaptureRequest`** — this guarantees the RAW buffer and the JPEG come from the *exact same frame* (identical timestamp, identical sensor exposure), which is essential for RAW+JPEG backup workflows that most photographers expect. Attempting two sequential captures introduces frame-to-frame variability in exposure, AF, and AWB.
+O fluxo de trabalho correto para a captura RAW usa **múltiplos alvos de saída em uma única `CaptureRequest`** — isso garante que o buffer RAW e o JPEG venham do *exato mesmo quadro* (timestamp idêntico, mesma exposição do sensor), o que é essencial para fluxos de trabalho de backup RAW+JPEG que a maioria dos fotógrafos espera. Tentar duas capturas sequenciais introduz variabilidade de quadro a quadro na exposição, AF e AWB.
 
-### Step 1: Query Capabilities and Maximum RAW Size
+### Passo 1: Consultar Capacidades e Tamanho Máximo de RAW
 
 ```kotlin
 import android.hardware.camera2.CameraCharacteristics
@@ -159,9 +159,9 @@ fun getRawCapabilities(cameraId: String,
 }
 ```
 
-`REQUEST_AVAILABLE_CAPABILITIES_RAW` is the mandatory gate — if it is not set, the HAL will refuse any RAW_SENSOR output, and attempting to create an `ImageReader` with that format will throw `IllegalArgumentException`. The Android Camera Parameters app lists this capability per camera ID on its main dashboard.
+`REQUEST_AVAILABLE_CAPABILITIES_RAW` é a porta de entrada obrigatória — se não estiver definida, o HAL recusará qualquer saída RAW_SENSOR, e tentar criar um `ImageReader` com esse formato lançará uma `IllegalArgumentException`. O aplicativo Android Camera Parameters lista essa capacidade por ID de câmera em seu painel principal.
 
-### Step 2: Create Dual ImageReaders (RAW + JPEG)
+### Passo 2: Criar ImageReaders Duplos (RAW + JPEG)
 
 ```kotlin
 import android.media.ImageReader
@@ -175,7 +175,7 @@ fun setupDualImageReaders(rawSize: Size, jpegSize: Size) {
         rawSize.width,
         rawSize.height,
         ImageFormat.RAW_SENSOR,
-        5 // Acquire buffer depth: >= 2, 5 allows headroom for burst capture
+        5 // Profundidade do buffer de aquisição: >= 2, 5 permite margem para captura burst
     ).apply {
         setOnImageAvailableListener(
             OnRawImageAvailableListener(),
@@ -197,9 +197,9 @@ fun setupDualImageReaders(rawSize: Size, jpegSize: Size) {
 }
 ```
 
-The RAW `maxImages` buffer depth should be larger (5) because RAW buffers are 2–4× the bandwidth of JPEG, and the HAL may deliver 2–3 frames before the disk writer catches up. Running out of RAW buffer space causes silent frame drops with no error callback.
+A profundidade do buffer `maxImages` do RAW deve ser maior (5) porque os buffers RAW têm de 2 a 4 vezes a largura de banda do JPEG, e o HAL pode entregar de 2 a 3 quadros antes que o gravador de disco os processe. Ficar sem espaço no buffer RAW causa descartes de quadros silenciosos sem callback de erro.
 
-### Step 3: Create a CaptureSession with Both Surfaces and Issue a Multi-Target Capture
+### Passo 3: Criar uma CaptureSession com Ambas as Superfícies e Emitir uma Captura Multi-Alvo
 
 ```kotlin
 import android.hardware.camera2.CameraDevice
@@ -231,7 +231,7 @@ fun createCaptureSessionAndCapture(
                     set(CaptureRequest.CONTROL_AE_MODE,
                         CaptureRequest.CONTROL_AE_MODE_ON)
                     set(CaptureRequest.CONTROL_AWB_MODE,
-                        CaptureRequest.CONTROL_AWB_MODE_OFF) // Lock WB in RAW!
+                        CaptureRequest.CONTROL_AWB_MODE_OFF) // Travar WB no RAW!
                 }
 
                 session.capture(
@@ -247,17 +247,17 @@ fun createCaptureSessionAndCapture(
 }
 ```
 
-Three details here are non-negotiable:
+Três detalhes aqui são inegociáveis:
 
-1. **AWB must be locked (`CONTROL_AWB_MODE_OFF`) for RAW captures.** If AWB is left on, the HAL will apply an RGB gain ramp mid-burst, meaning every RAW frame has a different native white balance — which breaks RAW editors' ability to apply a uniform profile. Use `CaptureResult.SENSOR_NEUTRAL_COLOR_POINT` to derive the correct WB in post instead.
+1. **O AWB deve ser travado (`CONTROL_AWB_MODE_OFF`) para capturas RAW.** Se o AWB for deixado ativado, o HAL aplicará uma rampa de ganho RGB no meio do burst, o que significa que cada quadro RAW terá um balanço de branco nativo diferente — o que quebra a capacidade dos editores RAW de aplicar um perfil uniforme. Use `CaptureResult.SENSOR_NEUTRAL_COLOR_POINT` para derivar o WB correto na pós-produção.
 
-2. **Use `TEMPLATE_STILL_CAPTURE`** as the base template. It configures the sensor for the highest-quality readout mode and disables preview-specific noise reduction that the HAL might otherwise inject.
+2. **Use o `TEMPLATE_STILL_CAPTURE`** como modelo base. Ele configura o sensor para o modo de leitura de maior qualidade e desativa a redução de ruído específica da pré-visualização que o HAL poderia injetar.
 
-3. **All three targets (preview, RAW, JPEG) are in one `CaptureRequest`.** The HAL guarantees time-coincident delivery.
+3. **Todos os três alvos (preview, RAW, JPEG) estão em uma única `CaptureRequest`.** O HAL garante a entrega simultânea no tempo.
 
-### Step 4: Use DngCreator to Write the DNG File
+### Passo 4: Usar o DngCreator para Gravar o Arquivo DNG
 
-The `OnImageAvailableListener` callback receives `Image` objects from which the RAW pixel data is already accessible. Pass the `Image` *and* the matching `CaptureResult` to `DngCreator`, along with the original `CameraCharacteristics` used to open the camera — this combination is required to populate all DNG 1.4 metadata correctly.
+O callback `OnImageAvailableListener` recebe objetos `Image` dos quais os dados de pixel RAW já estão acessíveis. Passe a `Image` *e* o `CaptureResult` correspondente para o `DngCreator`, junto com as `CameraCharacteristics` originais usadas para abrir a câmera — esta combinação é necessária para preencher corretamente todos os metadados do DNG 1.4.
 
 ```kotlin
 import android.hardware.camera2.CameraCharacteristics
@@ -297,77 +297,77 @@ inner class OnRawImageAvailableListener : ImageReader.OnImageAvailableListener {
                     image.width,
                     image.height,
                     image.planes[0].buffer,
-                    0 // padding, always 0 for RAW_SENSOR
+                    0 // padding, sempre 0 para RAW_SENSOR
                 )
             }
 
         } catch (e: IOException) {
-            Log.e(TAG, "Failed to write DNG file", e)
+            Log.e(TAG, "Falha ao gravar arquivo DNG", e)
         } catch (e: IllegalStateException) {
-            Log.e(TAG, "DngCreator rejected metadata (missing required field)", e)
+            Log.e(TAG, "DngCreator rejeitou metadados (falta campo obrigatório)", e)
         } finally {
-            image?.close() // CRITICAL: NEVER leak Image references
+            image?.close() // CRÍTICO: NUNCA vaze referências de Image
         }
     }
 }
 ```
 
-The `DngCreator` constructor takes exactly two arguments:
-- **`CameraCharacteristics`** — static, per-camera fields (black levels, color matrices, CFA pattern, neutral color point, illuminants 1&2)
-- **`CaptureResult`** — per-frame dynamic fields (sensor exposure, ISO, lens shading map, AF lens position)
+O construtor do `DngCreator` recebe exatamente dois argumentos:
+- **`CameraCharacteristics`** — campos estáticos por câmera (níveis de preto, matrizes de cores, padrão CFA, ponto de cor neutra, iluminantes 1 e 2).
+- **`CaptureResult`** — campos dinâmicos por quadro (exposição do sensor, ISO, mapa de sombreamento da lente, posição da lente AF).
 
-If either is `null` or if a required metadata field is missing (e.g. some budget devices report `null` for `SENSOR_COLOR_TRANSFORM1`), the constructor will throw `IllegalArgumentException` at construction time (not at `writeByteBuffer`). This is why the Android Camera Parameters app explicitly reports every DNG-relevant field: developers can pre-filter devices to avoid crashes on devices with incomplete HAL implementations.
+Se algum deles for `null` ou se faltar um campo de metadados obrigatório (ex: alguns dispositivos econômicos relatam `null` para `SENSOR_COLOR_TRANSFORM1`), o construtor lançará uma `IllegalArgumentException` no momento da construção (não no `writeByteBuffer`). É por isso que o aplicativo Android Camera Parameters relata explicitamente todos os campos relevantes para o DNG: os desenvolvedores podem pré-filtrar os dispositivos para evitar falhas em aparelhos com implementações incompletas do HAL.
 
-The `pendingDngWrites` timestamp map solves a real concurrency problem: `CaptureResult.CaptureCallback.onCaptureCompleted()` fires **before or after** `OnImageAvailableListener.onImageAvailable()` (HAL-dependent). Matching by `image.timestamp` == `CaptureResult.SENSOR_TIMESTAMP` guarantees the right metadata pairs with the right pixel buffer.
+O mapa `pendingDngWrites` por timestamp resolve um problema real de concorrência: `CaptureResult.CaptureCallback.onCaptureCompleted()` dispara **antes ou depois** de `OnImageAvailableListener.onImageAvailable()` (dependendo do HAL). A correspondência por `image.timestamp` == `CaptureResult.SENSOR_TIMESTAMP` garante que os metadados corretos sejam pareados com o buffer de pixel correto.
 
-## Processing Pipeline Comparison (Detailed Mermaid)
+## Comparação do Pipeline de Processamento (Mermaid Detalhado)
 
 ```mermaid
 flowchart LR
-    subgraph Standard["Standard JPEG Capture Pipeline (TAP → JPEG on Disk)"]
-        A[Sensor Exposure + Analog Gain] --> B[ISP Demosaic + Noise Reduction]
-        B --> C[ISP Color Correction + Tone Mapping]
-        C --> D[Hardware JPEG Encoder]
-        D --> E["8-bit sRGB JPEG\n(~3 MB for 12 MP)"]
+    subgraph Standard["Pipeline de Captura JPEG Padrão (TOQUE → JPEG no Disco)"]
+        A["Exposição do Sensor + Ganho Analógico"] --> B["Demosaic ISP + Redução de Ruído"]
+        B --> C[Correção de Cor ISP + Mapeamento de Tons]
+        C --> D[Codificador JPEG de Hardware]
+        D --> E["JPEG sRGB de 8 bits<br/>(~3 MB para 12 MP)"]
     end
 
-    subgraph RawCapture["RAW + JPEG Simultaneous Capture Pipeline"]
-        F[Sensor Exposure + Analog Gain] --> G{Frame Buffer\nDuplicated in HAL}
-        G --> H["Path 1 → RAW_SENSOR\n16-bit Bayer\n(~48 MB for 12 MP)"]
-        G --> I["Path 2 → ISP Pipeline\n(demosaic, NR, color, tone)"]
-        I --> J[Hardware JPEG Encoder]
-        H --> K["ImageReader RAW Plane\n→ DngCreator"]
-        J --> L["ImageReader JPEG Plane"]
-        K --> M["RAW .dng File\n(Editable, 14-bit DR)"]
-        L --> N["JPEG .jpg File\n(Instant preview)"]
+    subgraph RawCapture["Pipeline de Captura Simultânea RAW + JPEG"]
+        F["Exposição do Sensor + Ganho Analógico"] --> G{Buffer de Quadro<br/>Duplicado no HAL}
+        G --> H["Caminho 1 → RAW_SENSOR<br/>Bayer de 16 bits<br/>(~48 MB para 12 MP)"]
+        G --> I["Caminho 2 → Pipeline ISP<br/>(demosaic, NR, cor, tom)"]
+        I --> J[Codificador JPEG de Hardware]
+        H --> K["Plano RAW do ImageReader<br/>→ DngCreator"]
+        J --> L["Plano JPEG do ImageReader"]
+        K --> M["Arquivo RAW .dng<br/>(Editável, DR de 14 bits)"]
+        L --> N["Arquivo JPEG .jpg<br/>(Visualização instantânea)"]
     end
 ```
 
-The key insight from this diagram is the frame **duplication node G**: the HAL reads one frame from the sensor, then routes an unmodified copy to the RAW output while feeding the *same* copy into the ISP for JPEG encoding. This guarantees frame parity without doubling sensor readout bandwidth.
+A principal percepção deste diagrama é o **nó de duplicação de quadro G**: o HAL lê um quadro do sensor e então roteia uma cópia não modificada para a saída RAW enquanto alimenta a *mesma* cópia no ISP para codificação JPEG. Isso garante a paridade do quadro sem dobrar a largura de banda de leitura do sensor.
 
-## Performance Considerations and Practical Limits
+## Considerações de Desempenho e Limites Práticos
 
-Writing 12–48 MB DNG files to flash storage takes measurable time:
-- UFS 3.1 storage: ~250 MB/s sequential write → 12 MP DNG (~48 MB) takes ~190 ms
-- eMMC 5.1 storage: ~120 MB/s sequential write → same file takes ~400 ms
+Gravar arquivos DNG de 12 a 48 MB no armazenamento flash leva um tempo mensurável:
+- Armazenamento UFS 3.1: gravação sequencial de ~250 MB/s → DNG de 12 MP (~48 MB) leva ~190 ms.
+- Armazenamento eMMC 5.1: gravação sequencial de ~120 MB/s → o mesmo arquivo leva ~400 ms.
 
-This means you **cannot block the UI thread on DNG writes** — always run `writeByteBuffer` on a background thread/Handler, and always close the `Image` in a `finally` block to avoid HAL buffer starvation.
+Isso significa que você **não pode bloquear a thread de UI nas gravações DNG** — sempre execute `writeByteBuffer` em uma thread/Handler de segundo plano e sempre feche a `Image` em um bloco `finally` para evitar a inanição do buffer do HAL.
 
-Another important constraint: not all devices support RAW + JPEG in the same session even if `CAPABILITIES_RAW` is set. The correct way to verify is `StreamConfigurationMap.isOutputSupportedFor(surfaceList)` with both surfaces in the list. If this returns `false`, fall back to RAW-only sessions.
+Outra restrição importante: nem todos os dispositivos suportam RAW + JPEG na mesma sessão, mesmo que `CAPABILITIES_RAW` esteja definido. A maneira correta de verificar é `StreamConfigurationMap.isOutputSupportedFor(surfaceList)` com ambas as superfícies na lista. Se isso retornar `false`, use sessões apenas RAW.
 
-## Summary
+## Resumo
 
-This chapter covered the full end-to-end RAW photography workflow in Android Camera2:
+Este capítulo cobriu todo o fluxo de trabalho de fotografia RAW de ponta a ponta no Android Camera2:
 
-- **RAW_SENSOR format** delivers the unprocessed 16-bit Bayer grid from the sensor, bypassing every ISP processing stage.
-- **Bayer patterns** (RGGB, BGGR, GRBG, GBRG) allocate 50% of photosites to green for human-vision-optimized luminance sampling.
-- **Packed variants** — RAW10, RAW12, RAW14 — store samples at native ADC bit depth; DngCreator unpacks them transparently.
-- **DNG v1.4** is the universal RAW container. `DngCreator(characteristics, result).writeByteBuffer(...)` populates all required metadata: black levels, color matrices, lens shading map, neutral color point, and calibration illuminants 1 & 2.
-- **Multi-target CaptureRequests** route the same frame to both RAW and JPEG ImageReaders, guaranteeing frame parity for RAW+JPEG workflows.
-- **Timestamp matching** between `CaptureResult` and `Image` is required because callbacks fire in HAL-dependent order.
+- **O formato RAW_SENSOR** entrega a grade Bayer de 16 bits não processada do sensor, ignorando todos os estágios de processamento do ISP.
+- **Os padrões Bayer** (RGGB, BGGR, GRBG, GBRG) alocam 50% dos fotossítios ao verde para amostragem de luminância otimizada para a visão humana.
+- **Variantes compactadas** — RAW10, RAW12, RAW14 — armazenam amostras na profundidade de bits nativa do ADC; o DngCreator as descompacta de forma transparente.
+- **DNG v1.4** é o contêiner RAW universal. O `DngCreator(characteristics, result).writeByteBuffer(...)` preenche todos os metadados obrigatórios: níveis de preto, matrizes de cores, mapa de sombreamento da lente, ponto de cor neutra e iluminantes de calibração 1 e 2.
+- **CaptureRequests de múltiplos alvos** roteiam o mesmo quadro para os ImageReaders RAW e JPEG, garantindo a paridade de quadro para fluxos de trabalho RAW+JPEG.
+- **A correspondência de timestamps** entre `CaptureResult` e `Image` é necessária porque os callbacks disparam em ordem dependente do HAL.
 
-## What's Next
+## O Que Vem a Seguir
 
-In the next chapter, we shift from still photography to video with **Chapter 19: High-Speed Video**, where we use `CameraConstrainedHighSpeedCaptureSession` to achieve 120 fps (4× slow-motion) and 240 fps (8× slow-motion) capture. You will learn why high-speed sessions require `createHighSpeedRequestList` instead of individual CaptureRequests, and how the HAL's dedicated high-speed pipeline bypasses the normal preview path to deliver frame rates that would otherwise be CPU-prohibitive.
+No próximo capítulo, mudaremos da fotografia estática para o vídeo com o **Capítulo 19: Vídeo de Alta Velocidade**, onde usaremos o `CameraConstrainedHighSpeedCaptureSession` para alcançar capturas de 120 fps (câmera lenta de 4×) e 240 fps (câmera lenta de 8×). Você aprenderá por que as sessões de alta velocidade exigem o `createHighSpeedRequestList` em vez de CaptureRequests individuais e como o pipeline de alta velocidade dedicado do HAL ignora o caminho de pré-visualização normal para entregar taxas de quadros que, de outra forma, seriam proibitivas para a CPU.
 
-You can validate your device's RAW capabilities, maximum RAW size, and DngCreator metadata completeness by installing the [Android Camera Parameters app](https://play.google.com/store/apps/details?id=com.zoozooll.cameraparameters) — and contribute device reports to the open-source [GitHub repository](https://github.com/zoozooll/AndroidCameraParameters) to help other developers know which devices support professional RAW workflows.
+Você pode validar as capacidades RAW do seu dispositivo, o tamanho máximo de RAW e a completude dos metadados do DngCreator instalando o [aplicativo Android Camera Parameters](https://play.google.com/store/apps/details?id=com.zoozooll.cameraparameters) — e contribuir com relatórios de dispositivos para o [repositório de código aberto no GitHub](https://github.com/zoozooll/AndroidCameraParameters) para ajudar outros desenvolvedores a saber quais dispositivos suportam fluxos de trabalho RAW profissionais.

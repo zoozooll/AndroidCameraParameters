@@ -1,161 +1,161 @@
 ---
 sidebar_position: 17
-title: "Chapter 17: The 3A Pipeline"
-description: Orchestrate Auto Exposure (AE), Auto Focus (AF), and Auto White Balance (AWB) into a reliable still-photography capture sequence. Learn the precapture trigger, flash modes, AE/AF state machines, and build production-quality Kotlin code that coordinates all three A's before every shot.
-keywords: [android camera2 3a pipeline, precapture trigger, CONTROL_AE_PRECAPTURE_TRIGGER, AE_STATE_PRECAPTURE, CONTROL_AF_TRIGGER_START, flash modes camera2, auto focus auto exposure auto white balance]
+title: "Capítulo 17: O Pipeline 3A"
+description: Orquestre a Exposição Automática (AE), o Foco Automático (AF) e o Balanço de Branco Automático (AWB) em uma sequência confiável de captura de fotografia estática. Aprenda o gatilho de pré-captura, modos de flash, máquinas de estado AE/AF e construa código Kotlin de qualidade de produção que coordena todos os três "A"s antes de cada disparo.
+keywords: [android camera2 pipeline 3a, gatilho de pré-captura, CONTROL_AE_PRECAPTURE_TRIGGER, AE_STATE_PRECAPTURE, CONTROL_AF_TRIGGER_START, modos de flash camera2, foco automático exposição automática balanço de branco automático]
 ---
 
-# Chapter 17: The 3A Pipeline
+# Capítulo 17: O Pipeline 3A
 
-We've studied **AE** (Auto Exposure, Chapter 13–14), **AF** (Auto Focus, Chapter 15), and **AWB** (Auto White Balance, Chapter 16) as independent systems. Real photography apps must coordinate all three before each shutter press — and the *order and timing* matter deeply.
+Estudamos o **AE** (Exposição Automática, Capítulos 13–14), o **AF** (Foco Automático, Capítulo 15) e o **AWB** (Balanço de Branco Automático, Capítulo 16) como sistemas independentes. Os aplicativos de fotografia reais devem coordenar todos os três antes de cada pressionamento do obturador — e a *ordem e o tempo* importam profundamente.
 
-A naive implementation that fires `capture()` immediately when the user taps the shutter button produces inconsistent results: sometimes focus, sometimes not; sometimes flash fires, sometimes not; sometimes mid-sweep AWB gives a green-tinted photo. A reliable 3A pipeline eliminates all of that.
+Uma implementação ingênua que dispara `capture()` imediatamente quando o usuário toca no botão do obturador produz resultados inconsistentes: às vezes foca, às vezes não; às vezes o flash dispara, às vezes não; às vezes o AWB no meio da varredura produz uma foto com tons verdes. Um pipeline 3A confiável elimina tudo isso.
 
-The 3A pipeline implementation in this chapter is identical to the flow used internally in the [Android Camera Parameters app](https://github.com/zoozooll/AndroidCameraParameters) and the sequence described in the Android Camera architecture research documents and CSDN articles on professional Camera2 development.
+A implementação do pipeline 3A neste capítulo é idêntica ao fluxo usado internamente no [aplicativo Android Camera Parameters](https://github.com/zoozooll/AndroidCameraParameters) e à sequência descrita nos documentos de pesquisa de arquitetura da Android Camera e artigos da CSDN sobre desenvolvimento profissional de Camera2.
 
 ---
 
-## The Full 3A Orchestration Sequence (Overview)
+## A Sequência Completa de Orquestração 3A (Visão Geral)
 
-Before diving into each subsystem, let's visualize the complete state flow. This is a real production sequence — not a simplification.
+Antes de mergulhar em cada subsistema, vamos visualizar o fluxo de estado completo. Esta é uma sequência de produção real — não uma simplificação.
 
 ```mermaid
 sequenceDiagram
     actor User
     participant App as CaptureController
     participant HAL as Camera2 HAL
-    participant AE as AE Engine
-    participant AF as AF Engine
-    participant AWB as AWB Engine
+    participant AE as Mecanismo AE
+    participant AF as Mecanismo AF
+    participant AWB as Mecanismo AWB
 
-    User->>App: Taps "Capture" button
-    App->>HAL: Set AF_MODE = AUTO (or MACRO)
+    User->>App: Toca no botão "Capturar"
+    App->>HAL: Definir AF_MODE = AUTO (ou MACRO)
     App->>HAL: CONTROL_AF_TRIGGER = START
-    Note over HAL,AF: Focus scan starts
+    Note over HAL,AF: Varredura de foco inicia
 
-    loop Every preview frame
+    loop Cada quadro de pré-visualização
         HAL-->>App: CaptureResult
-        App->>App: Check AF_STATE
+        App->>App: Verificar AF_STATE
     end
 
-    AF-->>HAL: AF lock achieved
+    AF-->>HAL: Trava de AF alcançada
     HAL-->>App: AF_STATE = FOCUSED_LOCKED ✓
-    Note over App,AE: Focus stable → proceed to AE precapture
+    Note over App,AE: Foco estável → prosseguir para pré-captura AE
 
     App->>HAL: CONTROL_AE_PRECAPTURE_TRIGGER = START
-    Note over HAL,AE: Precapture metering sweep<br/>(if flash mode requires, fires<br/>a preflash for metering)
+    Note over HAL,AE: Medição de pré-captura<br/>(se o modo de flash exigir, dispara<br/>um pré-flash para medição)
 
-    loop Every preview frame
+    loop Cada quadro de pré-visualização
         HAL-->>App: CaptureResult
-        App->>App: Check AE_STATE &amp; FLASH_STATE
+        App->>App: Verificar AE_STATE &amp; FLASH_STATE
     end
 
-    AE-->>HAL: AE converged; final exposure decided
-    HAL-->>App: AE_STATE = CONVERGED (+ FLASH_STATE = READY if needed) ✓
-    AWB-->>HAL: AWB_STATE = CONVERGED (usually already done)
-    Note over App: All 3A converged! SAFE TO CAPTURE
+    AE-->>HAL: AE convergiu; exposição final decidida
+    HAL-->>App: AE_STATE = CONVERGED (+ FLASH_STATE = READY se necessário) ✓
+    AWB-->>HAL: AWB_STATE = CONVERGED (geralmente já concluído)
+    Note over App: Todos os 3A convergiram! SEGURO PARA CAPTURAR
 
-    App->>HAL: Still Capture request (TEMPLATE_STILL_CAPTURE)
-    HAL->>HAL: Fire main flash if needed
-    HAL->>HAL: Expose sensor, read out frame
-    HAL-->>App: JPEG / RAW frame delivered via ImageReader
+    App->>HAL: Solicitação Still Capture (TEMPLATE_STILL_CAPTURE)
+    HAL->>HAL: Disparar flash principal se necessário
+    HAL->>HAL: Expor o sensor, ler o quadro
+    HAL-->>App: Quadro JPEG / RAW entregue via ImageReader
 
     App->>HAL: CONTROL_AF_TRIGGER = CANCEL
     App->>HAL: CONTROL_AE_PRECAPTURE_TRIGGER = IDLE
-    App->>HAL: Restore AF_MODE = CONTINUOUS_PICTURE
-    Note over App,HAL: Cleanup: preview resumes normal auto
+    App->>HAL: Restaurar AF_MODE = CONTINUOUS_PICTURE
+    Note over App,HAL: Limpeza: a pré-visualização retoma o automático normal
 ```
 
-**Each step is blocking.** You do not move to step N+1 until the HAL confirms the state required at step N. Never skip steps — that's how you ship an app with intermittent soft focus, bad flash exposures, or blue-tinted photos.
+**Cada etapa é bloqueante.** Você não avança para a etapa N+1 até que o HAL confirme o estado exigido na etapa N. Nunca pule etapas — é assim que você entrega um aplicativo com foco suave intermitente, exposições de flash ruins ou fotos com tons azulados.
 
 ---
 
-## AE (Auto Exposure) Deep-Dive
+## Mergulho Profundo no AE (Exposição Automática)
 
-AE is the most complex of the three A's because it encompasses not just shutter+ISO but **flash metering** and the **precapture trigger**.
+O AE é o mais complexo dos três "A"s porque engloba não apenas o obturador+ISO, mas também a **medição do flash** e o **gatilho de pré-captura**.
 
-### AE Modes: CONTROL_AE_MODE
+### Modos de AE: CONTROL_AE_MODE
 
-| Mode | Behavior | Flash Support |
+| Modo | Comportamento | Suporte a Flash |
 |------|----------|--------------|
-| `OFF` | Fully manual (covered in Ch. 14) | None |
-| `ON` | Auto exposure, **flash disabled** (permanent off) | No |
-| `ON_AUTO_FLASH` | Auto exposure, **auto-flash decision** — HAL fires flash only in low light | Auto (most common default) |
-| `ON_ALWAYS_FLASH` | Auto exposure, **flash always fires** (fill flash for backlit portraits) | Always |
-| `ON_AUTO_FLASH_REDEYE` | Auto exposure + flash + red-eye reduction (fires a pre-flash sequence to clamp pupils) | Auto + redeye |
-| `ON_EXTERNAL_FLASH` | External camera accessory flash | External only (rare) |
+| `OFF` | Totalmente manual (coberto no Cap. 14) | Nenhum |
+| `ON` | Exposição automática, **flash desativado** (sempre desligado) | Não |
+| `ON_AUTO_FLASH` | Exposição automática, **decisão de flash automático** — o HAL dispara o flash apenas em pouca luz | Automático (padrão mais comum) |
+| `ON_ALWAYS_FLASH` | Exposição automática, **o flash sempre dispara** (flash de preenchimento para retratos em contraluz) | Sempre |
+| `ON_AUTO_FLASH_REDEYE` | Exposição automática + flash + redução de olhos vermelhos (dispara uma sequência de pré-flash para fechar as pupilas) | Automático + olhos vermelhos |
+| `ON_EXTERNAL_FLASH` | Flash acessório de câmera externa | Apenas externo (raro) |
 
-**The default for a normal camera app** is `ON_AUTO_FLASH`. Users expect the phone to "know" when to fire the flash.
+**O padrão para um aplicativo de câmera normal** é `ON_AUTO_FLASH`. Os usuários esperam que o telefone "saiba" quando disparar o flash.
 
-### AE States & Precapture Trigger
+### Estados de AE e Gatilho de Pré-captura
 
-Like AF, AE reports its state via `CaptureResult.CONTROL_AE_STATE`:
+Assim como o AF, o AE relata seu estado via `CaptureResult.CONTROL_AE_STATE`:
 
-| State | Meaning |
+| Estado | Significado |
 |-------|---------|
-| `INACTIVE` (0) | AE disabled or hasn't started |
-| `SEARCHING` (1) | Actively searching for correct exposure |
-| `CONVERGED` (2) | Exposure is stable. In flash modes, this means *ambient* exposure converged, but a preflash sweep hasn't happened yet. |
-| `LOCKED` (3) | Exposure explicitly locked via `CONTROL_AE_LOCK = true` |
-| `FLASH_REQUIRED` (4) | Converged on ambient, and HAL has decided **flash is needed** for correct shot |
-| `PRECAPTURE` (5) | **Key state.** The precapture sweep is running — HAL is metering (firing preflash pulses, if flash is needed) to calculate final capture exposure + flash power. |
+| `INACTIVE` (0) | AE desativado ou ainda não iniciado |
+| `SEARCHING` (1) | Procurando ativamente pela exposição correta |
+| `CONVERGED` (2) | A exposição está estável. Em modos de flash, isso significa que a exposição *ambiente* convergiu, mas uma varredura de pré-flash ainda não aconteceu. |
+| `LOCKED` (3) | Exposição travada explicitamente via `CONTROL_AE_LOCK = true` |
+| `FLASH_REQUIRED` (4) | Convergiu no ambiente, e o HAL decidiu que o **flash é necessário** para a foto correta |
+| `PRECAPTURE` (5) | **Estado-chave.** A varredura de pré-captura está rodando — o HAL está medindo (disparando pulsos de pré-flash, se o flash for necessário) para calcular a exposição final da captura + a potência do flash. |
 
-### Why the Precapture Trigger Matters
+### Por que o Gatilho de Pré-captura é Importante
 
-The AE engine running on preview frames is *approximate*. The preview pipeline uses smaller buffers, lower bit-depth processing, and doesn't account for the massive light contribution of a main flash firing at capture time.
+O mecanismo AE que roda nos quadros de pré-visualização é *aproximado*. O pipeline de pré-visualização usa buffers menores, processamento de menor profundidade de bits e não leva em conta a enorme contribuição de luz de um flash principal disparando no momento da captura.
 
-`CONTROL_AE_PRECAPTURE_TRIGGER = START` tells the HAL:
+`CONTROL_AE_PRECAPTURE_TRIGGER = START` diz ao HAL:
 
-> "I'm about to take a real still photo. Stop approximating. Run the full-precision metering pipeline. If I'm in an auto-flash mode, fire one or more low-power preflashes, measure the reflection, and calculate exact final shutter/ISO/flash-power for the capture."
+> "Estou prestes a tirar uma foto estática real. Pare de aproximar. Execute o pipeline de medição de precisão total. Se eu estiver em um modo de flash automático, dispare um ou mais pré-flashes de baixa potência, meça o reflexo e calcule o obturador/ISO/potência do flash final exato para a captura."
 
-**Skipping precapture = flash photos are randomly overexposed or underexposed.** The HAL simply didn't have a chance to meter for the flash in real time.
+**Pular a pré-captura = fotos com flash ficam aleatoriamente superexpostas ou subexpostas.** O HAL simplesmente não teve a chance de medir o flash em tempo real.
 
-### AE Regions (Spot Metering)
+### Regiões de AE (Medição Pontual)
 
-Just like `CONTROL_AF_REGIONS` for focus, `CONTROL_AE_REGIONS` specifies *where in the scene* to meter. A portrait tap-to-focus should simultaneously apply the same region to AE — the face gets both focus priority AND exposure priority, not metered based on the bright sky background.
+Assim como `CONTROL_AF_REGIONS` para o foco, `CONTROL_AE_REGIONS` especifica *onde na cena* medir. Um "tocar para focar" em retrato deve aplicar simultaneamente a mesma região ao AE — o rosto recebe prioridade de foco E prioridade de exposição, e não é medido com base no fundo de céu brilhante.
 
 ```kotlin
-// Use the SAME MeteringRectangle array for both AF and AE regions
+// Use o MESMO array MeteringRectangle para as regiões de AF e AE
 val focusWeightedRegions = arrayOf(userTapRegion)
 builder.set(CaptureRequest.CONTROL_AF_REGIONS, focusWeightedRegions)
 builder.set(CaptureRequest.CONTROL_AE_REGIONS, focusWeightedRegions)
 ```
 
-**Weighting:** Each `MeteringRectangle` has a `weight` (0–1000). Regions with higher weight influence metering more. A "spot metering" mode uses one high-weight rectangle (1000). "Matrix / Evaluative" metering uses many low-weight rectangles spread across the frame.
+**Peso:** Cada `MeteringRectangle` possui um `weight` (0–1000). Regiões com peso maior influenciam mais a medição. Um modo de "medição pontual" usa um retângulo de peso alto (1000). A medição "Matricial / Avaliativa" usa muitos retângulos de peso baixo espalhados pelo quadro.
 
 ---
 
-## AWB: The Silent Partner of the Trio
+## AWB: O Parceiro Silencioso do Trio
 
-AWB usually converges early and stays converged in most scenes — which is why it's often treated as an afterthought. But its contribution to color accuracy is critical, and it *can* still be searching when you're ready to capture.
+O AWB geralmente converge cedo e permanece convergido na maioria das cenas — é por isso que muitas vezes é tratado como um detalhe secundário. Mas sua contribuição para a precisão das cores é crítica, e ele *ainda* pode estar procurando quando você estiver pronto para capturar.
 
-### AWB States Recap
+### Resumo dos Estados de AWB
 
-| AWB State | Capture Decision |
+| Estado do AWB | Decisão de Captura |
 |-----------|------------------|
-| `INACTIVE` (AWB_MODE = OFF) | OK to proceed (manual gains) |
-| `SEARCHING` | **Wait.** Colors may still shift. Usually < 500ms after major scene change. |
-| `CONVERGED` | ✅ Perfect — proceed |
-| `LOCKED` | ✅ Also perfect — explicitly locked via `CONTROL_AWB_LOCK = true` |
+| `INACTIVE` (AWB_MODE = OFF) | OK para prosseguir (ganhos manuais) |
+| `SEARCHING` | **Aguarde.** As cores ainda podem mudar. Geralmente < 500ms após mudança importante na cena. |
+| `CONVERGED` | ✅ Perfeito — prossiga |
+| `LOCKED` | ✅ Também perfeito — travado explicitamente via `CONTROL_AWB_LOCK = true` |
 
-### Coupling AWB Lock with AE/AF Locks
+### Acoplando a Trava de AWB com as Travas de AE/AF
 
-For critical studio/product photography, lock all three *before* capture:
+Para fotografia crítica de estúdio/produto, trave todos os três *antes* da captura:
 
 ```kotlin
-// In the still-capture request (not earlier — we want final converged values locked)
+// Na solicitação de captura estática (não antes — queremos os valores convergidos finais travados)
 builder.set(CaptureRequest.CONTROL_AWB_LOCK, true)
 builder.set(CaptureRequest.CONTROL_AE_LOCK, true)
-// AF stays locked because we triggered it earlier and haven't cancelled
+// O AF permanece travado porque o acionamos anteriormente e não o cancelamos
 ```
 
-This guarantees the main capture reuses *exactly* the same color/wb profile that the final precapture metering frame used.
+Isso garante que a captura principal reutilize *exatamente* o mesmo perfil de cor/wb que o quadro de medição de pré-captura final utilizou.
 
 ---
 
-## Complete Production 3A Capture Controller (Kotlin)
+## Controlador de Captura 3A de Produção Completo (Kotlin)
 
-Now let's assemble it all into a reusable class. This implementation matches the orchestration flow in the Android Camera architecture research documents section on 3A Control Pipeline and the patterns recommended by the Android Camera CSDN series.
+Agora vamos montar tudo em uma classe reutilizável. Esta implementação corresponde ao fluxo de orquestração nos documentos de pesquisa da arquitetura Android Camera na seção sobre Pipeline de Controle 3A e aos padrões recomendados pela série CSDN Android Camera.
 
 ```kotlin
 class ThreeACaptureController(
@@ -165,7 +165,7 @@ class ThreeACaptureController(
     private val jpegReaderSurface: Surface,
     private val mainHandler: Handler
 ) {
-    // ----------- Public API -----------
+    // ----------- API Pública -----------
     interface CaptureListener {
         fun onCaptureStarted() {}
         fun onCaptureSuccess(jpegBytes: ByteArray)
@@ -173,8 +173,8 @@ class ThreeACaptureController(
     }
 
     /**
-     * Orchestrate the full 3A capture sequence:
-     *   AF Trigger → AF Locked → AE Precapture → AE Converged → Still Capture → Cleanup
+     * Orquestrar a sequência completa de captura 3A:
+     *   Gatilho AF → AF Travado → Pré-captura AE → AE Convergido → Captura Estática → Limpeza
      */
     fun captureStillPhoto(
         aeMode: Int = CameraMetadata.CONTROL_AE_MODE_ON_AUTO_FLASH,
@@ -185,15 +185,15 @@ class ThreeACaptureController(
         beginPhase1_AfTrigger(aeMode)
     }
 
-    // ----------- Internal state -----------
+    // ----------- Estado interno -----------
     private var listener: CaptureListener? = null
     private var timeoutRunnable: Runnable? = null
     private var phase: Int = 0
     private lateinit var currentAeMode: Int
 
-    private val SESSION_TIMEOUT_MS = 3500L  // Budget phones need up to ~3s
+    private val SESSION_TIMEOUT_MS = 3500L  // Telefones econômicos precisam de até ~3s
 
-    // ---- PHASE 1: Trigger AF, wait for FOCUSED_LOCKED ----
+    // ---- FASE 1: Disparar AF, aguardar FOCUSED_LOCKED ----
     private fun beginPhase1_AfTrigger(aeMode: Int) {
         currentAeMode = aeMode
         phase = 1
@@ -209,16 +209,16 @@ class ThreeACaptureController(
             set(CaptureRequest.CONTROL_AWB_MODE,
                 CameraMetadata.CONTROL_AWB_MODE_AUTO)
 
-            // Kick off one-shot AF scan
+            // Iniciar varredura de AF de disparo único
             set(CaptureRequest.CONTROL_AF_TRIGGER,
                 CameraMetadata.CONTROL_AF_TRIGGER_START)
         }
 
-        startTimeout("AF scan")
+        startTimeout("Varredura AF")
         captureSession.setRepeatingRequest(request.build(), captureCallback, mainHandler)
     }
 
-    // ---- PHASE 2: AF locked. Start AE precapture trigger ----
+    // ---- FASE 2: AF travado. Iniciar gatilho de pré-captura AE ----
     private fun beginPhase2_AePrecapture() {
         phase = 2
         val request = captureSession.device.createCaptureRequest(
@@ -226,14 +226,14 @@ class ThreeACaptureController(
         ).apply {
             addTarget(previewSurface)
 
-            // Keep AF locked — do NOT cancel AF trigger yet!
+            // Manter AF travado — NÃO cancele o gatilho AF ainda!
             set(CaptureRequest.CONTROL_AF_MODE,
                 CameraMetadata.CONTROL_AF_MODE_AUTO)
-            // AF_TRIGGER remains in START state from Phase 1
+            // AF_TRIGGER permanece no estado START da Fase 1
 
             set(CaptureRequest.CONTROL_AE_MODE, currentAeMode)
 
-            // ---- THE CRITICAL LINE: Run Precapture ----
+            // ---- A LINHA CRÍTICA: Executar Pré-captura ----
             set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER,
                 CameraMetadata.CONTROL_AE_PRECAPTURE_TRIGGER_START)
 
@@ -241,11 +241,11 @@ class ThreeACaptureController(
                 CameraMetadata.CONTROL_AWB_MODE_AUTO)
         }
 
-        restartTimeout("AE precapture")
+        restartTimeout("Pré-captura AE")
         captureSession.setRepeatingRequest(request.build(), captureCallback, mainHandler)
     }
 
-    // ---- PHASE 3: AE converged + AWB converged. Fire actual still capture. ----
+    // ---- FASE 3: AE convergido + AWB convergido. Disparar captura estática real. ----
     private fun beginPhase3_StillCapture() {
         phase = 3
         cancelTimeout()
@@ -256,13 +256,13 @@ class ThreeACaptureController(
             addTarget(previewSurface)
             addTarget(jpegReaderSurface)
 
-            // Keep AF locked until AFTER capture completes
+            // Manter AF travado até DEPOIS da conclusão da captura
             set(CaptureRequest.CONTROL_AF_MODE,
                 CameraMetadata.CONTROL_AF_MODE_AUTO)
 
             set(CaptureRequest.CONTROL_AE_MODE, currentAeMode)
 
-            // Lock both AE and AWB for the still capture to prevent last-frame drift
+            // Travar tanto o AE quanto o AWB para a captura estática para evitar desvio no último quadro
             set(CaptureRequest.CONTROL_AE_LOCK, true)
             set(CaptureRequest.CONTROL_AWB_LOCK, true)
 
@@ -270,7 +270,7 @@ class ThreeACaptureController(
                 CameraMetadata.CONTROL_AWB_MODE_AUTO)
 
             set(CaptureRequest.JPEG_QUALITY, 95)
-            // JPEG orientation: use Display rotation for correct final orientation
+            // Orientação JPEG: use a rotação do Display para orientação final correta
             val jpegOrient = computeJpegOrientation()
             set(CaptureRequest.JPEG_ORIENTATION, jpegOrient)
         }
@@ -282,14 +282,14 @@ class ThreeACaptureController(
                 result: TotalCaptureResult
             ) {
                 super.onCaptureCompleted(session, request, result)
-                // ImageReader OnImageAvailableListener will handle saving bytes to listener
-                // Now clean up: reset back to normal preview mode
+                // O OnImageAvailableListener do ImageReader lidará com o salvamento dos bytes para o listener
+                // Agora limpe: resete de volta para o modo de pré-visualização normal
                 resetToContinuousPreview()
             }
         }, mainHandler)
     }
 
-    // ---- Cleanup: Resume normal continuous preview ----
+    // ---- Limpeza: Retomar pré-visualização contínua normal ----
     private fun resetToContinuousPreview() {
         phase = 0
         val request = captureSession.device.createCaptureRequest(
@@ -302,7 +302,7 @@ class ThreeACaptureController(
             set(CaptureRequest.CONTROL_AWB_MODE,
                 CameraMetadata.CONTROL_AWB_MODE_AUTO)
 
-            // Release all locks & cancel all triggers
+            // Liberar todas as travas e cancelar todos os gatilhos
             set(CaptureRequest.CONTROL_AF_TRIGGER,
                 CameraMetadata.CONTROL_AF_TRIGGER_CANCEL)
             set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER,
@@ -313,7 +313,7 @@ class ThreeACaptureController(
         captureSession.setRepeatingRequest(request.build(), null, mainHandler)
     }
 
-    // ----------- Master Callback: Drives all 3 phases via state inspection -----------
+    // ----------- Callback Mestre: Conduz todas as 3 fases via inspeção de estado -----------
     private val captureCallback = object : CameraCaptureSession.CaptureCallback() {
         override fun onCaptureCompleted(
             session: CameraCaptureSession,
@@ -326,22 +326,22 @@ class ThreeACaptureController(
 
             when (phase) {
                 1 -> {
-                    // ---- PHASE 1: Wait for AF lock ----
+                    // ---- FASE 1: Aguardar trava de AF ----
                     when (afState) {
                         CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED -> {
-                            Log.d("3A", "✓ AF FOCUSED_LOCKED — moving to AE precapture")
+                            Log.d("3A", "✓ AF FOCUSED_LOCKED — movendo para pré-captura AE")
                             beginPhase2_AePrecapture()
                         }
                         CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED -> {
-                            Log.w("3A", "⚠ AF NOT_FOCUSED_LOCKED — proceeding anyway (may be soft)")
+                            Log.w("3A", "⚠ AF NOT_FOCUSED_LOCKED — prosseguindo de qualquer maneira (pode ficar suave)")
                             beginPhase2_AePrecapture()
                         }
-                        // ACTIVE_SCAN / PASSIVE_SCAN → keep waiting
+                        // ACTIVE_SCAN / PASSIVE_SCAN → continuar esperando
                     }
                 }
                 2 -> {
-                    // ---- PHASE 2: Wait for AE to converge after precapture ----
-                    // Accept states that mean "AE is done with precapture and ready for capture"
+                    // ---- FASE 2: Aguardar convergência do AE após pré-captura ----
+                    // Aceitar estados que signifiquem "AE concluiu a pré-captura e está pronto para capturar"
                     val aeReady = (aeState == CaptureResult.CONTROL_AE_STATE_CONVERGED
                                 || aeState == CaptureResult.CONTROL_AE_STATE_LOCKED
                                 || aeState == CaptureResult.CONTROL_AE_STATE_FLASH_REQUIRED)
@@ -350,7 +350,7 @@ class ThreeACaptureController(
                                  || awbState == CaptureResult.CONTROL_AWB_STATE_INACTIVE)
 
                     if (aeReady && awbReady) {
-                        Log.d("3A", "✓ AE=$aeState, AWB=$awbState — firing capture")
+                        Log.d("3A", "✓ AE=$aeState, AWB=$awbState — disparando captura")
                         beginPhase3_StillCapture()
                     }
                 }
@@ -358,14 +358,14 @@ class ThreeACaptureController(
         }
     }
 
-    // ----------- Timeout protection: Never hang if HAL never converges -----------
+    // ----------- Proteção contra timeout: Nunca trava se o HAL nunca convergir -----------
     private fun startTimeout(phaseName: String) {
         cancelTimeout()
         timeoutRunnable = Runnable {
-            Log.w("3A", "⏱ Timeout waiting for $phaseName — proceeding with best effort")
+            Log.w("3A", "⏱ Timeout aguardando $phaseName — prosseguindo com melhor esforço")
             when (phase) {
-                1 -> beginPhase2_AePrecapture()  // Proceed with best possible focus
-                2 -> beginPhase3_StillCapture()  // Proceed with best possible exposure
+                1 -> beginPhase2_AePrecapture()  // Prosseguir com o melhor foco possível
+                2 -> beginPhase3_StillCapture()  // Prosseguir com a melhor exposição possível
             }
         }
         mainHandler.postDelayed(timeoutRunnable!!, SESSION_TIMEOUT_MS)
@@ -376,22 +376,22 @@ class ThreeACaptureController(
         timeoutRunnable = null
     }
 
-    // ----------- Utility: Correct JPEG orientation based on display rotation -----------
+    // ----------- Utilitário: Orientação JPEG correta baseada na rotação do display -----------
     private fun computeJpegOrientation(): Int {
         val sensorOrient = characteristics.get(
             CameraCharacteristics.SENSOR_ORIENTATION
         ) ?: 0
-        // Combine with Display.rotation (0, 90, 180, 270) from your Activity
-        // Typical impl: return (sensorOrient + displayRotationDegrees) % 360
-        return sensorOrient  // Simplified; wire to your display's rotation
+        // Combinar com o Display.rotation (0, 90, 180, 270) da sua Activity
+        // Impl típica: retornar (sensorOrient + displayRotationDegrees) % 360
+        return sensorOrient  // Simplificado; ligue à rotação do seu display
     }
 }
 ```
 
-### How to Use the Controller
+### Como Usar o Controlador
 
 ```kotlin
-// Inside your CameraFragment's capture button click listener
+// Dentro do listener de clique do botão de captura do seu CameraFragment
 val controller = ThreeACaptureController(
     characteristics = yourCameraCharacteristics,
     captureSession = yourActiveSession,
@@ -408,29 +408,29 @@ controller.captureStillPhoto(
             val file = File(requireContext().filesDir, "photo_${System.currentTimeMillis()}.jpg")
             file.writeBytes(jpegBytes)
             withContext(Dispatchers.Main) {
-                Toast.makeText(requireContext(), "Saved: ${file.name}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Salvo: ${file.name}", Toast.LENGTH_SHORT).show()
             }
         }
     }
     override fun onCaptureError(reason: String) {
-        Toast.makeText(requireContext(), "Capture failed: $reason", Toast.LENGTH_LONG).show()
+        Toast.makeText(requireContext(), "Captura falhou: $reason", Toast.LENGTH_LONG).show()
     }
 }
 ```
 
-### Pairing with ImageReader
+### Emparelhamento com o ImageReader
 
-Don't forget the `OnImageAvailableListener` on your JPEG `ImageReader` to actually deliver `jpegBytes` to the listener. The controller above assumes you've already wired this:
+Não esqueça o `OnImageAvailableListener` no seu `ImageReader` JPEG para realmente entregar os `jpegBytes` para o listener. O controlador acima presume que você já configurou isso:
 
 ```kotlin
-// Set this up when creating the ImageReader (see Capture Chapter)
+// Configure isso ao criar o ImageReader (consulte o Capítulo de Captura)
 jpegImageReader.setOnImageAvailableListener({ reader ->
     val image = reader.acquireLatestImage() ?: return@setOnImageAvailableListener
     image.use {
         val buffer = it.planes[0].buffer
         val bytes = ByteArray(buffer.remaining())
         buffer.get(bytes)
-        // Deliver bytes to your UI / file saver
+        // Entregar os bytes para sua UI / salvador de arquivos
         lastCaptureListener?.onCaptureSuccess(bytes)
     }
 }, mainHandler)
@@ -438,16 +438,16 @@ jpegImageReader.setOnImageAvailableListener({ reader ->
 
 ---
 
-## Flash-Specific Handling Nuances
+## Nuances do Tratamento Específico de Flash
 
-For `ON_AUTO_FLASH` / `ON_ALWAYS_FLASH` / `ON_AUTO_FLASH_REDEYE` modes, the precapture trigger runs preflash pulses. Two important considerations:
+Para os modos `ON_AUTO_FLASH` / `ON_ALWAYS_FLASH` / `ON_AUTO_FLASH_REDEYE`, o gatilho de pré-captura executa pulsos de pré-flash. Duas considerações importantes:
 
-1. **Preflash pulse visibility:** Preflashes are *real flashes* — the user sees them as a low-brightness flash pulse before the main flash. Most modern camera UIs hide this with a "shutter button animation" or by darkening the preview.
+1. **Visibilidade do pulso de pré-flash:** Os pré-flashes são *flashes reais* — o usuário os vê como um pulso de flash de baixo brilho antes do flash principal. A maioria das interfaces de câmera modernas oculta isso com uma "animação de botão do obturador" ou escurecendo a pré-visualização.
 
-2. **`FLASH_STATE` must READY:** In addition to `AE_STATE = CONVERGED`, verify `CaptureResult.FLASH_STATE = FLASH_STATE_READY` (or `FIRED`) for flash modes before capture. It's possible for AE to converge but the flash charging capacitor to still be ramping up.
+2. **`FLASH_STATE` deve estar READY:** Além de `AE_STATE = CONVERGED`, verifique `CaptureResult.FLASH_STATE = FLASH_STATE_READY` (ou `FIRED`) para modos de flash antes da captura. É possível que o AE convirja, mas o capacitor de carregamento do flash ainda esteja subindo.
 
 ```kotlin
-// Enhanced aeReady check inside Phase 2 callback for flash modes:
+// Verificação aeReady aprimorada dentro do callback da Fase 2 para modos de flash:
 val aeState = result.get(CaptureResult.CONTROL_AE_STATE)
 val flashState = result.get(CaptureResult.FLASH_STATE)
 
@@ -457,14 +457,14 @@ val flashModeWantsFlash = (currentAeMode == CameraMetadata.CONTROL_AE_MODE_ON_AL
 
 val aeReady = when {
     flashModeWantsFlash -> {
-        // HAL must have both AE converged AND flash ready to fire
+        // O HAL deve ter tanto o AE convergido QUANTO o flash pronto para disparar
         (aeState == CaptureResult.CONTROL_AE_STATE_CONVERGED
          || aeState == CaptureResult.CONTROL_AE_STATE_FLASH_REQUIRED) &&
         (flashState == CaptureResult.FLASH_STATE_READY
          || flashState == CaptureResult.FLASH_STATE_FIRED)
     }
     else -> {
-        // No-flash mode: plain AE convergence is enough
+        // Modo sem flash: a convergência simples do AE é suficiente
         (aeState == CaptureResult.CONTROL_AE_STATE_CONVERGED
          || aeState == CaptureResult.CONTROL_AE_STATE_LOCKED)
     }
@@ -473,83 +473,83 @@ val aeReady = when {
 
 ---
 
-## The 3A State Transition Machine (Summary Diagram)
+## A Máquina de Transição de Estado 3A (Diagrama de Resumo)
 
-For quick reference when debugging, here's the combined state chart of AE, AF, and AWB showing the expected transitions during a successful capture.
+Para referência rápida ao depurar, aqui está o gráfico de estados combinado de AE, AF e AWB, mostrando as transições esperadas durante uma captura bem-sucedida.
 
 ```mermaid
 stateDiagram-v2
     direction LR
 
-    state "AF States" as AF {
+    state "Estados de AF" as AF {
         [*] --> ACTIVE_SCAN: AF_TRIGGER = START
-        ACTIVE_SCAN --> FOCUSED_LOCKED: ✓ Focus found
-        ACTIVE_SCAN --> NOT_FOCUSED_LOCKED: ✗ Couldn't lock
-        FOCUSED_LOCKED --> [*]: Proceed to Phase 2
-        NOT_FOCUSED_LOCKED --> [*]: Proceed (best effort)
+        ACTIVE_SCAN --> FOCUSED_LOCKED: ✓ Foco encontrado
+        ACTIVE_SCAN --> NOT_FOCUSED_LOCKED: ✗ Não pôde travar
+        FOCUSED_LOCKED --> [*]: Prosseguir para Fase 2
+        NOT_FOCUSED_LOCKED --> [*]: Prosseguir (melhor esforço)
     }
 
-    state "AE States" as AE {
-        [*] --> SEARCHING: Preview running
-        SEARCHING --> CONVERGED: Ambient stable
+    state "Estados de AE" as AE {
+        [*] --> SEARCHING: Pré-visualização rodando
+        SEARCHING --> CONVERGED: Ambiente estável
         CONVERGED --> PRECAPTURE: PRECAPTURE_TRIGGER = START
-        PRECAPTURE --> CONVERGED: Final exposure+flash computed
-        CONVERGED --> FLASH_REQUIRED: (auto-flash mode only)
-        CONVERGED --> [*]: Capture now
-        FLASH_REQUIRED --> [*]: Capture with flash now
+        PRECAPTURE --> CONVERGED: Exposição final + flash computados
+        CONVERGED --> FLASH_REQUIRED: (apenas modo flash automático)
+        CONVERGED --> [*]: Capturar agora
+        FLASH_REQUIRED --> [*]: Capturar com flash agora
     }
 
-    state "AWB States" as AWB {
-        [*] --> SEARCHING: Major scene change
-        SEARCHING --> CONVERGED: Illuminant found
+    state "Estados de AWB" as AWB {
+        [*] --> SEARCHING: Mudança importante na cena
+        SEARCHING --> CONVERGED: Iluminante encontrado
         CONVERGED --> LOCKED: AWB_LOCK = true
-        CONVERGED --> [*]: Capture OK
-        LOCKED --> [*]: Capture OK
+        CONVERGED --> [*]: Captura OK
+        LOCKED --> [*]: Captura OK
     }
 ```
 
-The global controller only proceeds to the still capture when the final "capture OK" state is reached simultaneously on all three sub-states.
+O controlador global só avança para a captura estática quando o estado final "captura OK" é alcançado simultaneamente em todos os três sub-estados.
 
 ---
 
-## Troubleshooting the 3A Pipeline
+## Solução de Problemas do Pipeline 3A
 
-| Symptom | Root Cause | Fix |
+| Sintoma | Causa Raiz | Correção |
 |---------|-----------|-----|
-| Flash photos randomly under/over-exposed | Skipped `AE_PRECAPTURE_TRIGGER = START` | Always run precapture before still capture in any flash mode |
-| Every 5th–10th photo is slightly soft | Proceeded to capture before `FOCUSED_LOCKED` | Block on AF state (our controller does this) |
-| Camera hangs for seconds then crashes | No timeout; HAL stuck in SEARCHING forever | Add the 3500ms timeout + best-effort fallback as shown |
-| Flash fires but photo is still dark | Proceeded before `FLASH_STATE = READY` | Capacitor charging; add FLASH_STATE check in AE ready condition |
-| Portrait of backlit person is underexposed | AE metered the sky, not the face | Couple `CONTROL_AE_REGIONS` to same tap rectangle as `CONTROL_AF_REGIONS` |
-| 2° color tint shift between frames in burst | Forgot `AWB_LOCK = true` before capture burst | Lock AWB on the first converged frame; keep locked through burst |
-| Capture sequence is noticeably slow on budget phone | `TEMPLATE_STILL_CAPTURE` starts cold pipeline | Warm up with a dummy `TEMPLATE_PREVIEW` with identical AE/AF settings first |
+| Fotos com flash sub/superexpostas aleatoriamente | Pulou `AE_PRECAPTURE_TRIGGER = START` | Sempre execute a pré-captura antes da captura estática em qualquer modo de flash |
+| Cada 5ª ou 10ª foto está ligeiramente suave | Prosseguiu para a captura antes de `FOCUSED_LOCKED` | Bloqueie no estado de AF (nosso controlador faz isso) |
+| A câmera trava por segundos e depois falha | Sem timeout; HAL travado em SEARCHING para sempre | Adicione o timeout de 3500ms + fallback de melhor esforço como mostrado |
+| O flash dispara, mas a foto ainda está escura | Prosseguiu antes de `FLASH_STATE = READY` | Capacitor carregando; adicione verificação de FLASH_STATE na condição AE pronto |
+| Retrato de pessoa em contraluz está subexposto | O AE mediu o céu, não o rosto | Acople `CONTROL_AE_REGIONS` ao mesmo retângulo de toque que `CONTROL_AF_REGIONS` |
+| Mudança de tonalidade de cor em 2° entre quadros em burst | Esqueceu `AWB_LOCK = true` antes do burst de captura | Trave o AWB no primeiro quadro convergido; mantenha travado durante o burst |
+| A sequência de captura é visivelmente lenta em telefone econômico | `TEMPLATE_STILL_CAPTURE` inicia o pipeline a frio | Aqueça com um `TEMPLATE_PREVIEW` fictício com configurações AE/AF idênticas primeiro |
 
 ---
 
-## Summary
+## Resumo
 
-This chapter tied exposure, focus, and white balance together into a single, reliable **3A capture pipeline** — the exact sequence a professional camera app uses for every shutter press:
+Este capítulo uniu a exposição, o foco e o balanço de branco em um único e confiável **pipeline de captura 3A** — a sequência exata que um aplicativo de câmera profissional usa para cada pressionamento do obturador:
 
-1. **Phase 1 (AF):** Set `AF_MODE = AUTO` + `AF_TRIGGER = START`. Wait until `AF_STATE = FOCUSED_LOCKED` (or `NOT_FOCUSED_LOCKED` as fallback).
-2. **Phase 2 (AE Precapture):** Set `AE_PRECAPTURE_TRIGGER = START`. Wait for `AE_STATE = CONVERGED` / `FLASH_REQUIRED` AND `FLASH_STATE = READY` (if flash modes). Also require `AWB_STATE = CONVERGED`.
-3. **Phase 3 (Still Capture):** Submit `TEMPLATE_STILL_CAPTURE` with `AE_LOCK = true`, `AWB_LOCK = true`.
-4. **Phase 4 (Cleanup):** Cancel all triggers, release all locks, restore `AF_MODE = CONTINUOUS_PICTURE`.
+1. **Fase 1 (AF):** Definir `AF_MODE = AUTO` + `AF_TRIGGER = START`. Aguardar até que `AF_STATE = FOCUSED_LOCKED` (ou `NOT_FOCUSED_LOCKED` como fallback).
+2. **Fase 2 (AE Pré-captura):** Definir `AE_PRECAPTURE_TRIGGER = START`. Aguardar por `AE_STATE = CONVERGED` / `FLASH_REQUIRED` E `FLASH_STATE = READY` (se modos de flash). Também exigir `AWB_STATE = CONVERGED`.
+3. **Fase 3 (Captura Estática):** Enviar `TEMPLATE_STILL_CAPTURE` com `AE_LOCK = true`, `AWB_LOCK = true`.
+4. **Fase 4 (Limpeza):** Cancelar todos os gatilhos, liberar todas as travas, restaurar `AF_MODE = CONTINUOUS_PICTURE`.
 
-Critical supporting concepts:
-- **AE modes:** `ON_AUTO_FLASH` is the sensible default for consumer apps
-- **AE regions** = spot metering; always pair with AF regions on tap-to-focus
-- **AWB converges fast** but always block on `CONVERGED` or `LOCKED` for color-critical work
-- **Timeouts are non-negotiable.** Budget phones and low-light can make AF/AE scan forever; always proceed with a best-effort fallback after ~3.5s.
+Conceitos de suporte críticos:
+- **Modos de AE:** `ON_AUTO_FLASH` é o padrão sensato para aplicativos de consumo.
+- **Regiões de AE** = medição pontual; sempre emparelhe com regiões de AF no tocar para focar.
+- **O AWB converge rápido**, mas sempre bloqueie em `CONVERGED` ou `LOCKED` para trabalhos críticos de cor.
+- **Timeouts são inegociáveis.** Telefones econômicos e pouca luz podem fazer as varreduras de AF/AE durarem para sempre; sempre prossiga com um fallback de melhor esforço após ~3,5s.
 
-## What's Next
+## O Que Vem a Seguir
 
-Congratulations on completing the 3A Manual Photography module. You now understand — at a professional level — how to control:
+Parabéns por concluir o módulo de Fotografia Manual 3A. Agora você entende — em um nível profissional — como controlar:
 
-- **Exposure (Ch. 13–14):** The exposure triangle, ISO + shutter, nanosecond conversions, manual override, long exposure, timelapse lock, bracketing
-- **Focus (Ch. 15):** AF modes, AF state machine, one-shot trigger-and-capture, manual focus diopters, hyperfocal presets, touch-to-focus regions
-- **Color (Ch. 16):** Color temperature, AWB presets, manual COLOR_CORRECTION_GAINS, 3×3 CCM transforms, Kelvin slider implementation
-- **Orchestration (Ch. 17):** The full 3A pipeline with precapture, flash-safe AE convergence, per-phase timeouts, lock/release cleanup
+- **Exposição (Caps. 13–14):** O triângulo de exposição, ISO + obturador, conversões de nanossegundos, sobreposição manual, longa exposição, trava de timelapse, bracketing.
+- **Foco (Cap. 15):** Modos de AF, máquina de estados de AF, disparo único e gatilho de captura, dioptrias de foco manual, predefinições hiperfocais, regiões de tocar para focar.
+- **Cor (Cap. 16):** Temperatura de cor, predefinições de AWB, COLOR_CORRECTION_GAINS manuais, transformações CCM 3×3, implementação de slider Kelvin.
+- **Orquestração (Cap. 17):** O pipeline 3A completo com pré-captura, convergência AE segura para flash, timeouts por fase, limpeza de trava/liberação.
 
-You can now build a complete pro-mode camera app that rivals the capabilities of the [Android Camera Parameters app](https://github.com/zoozooll/AndroidCameraParameters) itself!
+Agora você pode construir um aplicativo de câmera modo pro completo que rivaliza com as capacidades do próprio [aplicativo Android Camera Parameters](https://github.com/zoozooll/AndroidCameraParameters)!
 
-In the upcoming chapters, we shift gears from capture **control** to capture **quality** — covering RAW capture, DNG saving, multi-frame processing, HDR, and computational photography techniques that build on the 3A pipeline you now master.
+Nos próximos capítulos, mudamos de marcha do **controle** de captura para a **qualidade** de captura — cobrindo captura RAW, salvamento em DNG, processamento de múltiplos quadros, HDR e técnicas de fotografia computacional que se baseiam no pipeline 3A que você agora domina.

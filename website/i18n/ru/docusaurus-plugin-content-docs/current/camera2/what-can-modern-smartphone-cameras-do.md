@@ -1,230 +1,225 @@
 ---
 sidebar_position: 3
-title: "Chapter 3: Modern Smartphone Photography"
-description: "A tour of the computational and optical features on modern phones: HDR, portrait bokeh, night mode, slow-motion, ultra-wide, telephoto, macro, and how computational photography fuses hardware and software."
-keywords: [HDR photography, portrait mode, night mode, slow motion video, ultra wide camera, telephoto, computational photography]
+title: "Глава 3: Возможности современной мобильной фотографии"
+description: "Обзор вычислительных и оптических функций современных телефонов: HDR, портретное боке, ночной режим, замедленная съемка, сверхширокоугольный объектив, телеобъектив, макросъемка и то, как вычислительная фотография объединяет аппаратное и программное обеспечение."
+keywords: [HDR фотография, портретный режим, ночной режим, замедленное видео, сверхширокоугольная камера, телеобъектив, вычислительная фотография]
 ---
 
-# Chapter 3: Modern Smartphone Photography
+# Глава 3: Возможности современной мобильной фотографии
 
-Chapter 2 gave you the hardware foundations: lenses, sensors, ISP pipelines, and multi-camera modules. This chapter answers the natural follow-up question: **How do modern camera apps actually use that hardware to produce the photos I see on Instagram?**
+Глава 2 заложила аппаратный фундамент: объективы, сенсоры, конвейеры ISP и мультикамерные модули. Эта глава отвечает на естественный вопрос: **как современные приложения камер используют это оборудование для создания снимков, которые мы видим в соцсетях?**
 
-A 2010 smartphone took a single exposure, ran it through a basic ISP, and wrote a JPEG. A 2026 smartphone routinely captures 5 to 15 separate frames for a single still photo, aligns them to sub-pixel precision using gyroscope data, fuses them using multi-frame signal processing, runs the result through a neural network for semantic segmentation or depth estimation, and finally tone-maps it into a single shareable image — all within the span of a single shutter button press.
+Смартфон 2010 года делал одну экспозицию, прогонял ее через базовый ISP и записывал JPEG. Смартфон 2026 года для одной фотографии обычно делает от 5 до 15 отдельных кадров, выравнивает их с субпиксельной точностью с помощью данных гироскопа, объединяет их методами многокадровой обработки сигналов, прогоняет результат через нейросеть для сегментации или оценки глубины и, наконец, выполняет тональное отображение в единое изображение — и всё это за время одного нажатия на кнопку затвора.
 
-This chapter is a feature-by-feature tour of modern smartphone photography. We will explain how each feature works at the hardware + software level, without any Camera2 API code. The goal is to build a vocabulary of what modern camera systems can do, so that when you later write code to control these features, you know what is happening under the hood.
+Эта глава представляет собой обзор функций современной мобильной фотографии. Мы объясним, как каждая функция работает на уровне железа и софта, не касаясь кода API Camera2. Цель — сформировать представление о возможностях современных систем камер, чтобы позже, когда вы будете писать код для управления этими функциями, вы понимали, что происходит «под капотом».
 
-## HDR: High Dynamic Range Multi-Frame Fusion
+## HDR: Многокадровое слияние с высоким динамическим диапазоном
 
-**Dynamic range** is the ratio between the brightest and darkest parts of a scene that the imaging system can record simultaneously without clipping. The human eye can perceive roughly 20 stops of dynamic range (a 1,000,000:1 contrast ratio) in a single glance, thanks to saccadic adaptation. A single smartphone sensor exposure can capture roughly 10 to 12 stops at base ISO. The gap between those two numbers is the reason HDR exists.
+**Динамический диапазон** — это отношение между самыми яркими и самыми темными частями сцены, которые система обработки изображений может зафиксировать одновременно без потери деталей (клиппинга). Человеческий глаз может воспринимать примерно 20 ступеней динамического диапазона (коэффициент контрастности 1 000 000:1) одним взглядом благодаря саккадической адаптации. Одна экспозиция сенсора смартфона при базовом ISO может зафиксировать примерно 10–12 ступеней. Разрыв между этими двумя числами и является причиной существования HDR.
 
-Imagine you are taking a photo indoors with a bright window behind your subject. If you expose for the person's face (let's say 1/30s, ISO 400), the window blows out to pure clipped white — no sky, no clouds, no detail. If you expose for the window (1/2000s, ISO 50), the person's face becomes a silhouetted black blob. Neither single exposure works.
+Представьте, что вы фотографируете в помещении, а за объектом съемки находится яркое окно. Если вы выставите экспозицию по лицу человека (скажем, 1/30 с, ISO 400), окно превратится в чистое белое пятно — ни неба, ни облаков, никаких деталей. Если вы выставите экспозицию по окну (1/2000 с, ISO 50), лицо человека станет черным силуэтом. Ни одна одиночная экспозиция не сработает.
 
-### How Smartphone HDR Works
+### Как работает HDR в смартфоне
 
-Every HDR system on modern phones uses **multi-frame bracketing** followed by computational fusion. The algorithm works like this:
+Каждая система HDR на современных телефонах использует **многокадровый брекетинг** с последующим вычислительным слиянием. Алгоритм работает следующим образом:
 
-1. **Bracketed capture**: The camera captures a rapid burst of 3 to 10 consecutive frames at different exposure values (EV). A typical set might be frames at -3 EV (very short, preserves highlights), -1 EV, +1 EV, and +3 EV (very long, captures shadows). The sensor and VCM are held perfectly still during the burst; only the electronic shutter timing changes.
-2. **Reference frame selection**: The algorithm picks the sharpest mid-exposure frame as the geometric reference.
-3. **Image registration / alignment**: Each non-reference frame is computationally aligned to the reference. The algorithm finds distinctive keypoint features (corners, edges) using algorithms like FAST or SIFT, computes an affine or homography transform that maps each frame's features onto the reference frame, and warps the pixels accordingly. Any frames that are too blurred (from micro-shake during the burst) are discarded entirely.
-4. **Fusion**: For each pixel location in the final image, the algorithm combines information from the aligned frames. Underexposed pixels contribute their clean, unclipped highlight data. Overexposed pixels contribute their low-noise shadow data. Mid-tone pixels are averaged across all frames to reduce shot noise.
-5. **Tone mapping**: The fused linear image — which may now contain 14 to 18 stops of usable dynamic range — is compressed through a sophisticated local tone mapping operator into an 8-bit or 10-bit output image that looks good on a standard sRGB display.
+1. **Брекетинг захвата**: камера делает быструю серию из 3–10 последовательных кадров с разными значениями экспозиции (EV). Типичный набор может включать кадры с −3 EV (очень короткая выдержка, сохраняет детали в светах), −1 EV, +1 EV и +3 EV (очень длинная выдержка, прорабатывает тени). Сенсор и объектив остаются неподвижными; меняется только время работы электронного затвора.
+2. **Выбор опорного кадра**: алгоритм выбирает самый резкий кадр со средней экспозицией в качестве геометрического эталона.
+3. **Регистрация / выравнивание изображений**: каждый неопорный кадр вычислительно выравнивается по опорному. Алгоритм находит характерные точки (углы, края) с помощью таких алгоритмов, как FAST или SIFT, вычисляет аффинное преобразование или гомографию, которая сопоставляет признаки каждого кадра с опорным, и соответствующим образом деформирует пиксели. Любые слишком размытые кадры (из-за дрожания рук во время съемки серии) отбрасываются.
+4. **Слияние (Fusion)**: для каждой позиции пикселя в финальном изображении алгоритм объединяет информацию из выровненных кадров. Недоэкспонированные пиксели дают чистые детали в светах. Переэкспонированные пиксели дают малошумные данные в тенях. Пиксели средних тонов усредняются по всем кадрам для уменьшения дробового шума.
+5. **Тональное отображение (Tone mapping)**: полученное линейное изображение, которое теперь может содержать от 14 до 18 ступеней полезного динамического диапазона, сжимается сложным оператором локального тонального отображения в 8-битное или 10-битное выходное изображение, которое хорошо выглядит на стандартном sRGB-дисплее.
 
 ```mermaid
 flowchart LR
-    A[Scene: Bright Window + Dark Room] --> B[Burst Capture]
-    B --> C1[-3 EV Frame\nDark, Preserves Highlights]
-    B --> C2[0 EV Frame\nMid-Exposure Reference]
-    B --> C3[+3 EV Frame\nBright, Preserves Shadows]
-    C1 --> D[Registration / Alignment\nFeature Matching + Warp]
+    A["Сцена: яркое окно + темная комната"] --> B["Серийная съемка"]
+    B --> C1["Кадр -3 EV<br/>Темный, детали в светах"]
+    B --> C2["Кадр 0 EV<br/>Опорный средний кадр"]
+    B --> C3["Кадр +3 EV<br/>Яркий, детали в тенях"]
+    C1 --> D["Выравнивание<br/>Сопоставление + Варпинг"]
     C2 --> D
     C3 --> D
-    D --> E[Merge / Fuse\nPer-Pixel Exposure Blend]
-    E --> F[Local Tone Mapping\n16 Stops → 8-Bit Displayable]
-    F --> G[Final HDR Output\nFace Visible + Sky Detailed]
+    D --> E["Слияние<br/>Попиксельное смешивание"]
+    E --> F["Тональное отображение<br/>Сжатие ДД в 8 бит"]
+    F --> G["Финальный HDR результат<br/>Лицо видно + Небо в деталях"]
 ```
 
-Real-world example: a Galaxy S26 Ultra in the default "Scene Optimizer HDR" mode internally fires 7 bracketed frames totaling approximately 0.2 seconds of capture time. The built-in hand-motion detection discards 2 blurred frames. The remaining 5 frames are aligned, fused, and tone-mapped. The output is written as a **JPEG_R Ultra HDR file** on Android 14+ devices: a standard JPEG primary image (8-bit SDR) with an embedded gain map that HDR-capable viewers (Android 14 Gallery, Chrome 120+, Adobe Lightroom) can use to reconstruct the full 10-bit HDR luminance range on an HDR10 or Dolby Vision display.
+Пример из реальной жизни: Galaxy S26 Ultra в режиме HDR по умолчанию делает серию из 7 кадров общей длительностью около 0,2 секунды. Встроенная система обнаружения движения рук отбрасывает 2 размытых кадра. Остальные 5 выравниваются, объединяются и проходят тональное отображение. Результат записывается в файл **JPEG_R Ultra HDR** на устройствах с Android 14+: это стандартное основное изображение JPEG (8-бит SDR) с внедренной картой усиления (gain map), которую HDR-совместимые просмотрщики (Галерея Android 14, Chrome 120+, Adobe Lightroom) могут использовать для восстановления полного 10-битного диапазона яркости на дисплеях HDR10 или Dolby Vision.
 
-### When HDR Works and When It Doesn't
+### Когда HDR работает, а когда нет
 
-HDR excels at static scenes with both bright highlights and deep shadows: landscapes, backlit portraits, rooms with windows, sunsets over water. It actively fails — producing ghosting artifacts — when objects in the scene move during the bracketed burst: a flying bird, a waving flag, a person blinking, a child running. Modern AI-powered HDR algorithms detect and segment moving objects, blending only the reference frame for those pixels to avoid the classic HDR "ghost."
+HDR отлично подходит для статичных сцен с яркими светами и глубокими тенями: пейзажи, портреты в контровом свете, комнаты с окнами, закаты над водой. Он может давать сбои — создавая артефакты-призраки (ghosting) — когда объекты в сцене движутся во время съемки серии: летящая птица, развевающийся флаг, моргающий человек, бегущий ребенок. Современные ИИ-алгоритмы HDR обнаруживают и сегментируют движущиеся объекты, смешивая для этих пикселей только данные из опорного кадра, чтобы избежать классических «призраков».
 
-## Portrait Mode: Bokeh via Depth Estimation
+## Портретный режим: Боке через оценку глубины
 
-Portrait mode produces the aesthetic where the subject's face is perfectly sharp and the background dissolves into a creamy, out-of-focus blur called **bokeh**. Traditional cameras achieve this optically with large sensors, wide apertures, and long focal lengths. Smartphones achieve it computationally, because a 1/1.3-inch sensor at f/1.6 does not naturally produce enough shallow depth of field for the effect.
+Портретный режим создает эффект, при котором лицо объекта идеально резкое, а фон растворяется в мягком размытии, называемом **боке**. Традиционные камеры достигают этого оптически с помощью больших сенсоров, широких диафрагм и больших фокусных расстояний. Смартфоны достигают этого вычислительно, так как сенсор 1/1,3 дюйма при f/1.6 естественным образом не дает достаточно малой глубины резкости для такого эффекта.
 
-### Three Methods of Smartphone Depth Estimation
+### Три метода оценки глубины в смартфонах
 
-There are three independent techniques used by modern portrait systems; many phones use a combination of all three.
+В современных портретных системах используются три независимых метода; многие телефоны используют их комбинацию.
 
-**Method 1: Stereo Disparity from Dual Cameras.** This is the oldest and most geometrically sound method. The phone fires both the wide camera and the telephoto camera simultaneously at the same subject. Because the two cameras are physically separated by 10 to 15 millimeters (the "baseline"), they see the subject from slightly different horizontal positions. A foreground object's position shifts more between the two viewpoints than a distant background object's position does. This shift is called **disparity**. The algorithm runs a block-matching or semi-global matching (SGM) algorithm over the two rectified images to compute a disparity value for every pixel. Disparity is inversely proportional to depth, so the disparity map is converted directly into a per-pixel depth map.
+**Метод 1: Стерео-диспаратность от двух камер.** Это старейший и наиболее геометрически обоснованный метод. Телефон одновременно задействует широкоугольную и телекамеру. Поскольку две камеры физически разнесены на 10–15 миллиметров (база), они видят объект с немного разных горизонтальных позиций. Положение переднего плана смещается между двумя точками зрения сильнее, чем положение удаленного фона. Это смещение называется **диспаратностью**. Алгоритм сопоставления блоков или полуглобального сопоставления (SGM) вычисляет значение диспаратности для каждого пикселя. Диспаратность обратно пропорциональна глубине, поэтому карта диспаратности напрямую преобразуется в попиксельную карту глубины.
 
-**Method 2: ToF / LiDAR Active Depth Sensing.** A ToF (Time-of-Flight) or LiDAR depth sensor projects a structured pattern of 30,000+ near-infrared laser dots onto the scene, then measures the round-trip time (for direct ToF) or phase shift (for indirect ToF) of the reflected light to compute a true metric depth in meters for each pixel. ToF produces accurate, dense depth maps even in complete darkness and on textureless surfaces (plain walls, sky) where stereo matching fails. Modern portrait systems typically use ToF as the ground-truth depth cue and stereo disparity as a refinement signal.
+**Метод 2: Активное зондирование глубины ToF / LiDAR.** Датчик глубины ToF (Time-of-Flight) или LiDAR проецирует на сцену структурированный узор из 30 000+ лазерных точек ближнего ИК-диапазона, а затем измеряет время пролета луча (для прямого ToF) или фазовый сдвиг (для непрямого ToF) отраженного света, чтобы вычислить истинную метрическую глубину в метрах для каждого пикселя. ToF дает точные, плотные карты глубины даже в полной темноте и на нетекстурированных поверхностях (простые стены, небо), где стерео-сопоставление пасует. Современные системы обычно используют ToF как основной сигнал глубины, а стерео-диспаратность — как уточняющий.
 
-**Method 3: Monocular ML Depth Estimation.** For single-camera phones (or for the front-facing selfie camera, which has no stereo partner), a neural network estimates depth from a single RGB image. The model, trained on millions of images with ground-truth depth labels, learns the statistical cues humans use to judge depth: relative size, occlusion, linear perspective, texture gradient, defocus blur, and atmospheric perspective. Google's PortraitNet and Meta's DeepLabV3+ are representative architectures. Monocular depth is less metrically accurate than stereo or ToF, but it is sufficient for plausible-looking portrait bokeh.
+**Метод 3: Монокулярная ИИ-оценка глубины.** Для телефонов с одной камерой (или для фронтальной селфи-камеры) нейросеть оценивает глубину по одному RGB-изображению. Модель, обученная на миллионах изображений с размеченными данными глубины, изучает статистические признаки, которые люди используют для оценки расстояния: относительный размер, перекрытие, линейная перспектива, градиент текстуры, размытие при дефокусировке и атмосферная перспектива. Монокулярная глубина менее точна метрически, чем стерео или ToF, но ее достаточно для создания правдоподобного боке.
 
-### The Portrait Rendering Pipeline
+### Конвейер рендеринга портрета
 
-Once a depth map is obtained, the remaining steps are the same regardless of which depth estimation method was used:
+После получения карты глубины шаги остаются одинаковыми независимо от метода ее получения:
 
-1. **Subject Segmentation**: A separate semantic segmentation neural network (usually a U-Net variant) runs on the main RGB camera image and produces a soft alpha mask identifying which pixels belong to "person" vs "background." The mask is feathered at the edges — especially around hair, glasses, and fine foreground detail — to avoid the cutout "paper doll" look of early 2010s portrait mode.
-2. **Depth Refinement**: The raw depth map from Method 1/2/3 is multiplied with the segmentation mask. Background pixels keep their depth value; subject pixels are clamped to a single focus plane depth.
-3. **Per-Pixel Variable Blur**: Each background pixel is blurred by a Gaussian (or, for premium "optical simulation" modes, a physically rendered lens-kernel convolution) whose radius scales linearly with the pixel's distance from the focus plane. A background object at 5 meters gets a heavy blur; a background object at 1.5 meters gets a mild blur. The subject pixels are copied untouched.
-4. **Faux Optical Glare**: A premium touch: bright specular highlights in the blurred background (streetlights, reflections, the sun) are rendered as characteristic lens-shaped bokeh hexagons or circles rather than simple Gaussian blobs. This sells the illusion that the blur came from a real lens diaphragm.
+1. **Сегментация объекта**: отдельная нейросеть (обычно вариант U-Net) работает с основным изображением и создает мягкую альфа-маску, определяющую, какие пиксели относятся к «человеку», а какие — к «фону». Маска растушевывается по краям — особенно вокруг волос, очков и мелких деталей переднего плана — чтобы избежать вида вырезанной из бумаги фигурки.
+2. **Уточнение глубины**: сырая карта глубины перемножается с маской сегментации. Пиксели фона сохраняют свои значения; пиксели объекта привязываются к глубине плоскости фокусировки.
+3. **Попиксельное переменное размытие**: каждый пиксель фона размывается по Гауссу (или, в премиальных режимах «оптической симуляции», физически отрисованной сверткой с ядром линзы), радиус которого линейно зависит от расстояния пикселя до плоскости фокуса. Объект на расстоянии 5 метров размывается сильно, на 1,5 метра — слабо. Пиксели объекта копируются без изменений.
+4. **Имитация оптических бликов**: премиальный штрих — яркие блики на размытом фоне (фонари, отражения, солнце) отрисовываются в виде характерных шестиугольников или кругов формы диафрагмы объектива. Это завершает иллюзию того, что размытие получено настоящей линзой.
 
 ```mermaid
 flowchart TD
-    A[Wide Camera Frame + Tele Camera Frame / ToF Data] --> B[Depth Estimation\nStereo / ToF / Mono ML]
-    B --> C[Depth Map\n0.5m → Infinity]
-    A --> D[Subject Segmentation\nU-Net Neural Network]
-    D --> E[Person Alpha Mask\nSoft-Edged Feathering]
-    C --> F[Per-Pixel Blur Radius\nScales with Depth]
+    A["Кадры с камер + данные ToF"] --> B["Оценка глубины<br/>Стерео / ToF / ИИ"]
+    B --> C["Карта глубины<br/>от 0.5м до бесконечности"]
+    A --> D["Сегментация объекта<br/>Нейросеть U-Net"]
+    D --> E["Альфа-маска человека<br/>Мягкие края"]
+    C --> F["Радиус размытия<br/>Зависит от глубины"]
     E --> F
-    F --> G[Apply Variable Blur\nSubject = Sharp, Background = Bokeh]
-    G --> H[Add Bokeh Speculars\nHexagonal / Circular Highlights]
-    H --> I[Final Portrait Photo\nCreamy Background Blur]
+    F --> G["Применение размытия<br/>Объект резкий, Фон в боке"]
+    G --> H["Добавление бликов боке<br/>Форма диафрагмы"]
+    H --> I["Финальное портретное фото<br/>Мягкое размытие фона"]
 ```
 
-## Night Mode: Multi-Frame Temporal Merging
+## Ночной режим: Многокадровое временное объединение
 
-Before 2018, low-light smartphone photography was essentially unusable without flash. A dimly lit bar or a city street at night produced a noisy, grainy, blurry mess. Then Google released **Night Sight** on the Pixel 3, and everything changed. The core insight was counterintuitive: instead of taking one long 1-second exposure (which would be hopelessly blurred from hand shake), take 15 very short 1/15-second exposures (each individually sharp because OIS is active), then algorithmically align and average them. The total integrated exposure time is still 1 second, but the per-frame exposure is short enough that handshake blur never accumulates.
+До 2018 года съемка смартфоном при слабом освещении была практически невозможна без вспышки. Плохо освещенный бар или ночная улица превращались в шумную, зернистую и размытую кашу. Затем Google выпустила **Night Sight** в Pixel 3, и всё изменилось. Идея была контринтуитивной: вместо одной длинной экспозиции в 1 секунду (которая была бы безнадежно размыта из-за дрожания рук), сделайте 15 очень коротких экспозиций по 1/15 секунды (каждая из которых будет резкой благодаря OIS), а затем алгоритмически выровняйте и усредните их. Общее время накопления света всё равно составит 1 секунду, но короткая выдержка каждого кадра не дает накопиться смазу.
 
-### The Night Mode Algorithm Step-by-Step
+### Алгоритм ночного режима пошагово
 
-1. **Burst Capture**: The camera captures 8 to 15 raw frames. Each frame uses a moderate exposure time (1/15s to 1/8s is typical) and moderate ISO (800 to 3200). Individual frames are noisy but not blurred. The burst totals 0.5 to 2 seconds of wall-clock time.
-2. **Gyro-Aided EIS Alignment**: The phone's main IMU gyroscope records angular velocity at 8,000 Hz throughout the burst. For each frame, the cumulative rotation and translation from the reference frame is computed. Each raw frame is then digitally shifted, rotated, and slightly scaled (Electronic Image Stabilization, EIS) on the NPU to sub-pixel precision, perfectly registering it to the reference frame even if the user's hands moved by several full pixels of blur during the burst.
-3. **Temporal Pixel Merging**: For each pixel location across the 12 aligned frames, the algorithm gathers 12 candidate pixel values. It then performs robust statistical merging rather than a simple average: outlier values (caused by hot pixels, cosmic ray hits, or a car's headlights transiting that spot) are identified and discarded. The remaining consistent values are averaged, reducing Gaussian shot noise by a factor equal to the square root of the number of frames kept. A 12-frame merge reduces noise by 3.5×.
-4. **Spatial Denoising**: A CNN-based denoiser (trained specifically on raw night imagery) removes any remaining high-frequency noise while preserving real edges and texture.
-5. **Local Tone Mapping**: The merged raw image has very high dynamic range. A spatially-varying tone mapping operator (based on bilateral filtering or a learned CNN tone map) lifts shadows without blowing out city lights, boosts color saturation in dark regions (which would otherwise look desaturated), and produces a final 8-bit image that feels bright and clean rather than dim and murky.
+1. **Серийная съемка**: камера делает от 8 до 15 RAW-кадров. Каждый кадр имеет умеренную выдержку (типично 1/15–1/8 с) и умеренное ISO (800–3200). Отдельные кадры шумные, но не размытые. Съемка всей серии занимает от 0,5 до 2 секунд.
+2. **Выравнивание на базе гироскопа**: гироскоп телефона записывает угловую скорость с частотой 8 000 Гц на протяжении всей съемки. Для каждого кадра вычисляется накопленный поворот и смещение относительно опорного кадра. Затем каждый RAW-кадр цифровым образом сдвигается, поворачивается и слегка масштабируется (EIS) на нейропроцессоре (NPU) с субпиксельной точностью, идеально совмещаясь с опорным кадром, даже если руки пользователя заметно дрожали.
+3. **Временное объединение пикселей**: для каждой позиции пикселя алгоритм собирает 12 (например) значений-кандидатов из всех кадров. Затем выполняется робастное статистическое объединение: аномальные значения (вызванные битыми пикселями или светом фар проезжающей машины) отбрасываются. Оставшиеся значения усредняются, что снижает гауссов дробовой шум на величину, равную квадратному корню из количества оставленных кадров. Объединение 12 кадров снижает шум в 3,5 раза.
+4. **Пространственное шумоподавление**: нейросетевой шумоподавитель (обученный специально на ночных RAW-снимках) удаляет остаточный высокочастотный шум, сохраняя реальные края и текстуру.
+5. **Локальное тональное отображение**: объединенное RAW-изображение имеет очень высокий динамический диапазон. Оператор тонального отображения (на базе билатеральной фильтрации или обученной нейросети) поднимает тени, не пересвечивая огни города, повышает насыщенность цветов в темных областях и создает итоговое 8-битное изображение, которое выглядит ярким и чистым.
 
 ```mermaid
 flowchart LR
-    A[Dark Scene: City Street at Night] --> B[Capture 12 RAW Frames\n1/15s each = 0.66s total]
-    B --> C[Gyro EIS Alignment\nSub-Pixel Shift + Rotate]
-    C --> D[Temporal Merge\nRobust Mean / Outlier Reject\nNoise −3.5×]
-    D --> E[CNN Spatial Denoiser\nPreserve Edges / Texture]
-    E --> F[Local Tone Mapping\nBoost Shadows / Preserve Lights]
-    F --> G[Bright Clear Night Photo\nLow Noise, No Blur]
+    A["Темная сцена: улица ночью"] --> B["Съемка 12 RAW кадров<br/>по 1/15с = 0.66с всего"]
+    B --> C["Выравнивание по гироскопу<br/>Субпиксельный сдвиг"]
+    C --> D["Временное объединение<br/>Усреднение, шум -3.5x"]
+    D --> E["Пространственный шумодав<br/>Сохранение текстур"]
+    E --> F["Тональное отображение<br/>Подъем теней"]
+    F --> G["Яркое ночное фото<br/>Мало шума, нет смаза"]
 ```
 
-Samsung's "Nightography," Apple's "Night Mode," Xiaomi's "Night Mode 2.0," and OPPO's "Ultra Dark Mode" all use substantially the same algorithm architecture. Variations exist in the exact number of frames, the choice of robust merging statistic, the denoiser architecture, and the tone map look, but the core gyro-aligned multi-frame temporal averaging is universal across the industry.
+«Nightography» от Samsung, «Night Mode» от Apple, «Night Mode 2.0» от Xiaomi и другие используют практически одну и ту же архитектуру алгоритмов. Различия заключаются в точном количестве кадров, выборе статистических методов объединения и эстетике тонального отображения, но само выравнивание по гироскопу и временное усреднение универсальны.
 
-## Slow Motion: High-Frame-Rate Cropped Capture
+## Замедленная съемка (Slow Motion): Кадрированный захват с высокой частотой
 
-Slow-motion video stretches time by capturing video frames faster than the standard 30 fps playback rate, then playing them back at the normal 30 fps speed. The common multipliers:
+Замедленное видео «растягивает» время, фиксируя кадры быстрее стандартной частоты 30 fps, а затем проигрывая их с нормальной скоростью. Распространенные множители:
 
-- **120 fps capture → 30 fps playback = 4× slow motion.** A 1-second real-world event becomes 4 seconds of video.
-- **240 fps → 30 fps = 8× slow motion.**
-- **960 fps → 30 fps = 32× ultra-slow motion.** A water drop splash, a balloon pop, or a hummingbird wingbeat becomes visible.
+- **120 fps → 30 fps = замедление в 4 раза.** Событие длительностью 1 секунду превращается в 4 секунды видео.
+- **240 fps → 30 fps = замедление в 8 раз.**
+- **960 fps → 30 fps = замедление в 32 раза.** Становятся видны всплеск капли воды, лопающийся шарик или взмах крыла колибри.
 
-### Why 960 fps Requires a Sensor Crop
+### Почему 960 fps требует обрезки (кропа)
 
-The bottleneck for high-frame-rate capture is **sensor readout bandwidth**. The image sensor has a finite number of MIPI CSI-2 lanes running at a fixed maximum data rate (typically 2.5 Gbps per lane, 4 lanes = 10 Gbps total). The sensor can only output so many pixels per second.
+Узким местом при скоростной съемке является **пропускная способность считывания сенсора**. Датчик изображения имеет конечное число линий MIPI CSI-2, работающих с максимальной скоростью (типично 2,5 Гбит/с на линию, 4 линии = 10 Гбит/с итого). Сенсор может выдавать только определенное количество пикселей в секунду.
 
-- A full 48MP (8000×6000) frame readout at 960 fps would require 48,000,000 × 960 = 46.08 billion pixels per second. That is 30× the actual readout bandwidth of any 2026 smartphone sensor.
-- Therefore, to hit 960 fps the sensor must read out only a small central crop of its pixel array. A 960 fps mode is typically a 1280×720 (720p HD) or sometimes a 1920×1080 (1080p FHD) crop. The total pixel bandwidth becomes manageable: 1280×720×960 fps = 884 megapixels per second, which fits comfortably in 10 Gbps even with 10-bit per pixel encoding.
+- Считывание полного кадра 48 Мп (8000×6000) при 960 fps потребовало бы 48 000 000 × 960 = 46,08 миллиарда пикселей в секунду. Это в 30 раз больше реальной пропускной способности любого мобильного сенсора 2026 года.
+- Следовательно, для достижения 960 fps сенсор должен считывать только небольшую центральную область своей матрицы. Режим 960 fps — это обычно кроп 1280×720 (720p HD) или иногда 1920×1080 (1080p FHD). Поток данных становится управляемым: 1280×720 × 960 fps = 884 мегапикселя в секунду, что укладывается в 10 Гбит/с даже при 10-битном кодировании.
 
-The numbers in practice: 960 fps capture × 0.3 seconds of real time = 288 individual frames. Played back at 30 fps = 9.6 seconds of buttery slow-motion video. Some Sony Xperia and Samsung Galaxy flagship phones support a brief burst of 960 fps at 1080p resolution by reading the sensor through a limited analog-to-digital converter (ADC) bank only in the central crop region.
+Числа на практике: захват 960 fps в течение 0,3 секунды реального времени дает 288 кадров. При проигрывании на 30 fps это превращается в 9,6 секунд плавного замедленного видео. Некоторые флагманы поддерживают короткие серии 960 fps в 1080p, считывая данные через ограниченный банк АЦП только в центральной области.
 
 ```mermaid
 flowchart TD
-    subgraph "Bandwidth Bottleneck: Sensor Readout"
+    subgraph "Узкое место: считывание сенсора"
         direction TB
-        A[Full Sensor Mode:\n48MP (8000×6000) @ 30fps\n= 1.44 GPix/s\n→ Photo / Standard Video]
-        B[Slow-Motion Crop Mode:\n1280×720 @ 960fps\n= 0.88 GPix/s\n→ 32× Ultra Slow-Mo]
+        A["Полный кадр 48Мп<br/>30fps = 1.44 ГПикс/с<br/>Фото / Обычное видео"]
+        B["Кроп для Slow-Mo<br/>1280x720 @ 960fps<br/>= 0.88 ГПикс/с<br/>Замедление 32x"]
     end
-    A --> C{MIPI CSI-2 Bus\n4 Lanes × 2.5 Gbps\n= 10 Gbps Total}
+    A --> C{"Шина MIPI CSI-2<br/>4 линии по 2.5 Гбит/с<br/>= 10 Гбит/с итого"}
     B --> C
-    C --> D[ISP Video Pipeline\nScales to Output Resolution]
-    D --> E[HEVC / AV1 Encoder\nWrites Slow-Motion MP4]
+    C --> D["Видеоконвейер ISP<br/>Масштабирование разрешения"]
+    D --> E["Кодировщик HEVC / AV1<br/>Запись MP4"]
 ```
 
-Slow-motion modes also often use a staggered HDR technique where alternate rows of the sensor are exposed for different durations to maintain high dynamic range even at 240 fps or 960 fps.
+## Сверхширокоугольный объектив: Коррекция искажений и качество краев
 
-## Ultra-Wide: Distortion Correction and Edge Quality
+Сверхширокоугольная камера дает эквивалентное фокусное расстояние 10–18 мм и угол обзора 100–130°. Она открывает новые композиционные возможности: захватывающие пейзажи, архитектурные снимки зданий целиком, групповые селфи и эффект «перспективного искажения», когда объекты вблизи линзы кажутся огромными.
 
-The ultra-wide camera on a modern flagship offers a 10–18mm full-frame equivalent focal length and a 100° to 130° diagonal field of view. It opens up compositional possibilities that the standard wide camera cannot: sweeping landscapes, towering architecture shots where the entire building fits without stepping into traffic, group selfies that actually include everyone, and a playful "close-up proximity distortion" effect where objects held near the lens appear massively oversized relative to the background.
+Однако такое фокусное расстояние несет в себе три оптических изъяна, которые ISP должен исправить:
 
-However, the ultra-wide focal length comes with three characteristic optical flaws that the ISP must correct before the photo is usable:
-
-1. **Geometric (Barrel) Distortion**: Straight lines bow outward like the edges of a fisheye lens. A photo of a rectangular door frame will look pincushioned or barreled. The ISP's Geometric Distortion Correction stage (see Chapter 2) applies a per-pixel coordinate remap using a 4th-order or 6th-order polynomial lens model calibrated for that specific module. The correction necessarily crops the outer 5–10% of the sensor array because the remapping pushes those outer pixels off-canvas.
-2. **Lateral Chromatic Aberration (LCA)**: The lens bends different wavelengths of light by slightly different amounts, so red, green, and blue images of the same off-axis point land at slightly different pixel coordinates. The result is visible color fringing (purple/green edges) on high-contrast objects near the corners. The ISP corrects LCA by applying a slightly different magnification factor to the red and blue color planes relative to green.
-3. **Vignetting / Corner Softness**: Corner pixels receive significantly less light than center pixels (due to the lens's cos⁴θ natural falloff plus mechanical vignetting from the lens barrel), and the lens's optical MTF (Modulation Transfer Function) is lower at extreme angles so corners look soft. The Lens Shading Correction stage applies a radially symmetric gain boost to flatten the illumination, and an edge-aware sharpening filter is applied more aggressively at the corners than in the center.
+1. **Геометрическая дисторсия**: прямые линии выгибаются наружу, как в объективе «рыбий глаз». Прямоугольная дверная рама будет выглядеть бочкой. Этап геометрической коррекции ISP применяет попиксельный пересчет координат, используя полиномиальную модель линзы, откалиброванную для конкретного модуля. Коррекция неизбежно «съедает» 5–10% внешних пикселей.
+2. **Хроматические аберрации**: линза преломляет свет разной длины волны по-разному, поэтому красное, зеленое и синее изображения одной и той же точки попадают в чуть разные координаты. Результат — цветные ореолы на контрастных границах по углам. ISP исправляет это, применяя разный коэффициент масштабирования для плоскостей R и B относительно G.
+3. **Виньетирование / нерезкость в углах**: угловые пиксели получают меньше света и линза там оптически слабее. ISP применяет радиальное усиление яркости и более агрессивный фильтр резкости по краям.
 
 ```mermaid
 flowchart LR
-    A[Raw Ultra-Wide Capture\n120° Fisheye\nBarrel Distorted] --> B[ISP Geometric Correction\n6th-Order Polynomial Remap]
-    B --> C[Cropped Rectilinear Output\nStraight Lines Actually Straight]
-    C --> D[Lateral CA Correction\nRed/Blue Plane Rescaling]
-    D --> E[Lens Shading + Corner Sharpening]
-    E --> F[Final Corrected Ultra-Wide Photo]
+    A["Сырой сверхширокий кадр<br/>Искажение 'Рыбий глаз'"] --> B["Геометрическая коррекция<br/>Полиномиальный маппинг"]
+    B --> C["Прямолинейный выход<br/>Прямые линии исправлены"]
+    C --> D["Коррекция аберраций<br/>Выравнивание цветовых плоскостей"]
+    D --> E["Виньетирование + Резкость"]
+    E --> F["Итоговое исправленное фото"]
 ```
 
-## Telephoto: Standard vs Periscope
+## Телеобъектив: Стандартный против перископического
 
-The telephoto camera captures distant subjects that the wide camera cannot resolve. Modern phones ship two distinct telephoto designs.
+Телеобъектив снимает удаленные объекты, которые основная камера не может разрешить. В современных телефонах используются две конструкции.
 
-**Standard Telephoto (2× to 3× optical):** This is a conventional camera module: the lens barrel sits perpendicular to the phone's back cover, directly above the image sensor, exactly like the wide camera but with a longer focal length lens. A 3× telephoto has an ~72mm full-frame equivalent focal length. The physical stack-up is limited by the phone's thickness (7–9mm), so the lens cannot be longer than that. Hence the 3× practical ceiling for conventional telephoto modules.
+**Стандартный телеобъектив (2×–3× оптический зум):** это обычный модуль, где блок линз расположен перпендикулярно задней крышке, прямо над сенсором. Фокусное расстояние 3× составляет ~72 мм экв. Физическая высота ограничена толщиной телефона (7–9 мм), поэтому такой объектив не может быть длиннее. Отсюда практический потолок в 3× для обычных модулей.
 
-**Periscope Telephoto (5× to 10× optical):** To get longer focal lengths without making the phone thicker, engineers folded the optical path 90° using a prism. Light enters through a window in the phone's edge or rear glass, hits a 45° right-angle prism, bounces 90° sideways, and then travels horizontally through a multi-element lens barrel 10–14mm long that runs parallel to the phone's mainboard, finally landing on an image sensor mounted sideways on the PCB. The prism itself is mounted on a 2-axis OIS gimbal, and the sensor is sometimes mounted on a separate sensor-shift OIS, giving 4-axis or 5-axis total stabilization — enough to get sharp handheld 10× photos of text on a distant building sign.
+**Перископический телеобъектив (5×–10× оптический зум):** чтобы получить большее фокусное расстояние, инженеры «сломали» оптический путь на 90° с помощью призмы. Свет входит через окно, ударяется о 45-градусную призму, поворачивает и идет горизонтально через длинный блок линз (10–14 мм), расположенный параллельно материнской плате, попадая на сенсор, установленный сбоку. Призма обычно установлена на 2-осевом стабилизаторе OIS, что позволяет получать четкие снимки на 10× даже с рук.
 
 ```mermaid
 graph LR
-    subgraph "Periscope Telephoto (Side View Inside Phone)"
+    subgraph "Перископ (вид сбоку внутри телефона)"
         direction LR
-        A[Light In\nRear Glass Window] --> B[45° Prism\n90° Reflection]
-        B --> C[Lens Element 1]
-        C --> D[Lens Element 2]
-        D --> E[Lens Element 3]
-        E --> F[Lens Element 4]
-        F --> G[Lens Element 5]
-        G --> H[IR Cut Filter]
-        H --> I[Image Sensor\nMounted Horizontally]
+        A["Свет входит<br/>через окно"] --> B["45° призма<br/>отражение на 90°"]
+        B --> C["Блок линз 1"]
+        C --> D["Блок линз 2"]
+        D --> E["ИК-фильтр"]
+        E --> F["Сенсор<br/>установлен сбоку"]
     end
-    J[Phone Thickness: 8.5mm Total] --> B
+    J["Толщина телефона: 8.5мм"] --> B
 ```
 
-At zoom boundaries between physical cameras (for example, 2.9× still digitally cropped from the wide camera vs 3.1× using the 3× periscope telephoto), the HAL performs a multi-camera fusion trick: for roughly ±0.2× around the switchover point, it captures both cameras simultaneously and performs a cross-fade weighted by zoom ratio, so the user never sees a visible "jump" when the active physical camera changes.
+На границах зума (например, 2,9× кроп основной камеры против 3,1× телеобъектива) HAL выполняет фокус: в диапазоне ±0,2× он снимает обеими камерами и плавно переходит от одной к другой, чтобы пользователь не видел резкого «прыжка» картинки.
 
-## Macro: Extreme Close-Up Photography
+## Макросъемка: Крупный план экстремального уровня
 
-Macro photography captures extreme close-ups of small subjects: the texture of flower petals, the compound eyes of insects, the fibers of a piece of fabric, the individual sugar crystals on a cookie.
+Макросъемка фиксирует мелкие объекты: текстуру лепестков, глаза насекомых, волокна ткани.
 
-Two macro strategies exist in modern phones:
+Существует две стратегии макросъемки в современных телефонах:
 
-**Dedicated Macro Camera:** Budget and mid-range phones often ship a small, low-resolution (2MP to 5MP) dedicated macro module with a fixed-focus short-focal-length lens. The module is tuned for a specific minimum focus distance (typically 2–4 cm) and produces surprisingly sharp macro images despite its low resolution. The main drawback is that the sensor is tiny, so image quality degrades sharply in anything less than bright daylight.
+**Выделенная макрокамера:** бюджетные модели часто оснащаются небольшим модулем низкого разрешения (2–5 Мп) с фиксированным фокусом на короткой дистанции (2–4 см). Сенсор там крошечный, поэтому качество быстро падает при любом освещении, кроме яркого солнца.
 
-**Ultra-Wide Re-purposed as Macro:** Flagship phones (Google Pixel, Samsung S-series Ultra, iPhone Pro) do not ship a dedicated macro camera. Instead, they re-task the ultra-wide camera. The ultra-wide's short focal length (13mm eq) gives it a very short minimum focus distance — often 1 to 2 centimeters from the subject. When the user taps "Macro" mode or the camera app detects a close subject via the ToF sensor or phase-detect AF rangefinder, the app switches to the ultra-wide, drives its VCM to the minimum-focus position, applies extra geometric distortion correction (because the subject is now at a field-curvature extreme where the polynomial remap differs significantly from the infinity calibration), and crops the center of the ultra-wide sensor to produce the final macro frame. The large 12MP–50MP ultra-wide sensor gives dramatically better macro image quality than a 5MP dedicated module.
+**Сверхширокоугольная камера в роли макро:** флагманы (Pixel, Samsung Ultra, iPhone Pro) не имеют отдельной макрокамеры. Вместо этого они переключают сверхширокоугольный объектив. Его короткое фокусное расстояние (13 мм экв.) дает очень малую дистанцию фокусировки — часто 1–2 см. Когда приложение обнаруживает близкий объект через ToF, оно переключается на «сверхширик», переводит его привод VCM в положение макро, применяет усиленную коррекцию искажений и делает кроп центра кадра. Большой сенсор флагманского «сверхширика» дает гораздо лучший результат, чем копеечный модуль на 2 Мп.
 
-## Computational Photography: The Unifying Philosophy
+## Вычислительная фотография: Объединяющая философия
 
-The features above — HDR, Portrait, Night Mode, Slow Motion, Ultra-Wide correction, Periscope zoom fusion, Macro — share a single unifying idea. **Computational photography** is the philosophy that the camera sensor, the ISP, the gyroscope/IMU, the NPU (Neural Processing Unit), and multi-frame signal processing algorithms can work together to produce imagery that no single lens/sensor combination, no matter how expensive the glass, could ever produce on its own.
+Все описанные функции — HDR, Портрет, Ночь, Slow Motion, коррекция дисторсии, зум — объединены одной идеей. **Вычислительная фотография** — это философия, согласно которой сенсор, ISP, гироскоп, нейропроцессор (NPU) и алгоритмы многокадровой обработки работают вместе для создания изображений, которые не может выдать ни одна комбинация линзы и сенсора сама по себе, какой бы дорогой ни была оптика.
 
-The classic DSLR model is: light → lens → sensor → storage. The smartphone model is: light → multiple lenses → multiple sensors → gyro/IMU → multi-frame burst capture → NPU neural inference → per-pixel decision fusion → sophisticated tone mapping → storage. Both start and end at the same place, but the smartphone inserts dozens of additional computational steps in the middle, each of which improves the final result in ways optics alone cannot.
+Классическая модель зеркалки: свет → линза → сенсор → память. Модель смартфона: свет → несколько линз → несколько сенсоров → гироскоп → серийная съемка → нейросетевой вывод → попиксельное слияние решений → сложное тональное отображение → память. Обе модели начинаются и заканчиваются одинаково, но смартфон вставляет в середину десятки вычислительных шагов, каждый из которых улучшает результат способами, недоступными чистой оптике.
 
-Zooming seamlessly across 0.5× to 10× on a Galaxy S26 Ultra is computational: the HAL blends three different cameras with three different focal lengths across five zoom switch points. Rescuing a backlit portrait where the window behind the subject no longer blows out is computational: 7-frame HDR fusion. A handheld night photo of the Milky Way that would require a tripod and a 30-second exposure on a DSLR is computational: 12-frame gyro-aligned temporal merge. Every feature described in this chapter is computational photography.
+Плавный зум от 0,5× до 10× — это вычисления: HAL смешивает данные с трех камер. Спасение портрета в контровом свете — это вычисления: слияние 7 кадров HDR. Ночное фото Млечного Пути с рук — это вычисления: объединение 12 кадров по данным гироскопа. Каждая функция в этой главе — это вычислительная фотография.
 
 ```mermaid
 graph TD
-    subgraph "Computational Photography Venn Diagram"
-        A[Optics\nLenses, Aperture, OIS]
-        B[Sensors\nCMOS, Bayer, Rolling Shutter]
-        C[Machine Learning\nSegmentation, Denoise, Depth]
-        D[Multi-Frame Signal Processing\nHDR Merge, Night Merge, EIS]
+    subgraph "Диаграмма вычислительной фотографии"
+        A["Оптика<br/>Линзы, диафрагма, OIS"]
+        B["Сенсоры<br/>CMOS, Байер, Rolling Shutter"]
+        C["Машинное обучение<br/>Сегментация, Шум, Глубина"]
+        D["Многокадровая обработка<br/>HDR, Ночь, EIS"]
     end
-    A -- Overlap --> E[Portrait Bokeh]
-    B -- Overlap --> F[HDR Bracketed Capture]
-    C -- Overlap --> G[ML Portrait Segmentation]
-    D -- Overlap --> H[Night Sight Temporal Merge]
-    A & B & C & D --> I[Seamless Multi-Camera Zoom]
+    A -- Пересечение --> E["Боке"]
+    B -- Пересечение --> F["HDR серии"]
+    C -- Пересечение --> G["ИИ сегментация"]
+    D -- Пересечение --> H["Ночной режим"]
+    A & B & C & D --> I["Бесшовный мультикамерный зум"]
 ```
 
-This is the most important idea to carry into the Camera2 API chapters that follow. The Camera2 API is not just a tool to "take a picture." It is a low-level control interface that lets your app fire precise multi-frame bursts, read gyro metadata per frame, select which physical camera fires at which zoom ratio, and stream frames through on-device neural networks — the building blocks for implementing your own computational photography features.
+Это самая важная мысль, которую стоит пронести через главы об API Camera2. Camera2 — это не просто инструмент, чтобы «сделать фотку». Это низкоуровневый интерфейс управления, позволяющий вашему приложению делать точные серии снимков, читать метаданные гироскопа для каждого кадра, выбирать физическую камеру на нужном зуме и прогонять кадры через нейросети — строительные блоки для реализации ваших собственных функций вычислительной фотографии.
 
-## Summary
+## Резюме
 
-In this chapter you learned the real-world algorithms behind modern smartphone photography features. HDR uses 3–10 frame exposure bracketing, per-frame feature-based alignment, and tone mapping to capture dynamic range the sensor cannot see in a single exposure. Portrait mode computes a per-pixel depth map via stereo camera disparity, ToF laser ranging, or monocular ML depth estimation, then runs a U-Net subject segmentation and applies a variable per-pixel Gaussian blur scaled by depth. Night mode captures 8–15 short exposures, aligns them using gyro-aided EIS, applies robust temporal pixel merging to reduce noise by 3.5×, and locally tone-maps the result. Slow-motion video at 960 fps must crop the sensor because the MIPI readout bandwidth is the hard bottleneck. Ultra-wide photos undergo geometric distortion correction, chromatic aberration correction, and corner shading correction in the ISP before they become viewable. Periscope telephoto cameras use a 45° prism to fold the light path 90° and fit a 10× optical lens inside an 8.5mm-thick phone. You learned the definition of computational photography: the fusion of Optics, Sensors, Machine Learning, and Multi-Frame Signal Processing to create images beyond the reach of any single lens/sensor system.
+В этой главе вы изучили алгоритмы, стоящие за современными функциями камер смартфонов. HDR использует брекетинг экспозиции из 3–10 кадров и тональное отображение. Портретный режим вычисляет глубину через стереозрение, ToF или ИИ, сегментирует человека и применяет переменное размытие. Ночной режим делает 8–15 коротких выдержек, выравнивает их по гироскопу и усредняет для снижения шума в 3,5 раза. Замедленное видео 960 fps требует кропа сенсора из-за ограничений шины MIPI. Сверхширокоугольные фото проходят через исправление дисторсии, аберраций и виньетирования. Перископические камеры используют призму для размещения длинной оптики в тонком корпусе. Вы узнали определение вычислительной фотографии: слияние оптики, сенсоров, машинного обучения и многокадровой обработки сигналов.
 
-## What's Next
+## Что дальше
 
-Chapter 4 is the hands-on practical chapter. You will install the **Android Camera Parameters** companion app from source or Google Play, launch it on your own phone, and inspect exactly what your own hardware is capable of. You will learn to read Camera IDs and facing directions, check the Hardware Level of each camera (LEGACY / LIMITED / FULL / LEVEL_3), enumerate supported output formats (JPEG, YUV_420_888, PRIVATE, RAW_SENSOR, JPEG_R Ultra HDR), find maximum slow-motion FPS ranges, explore zoom ratios and switch points between your phone's physical cameras, and check whether your primary sensor supports RAW capture — writing down the answers for your specific device, because those answers determine what is and is not possible for your own Camera2 API app to do on that phone.
+Глава 4 — практическая. Вы установите приложение-компаньон **Android Camera Parameters** и изучите возможности именно вашего смартфона. Вы научитесь читать Camera ID, проверять уровень аппаратной поддержки (LEGACY / LIMITED / FULL / LEVEL_3), перечислять форматы вывода (JPEG, RAW, JPEG_R Ultra HDR), находить диапазоны FPS для замедленной съемки, исследовать точки переключения между физическими камерами и проверять поддержку RAW. Ответы для вашего конкретного устройства определят, что именно ваше приложение на Camera2 сможет на нем делать.

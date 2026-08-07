@@ -1,4 +1,4 @@
----
+﻿---
 sidebar_position: 27
 title: "Chapter 27: Camera Testing"
 description: "The complete Android camera testing guide. Understand Camera ITS (Image Test Suite), what OEMs validate before shipping (feature combinations, scene tests, sensor fusion), CTS Verifier manual tests, and how to write your own instrumentation tests with Mockito mocks and parameterized hardware-level tests that run on CI."
@@ -57,7 +57,7 @@ A real Camera ITS lab looks like this:
 
 ```mermaid
 graph LR
-    TC[Test Controller PC<br/>Linux + Tradefed CLI<br/>Runs python3 its/scripts]
+    TC["Test Controller PC<br/>Linux + Tradefed CLI<br/>Runs python3 its/scripts"]
     TC -->|USB 3.x ADB| DUT[DUT Phone or Tablet<br/>Device Under Test<br/>Camera facing tablet display]
     TC -->|USB 3.x| TPD[Tablet Display<br/>~10" calibrated 4K panel<br/>Runs ITS tabletd APK]
     TC -->|GPIO / USB relay| LIGHT[Controlled Lighting<br/>CCT-tunable LED panels<br/>2700K-6500K ±2%]

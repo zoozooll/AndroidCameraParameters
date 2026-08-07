@@ -1,4 +1,4 @@
----
+﻿---
 sidebar_position: 23
 title: "Chapter 23: Zero Shutter Lag & Reprocessing"
 description: "Build Zero Shutter Lag (ZSL) with circular YUV/PRIVATE buffering, CONTROL_CAPTURE_INTENT_ZERO_SHUTTER_LAG, reprocessable capture sessions via InputConfiguration, ImageWriter frame reinjection, and createReprocessCaptureRequest for heavy post-capture ISP processing. Also covers switchToOffline() for background processing continuity."
@@ -33,24 +33,24 @@ ZSL solves this by reversing the pipeline order: instead of capture → process 
 flowchart LR
     subgraph STANDARD["Standard Capture (114 ms LAG)"]
         direction TB
-        T1["T=0: User Taps SHUTTER"] --> T2["T+40ms: AE Converges,\nNew Exposure Starts"]
-        T2 --> T3["T+72ms: Sensor Rolling\nShutter Readout Complete"]
-        T3 --> T4["T+96ms: ISP Standard\nProcessing Done"]
+        T1["T=0: User Taps SHUTTER"] --> T2["T+40ms: AE Converges,<br/>New Exposure Starts"]
+        T2 --> T3["T+72ms: Sensor Rolling<br/>Shutter Readout Complete"]
+        T3 --> T4["T+96ms: ISP Standard<br/>Processing Done"]
         T4 --> T5["T+114ms: JPEG Stored"]
-        LOST["⚠ Scene Changed DURING T+0 – T+114ms\n→ Missed the decisive moment"]
+        LOST["⚠ Scene Changed DURING T+0 – T+114ms<br/>→ Missed the decisive moment"]
     end
 
     subgraph ZSLFLOW["Zero Shutter Lag (0 ms LAG)"]
         direction TB
-        C0["T=-2000ms: Circular Buffer\nStarts Filling (always running)"]
-        C1["T=-66ms: Frame N-2\n→ Buffer slot 0"]
-        C2["T=-33ms: Frame N-1\n→ Buffer slot 1"]
-        C3["T=0ms: Frame N → Buffer slot 2\n★★★ USER TAPS SHUTTER NOW ★★★"]
-        C4["T=0ms (INSTANT): Select\nFrame N (T=0) from Circular Buffer"]
-        C4 --> C5["T=0ms: ImageWriter\nFeeds Frame N BACK into HAL"]
-        C5 --> C6["T=+30ms: HEAVY ISP\nReprocessing (NR+EDGE)"]
+        C0["T=-2000ms: Circular Buffer<br/>Starts Filling (always running)"]
+        C1["T=-66ms: Frame N-2<br/>→ Buffer slot 0"]
+        C2["T=-33ms: Frame N-1<br/>→ Buffer slot 1"]
+        C3["T=0ms: Frame N → Buffer slot 2<br/>★★★ USER TAPS SHUTTER NOW ★★★"]
+        C4["T=0ms (INSTANT): Select<br/>Frame N (T=0) from Circular Buffer"]
+        C4 --> C5["T=0ms: ImageWriter<br/>Feeds Frame N BACK into HAL"]
+        C5 --> C6["T=+30ms: HEAVY ISP<br/>Reprocessing (NR+EDGE)"]
         C6 --> C7["T=+48ms: JPEG Stored"]
-        PERFECT["✓ Captured EXACTLY the frame the user\nsaw at the moment of the tap"]
+        PERFECT["✓ Captured EXACTLY the frame the user<br/>saw at the moment of the tap"]
     end
 
     style STANDARD fill:#ffeded,stroke:#b91c1c
@@ -446,34 +446,34 @@ fun submitZslReprocessRequest(
 
 ```mermaid
 flowchart TD
-    A[Sensor Continuous Readout\n30fps full-res] --> B[ZSL Preview ISP:\nLow-power mode\nEDGE_MODE=FAST\nNR_MODE=FAST]
-    B --> C[Preview SurfaceView\nUser sees live 30fps view]
-    B --> D[ZSL ImageReader\nPRIVATE or YUV full-res]
+    A["Sensor Continuous Readout<br/>30fps full-res"] --> B["ZSL Preview ISP:<br/>Low-power mode<br/>EDGE_MODE=FAST<br/>NR_MODE=FAST"]
+    B --> C[Preview SurfaceView<br/>User sees live 30fps view]
+    B --> D[ZSL ImageReader<br/>PRIVATE or YUV full-res]
     
     subgraph CB["🗘 Circular Buffer (Depth 12, 400ms history)"]
         direction TB
         CB1["Slot N-11 (T-366ms)"]
         CB2["..."]
         CB3["Slot N-1 (T-33ms)"]
-        CB4["★ Slot N (T=0ms) ★\nCLOSEST TO TAP TIME"]
+        CB4["★ Slot N (T=0ms) ★<br/>CLOSEST TO TAP TIME"]
     end
     D --> CB
 
-    E[★ USER TAPS SHUTTER AT T=0ms ★] --> F{Walk CB NEWEST → OLDEST\nFind min |frame.ts − tap.ts|}
+    E["★ USER TAPS SHUTTER AT T=0ms ★"] --> F{Walk CB NEWEST → OLDEST<br/>Find min |frame.ts − tap.ts|}
     F -->|"Selected: Slot N"| G[ImageWriter.dequeueInputImage()]
-    G --> H[Copy selected frame's\nPlanes → ImageWriter buffer]
-    H --> I[ImageWriter.queueInputImage()\n→ Feeds BACK into HAL Input Port]
+    G --> H[Copy selected frame's<br/>Planes → ImageWriter buffer]
+    H --> I[ImageWriter.queueInputImage()<br/>→ Feeds BACK into HAL Input Port]
     
     subgraph REPROC["🔄 Reprocessing Pipeline (HEAVY QUALITY)"]
         direction TB
-        R1["ISP NR_MODE = HIGH_QUALITY\n(Multi-frame spatial+TNR)"]
-        R2["ISP EDGE_MODE = HIGH_QUALITY\n(Unsharp mask + LPA sharpening)"]
-        R3["ISP COLOR_CORRECTION =\nHIGH_QUALITY (3D LUT)"]
-        R4["Hardware JPEG Encoder\nQ=95"]
+        R1["ISP NR_MODE = HIGH_QUALITY<br/>(Multi-frame spatial+TNR)"]
+        R2["ISP EDGE_MODE = HIGH_QUALITY<br/>(Unsharp mask + LPA sharpening)"]
+        R3["ISP COLOR_CORRECTION =<br/>HIGH_QUALITY (3D LUT)"]
+        R4["Hardware JPEG Encoder<br/>Q=95"]
     end
 
     I --> REPROC
-    REPROC --> J["JPEG Stored\nContent = EXACT frame user\n saw at T=0ms — ✓ ZERO LAG"]
+    REPROC --> J["JPEG Stored<br/>Content = EXACT frame user<br/> saw at T=0ms — ✓ ZERO LAG"]
 
     style CB fill:#eff6ff,stroke:#2563eb
     style REPROC fill:#fef3c7,stroke:#d97706

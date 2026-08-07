@@ -1,8 +1,8 @@
 {
-  "label": "Android Camera2 API をマスターする",
+  "label": "Android Camera2 APIをマスターする",
   "position": 3,
   "link": {
     "type": "generated-index",
-    "description": "スマートフォンカメラハードウェアの基礎から高度な機能やメタデータまで、Android Camera2 APIを包括的に学びます。"
+    "description": "スマートフォンカメラハードウェアの基礎から、高度な機能やメタデータまで、Android Camera2 APIについて学びましょう。"
   }
 }

@@ -1,22 +1,22 @@
 ---
 sidebar_position: 13
-title: "Chapter 13: Exposure"
-description: Master the fundamentals of photographic exposure—the Exposure Triangle of ISO, shutter speed, and aperture. Understand EV stops, the Sunny 16 rule, and how different combinations create the same exposure with creative tradeoffs.
-keywords: [android camera2, exposure triangle, ISO, shutter speed, aperture, exposure value, sunny 16 rule, photography basics]
+title: "Chapitre 13 : L'exposition"
+description: Maîtrisez les fondamentaux de l'exposition photographique — le triangle de l'exposition composé de l'ISO, de la vitesse d'obturation et de l'ouverture. Comprenez les paliers EV, la règle du Sunny 16 et comment différentes combinaisons créent la même exposition avec des compromis créatifs.
+keywords: [android camera2, triangle exposition, ISO, vitesse obturation, ouverture, valeur exposition, règle sunny 16, bases photographie]
 ---
 
-# Chapter 13: Exposure
+# Chapitre 13 : L'exposition
 
-## The Exposure Triangle: Three Knobs, One Goal
+## Le triangle de l'exposition : Trois boutons, un seul but
 
-When you take a photo with a smartphone camera, you're capturing light. The *amount* of light that reaches the sensor determines whether your photo is too dark (underexposed), too bright (overexposed), or just right (correctly exposed). Three fundamental controls govern this — together they form the **Exposure Triangle**.
+Lorsque vous prenez une photo avec l'appareil photo d'un smartphone, vous capturez de la lumière. La *quantité* de lumière qui atteint le capteur détermine si votre photo est trop sombre (sous-exposée), trop lumineuse (surexposée) ou juste comme il faut (correctement exposée). Trois réglages fondamentaux régissent cela — ensemble, ils forment le **triangle de l'exposition**.
 
 ```mermaid
 graph TD
-    A[Exposure<br/>Light Reaching Sensor] --> B[Shutter Speed<br/>Time Light Enters]
-    A --> C[ISO<br/>Sensor Sensitivity]
-    A --> D[Aperture<br/>Size of Opening]
-    B <--> C[Equivalent Exposure<br/>Tradeoffs]
+    A["Exposition<br/>Lumière atteignant le capteur"] --> B["Vitesse d'obturation<br/>Temps d'entrée de la lumière"]
+    A --> C[ISO<br/>Sensibilité du capteur]
+    A --> D[Ouverture<br/>Taille de l'orifice]
+    B <--> C[Exposition équivalente<br/>Compromis]
     C <--> D
     B <--> D
     style A fill:#e74c3c,color:#fff
@@ -25,82 +25,82 @@ graph TD
     style D fill:#f39c12,color:#fff
 ```
 
-**The core idea:** Each corner of the triangle controls light, but each also introduces a *creative tradeoff*. You can achieve the *same* total exposure with different combinations of the three settings — but each combination yields a different *look* to your photograph.
+**L'idée centrale :** Chaque angle du triangle contrôle la lumière, mais chaque angle introduit également un *compromis créatif*. Vous pouvez obtenir la *même* exposition totale avec différentes combinaisons des trois réglages — mais chaque combinaison donnera un *aspect* différent à votre photographie.
 
-Before we dive into Android Camera2 API specifics in the next chapter, let's build a solid intuitive foundation for each element.
-
----
-
-## ISO: Sensor Sensitivity (Gain Control)
-
-In the days of film, **ISO** described the *film stock's sensitivity to light* — ISO 100 film was "slow" and needed bright light, while ISO 800 film was "fast" and could shoot indoors.
-
-**In digital photography (including smartphone cameras), ISO is sensor gain / electronic amplification.** When you double the ISO value, you're effectively doubling the amplification applied to the sensor's analog signal before it's digitized.
-
-### How ISO Works
-
-Imagine the sensor's pixel wells collecting photons (light particles). After the exposure period ends:
-
-1. Each pixel converts accumulated photons into a tiny electrical charge
-2. An **analog gain amplifier** multiplies this signal by a factor corresponding to your ISO setting
-3. The amplified signal is converted from analog to digital (ADC)
-4. Digital processing then applies further processing (noise reduction, tone-mapping)
-
-**ISO 100 = base / lowest gain.** The signal is amplified least, so:
-- Photos are *clean* with minimal digital noise (grain)
-- Dynamic range (difference between brightest and darkest recordable tones) is highest
-- Colors are most accurate
-
-**ISO 3200 = high gain.** The signal is amplified 32×:
-- You can shoot in dimmer scenes without increasing shutter time
-- But you get *visible noise* (color speckle, luminance grain)
-- Dynamic range and color accuracy degrade significantly
-
-### Typical Smartphone ISO Range
-
-| ISO Range | Characteristic | Use Case |
-|-----------|---------------|----------|
-| 50–200 | Base ISO, cleanest image | Bright daylight, studio lighting |
-| 200–800 | Moderate gain, minor noise | Overcast day, shaded areas |
-| 800–3200 | Visible noise, still usable | Indoor lighting, dusk |
-| 3200–12800+ | Heavy noise / heavy NR applied | Night scenes, low-light events |
-
-> **Smartphone Reality Note:** Flagship phones often apply heavy computational noise reduction at high ISO values (vendor-specific "night mode" processing). When you later disable the auto pipeline in Camera2, you *lose* many of these OEM optimizations — a critical caveat we'll return to in Chapter 14.
+Avant de plonger dans les spécificités de l'API Android Camera2 dans le chapitre suivant, construisons une base intuitive solide pour chaque élément.
 
 ---
 
-## Shutter Speed (Exposure Time)
+## ISO : Sensibilité du capteur (Contrôle du gain)
 
-**Shutter speed** is simply *how long the sensor is exposed to light*. In traditional cameras, a mechanical shutter physically opens and closes. In smartphones, it's almost always an **electronic shutter** — the sensor is reset, allowed to collect photons for a precise duration, then read out.
+À l'époque de la pellicule, l'**ISO** décrivait la *sensibilité de la pellicule à la lumière* — une pellicule ISO 100 était "lente" et nécessitait une lumière vive, tandis qu'une pellicule ISO 800 était "rapide" et pouvait photographier en intérieur.
 
-Shutter speed is measured in **seconds**, typically expressed as fractions:
+**En photographie numérique (y compris les caméras de smartphone), l'ISO est le gain du capteur / l'amplification électronique.** Lorsque vous doublez la valeur ISO, vous doublez effectivement l'amplification appliquée au signal analogique du capteur avant sa numérisation.
 
-| Shutter Speed | What It Does | Typical Use |
-|--------------|-------------|-------------|
-| 1/2000s – 1/1000s | Very short exposure, freezes all motion | Sports, birds, fast-moving vehicles |
-| 1/500s – 1/250s | Freezes typical human motion | Walking people, children playing |
-| 1/125s – 1/60s | "Safe" handheld speed with stabilization | General photography on stable hands |
-| 1/30s – 1/15s | Slight motion blur visible, needs tripod | Creative motion, low light |
-| 1s – 30s | Long exposure, heavy motion blur | Waterfalls, star trails, smooth water |
-| 30s+ | Ultra-long exposure (specialized) | Astrophotography, light painting |
+### Comment fonctionne l'ISO
 
-### The Motion Blur Effect
+Imaginez les puits de pixels du capteur collectant des photons (particules de lumière). Une fois la période d'exposition terminée :
 
-There are **two** reasons to deliberately choose a specific shutter speed beyond "enough light":
+1. Chaque pixel convertit les photons accumulés en une minuscule charge électrique
+2. Un **amplificateur de gain analogique** multiplie ce signal par un facteur correspondant à votre réglage ISO
+3. Le signal amplifié est converti d'analogique en numérique (CAN)
+4. Le traitement numérique applique ensuite d'autres étapes (réduction du bruit, mappage de tonalité)
 
-1. **Freeze action:** A bird in flight at 1/1000s shows every feather crisply because the bird moved almost zero distance during the exposure.
+**ISO 100 = base / gain le plus bas.** Le signal est le moins amplifié, donc :
+- Les photos sont *propres* avec un bruit numérique (grain) minimal
+- La plage dynamique (différence entre les tons les plus clairs et les plus sombres enregistrables) est maximale
+- Les couleurs sont les plus fidèles
 
-2. **Create motion blur:** A waterfall at 2 seconds renders the moving water as smooth, silky white trails — because each water droplet traveled across many pixels on the sensor while it was exposed.
+**ISO 3200 = gain élevé.** Le signal est amplifié 32× :
+- Vous pouvez photographier dans des scènes plus sombres sans augmenter le temps d'obturation
+- Mais vous obtenez un *bruit visible* (tavelures de couleur, grain de luminance)
+- La plage dynamique et la fidélité des couleurs se dégradent considérablement
 
-Think of it like a long-exposure painting: *anything that moves while the shutter is open becomes a streak.*
+### Plage ISO typique d'un smartphone
 
-**Important for video:** When shooting 30fps video, each frame is exposed for ~1/30s *maximum*. Cinematographers follow the **180° shutter rule**: set shutter speed to double the frame rate → 1/60s for 30fps video. This gives natural, "film-like" motion blur without being too choppy or too smeary.
+| Plage ISO | Caractéristique | Cas d'utilisation |
+|-----------|-----------------|-------------------|
+| 50–200 | ISO de base, image la plus propre | Plein soleil, éclairage de studio |
+| 200–800 | Gain modéré, bruit mineur | Temps couvert, zones ombragées |
+| 800–3200 | Bruit visible, toujours utilisable | Éclairage intérieur, crépuscule |
+| 3200–12800+ | Bruit lourd / NR intensive appliquée | Scènes de nuit, événements sombres |
+
+> **Note sur la réalité des smartphones :** Les téléphones fleurons appliquent souvent une réduction de bruit computationnelle intensive aux valeurs ISO élevées (le "mode nuit" spécifique au fournisseur). Lorsque vous désactivez plus tard le pipeline automatique dans Camera2, vous *perdez* bon nombre de ces optimisations OEM — une mise en garde critique sur laquelle nous reviendrons au chapitre 14.
 
 ---
 
-## Aperture
+## Vitesse d'obturation (Temps d'exposition)
 
-**Aperture** is the size of the opening in the lens through which light passes. It's measured in **f-stops** (f/1.4, f/2.0, f/2.8, f/4.0, f/5.6, f/8.0, etc.) — a *counterintuitive scale where smaller numbers = wider opening*.
+La **vitesse d'obturation** est simplement *la durée pendant laquelle le capteur est exposé à la lumière*. Dans les appareils photo traditionnels, un obturateur mécanique s'ouvre et se ferme physiquement. Dans les smartphones, il s'agit presque toujours d'un **obturateur électronique** — le capteur est réinitialisé, laissé libre de collecter des photons pendant une durée précise, puis lu.
+
+La vitesse d'obturation est mesurée en **secondes**, généralement exprimée sous forme de fractions :
+
+| Vitesse d'obturation | Effet | Utilisation typique |
+|-----------------------|-------|---------------------|
+| 1/2000s – 1/1000s | Exposition très courte, fige tout mouvement | Sports, oiseaux, véhicules rapides |
+| 1/500s – 1/250s | Fige les mouvements humains typiques | Gens qui marchent, enfants qui jouent |
+| 1/125s – 1/60s | Vitesse "sûre" à main levée avec stabilisation | Photographie générale avec mains stables |
+| 1/30s – 1/15s | Léger flou de bougé visible, nécessite un trépied | Mouvement créatif, basse lumière |
+| 1s – 30s | Longue exposition, flou de mouvement important | Cascades, traînées d'étoiles, eau lisse |
+| 30s+ | Exposition ultra-longue (spécialisée) | Astrophotographie, light painting |
+
+### L'effet de flou de mouvement
+
+Il existe **deux** raisons de choisir délibérément une vitesse d'obturation spécifique au-delà du simple "assez de lumière" :
+
+1. **Figer l'action :** Un oiseau en vol à 1/1000s montre chaque plume avec netteté car l'oiseau a parcouru une distance presque nulle pendant l'exposition.
+
+2. **Créer un flou de mouvement :** Une cascade à 2 secondes rend l'eau en mouvement comme des traînées blanches soyeuses — parce que chaque goutte d'eau a traversé de nombreux pixels sur le capteur pendant qu'il était exposé.
+
+Pensez-y comme à une peinture à longue exposition : *tout ce qui bouge pendant que l'obturateur est ouvert devient une traînée.*
+
+**Important pour la vidéo :** Lors d'un tournage vidéo à 30 fps, chaque image est exposée pendant ~1/30s *maximum*. Les directeurs de la photographie suivent la **règle de l'obturateur à 180°** : régler la vitesse d'obturation au double de la fréquence d'images → 1/60s pour une vidéo à 30 fps. Cela donne un flou de mouvement naturel, de type "cinéma", sans être trop saccadé ni trop baveux.
+
+---
+
+## Ouverture
+
+L'**ouverture** est la taille de l'orifice dans l'objectif par lequel passe la lumière. Elle est mesurée en **f-stops** (f/1.4, f/2.0, f/2.8, f/4.0, f/5.6, f/8.0, etc.) — une *échelle contre-intuitive où les petits chiffres = plus grande ouverture*.
 
 ```
   f/1.4     f/2.0     f/2.8     f/4.0     f/5.6     f/8.0
@@ -112,152 +112,152 @@ Think of it like a long-exposure painting: *anything that moves while the shutte
 ███████████                                      ██████
 ```
 
-**Halving the light each stop:** Moving from f/1.4 → f/2.0 → f/2.8 → f/4.0 each *halves* the area of the opening, so half the total light gets through. This is one "stop" darker per step.
+**Diviser la lumière par deux à chaque palier :** Passer de f/1.4 → f/2.0 → f/2.8 → f/4.0 divise à chaque fois par deux la surface de l'orifice, donc la moitié de la lumière totale passe. C'est un "palier" (stop) plus sombre par étape.
 
-### Aperture Tradeoffs (Creative & Practical)
+### Compromis de l'ouverture (Créatifs et Pratiques)
 
-1. **Depth of Field (DoF):** Wide aperture (f/1.8) = *shallow* DoF — only a narrow plane is in focus; everything in front/behind blurs out (bokeh). Narrow aperture (f/8) = *deep* DoF — everything from foreground to background is sharp.
+1. **Profondeur de champ (DoF) :** Grande ouverture (f/1.8) = DoF *faible* — seul un plan étroit est net ; tout ce qui est devant/derrière devient flou (bokeh). Petite ouverture (f/8) = DoF *profonde* — tout est net, du premier plan à l'arrière-plan.
 
-2. **Light gathering:** f/1.4 gathers 4× more light than f/2.8. This is why "fast lenses" (wide maximum aperture) are prized for low-light shooting.
+2. **Collecte de lumière :** f/1.4 collecte 4× plus de lumière que f/2.8. C'est pourquoi les "objectifs rapides" (grande ouverture maximale) sont prisés pour les prises de vue en basse lumière.
 
-3. **Diffraction:** At very narrow apertures (f/11+), light waves bend around the aperture blades, slightly softening the image. This is usually irrelevant on smartphones.
+3. **Diffraction :** Aux ouvertures très petites (f/11+), les ondes lumineuses se courbent autour des lamelles du diaphragme, ce qui ramollit légèrement l'image. C'est généralement sans importance sur les smartphones.
 
-### Smartphone Reality Check
+### Réalité des smartphones
 
-Most smartphones have **fixed aperture lenses** — you cannot change the f-stop. Budget phones might have f/2.4–f/2.8; flagships often reach f/1.4–f/1.8. The [Android Camera Parameters app](https://play.google.com/store/apps/details?id=com.minininja.cameraparams) lets you check your lens' fixed aperture in `CameraCharacteristics`.
+La plupart des smartphones ont des **objectifs à ouverture fixe** — vous ne pouvez pas changer le f-stop. Les téléphones d'entrée de gamme peuvent avoir f/2.4–f/2.8 ; les fleurons atteignent souvent f/1.4–f/1.8. L'application [Android Camera Parameters](https://play.google.com/store/apps/details?id=com.minininja.cameraparams) vous permet de vérifier l'ouverture fixe de votre objectif dans `CameraCharacteristics`.
 
-A few premium phones (e.g., Samsung Galaxy S23 Ultra, Xperia series) offer a *dual aperture* mechanism that mechanically switches between two stops (e.g., f/1.5 and f/2.4). In Camera2, query `LENS_INFO_AVAILABLE_APERTURES` to see if your device supports multiple apertures.
+Quelques téléphones haut de gamme (ex: Samsung Galaxy S23 Ultra, série Xperia) proposent un mécanisme de *double ouverture* qui bascule mécaniquement entre deux paliers (ex: f/1.5 et f/2.4). Dans Camera2, interrogez `LENS_INFO_AVAILABLE_APERTURES` pour voir si votre appareil prend en charge plusieurs ouvertures.
 
-**The practical takeaway:** For most Android Camera2 development, aperture is *fixed*, so you control exposure via **ISO + shutter speed only**. Two knobs instead of three — which actually simplifies things!
+**La conclusion pratique :** Pour la plupart des développements Android Camera2, l'ouverture est *fixe*, vous contrôlez donc l'exposition via **l'ISO + la vitesse d'obturation uniquement**. Deux boutons au lieu de trois — ce qui simplifie en fait les choses !
 
 ---
 
-## EV: Exposure Value (The Logarithmic Scale)
+## EV : Valeur d'exposition (L'échelle logarithmique)
 
-When photographers say "adjust by one stop," they mean **double or halve the total light**. To make stop-based thinking precise, the industry standardized on **Exposure Value (EV)**.
+Quand les photographes disent "ajuster d'un palier", ils veulent dire **doubler ou diviser par deux la lumière totale**. Pour rendre la réflexion basée sur les paliers précise, l'industrie a normalisé la **valeur d'exposition (EV)**.
 
-**EV 0** is defined as the exposure combination that produces a standard reference brightness: **1 second exposure, f/1.0 aperture, ISO 100**.
+L'**EV 0** est défini comme la combinaison d'exposition qui produit une luminosité de référence standard : **1 seconde d'exposition, ouverture f/1.0, ISO 100**.
 
-Every **+1 EV doubles the light** (brighter). Every **−1 EV halves the light** (darker):
+Chaque **+1 EV double la lumière** (plus lumineux). Chaque **−1 EV divise la lumière par deux** (plus sombre) :
 
-| EV Change | Meaning |
-|-----------|---------|
-| +3 EV | 8× more light (2³) |
-| +2 EV | 4× more light |
-| +1 EV | 2× more light |
-| 0 EV | Reference: 1s @ f/1.0 ISO 100 |
-| −1 EV | ½ the light |
-| −2 EV | ¼ the light |
-| −3 EV | ⅛ the light |
+| Changement d'EV | Signification |
+|-----------------|---------------|
+| +3 EV | 8× plus de lumière (2³) |
+| +2 EV | 4× plus de lumière |
+| +1 EV | 2× plus de lumière |
+| 0 EV | Référence : 1s @ f/1.0 ISO 100 |
+| −1 EV | ½ de la lumière |
+| −2 EV | ¼ de la lumière |
+| −3 EV | ⅛ de la lumière |
 
-The beautiful thing: **any combination of ISO + shutter + aperture that sums to the same EV value produces the same total exposure**. This is the *equivalent exposure* principle connecting the three triangle corners.
+La chose magnifique : **toute combinaison d'ISO + obturation + ouverture dont la somme donne la même valeur EV produit la même exposition totale**. C'est le principe de l'*exposition équivalente* qui relie les trois sommets du triangle.
 
-### EV and ISO/Shutter Combinations
+### EV et combinaisons ISO/Obturation
 
-With fixed aperture, the EV equation simplifies dramatically. For a smartphone at f/1.8:
+Avec une ouverture fixe, l'équation EV se simplifie considérablement. Pour un smartphone à f/1.8 :
 
-| Scene | Typical EV | ISO 100 Shutter | ISO 400 Shutter | ISO 1600 Shutter |
-|-------|-----------|----------------|-----------------|------------------|
-| Bright sunny beach | 15 | 1/4000s | 1/1000s | 1/250s |
-| Hazy / overcast day | 12 | 1/500s | 1/125s | 1/30s |
-| Indoor bright office | 8 | 1/30s | 1/8s | 1/2s |
-| Living room at night | 4 | 2s | 0.5s | 1/8s |
-| Starry night scene | −2 | 30s | 8s | 2s |
+| Scène | EV typique | Obturation ISO 100 | Obturation ISO 400 | Obturation ISO 1600 |
+|-------|------------|--------------------|--------------------|---------------------|
+| Plage ensoleillée | 15 | 1/4000s | 1/1000s | 1/250s |
+| Jour voilé / couvert | 12 | 1/500s | 1/125s | 1/30s |
+| Bureau intérieur lumineux | 8 | 1/30s | 1/8s | 1/2s |
+| Salon la nuit | 4 | 2s | 0,5s | 1/8s |
+| Scène de nuit étoilée | −2 | 30s | 8s | 2s |
 
-### The Famous Sunny 16 Rule
+### La célèbre règle du Sunny 16
 
-Before matrix metering and sophisticated autoexposure algorithms, photographers relied on a rule of thumb to nail daylight exposure without a meter:
+Avant les mesures matricielles et les algorithmes sophistiqués d'exposition automatique, les photographes s'appuyaient sur une règle de base pour réussir l'exposition en plein jour sans posemètre :
 
-> **On a sunny day, set aperture to f/16, shutter speed to 1/ISO seconds.**
+> **Par une journée ensoleillée, réglez l'ouverture sur f/16 et la vitesse d'obturation sur 1/ISO secondes.**
 
-| Sunny 16 (f/16) | Equivalent at f/1.8 (Smartphone) |
-|-----------------|----------------------------------|
+| Sunny 16 (f/16) | Équivalent à f/1.8 (Smartphone) |
+|-----------------|---------------------------------|
 | ISO 100, 1/100s, f/16 → EV 15 | ISO 100, 1/4000s, f/1.8 → EV 15 ✓ |
 | ISO 200, 1/200s, f/16 → EV 15 | ISO 200, 1/8000s, f/1.8 → EV 15 ✓ |
 
-The math checks out: f/1.8 is about **6⅓ stops wider** than f/16. Each stop quadruples? No — each stop *doubles* the light area. 2^(6.33) ≈ 80× more light. So the shutter must be 80× faster to compensate: 1/100s ÷ 80 ≈ 1/8000s (at ISO 200). Close enough for field work.
+Le calcul se vérifie : f/1.8 est environ **6⅓ paliers plus large** que f/16. Chaque palier quadruple ? Non — chaque palier *double* la zone de lumière. 2^(6,33) ≈ 80× plus de lumière. L'obturateur doit donc être 80× plus rapide pour compenser : 1/100s ÷ 80 ≈ 1/8000s (à ISO 200). C'est assez précis pour le terrain.
 
 ---
 
-## The Look of Underexposed / Correct / Overexposed
+## L'aspect des photos sous-exposées / correctes / surexposées
 
-Let's mentally compare three shots of the same scene (e.g., a person outdoors with sky behind them):
+Comparons mentalement trois clichés de la même scène (ex : une personne à l'extérieur avec le ciel derrière elle) :
 
-**Underexposed (−2 EV):** The subject is too dark. Shadows are *crushed* to pure black with no detail. In a histogram, all data piles up on the left (dark) side. The sky might look good, but the person appears as a silhouette. You *can* try to "push" underexposed raw data in post-processing, but the shadows will reveal heavy noise because you're amplifying a weak signal.
+**Sous-exposée (−2 EV) :** Le sujet est trop sombre. Les ombres sont *écrasées* en noir pur sans détails. Dans un histogramme, toutes les données s'entassent sur le côté gauche (sombre). Le ciel peut paraître correct, mais la personne apparaît comme une silhouette. Vous *pouvez* essayer de "pousser" les données brutes sous-exposées en post-traitement, mais les ombres révéleront un bruit important car vous amplifiez un signal faible.
 
-**Correct Exposure (0 EV):** Mid-tones show proper texture. The person's face has visible skin detail, shirt wrinkles, eye catchlights. Histogram has data spread across the full range without hard clipping at either end. On phones with limited dynamic range, this may mean *some* bright sky highlights clip to white (no blue detail) — that's a classic tradeoff vs. underexposing the subject.
+**Exposition correcte (0 EV) :** Les tons moyens présentent une texture appropriée. Le visage de la personne présente des détails de peau visibles, les plis de la chemise, les reflets dans les yeux. L'histogramme présente des données réparties sur toute la plage sans écrêtage brutal aux deux extrémités. Sur les téléphones à plage dynamique limitée, cela peut signifier que *certaines* zones très lumineuses du ciel sont écrêtées en blanc (pas de détails bleus) — c'est un compromis classique par rapport à la sous-exposition du sujet.
 
-**Overexposed (+2 EV):** Highlights are *blown out* to pure white with no recovery. Sky is a uniform white flat field; bright shirt buttons and specular reflections are clipped. The person's face might look flattering (bright skin), but you've permanently lost all highlight detail. Unlike underexposed shadows (which you can often partially recover with noise), *blown highlights are gone forever* — there's simply no data in those pixels.
+**Surexposée (+2 EV) :** Les zones lumineuses sont *brûlées* en blanc pur sans récupération possible. Le ciel est un champ plat blanc uniforme ; les boutons de chemise brillants et les reflets spéculaires sont écrêtés. Le visage de la personne peut sembler flatteur (peau lumineuse), mais vous avez perdu définitivement tous les détails dans les hautes lumières. Contrairement aux ombres sous-exposées (que vous pouvez souvent récupérer partiellement avec du bruit), *les hautes lumières brûlées ont disparu à jamais* — il n'y a tout simplement aucune donnée dans ces pixels.
 
-**The Photographer's Mantra:** *Expose for the highlights, recover the shadows.* In RAW capture (which we'll cover later), this is especially powerful because 14-bit RAW stores enough shadow detail to pull +2 EV or more without catastrophic noise.
-
----
-
-## Real-World EV Reference Table
-
-Memorizing a few landmark EV values lets you estimate exposure anywhere:
-
-| Scene | Typical EV (at ISO 100) | Rough Shutter @ f/1.8, ISO 400 |
-|-------|------------------------|--------------------------------|
-| Snow landscape in direct sun | 16 | 1/4000s |
-| Sunny beach, bright day | 15 | 1/2000s |
-| Typical sunny day | 14 | 1/1000s |
-| Overcast / cloudy day | 12 | 1/250s |
-| Very cloudy / rain | 11 | 1/125s |
-| Open shade (person in shadow, sunlit background) | 9 | 1/30s |
-| Sunset / golden hour | 7 | 1/8s |
-| Bright indoor office | 8 | 1/15s |
-| Home living room, lamps only | 4 | 1/2s |
-| Dark restaurant interior | 2 | 2s |
-| City street at night (neon signs) | 1 | 4s |
-| Night landscape, distant city lights | −2 | 30s |
-| Moonlit landscape (full moon) | −3 | 1 minute |
-| Starry sky, no moon | −6 | 8 minutes |
-
-You can verify these approximations against what your phone's auto-exposure actually chooses. Launch the [Android Camera Parameters app](https://github.com/zoozooll/AndroidCameraParameters), go into Live Preview, and observe `SENSOR_EXPOSURE_TIME` and `SENSOR_SENSITIVITY` as you walk from bright sun to a dark room — you'll see real values that map roughly to this table.
+**Le mantra du photographe :** *Exposez pour les hautes lumières, récupérez les ombres.* En capture RAW (que nous aborderons plus tard), c'est particulièrement puissant car le RAW 14 bits stocke suffisamment de détails dans les ombres pour remonter de +2 EV ou plus sans bruit catastrophique.
 
 ---
 
-## Putting It All Together: Equivalent Exposures
+## Tableau de référence des EV en conditions réelles
 
-Let's say you want the *same total exposure* (EV 12 = overcast day, f/1.8 smartphone). Here are three valid combinations producing identical sensor brightness:
+Mémoriser quelques valeurs EV clés vous permet d'estimer l'exposition n'importe où :
 
-| Combination | ISO | Shutter Speed | Look & Feel |
-|-------------|-----|---------------|-------------|
-| Clean & Sharp | 100 | 1/500s | Cleanest noise, sharpest freeze of motion |
-| Middle Ground | 400 | 1/125s | Minor noise, good balance |
-| Smooth Motion | 1600 | 1/30s | Visible noise; slight blur on moving subjects |
+| Scène | EV typique (à ISO 100) | Obturation approx. @ f/1.8, ISO 400 |
+|-------|------------------------|-------------------------------------|
+| Paysage enneigé en plein soleil | 16 | 1/4000s |
+| Plage ensoleillée, jour radieux | 15 | 1/2000s |
+| Journée ensoleillée typique | 14 | 1/1000s |
+| Jour couvert / nuageux | 12 | 1/250s |
+| Très nuageux / pluie | 11 | 1/125s |
+| Ombre découverte (sujet à l'ombre, fond ensoleillé) | 9 | 1/30s |
+| Coucher de soleil / heure dorée | 7 | 1/8s |
+| Bureau intérieur lumineux | 8 | 1/15s |
+| Salon de maison, lampes seules | 4 | 1/2s |
+| Intérieur de restaurant sombre | 2 | 2s |
+| Rue de ville la nuit (néons) | 1 | 4s |
+| Paysage nocturne, lumières de ville lointaines | −2 | 30s |
+| Paysage au clair de lune (pleine lune) | −3 | 1 minute |
+| Ciel étoilé, sans lune | −6 | 8 minutes |
 
-All three land at the same EV. All three *look equally bright*. But the *texture* (noise grain) and *motion portrayal* are completely different. **That's the art of exposure.**
-
-### What If You Need Both?
-
-This is where computational photography shines. A phone in "night mode" doesn't take *one* 2-second shot — it captures *dozens* of 1/60s frames (freezing motion in each), then aligns and averages them computationally. The result approximates the light gathering of a long exposure without the motion blur penalty.
-
-Once you understand manual exposure at the Camera2 level, you can implement techniques like this yourself.
+Vous pouvez vérifier ces approximations par rapport à ce que l'exposition automatique de votre téléphone choisit réellement. Lancez l'application [Android Camera Parameters](https://github.com/zoozooll/AndroidCameraParameters), allez dans l'aperçu en direct et observez `SENSOR_EXPOSURE_TIME` et `SENSOR_SENSITIVITY` lorsque vous passez d'un soleil éclatant à une pièce sombre — vous verrez des valeurs réelles qui correspondent approximativement à ce tableau.
 
 ---
 
-## Summary
+## Synthèse : Les expositions équivalentes
 
-In this chapter, we covered the *photography fundamentals* without touching a line of Android code:
+Disons que vous voulez la *même exposition totale* (EV 12 = jour couvert, smartphone f/1.8). Voici trois combinaisons valides produisant une luminosité de capteur identique :
 
-- **Exposure Triangle:** Shutter Speed (time), ISO (sensor gain), and Aperture (opening size) combine to control total light. Each has a creative tradeoff.
-- **ISO** in digital photography = analog sensor gain. Low ISO = clean, high ISO = noisy. Smartphones commonly support ISO 100–6400+ with OEM noise reduction.
-- **Shutter Speed** is exposure time in seconds. Fast shutters (1/1000s) freeze action; slow shutters (1s+) create motion blur. The 180° shutter rule applies to video.
-- **Aperture** is f-stop-controlled lens opening. Most smartphones have fixed aperture, so we rely on ISO + shutter only.
-- **EV (Exposure Value)** is the logarithmic stop scale where each ±1 step doubles/halves light. EV 0 = 1s @ f/1.0 ISO 100.
-- **Sunny 16 Rule** and the EV reference table let you ballpark exposures without metering.
-- **Correct exposure** balances mid-tone detail, avoiding crushed shadows and blown highlights. RAW preserves recovery headroom.
+| Combinaison | ISO | Vitesse d'obturation | Aspect et sensation |
+|-------------|-----|----------------------|---------------------|
+| Propre & net | 100 | 1/500s | Bruit le plus propre, fige au mieux le mouvement |
+| Entre-deux | 400 | 1/125s | Bruit mineur, bon équilibre |
+| Mouvement fluide | 1600 | 1/30s | Bruit visible ; léger flou sur les sujets mobiles |
 
-## What's Next
+Les trois arrivent au même EV. Les trois *semblent aussi lumineuses*. Mais la *texture* (grain du bruit) et la *représentation du mouvement* sont complètement différentes. **C'est là tout l'art de l'exposition.**
 
-In **Chapter 14: Manual Exposure in Camera2**, we translate this entire conceptual model into concrete Camera2 API calls. You'll learn:
+### Et si vous avez besoin des deux ?
 
-- How to disable the auto-exposure pipeline (`CONTROL_MODE = OFF`, `CONTROL_AE_MODE = OFF`)
-- How to translate ISO values to `SENSOR_SENSITIVITY`
-- How to convert human-readable seconds ↔ nanoseconds for `SENSOR_EXPOSURE_TIME`
-- Complete working Kotlin code for fixed timelapse exposure, long night exposure, and a 3-shot exposure bracketing series
-- The critical caveat about OEM noise reduction being disabled when you turn off 3A
+C'est là que la photographie computationnelle brille. Un téléphone en "mode nuit" ne prend pas *une* photo de 2 secondes — il capture des *douzaines* d'images de 1/60s (figeant le mouvement dans chacune), puis les aligne et en fait la moyenne par calcul. Le résultat approche la collecte de lumière d'une exposition longue sans la pénalité du flou de mouvement.
 
-Grab your thinking cap — the code starts next.
+Une fois que vous aurez compris l'exposition manuelle au niveau de Camera2, vous pourrez implémenter vous-même des techniques de ce genre.
+
+---
+
+## Résumé
+
+Dans ce chapitre, nous avons couvert les *fondamentaux de la photographie* sans toucher à une seule ligne de code Android :
+
+- **Le triangle de l'exposition :** La vitesse d'obturation (temps), l'ISO (gain du capteur) et l'ouverture (taille de l'orifice) se combinent pour contrôler la lumière totale. Chacun a un compromis créatif.
+- **L'ISO** en photographie numérique = gain analogique du capteur. ISO bas = propre, ISO élevé = bruité. Les smartphones supportent couramment ISO 100–6400+ avec réduction de bruit OEM.
+- **La vitesse d'obturation** est le temps d'exposition en secondes. Les obturateurs rapides (1/1000s) figent l'action ; les obturateurs lents (1s+) créent un flou de mouvement. La règle du 180° s'applique à la vidéo.
+- **L'ouverture** est l'orifice de l'objectif contrôlé par le f-stop. La plupart des smartphones ont une ouverture fixe, nous comptons donc uniquement sur l'ISO + l'obturation.
+- **L'EV (Valeur d'exposition)** est l'échelle logarithmique de paliers où chaque palier ±1 double/divise par deux la lumière. EV 0 = 1s @ f/1.0 ISO 100.
+- **La règle du Sunny 16** et le tableau de référence EV vous permettent d'estimer les expositions sans posemètre.
+- **L'exposition correcte** équilibre les détails des tons moyens, en évitant les ombres écrasées et les hautes lumières brûlées. Le RAW préserve une marge de récupération.
+
+## Et ensuite ?
+
+Dans le **Chapitre 14 : L'exposition manuelle dans Camera2**, nous traduisons tout ce modèle conceptuel en appels concrets de l'API Camera2. Vous apprendrez :
+
+- Comment désactiver le pipeline d'exposition automatique (`CONTROL_MODE = OFF`, `CONTROL_AE_MODE = OFF`)
+- Comment traduire les valeurs ISO en `SENSOR_SENSITIVITY`
+- Comment convertir les secondes lisibles par l'homme ↔ nanosecondes pour `SENSOR_EXPOSURE_TIME`
+- Le code Kotlin complet et fonctionnel pour une exposition fixe de timelapse, une exposition nocturne longue et une série de bracketing d'exposition de 3 clichés
+- La mise en garde critique concernant la désactivation de la réduction du bruit OEM lorsque vous coupez le 3A
+
+Préparez-vous — le code commence tout de suite.

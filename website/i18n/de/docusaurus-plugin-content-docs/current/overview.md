@@ -1,39 +1,39 @@
 ---
 sidebar_position: 1
 slug: /
-description: Überblick über das Android Camera Parameters Dashboard und seine wichtigsten Diagnosefunktionen, einschließlich Hardware-Level-Erkennung und Echtzeit-Feature-Tracking.
-keywords: [android kamera dashboard, hardware-level-erkennung, kamera-diagnose]
+description: Übersicht über das Android Camera Parameters Dashboard und seine wichtigsten Diagnosefunktionen, einschließlich Hardware-Level-Erkennung und Echtzeit-Feature-Tracking.
+keywords: [Android Kamera Dashboard, Hardware-Level-Erkennung, Kameradiagnose]
 ---
 
 # App-Übersicht
 
-Diese Seite bietet eine detaillierte Aufschlüsselung des Dashboards der Anwendung und ihrer wichtigsten Funktionen.
+Diese Seite bietet eine detaillierte Aufschlüsselung des Dashboards und der wichtigsten Funktionen der Anwendung.
 
 ![App-Übersicht](/img/camera_params_feature_graph.png)
 
 ## Dashboard-Komponenten
 
 ### 1. Navigation & Auswahl
-- **Navigationsmenü**: Schneller Zugriff auf Einstellungen, Export/Import, Theme-Umschalter und Info-Informationen.
-- **Kamera-Auswahl**: Klicken Sie auf den Kameranamen oder das ID-Badge, um zwischen Rück-, Vorder- und externen Objektiven zu wechseln.
+- **Menü-Drawer**: Zugriff auf Datenschutzbestimmungen, App bewerten und Informationen über das Menü-Symbol oben links.
+- **Kamera-Auswahl**: Tippen Sie auf den Kameranamen oder das ID-Badge (z. B. "0"), um ein Dropdown-Menü zu öffnen und zwischen den verfügbaren Objektiven (Rückseite, Vorderseite, Ultraweitwinkel usw.) zu wechseln.
+- **Untere Navigation**: Wechseln Sie nahtlos zwischen **Übersicht**, **Kategorien**, **Roh-JSON** und **Favoriten**.
 
 ### 2. Zusammenfassungskarte
-Die Zusammenfassungskarte bietet einen Überblick über die ausgewählte Kamera:
-- **Hardware-Level**: Gibt die Camera2-API-Unterstützungsstufe an (LEGACY, LIMITED, FULL, LEVEL_3).
-- **Sensorauflösung**: Die Gesamtzahl der Megapixel des Sensors.
-- **Max. Video-FPS**: Die höchste unterstützte Bildrate für Videoaufnahmen.
+Die Zusammenfassungskarte oben liefert die kritischsten Informationen:
+- **Hardware-Level**: Die Unterstützungsstufe der Camera2-API (LEGACY, LIMITED, FULL oder LEVEL_3). Dies bestimmt die allgemeinen Fähigkeiten des Objektivs.
 
-### 3. Raster der Hauptfunktionen
-Ein Raster für den schnellen Überblick, das die Unterstützung für kritische Profi-Funktionen zeigt:
-- **RAW-Unterstützung**: Fähigkeit, unkomprimierte Sensordaten aufzunehmen.
-- **Manuelle Belichtung & Fokus**: Professionelle Kontrolle über die Bildaufnahme.
-- **Blitzfunktionen**: Unterstützung für Auto-Blitz und Rote-Augen-Reduzierung.
-- **OIS (Optische Bildstabilisierung)**: Hardwarebasierte Erschütterungsreduzierung.
-- **HDR & Gesichtserkennung**: Intelligente Szenenverarbeitungsfunktionen.
+### 3. Raster der Hauptmerkmale
+Ein visuelles Raster, das den sofortigen Status für professionelle Funktionen liefert:
+- **Auflösung & Sensorgröße**: Physikalische Eigenschaften des Sensors.
+- **Max. Video-FPS**: Spitzenwerte der Bildrate.
+- **RAW-Unterstützung**: Gibt an, ob der Sensor unkomprimierte Daten ausgeben kann.
+- **OIS (Optische Bildstabilisierung)**: Verfügbarkeit der physischen Objektivstabilisierung.
+- **Manuelle Steuerung**: Status der Unterstützung für manuelle Belichtung und manuellen Fokus.
+- **Verarbeitung**: Unterstützung für HDR, Gesichtserkennung und Rote-Augen-Reduzierung.
 
-### 4. Parameter-Kategorien
-Detaillierte Kameramerkmale sind zur einfacheren Erkundung in logische Kategorien gruppiert:
-- **Sensor**: Größe des aktiven Arrays, Empfindlichkeit, Belichtungszeitbereiche.
-- **Objektiv**: Blende, Brennweite, Fokusabstand.
-- **AE/AF/AWB**: Detaillierte Steuerungen für Belichtungsautomatik, Autofokus und automatischen Weißabgleich.
-- **Ausgabe**: Unterstützte JPEG-, RAW- und YUV-Größen.
+### 4. Kategorisierte Parameter (Registerkarte Kategorien)
+Erkunden Sie die vollständige Liste der CameraCharacteristics, die in logischen Gruppen organisiert sind:
+- **Sensor**: Auflösung, physikalische Größe, Empfindlichkeitsbereiche.
+- **Objektiv**: Brennweite, Blende, Stabilisierungsmodi.
+- **AE/AF/AWB**: Detaillierte Steuerungsmodi für Belichtung, Fokus und Weißabgleich.
+- **Suche**: Verwenden Sie die integrierte Suchleiste, um schnell bestimmte API-Schlüssel oder Werte zu finden.

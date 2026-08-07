@@ -1,230 +1,230 @@
 ---
 sidebar_position: 3
-title: "Chapter 3: Modern Smartphone Photography"
-description: "A tour of the computational and optical features on modern phones: HDR, portrait bokeh, night mode, slow-motion, ultra-wide, telephoto, macro, and how computational photography fuses hardware and software."
-keywords: [HDR photography, portrait mode, night mode, slow motion video, ultra wide camera, telephoto, computational photography]
+title: "Bab 3: Fotografi Smartphone Modern"
+description: "Tur fitur komputasional dan optik pada ponsel modern: HDR, bokeh potret, mode malam, gerak lambat, ultra-lebar, telefoto, makro, dan bagaimana fotografi komputasional menggabungkan perangkat keras dan perangkat lunak."
+keywords: [fotografi HDR, mode potret, mode malam, video gerak lambat, kamera ultra lebar, telefoto, fotografi komputasional]
 ---
 
-# Chapter 3: Modern Smartphone Photography
+# Bab 3: Fotografi Smartphone Modern
 
-Chapter 2 gave you the hardware foundations: lenses, sensors, ISP pipelines, and multi-camera modules. This chapter answers the natural follow-up question: **How do modern camera apps actually use that hardware to produce the photos I see on Instagram?**
+Bab 2 memberi Anda dasar-dasar perangkat keras: lensa, sensor, pipeline ISP, dan modul multi-kamera. Bab ini menjawab pertanyaan lanjutan yang alami: **Bagaimana aplikasi kamera modern sebenarnya menggunakan perangkat keras tersebut untuk menghasilkan foto yang saya lihat di Instagram?**
 
-A 2010 smartphone took a single exposure, ran it through a basic ISP, and wrote a JPEG. A 2026 smartphone routinely captures 5 to 15 separate frames for a single still photo, aligns them to sub-pixel precision using gyroscope data, fuses them using multi-frame signal processing, runs the result through a neural network for semantic segmentation or depth estimation, and finally tone-maps it into a single shareable image — all within the span of a single shutter button press.
+Smartphone tahun 2010 mengambil satu eksposur, menjalankannya melalui ISP dasar, dan menulis JPEG. Smartphone tahun 2026 secara rutin mengambil 5 hingga 15 bingkai terpisah untuk satu foto diam, menyelaraskannya dengan presisi sub-piksel menggunakan data giroskop, menggabungkannya menggunakan pemrosesan sinyal multi-bingkai, menjalankan hasilnya melalui jaringan saraf untuk segmentasi semantik atau estimasi kedalaman, dan akhirnya memetakan nadanya ke dalam satu gambar yang dapat dibagikan — semuanya dalam rentang satu kali penekanan tombol rana.
 
-This chapter is a feature-by-feature tour of modern smartphone photography. We will explain how each feature works at the hardware + software level, without any Camera2 API code. The goal is to build a vocabulary of what modern camera systems can do, so that when you later write code to control these features, you know what is happening under the hood.
+Bab ini adalah tur fitur demi fitur dari fotografi smartphone modern. Kami akan menjelaskan bagaimana setiap fitur bekerja pada tingkat perangkat keras + perangkat lunak, tanpa kode API Camera2 apa pun. Tujuannya adalah untuk membangun kosakata tentang apa yang dapat dilakukan oleh sistem kamera modern, sehingga ketika Anda nanti menulis kode untuk mengontrol fitur-fitur ini, Anda tahu apa yang terjadi di balik layar.
 
 ## HDR: High Dynamic Range Multi-Frame Fusion
 
-**Dynamic range** is the ratio between the brightest and darkest parts of a scene that the imaging system can record simultaneously without clipping. The human eye can perceive roughly 20 stops of dynamic range (a 1,000,000:1 contrast ratio) in a single glance, thanks to saccadic adaptation. A single smartphone sensor exposure can capture roughly 10 to 12 stops at base ISO. The gap between those two numbers is the reason HDR exists.
+**Rentang dinamis (Dynamic range)** adalah rasio antara bagian paling terang dan paling gelap dari sebuah pemandangan yang dapat direkam oleh sistem pencitraan secara bersamaan tanpa terpotong (clipping). Mata manusia dapat merasakan kira-kira 20 stop rentang dinamis (rasio kontras 1.000.000:1) dalam satu pandangan, berkat adaptasi sakadik. Eksposur sensor smartphone tunggal dapat menangkap kira-kira 10 hingga 12 stop pada ISO dasar. Kesenjangan antara kedua angka tersebut adalah alasan mengapa HDR ada.
 
-Imagine you are taking a photo indoors with a bright window behind your subject. If you expose for the person's face (let's say 1/30s, ISO 400), the window blows out to pure clipped white — no sky, no clouds, no detail. If you expose for the window (1/2000s, ISO 50), the person's face becomes a silhouetted black blob. Neither single exposure works.
+Bayangkan Anda sedang mengambil foto di dalam ruangan dengan jendela terang di belakang subjek Anda. Jika Anda mengatur eksposur untuk wajah orang tersebut (katakanlah 1/30 detik, ISO 400), jendela akan menjadi putih bersih yang terpotong — tidak ada langit, tidak ada awan, tidak ada detail. Jika Anda mengatur eksposur untuk jendela (1/2000 detik, ISO 50), wajah orang tersebut menjadi siluet hitam. Tidak ada satu pun eksposur tunggal yang berhasil.
 
-### How Smartphone HDR Works
+### Cara Kerja HDR Smartphone
 
-Every HDR system on modern phones uses **multi-frame bracketing** followed by computational fusion. The algorithm works like this:
+Setiap sistem HDR pada ponsel modern menggunakan **bracketing multi-bingkai** diikuti oleh penggabungan komputasional. Algoritmanya bekerja seperti ini:
 
-1. **Bracketed capture**: The camera captures a rapid burst of 3 to 10 consecutive frames at different exposure values (EV). A typical set might be frames at -3 EV (very short, preserves highlights), -1 EV, +1 EV, and +3 EV (very long, captures shadows). The sensor and VCM are held perfectly still during the burst; only the electronic shutter timing changes.
-2. **Reference frame selection**: The algorithm picks the sharpest mid-exposure frame as the geometric reference.
-3. **Image registration / alignment**: Each non-reference frame is computationally aligned to the reference. The algorithm finds distinctive keypoint features (corners, edges) using algorithms like FAST or SIFT, computes an affine or homography transform that maps each frame's features onto the reference frame, and warps the pixels accordingly. Any frames that are too blurred (from micro-shake during the burst) are discarded entirely.
-4. **Fusion**: For each pixel location in the final image, the algorithm combines information from the aligned frames. Underexposed pixels contribute their clean, unclipped highlight data. Overexposed pixels contribute their low-noise shadow data. Mid-tone pixels are averaged across all frames to reduce shot noise.
-5. **Tone mapping**: The fused linear image — which may now contain 14 to 18 stops of usable dynamic range — is compressed through a sophisticated local tone mapping operator into an 8-bit or 10-bit output image that looks good on a standard sRGB display.
+1. **Pengambilan gambar bracketed**: Kamera mengambil rentetan cepat 3 hingga 10 bingkai berturut-turut pada nilai eksposur (EV) yang berbeda. Kumpulan yang umum mungkin berupa bingkai pada -3 EV (sangat pendek, menjaga sorotan), -1 EV, +1 EV, dan +3 EV (sangat panjang, menangkap bayangan). Sensor dan VCM dijaga tetap diam sempurna selama rentetan tersebut; hanya pengaturan waktu rana elektronik yang berubah.
+2. **Pemilihan bingkai referensi**: Algoritma memilih bingkai eksposur tengah yang paling tajam sebagai referensi geometris.
+3. **Pendaftaran / penyelarasan gambar**: Setiap bingkai non-referensi diselaraskan secara komputasional dengan referensi. Algoritma menemukan fitur titik kunci yang khas (sudut, tepi) menggunakan algoritma seperti FAST atau SIFT, menghitung transformasi affine atau homografi yang memetakan fitur setiap bingkai ke bingkai referensi, dan melengkungkan piksel sesuai kebutuhan. Setiap bingkai yang terlalu kabur (akibat getaran mikro selama rentetan) akan dibuang sepenuhnya.
+4. **Penggabungan (Fusion)**: Untuk setiap lokasi piksel pada gambar final, algoritma menggabungkan informasi dari bingkai yang telah diselaraskan. Piksel yang kurang eksposur (underexposed) menyumbangkan data sorotan yang bersih dan tidak terpotong. Piksel yang kelebihan eksposur (overexposed) menyumbangkan data bayangan dengan noise rendah. Piksel nada tengah dirata-ratakan di semua bingkai untuk mengurangi noise shot.
+5. **Pemetaan nada (Tone mapping)**: Gambar linear yang digabungkan — yang sekarang mungkin berisi 14 hingga 18 stop rentang dinamis yang dapat digunakan — dikompresi melalui operator pemetaan nada lokal yang canggih menjadi gambar output 8-bit atau 10-bit yang terlihat bagus pada tampilan sRGB standar.
 
 ```mermaid
 flowchart LR
-    A[Scene: Bright Window + Dark Room] --> B[Burst Capture]
-    B --> C1[-3 EV Frame\nDark, Preserves Highlights]
-    B --> C2[0 EV Frame\nMid-Exposure Reference]
-    B --> C3[+3 EV Frame\nBright, Preserves Shadows]
-    C1 --> D[Registration / Alignment\nFeature Matching + Warp]
+    A["Pemandangan: Jendela Terang + Ruangan Gelap"] --> B["Pengambilan Gambar Burst"]
+    B --> C1["Bingkai -3 EV<br/>Gelap, Menjaga Sorotan"]
+    B --> C2["Bingkai 0 EV<br/>Referensi Eksposur Tengah"]
+    B --> C3["Bingkai +3 EV<br/>Terang, Menjaga Bayangan"]
+    C1 --> D["Pendaftaran / Penyelarasan<br/>Pencocokan Fitur + Warp"]
     C2 --> D
     C3 --> D
-    D --> E[Merge / Fuse\nPer-Pixel Exposure Blend]
-    E --> F[Local Tone Mapping\n16 Stops → 8-Bit Displayable]
-    F --> G[Final HDR Output\nFace Visible + Sky Detailed]
+    D --> E["Gabungkan / Fuse<br/>Campuran Eksposur Per-Piksel"]
+    E --> F["Pemetaan Nada Lokal<br/>16 Stop ke Tampilan 8-Bit"]
+    F --> G["Output HDR Final<br/>Wajah Terlihat + Langit Mendetail"]
 ```
 
-Real-world example: a Galaxy S26 Ultra in the default "Scene Optimizer HDR" mode internally fires 7 bracketed frames totaling approximately 0.2 seconds of capture time. The built-in hand-motion detection discards 2 blurred frames. The remaining 5 frames are aligned, fused, and tone-mapped. The output is written as a **JPEG_R Ultra HDR file** on Android 14+ devices: a standard JPEG primary image (8-bit SDR) with an embedded gain map that HDR-capable viewers (Android 14 Gallery, Chrome 120+, Adobe Lightroom) can use to reconstruct the full 10-bit HDR luminance range on an HDR10 or Dolby Vision display.
+Contoh dunia nyata: Galaxy S26 Ultra dalam mode default "Scene Optimizer HDR" secara internal menembakkan 7 bingkai bracketed dengan total waktu pengambilan gambar sekitar 0,2 detik. Deteksi gerakan tangan bawaan membuang 2 bingkai yang kabur. 5 bingkai sisanya diselaraskan, digabungkan, dan dipetakan nadanya. Outputnya ditulis sebagai **file JPEG_R Ultra HDR** pada perangkat Android 14+: gambar utama JPEG standar (SDR 8-bit) dengan peta penguatan (gain map) tertanam yang dapat digunakan oleh penampil yang mendukung HDR (Galeri Android 14, Chrome 120+, Adobe Lightroom) untuk merekonstruksi rentang luminans HDR 10-bit penuh pada layar HDR10 atau Dolby Vision.
 
-### When HDR Works and When It Doesn't
+### Kapan HDR Berhasil dan Kapan Tidak
 
-HDR excels at static scenes with both bright highlights and deep shadows: landscapes, backlit portraits, rooms with windows, sunsets over water. It actively fails — producing ghosting artifacts — when objects in the scene move during the bracketed burst: a flying bird, a waving flag, a person blinking, a child running. Modern AI-powered HDR algorithms detect and segment moving objects, blending only the reference frame for those pixels to avoid the classic HDR "ghost."
+HDR unggul pada pemandangan statis dengan sorotan terang dan bayangan dalam: pemandangan alam, potret dengan cahaya latar, ruangan dengan jendela, matahari terbenam di atas air. Ia gagal secara aktif — menghasilkan artefak ghosting — ketika objek dalam pemandangan bergerak selama rentetan bracketed: burung yang terbang, bendera yang melambai, orang yang berkedip, anak yang berlari. Algoritma HDR bertenaga AI modern mendeteksi dan melakukan segmentasi pada objek yang bergerak, hanya mencampurkan bingkai referensi untuk piksel-piksel tersebut untuk menghindari "hantu" HDR klasik.
 
-## Portrait Mode: Bokeh via Depth Estimation
+## Mode Potret: Bokeh melalui Estimasi Kedalaman
 
-Portrait mode produces the aesthetic where the subject's face is perfectly sharp and the background dissolves into a creamy, out-of-focus blur called **bokeh**. Traditional cameras achieve this optically with large sensors, wide apertures, and long focal lengths. Smartphones achieve it computationally, because a 1/1.3-inch sensor at f/1.6 does not naturally produce enough shallow depth of field for the effect.
+Mode potret menghasilkan estetika di mana wajah subjek tampak tajam sempurna dan latar belakang meluruh menjadi blur yang lembut dan kental yang disebut **bokeh**. Kamera tradisional mencapai hal ini secara optik dengan sensor besar, bukaan lebar, dan panjang fokus yang panjang. Smartphone mencapainya secara komputasional, karena sensor 1/1,3 inci pada f/1.6 tidak secara alami menghasilkan kedalaman bidang dangkal yang cukup untuk efek tersebut.
 
-### Three Methods of Smartphone Depth Estimation
+### Tiga Metode Estimasi Kedalaman Smartphone
 
-There are three independent techniques used by modern portrait systems; many phones use a combination of all three.
+Ada tiga teknik independen yang digunakan oleh sistem potret modern; banyak ponsel menggunakan kombinasi dari ketiganya.
 
-**Method 1: Stereo Disparity from Dual Cameras.** This is the oldest and most geometrically sound method. The phone fires both the wide camera and the telephoto camera simultaneously at the same subject. Because the two cameras are physically separated by 10 to 15 millimeters (the "baseline"), they see the subject from slightly different horizontal positions. A foreground object's position shifts more between the two viewpoints than a distant background object's position does. This shift is called **disparity**. The algorithm runs a block-matching or semi-global matching (SGM) algorithm over the two rectified images to compute a disparity value for every pixel. Disparity is inversely proportional to depth, so the disparity map is converted directly into a per-pixel depth map.
+**Metode 1: Disparitas Stereo dari Kamera Ganda.** Ini adalah metode yang paling tua dan secara geometris paling solid. Ponsel menembakkan kamera lebar dan kamera telefoto secara bersamaan pada subjek yang sama. Karena kedua kamera dipisahkan secara fisik sejauh 10 hingga 15 milimeter ("garis dasar"), mereka melihat subjek dari posisi horizontal yang sedikit berbeda. Posisi objek di latar depan bergeser lebih banyak di antara dua sudut pandang tersebut daripada posisi objek di latar belakang yang jauh. Pergeseran ini disebut **disparitas**. Algoritma menjalankan pencocokan blok atau algoritma pencocokan semi-global (SGM) pada dua gambar yang telah diperbaiki (rectified) untuk menghitung nilai disparitas bagi setiap piksel. Disparitas berbanding terbalik dengan kedalaman, sehingga peta disparitas diubah langsung menjadi peta kedalaman per-piksel.
 
-**Method 2: ToF / LiDAR Active Depth Sensing.** A ToF (Time-of-Flight) or LiDAR depth sensor projects a structured pattern of 30,000+ near-infrared laser dots onto the scene, then measures the round-trip time (for direct ToF) or phase shift (for indirect ToF) of the reflected light to compute a true metric depth in meters for each pixel. ToF produces accurate, dense depth maps even in complete darkness and on textureless surfaces (plain walls, sky) where stereo matching fails. Modern portrait systems typically use ToF as the ground-truth depth cue and stereo disparity as a refinement signal.
+**Metode 2: Penginderaan Kedalaman Aktif ToF / LiDAR.** Sensor kedalaman ToF (Time-of-Flight) atau LiDAR memproyeksikan pola terstruktur berisi 30.000+ titik laser inframerah dekat ke pemandangan, lalu mengukur waktu pulang-pergi (untuk ToF langsung) atau pergeseran fase (untuk ToF tidak langsung) dari cahaya yang dipantulkan untuk menghitung kedalaman metrik yang sebenarnya dalam meter untuk setiap piksel. ToF menghasilkan peta kedalaman yang akurat dan padat bahkan dalam kegelapan total dan pada permukaan tanpa tekstur (dinding polos, langit) di mana pencocokan stereo gagal. Sistem potret modern biasanya menggunakan ToF sebagai petunjuk kedalaman kebenaran dasar (ground-truth) dan disparitas stereo sebagai sinyal penyempurnaan.
 
-**Method 3: Monocular ML Depth Estimation.** For single-camera phones (or for the front-facing selfie camera, which has no stereo partner), a neural network estimates depth from a single RGB image. The model, trained on millions of images with ground-truth depth labels, learns the statistical cues humans use to judge depth: relative size, occlusion, linear perspective, texture gradient, defocus blur, and atmospheric perspective. Google's PortraitNet and Meta's DeepLabV3+ are representative architectures. Monocular depth is less metrically accurate than stereo or ToF, but it is sufficient for plausible-looking portrait bokeh.
+**Metode 3: Estimasi Kedalaman ML Monokular.** Untuk ponsel kamera tunggal (atau untuk kamera selfie menghadap ke depan, yang tidak memiliki pasangan stereo), jaringan saraf memperkirakan kedalaman dari satu gambar RGB. Model tersebut, yang dilatih pada jutaan gambar dengan label kedalaman ground-truth, mempelajari petunjuk statistik yang digunakan manusia untuk menilai kedalaman: ukuran relatif, oklusi, perspektif linear, gradien tekstur, blur defokus, dan perspektif atmosfer. Arsitektur PortraitNet dari Google dan DeepLabV3+ dari Meta adalah arsitektur yang mewakili. Kedalaman monokular kurang akurat secara metrik dibandingkan stereo atau ToF, tetapi cukup untuk bokeh potret yang terlihat masuk akal.
 
-### The Portrait Rendering Pipeline
+### Pipeline Perenderingan Potret
 
-Once a depth map is obtained, the remaining steps are the same regardless of which depth estimation method was used:
+Setelah peta kedalaman diperoleh, langkah-langkah sisanya sama terlepas dari metode estimasi kedalaman mana yang digunakan:
 
-1. **Subject Segmentation**: A separate semantic segmentation neural network (usually a U-Net variant) runs on the main RGB camera image and produces a soft alpha mask identifying which pixels belong to "person" vs "background." The mask is feathered at the edges — especially around hair, glasses, and fine foreground detail — to avoid the cutout "paper doll" look of early 2010s portrait mode.
-2. **Depth Refinement**: The raw depth map from Method 1/2/3 is multiplied with the segmentation mask. Background pixels keep their depth value; subject pixels are clamped to a single focus plane depth.
-3. **Per-Pixel Variable Blur**: Each background pixel is blurred by a Gaussian (or, for premium "optical simulation" modes, a physically rendered lens-kernel convolution) whose radius scales linearly with the pixel's distance from the focus plane. A background object at 5 meters gets a heavy blur; a background object at 1.5 meters gets a mild blur. The subject pixels are copied untouched.
-4. **Faux Optical Glare**: A premium touch: bright specular highlights in the blurred background (streetlights, reflections, the sun) are rendered as characteristic lens-shaped bokeh hexagons or circles rather than simple Gaussian blobs. This sells the illusion that the blur came from a real lens diaphragm.
+1. **Segmentasi Subjek**: Jaringan saraf segmentasi semantik terpisah (biasanya varian U-Net) berjalan pada gambar kamera RGB utama dan menghasilkan masker alfa lembut yang mengidentifikasi piksel mana yang termasuk dalam "orang" vs "latar belakang". Masker tersebut dihaluskan (feathered) di bagian tepi — terutama di sekitar rambut, kacamata, dan detail halus latar depan — untuk menghindari tampilan potongan "boneka kertas" seperti pada mode potret awal tahun 2010-an.
+2. **Penyempurnaan Kedalaman**: Peta kedalaman mentah dari Metode 1/2/3 dikalikan dengan masker segmentasi. Piksel latar belakang mempertahankan nilai kedalamannya; piksel subjek dikunci pada satu kedalaman bidang fokus.
+3. **Blur Variabel Per-Piksel**: Setiap piksel latar belakang dikaburkan oleh Gaussian (atau, untuk mode "simulasi optik" premium, konvolusi kernel-lensa yang dirender secara fisik) yang radiusnya berskala secara linear dengan jarak piksel dari bidang fokus. Objek latar belakang pada jarak 5 meter mendapatkan blur yang berat; objek latar belakang pada jarak 1,5 meter mendapatkan blur yang ringan. Piksel subjek disalin tanpa perubahan.
+4. **Silau Optik Buatan**: Sentuhan premium: sorotan spekular yang terang di latar belakang yang kabur (lampu jalan, pantulan, matahari) dirender sebagai bentuk segi enam atau lingkaran bokeh karakteristik lensa, bukan sekadar gumpalan Gaussian sederhana. Ini memberikan ilusi bahwa blur tersebut berasal dari diafragma lensa sungguhan.
 
 ```mermaid
 flowchart TD
-    A[Wide Camera Frame + Tele Camera Frame / ToF Data] --> B[Depth Estimation\nStereo / ToF / Mono ML]
-    B --> C[Depth Map\n0.5m → Infinity]
-    A --> D[Subject Segmentation\nU-Net Neural Network]
-    D --> E[Person Alpha Mask\nSoft-Edged Feathering]
-    C --> F[Per-Pixel Blur Radius\nScales with Depth]
+    A["Bingkai Kamera Lebar + Bingkai Kamera Tele / Data ToF"] --> B["Estimasi Kedalaman<br/>Stereo / ToF / Mono ML"]
+    B --> C["Peta Kedalaman<br/>0,5m hingga Tak Terhingga"]
+    A --> D["Segmentasi Subjek<br/>Jaringan Saraf U-Net"]
+    D --> E["Masker Alfa Orang<br/>Penghalusan Tepi Lembut"]
+    C --> F["Radius Blur Per-Piksel<br/>Berskala dengan Kedalaman"]
     E --> F
-    F --> G[Apply Variable Blur\nSubject = Sharp, Background = Bokeh]
-    G --> H[Add Bokeh Speculars\nHexagonal / Circular Highlights]
-    H --> I[Final Portrait Photo\nCreamy Background Blur]
+    F --> G["Terapkan Blur Variabel<br/>Subjek = Tajam, Latar Belakang = Bokeh"]
+    G --> H["Tambahkan Spekular Bokeh<br/>Sorotan Segi Enam / Lingkaran"]
+    H --> I["Foto Potret Final<br/>Blur Latar Belakang yang Lembut"]
 ```
 
-## Night Mode: Multi-Frame Temporal Merging
+## Mode Malam: Penggabungan Temporal Multi-Bingkai
 
-Before 2018, low-light smartphone photography was essentially unusable without flash. A dimly lit bar or a city street at night produced a noisy, grainy, blurry mess. Then Google released **Night Sight** on the Pixel 3, and everything changed. The core insight was counterintuitive: instead of taking one long 1-second exposure (which would be hopelessly blurred from hand shake), take 15 very short 1/15-second exposures (each individually sharp because OIS is active), then algorithmically align and average them. The total integrated exposure time is still 1 second, but the per-frame exposure is short enough that handshake blur never accumulates.
+Sebelum 2018, fotografi smartphone cahaya rendah pada dasarnya tidak dapat digunakan tanpa lampu kilat. Bar yang remang-remang atau jalanan kota di malam hari menghasilkan kekacauan yang ber-noise, berbintik, dan kabur. Kemudian Google merilis **Night Sight** pada Pixel 3, dan segalanya berubah. Wawasan intinya berlawanan dengan intuisi: alih-alih mengambil satu eksposur panjang 1 detik (yang pasti akan kabur akibat getaran tangan), ambillah 15 eksposur sangat pendek 1/15 detik (masing-masing tajam karena OIS aktif), lalu gabungkan dan rata-ratakan secara algoritmis. Total waktu eksposur terintegrasi tetap 1 detik, tetapi eksposur per bingkai cukup pendek sehingga blur getaran tangan tidak pernah menumpuk.
 
-### The Night Mode Algorithm Step-by-Step
+### Algoritma Mode Malam Langkah demi Langkah
 
-1. **Burst Capture**: The camera captures 8 to 15 raw frames. Each frame uses a moderate exposure time (1/15s to 1/8s is typical) and moderate ISO (800 to 3200). Individual frames are noisy but not blurred. The burst totals 0.5 to 2 seconds of wall-clock time.
-2. **Gyro-Aided EIS Alignment**: The phone's main IMU gyroscope records angular velocity at 8,000 Hz throughout the burst. For each frame, the cumulative rotation and translation from the reference frame is computed. Each raw frame is then digitally shifted, rotated, and slightly scaled (Electronic Image Stabilization, EIS) on the NPU to sub-pixel precision, perfectly registering it to the reference frame even if the user's hands moved by several full pixels of blur during the burst.
-3. **Temporal Pixel Merging**: For each pixel location across the 12 aligned frames, the algorithm gathers 12 candidate pixel values. It then performs robust statistical merging rather than a simple average: outlier values (caused by hot pixels, cosmic ray hits, or a car's headlights transiting that spot) are identified and discarded. The remaining consistent values are averaged, reducing Gaussian shot noise by a factor equal to the square root of the number of frames kept. A 12-frame merge reduces noise by 3.5×.
-4. **Spatial Denoising**: A CNN-based denoiser (trained specifically on raw night imagery) removes any remaining high-frequency noise while preserving real edges and texture.
-5. **Local Tone Mapping**: The merged raw image has very high dynamic range. A spatially-varying tone mapping operator (based on bilateral filtering or a learned CNN tone map) lifts shadows without blowing out city lights, boosts color saturation in dark regions (which would otherwise look desaturated), and produces a final 8-bit image that feels bright and clean rather than dim and murky.
+1. **Pengambilan Gambar Burst**: Kamera mengambil 8 hingga 15 bingkai mentah. Setiap bingkai menggunakan waktu eksposur moderat (1/15 detik hingga 1/8 detik adalah umum) dan ISO moderat (800 hingga 3200). Bingkai individu ber-noise tetapi tidak kabur. Burst tersebut totalnya memakan waktu 0,5 hingga 2 detik waktu nyata.
+2. **Penyelarasan EIS Berbantuan Gyro**: Giroskop IMU utama ponsel mencatat kecepatan sudut pada 8.000 Hz sepanjang burst. Untuk setiap bingkai, rotasi dan translasi kumulatif dari bingkai referensi dihitung. Setiap bingkai mentah kemudian digeser secara digital, diputar, dan sedikit diskalakan (Electronic Image Stabilization, EIS) pada NPU ke presisi sub-piksel, mendaftarkannya secara sempurna ke bingkai referensi bahkan jika tangan pengguna bergerak sejauh beberapa piksel blur selama burst.
+3. **Penggabungan Piksel Temporal**: Untuk setiap lokasi piksel di 12 bingkai yang telah diselaraskan, algoritma mengumpulkan 12 kandidat nilai piksel. Ia kemudian melakukan penggabungan statistik yang kuat (robust statistical merging) daripada rata-rata sederhana: nilai pencilan (outlier) (yang disebabkan oleh piksel panas, hantaman sinar kosmik, atau lampu mobil yang melintasi titik itu) diidentifikasi dan dibuang. Nilai-nilai konsisten yang tersisa dirata-ratakan, mengurangi noise shot Gaussian sebesar faktor yang sama dengan akar kuadrat dari jumlah bingkai yang disimpan. Penggabungan 12 bingkai mengurangi noise sebesar 3,5×.
+4. **Denoising Spasial**: Denoiser berbasis CNN (dilatih khusus pada citra malam mentah) menghilangkan noise frekuensi tinggi yang tersisa sambil tetap mempertahankan tepi dan tekstur asli.
+5. **Pemetaan Nada Lokal**: Gambar mentah yang digabungkan memiliki rentang dinamis yang sangat tinggi. Operator pemetaan nada yang bervariasi secara spasial (berdasarkan penyaringan bilateral atau peta nada CNN yang dipelajari) mengangkat bayangan tanpa membuat lampu kota tampak terpotong, meningkatkan saturasi warna di wilayah gelap (yang jika tidak akan terlihat pucat), dan menghasilkan gambar 8-bit final yang terasa terang dan bersih, bukan redup dan suram.
 
 ```mermaid
 flowchart LR
-    A[Dark Scene: City Street at Night] --> B[Capture 12 RAW Frames\n1/15s each = 0.66s total]
-    B --> C[Gyro EIS Alignment\nSub-Pixel Shift + Rotate]
-    C --> D[Temporal Merge\nRobust Mean / Outlier Reject\nNoise −3.5×]
-    D --> E[CNN Spatial Denoiser\nPreserve Edges / Texture]
-    E --> F[Local Tone Mapping\nBoost Shadows / Preserve Lights]
-    F --> G[Bright Clear Night Photo\nLow Noise, No Blur]
+    A["Pemandangan Gelap: Jalanan Kota di Malam Hari"] --> B["Ambil 12 Bingkai RAW<br/>masing-masing 1/15 detik = total 0,66 detik"]
+    B --> C["Penyelarasan EIS Gyro<br/>Pergeseran + Rotasi Sub-Piksel"]
+    C --> D["Penggabungan Temporal<br/>Robust Mean / Tolak Pencilan<br/>Noise -3,5x"]
+    D --> E["Denoiser Spasial CNN<br/>Menjaga Tepi / Tekstur"]
+    E --> F["Pemetaan Nada Lokal<br/>Angkat Bayangan / Jaga Lampu"]
+    F --> G["Foto Malam yang Terang dan Jernih<br/>Noise Rendah, Tanpa Blur"]
 ```
 
-Samsung's "Nightography," Apple's "Night Mode," Xiaomi's "Night Mode 2.0," and OPPO's "Ultra Dark Mode" all use substantially the same algorithm architecture. Variations exist in the exact number of frames, the choice of robust merging statistic, the denoiser architecture, and the tone map look, but the core gyro-aligned multi-frame temporal averaging is universal across the industry.
+"Nightography" dari Samsung, "Night Mode" dari Apple, "Night Mode 2.0" dari Xiaomi, dan "Ultra Dark Mode" dari OPPO semuanya menggunakan arsitektur algoritma yang secara substansial sama. Variasi ada pada jumlah bingkai yang tepat, pilihan statistik penggabungan yang kuat, arsitektur denoiser, dan tampilan peta nada, tetapi rata-rata temporal multi-bingkai yang selaras dengan gyro adalah universal di seluruh industri.
 
-## Slow Motion: High-Frame-Rate Cropped Capture
+## Gerak Lambat (Slow Motion): Pengambilan Gambar Terpotong Kecepatan Tinggi
 
-Slow-motion video stretches time by capturing video frames faster than the standard 30 fps playback rate, then playing them back at the normal 30 fps speed. The common multipliers:
+Video gerak lambat meregangkan waktu dengan mengambil bingkai video lebih cepat daripada laju pemutaran standar 30 fps, lalu memutarnya kembali pada kecepatan normal 30 fps. Pengganda yang umum:
 
-- **120 fps capture → 30 fps playback = 4× slow motion.** A 1-second real-world event becomes 4 seconds of video.
-- **240 fps → 30 fps = 8× slow motion.**
-- **960 fps → 30 fps = 32× ultra-slow motion.** A water drop splash, a balloon pop, or a hummingbird wingbeat becomes visible.
+- **Pengambilan 120 fps → Pemutaran 30 fps = 4× gerak lambat.** Peristiwa dunia nyata berdurasi 1 detik menjadi video berdurasi 4 detik.
+- **240 fps → 30 fps = 8× gerak lambat.**
+- **960 fps → 30 fps = 32× gerak lambat ultra.** Percikan tetesan air, balon yang meletus, atau kepakan sayap burung kolibri menjadi terlihat.
 
-### Why 960 fps Requires a Sensor Crop
+### Mengapa 960 fps Memerlukan Pemotongan (Crop) Sensor
 
-The bottleneck for high-frame-rate capture is **sensor readout bandwidth**. The image sensor has a finite number of MIPI CSI-2 lanes running at a fixed maximum data rate (typically 2.5 Gbps per lane, 4 lanes = 10 Gbps total). The sensor can only output so many pixels per second.
+Hambatan untuk pengambilan gambar dengan frame rate tinggi adalah **bandwidth pembacaan sensor**. Sensor gambar memiliki jumlah jalur MIPI CSI-2 yang terbatas yang berjalan pada laju data maksimum tetap (biasanya 2,5 Gbps per jalur, 4 jalur = total 10 Gbps). Sensor hanya dapat mengeluarkan sejumlah piksel tertentu per detik.
 
-- A full 48MP (8000×6000) frame readout at 960 fps would require 48,000,000 × 960 = 46.08 billion pixels per second. That is 30× the actual readout bandwidth of any 2026 smartphone sensor.
-- Therefore, to hit 960 fps the sensor must read out only a small central crop of its pixel array. A 960 fps mode is typically a 1280×720 (720p HD) or sometimes a 1920×1080 (1080p FHD) crop. The total pixel bandwidth becomes manageable: 1280×720×960 fps = 884 megapixels per second, which fits comfortably in 10 Gbps even with 10-bit per pixel encoding.
+- Pembacaan bingkai penuh 48MP (8000×6000) pada 960 fps akan memerlukan 48.000.000 × 960 = 46,08 miliar piksel per detik. Itu adalah 30× bandwidth pembacaan aktual dari sensor smartphone tahun 2026 mana pun.
+- Oleh karena itu, untuk mencapai 960 fps, sensor hanya boleh membaca potongan pusat kecil dari array pikselnya. Mode 960 fps biasanya berupa potongan 1280×720 (720p HD) atau terkadang 1920×1080 (1080p FHD). Bandwidth piksel total menjadi dapat dikelola: 1280×720×960 fps = 884 megapiksel per detik, yang pas dengan nyaman dalam 10 Gbps bahkan dengan pengkodean 10-bit per piksel.
 
-The numbers in practice: 960 fps capture × 0.3 seconds of real time = 288 individual frames. Played back at 30 fps = 9.6 seconds of buttery slow-motion video. Some Sony Xperia and Samsung Galaxy flagship phones support a brief burst of 960 fps at 1080p resolution by reading the sensor through a limited analog-to-digital converter (ADC) bank only in the central crop region.
+Angka-angka dalam praktiknya: pengambilan 960 fps × 0,3 detik waktu nyata = 288 bingkai individu. Diputar kembali pada 30 fps = 9,6 detik video gerak lambat yang sangat halus. Beberapa ponsel unggulan Sony Xperia dan Samsung Galaxy mendukung burst singkat 960 fps pada resolusi 1080p dengan membaca sensor melalui bank konverter analog-ke-digital (ADC) yang terbatas hanya di wilayah potongan pusat.
 
 ```mermaid
 flowchart TD
-    subgraph "Bandwidth Bottleneck: Sensor Readout"
+    subgraph "Hambatan Bandwidth: Pembacaan Sensor"
         direction TB
-        A[Full Sensor Mode:\n48MP (8000×6000) @ 30fps\n= 1.44 GPix/s\n→ Photo / Standard Video]
-        B[Slow-Motion Crop Mode:\n1280×720 @ 960fps\n= 0.88 GPix/s\n→ 32× Ultra Slow-Mo]
+        A["Mode Sensor Penuh<br/>48MP (8000x6000) @ 30fps<br/>= 1,44 GPix/s<br/>Foto / Video Standar"]
+        B["Mode Potong Gerak Lambat<br/>1280x720 @ 960fps<br/>= 0,88 GPix/s<br/>32x Gerak Lambat Ultra"]
     end
-    A --> C{MIPI CSI-2 Bus\n4 Lanes × 2.5 Gbps\n= 10 Gbps Total}
+    A --> C{"Bus MIPI CSI-2<br/>4 Jalur x 2,5 Gbps<br/>= Total 10 Gbps"}
     B --> C
-    C --> D[ISP Video Pipeline\nScales to Output Resolution]
-    D --> E[HEVC / AV1 Encoder\nWrites Slow-Motion MP4]
+    C --> D["Pipeline Video ISP<br/>Menskalakan ke Resolusi Output"]
+    D --> E["Encoder HEVC / AV1<br/>Menulis MP4 Gerak Lambat"]
 ```
 
-Slow-motion modes also often use a staggered HDR technique where alternate rows of the sensor are exposed for different durations to maintain high dynamic range even at 240 fps or 960 fps.
+Mode gerak lambat juga sering menggunakan teknik HDR bertingkat (staggered) di mana baris sensor yang bergantian diekspos untuk durasi yang berbeda untuk mempertahankan rentang dinamis yang tinggi bahkan pada 240 fps atau 960 fps.
 
-## Ultra-Wide: Distortion Correction and Edge Quality
+## Ultra-Lebar: Koreksi Distorsi dan Kualitas Tepi
 
-The ultra-wide camera on a modern flagship offers a 10–18mm full-frame equivalent focal length and a 100° to 130° diagonal field of view. It opens up compositional possibilities that the standard wide camera cannot: sweeping landscapes, towering architecture shots where the entire building fits without stepping into traffic, group selfies that actually include everyone, and a playful "close-up proximity distortion" effect where objects held near the lens appear massively oversized relative to the background.
+Kamera ultra-lebar pada ponsel unggulan modern menawarkan panjang fokus ekivalen full-frame 10–18mm dan bidang pandang diagonal 100° hingga 130°. Ini membuka kemungkinan komposisi yang tidak bisa dilakukan oleh kamera lebar standar: pemandangan alam yang luas, bidikan arsitektur yang menjulang di mana seluruh bangunan muat tanpa harus melangkah ke jalanan yang ramai, foto grup selfie yang benar-benar mencakup semua orang, dan efek "distorsi kedekatan jarak dekat" yang menyenangkan di mana objek yang dipegang dekat lensa tampak sangat besar dibandingkan dengan latar belakang.
 
-However, the ultra-wide focal length comes with three characteristic optical flaws that the ISP must correct before the photo is usable:
+Namun, panjang fokus ultra-lebar disertai dengan tiga cacat optik karakteristik yang harus diperbaiki oleh ISP sebelum foto dapat digunakan:
 
-1. **Geometric (Barrel) Distortion**: Straight lines bow outward like the edges of a fisheye lens. A photo of a rectangular door frame will look pincushioned or barreled. The ISP's Geometric Distortion Correction stage (see Chapter 2) applies a per-pixel coordinate remap using a 4th-order or 6th-order polynomial lens model calibrated for that specific module. The correction necessarily crops the outer 5–10% of the sensor array because the remapping pushes those outer pixels off-canvas.
-2. **Lateral Chromatic Aberration (LCA)**: The lens bends different wavelengths of light by slightly different amounts, so red, green, and blue images of the same off-axis point land at slightly different pixel coordinates. The result is visible color fringing (purple/green edges) on high-contrast objects near the corners. The ISP corrects LCA by applying a slightly different magnification factor to the red and blue color planes relative to green.
-3. **Vignetting / Corner Softness**: Corner pixels receive significantly less light than center pixels (due to the lens's cos⁴θ natural falloff plus mechanical vignetting from the lens barrel), and the lens's optical MTF (Modulation Transfer Function) is lower at extreme angles so corners look soft. The Lens Shading Correction stage applies a radially symmetric gain boost to flatten the illumination, and an edge-aware sharpening filter is applied more aggressively at the corners than in the center.
+1. **Distorsi Geometris (Barel)**: Garis lurus melengkung ke luar seperti tepi lensa fisheye. Foto kusen pintu persegi panjang akan terlihat seperti bantal atau tong. Tahap Koreksi Distorsi Geometris ISP (lihat Bab 2) menerapkan pemetaan ulang koordinat per piksel menggunakan model lensa polinomial orde ke-4 atau ke-6 yang dikalibrasi untuk modul tertentu tersebut. Koreksi ini mau tidak mau memotong 5–10% bagian luar dari array sensor karena pemetaan ulang tersebut mendorong piksel terluar keluar dari kanvas.
+2. **Aberasi Kromatik Lateral (LCA)**: Lensa membelokkan panjang gelombang cahaya yang berbeda dengan jumlah yang sedikit berbeda, sehingga gambar merah, hijau, dan biru dari titik di luar sumbu yang sama mendarat di koordinat piksel yang sedikit berbeda. Hasilnya adalah fringing warna yang terlihat (tepian ungu/hijau) pada objek kontras tinggi di dekat sudut. ISP memperbaiki LCA dengan menerapkan faktor pembesaran yang sedikit berbeda pada bidang warna merah dan biru relatif terhadap hijau.
+3. **Vinyet / Kelembutan Sudut**: Piksel sudut menerima cahaya yang jauh lebih sedikit daripada piksel tengah (karena falloff alami cos⁴θ lensa ditambah vinyet mekanis dari barel lensa), dan MTF (Modulation Transfer Function) optik lensa lebih rendah pada sudut yang ekstrem sehingga sudut terlihat lembut. Tahap Koreksi Bayangan Lensa menerapkan penguatan (gain) yang simetris secara radial untuk meratakan pencahayaan, dan filter penajaman sadar tepi diterapkan lebih agresif di sudut daripada di tengah.
 
 ```mermaid
 flowchart LR
-    A[Raw Ultra-Wide Capture\n120° Fisheye\nBarrel Distorted] --> B[ISP Geometric Correction\n6th-Order Polynomial Remap]
-    B --> C[Cropped Rectilinear Output\nStraight Lines Actually Straight]
-    C --> D[Lateral CA Correction\nRed/Blue Plane Rescaling]
-    D --> E[Lens Shading + Corner Sharpening]
-    E --> F[Final Corrected Ultra-Wide Photo]
+    A["Pengambilan Ultra-Lebar Mentah<br/>Fisheye 120 derajat<br/>Distorsi Barel"] --> B["Koreksi Geometris ISP<br/>Pemetaan Ulang Polinomial Orde ke-6"]
+    B --> C["Output Rektilinear yang Dipotong<br/>Garis Lurus Benar-benar Lurus"]
+    C --> D["Koreksi CA Lateral<br/>Penskalaan Ulang Bidang Merah/Biru"]
+    D --> E["Koreksi Bayangan Lensa + Penajaman Sudut"]
+    E --> F["Foto Ultra-Lebar Final yang Telah Dikoreksi"]
 ```
 
-## Telephoto: Standard vs Periscope
+## Telefoto: Standar vs Periskop
 
-The telephoto camera captures distant subjects that the wide camera cannot resolve. Modern phones ship two distinct telephoto designs.
+Kamera telefoto menangkap subjek jauh yang tidak dapat diselesaikan oleh kamera lebar. Ponsel modern mengusung dua desain telefoto yang berbeda.
 
-**Standard Telephoto (2× to 3× optical):** This is a conventional camera module: the lens barrel sits perpendicular to the phone's back cover, directly above the image sensor, exactly like the wide camera but with a longer focal length lens. A 3× telephoto has an ~72mm full-frame equivalent focal length. The physical stack-up is limited by the phone's thickness (7–9mm), so the lens cannot be longer than that. Hence the 3× practical ceiling for conventional telephoto modules.
+**Telefoto Standar (optik 2× hingga 3×):** Ini adalah modul kamera konvensional: barel lensa diletakkan tegak lurus dengan penutup belakang ponsel, tepat di atas sensor gambar, persis seperti kamera lebar tetapi dengan lensa panjang fokus yang lebih panjang. Telefoto 3× memiliki panjang fokus ekivalen full-frame ~72mm. Tumpukan fisik dibatasi oleh ketebalan ponsel (7–9mm), sehingga lensa tidak boleh lebih panjang dari itu. Oleh karena itu, batas praktis 3× untuk modul telefoto konvensional.
 
-**Periscope Telephoto (5× to 10× optical):** To get longer focal lengths without making the phone thicker, engineers folded the optical path 90° using a prism. Light enters through a window in the phone's edge or rear glass, hits a 45° right-angle prism, bounces 90° sideways, and then travels horizontally through a multi-element lens barrel 10–14mm long that runs parallel to the phone's mainboard, finally landing on an image sensor mounted sideways on the PCB. The prism itself is mounted on a 2-axis OIS gimbal, and the sensor is sometimes mounted on a separate sensor-shift OIS, giving 4-axis or 5-axis total stabilization — enough to get sharp handheld 10× photos of text on a distant building sign.
+**Telefoto Periskop (optik 5× hingga 10×):** Untuk mendapatkan panjang fokus yang lebih panjang tanpa membuat ponsel lebih tebal, para insinyur melipat jalur optik 90° menggunakan prisma. Cahaya masuk melalui jendela di tepi ponsel atau kaca belakang, mengenai prisma siku-siku 45°, memantul 90° ke samping, dan kemudian merambat secara horizontal melalui barel lensa multi-elemen sepanjang 10–14mm yang berjalan sejajar dengan papan utama ponsel, akhirnya mendarat di sensor gambar yang dipasang miring di PCB. Prisma itu sendiri dipasang pada gimbal OIS 2-sumbu, dan sensornya terkadang dipasang pada OIS pergeseran sensor terpisah, memberikan total stabilisasi 4-sumbu atau 5-sumbu — cukup untuk mendapatkan foto genggam 10× yang tajam dari teks pada papan nama bangunan yang jauh.
 
 ```mermaid
 graph LR
-    subgraph "Periscope Telephoto (Side View Inside Phone)"
+    subgraph "Telefoto Periskop (Tampilan Samping di Dalam Ponsel)"
         direction LR
-        A[Light In\nRear Glass Window] --> B[45° Prism\n90° Reflection]
-        B --> C[Lens Element 1]
-        C --> D[Lens Element 2]
-        D --> E[Lens Element 3]
-        E --> F[Lens Element 4]
-        F --> G[Lens Element 5]
-        G --> H[IR Cut Filter]
-        H --> I[Image Sensor\nMounted Horizontally]
+        A["Cahaya Masuk<br/>Jendela Kaca Belakang"] --> B["Prisma 45 derajat<br/>Refleksi 90 derajat"]
+        B --> C["Elemen Lensa 1"]
+        C --> D["Elemen Lensa 2"]
+        D --> E["Elemen Lensa 3"]
+        E --> F["Elemen Lensa 4"]
+        F --> G["Elemen Lensa 5"]
+        G --> H["Filter Pemotong IR"]
+        H --> I["Sensor Gambar<br/>Dipasang Secara Horizontal"]
     end
-    J[Phone Thickness: 8.5mm Total] --> B
+    J["Ketebalan Ponsel: Total 8,5mm"] --> B
 ```
 
-At zoom boundaries between physical cameras (for example, 2.9× still digitally cropped from the wide camera vs 3.1× using the 3× periscope telephoto), the HAL performs a multi-camera fusion trick: for roughly ±0.2× around the switchover point, it captures both cameras simultaneously and performs a cross-fade weighted by zoom ratio, so the user never sees a visible "jump" when the active physical camera changes.
+Pada batas zoom antar kamera fisik (misalnya, 2,9× masih dipotong secara digital dari kamera lebar vs 3,1× menggunakan kamera telefoto periskop 3×), HAL melakukan trik penggabungan multi-kamera: untuk sekitar ±0,2× di sekitar titik pengalihan, ia menangkap kedua kamera secara bersamaan dan melakukan cross-fade yang dibobot oleh rasio zoom, sehingga pengguna tidak pernah melihat "lompatan" yang terlihat saat kamera fisik yang aktif berubah.
 
-## Macro: Extreme Close-Up Photography
+## Makro: Fotografi Jarak Dekat Ekstrem
 
-Macro photography captures extreme close-ups of small subjects: the texture of flower petals, the compound eyes of insects, the fibers of a piece of fabric, the individual sugar crystals on a cookie.
+Fotografi makro menangkap bidikan jarak dekat ekstrem dari subjek kecil: tekstur kelopak bunga, mata majemuk serangga, serat-serat kain, kristal gula individu pada kue.
 
-Two macro strategies exist in modern phones:
+Ada dua strategi makro pada ponsel modern:
 
-**Dedicated Macro Camera:** Budget and mid-range phones often ship a small, low-resolution (2MP to 5MP) dedicated macro module with a fixed-focus short-focal-length lens. The module is tuned for a specific minimum focus distance (typically 2–4 cm) and produces surprisingly sharp macro images despite its low resolution. The main drawback is that the sensor is tiny, so image quality degrades sharply in anything less than bright daylight.
+**Kamera Makro Khusus:** Ponsel anggaran dan kelas menengah sering kali mengusung modul makro khusus beresolusi rendah (2MP hingga 5MP) dengan lensa panjang fokus pendek fokus-tetap. Modul ini disetel untuk jarak fokus minimum tertentu (biasanya 2–4 cm) dan menghasilkan gambar makro yang mengejutkan tajam meskipun resolusinya rendah. Kekurangan utamanya adalah sensornya kecil, sehingga kualitas gambar menurun tajam dalam kondisi selain cahaya siang hari yang terang.
 
-**Ultra-Wide Re-purposed as Macro:** Flagship phones (Google Pixel, Samsung S-series Ultra, iPhone Pro) do not ship a dedicated macro camera. Instead, they re-task the ultra-wide camera. The ultra-wide's short focal length (13mm eq) gives it a very short minimum focus distance — often 1 to 2 centimeters from the subject. When the user taps "Macro" mode or the camera app detects a close subject via the ToF sensor or phase-detect AF rangefinder, the app switches to the ultra-wide, drives its VCM to the minimum-focus position, applies extra geometric distortion correction (because the subject is now at a field-curvature extreme where the polynomial remap differs significantly from the infinity calibration), and crops the center of the ultra-wide sensor to produce the final macro frame. The large 12MP–50MP ultra-wide sensor gives dramatically better macro image quality than a 5MP dedicated module.
+**Ultra-Lebar yang Dialih-fungsikan sebagai Makro:** Ponsel unggulan (Google Pixel, Samsung S-series Ultra, iPhone Pro) tidak mengusung kamera makro khusus. Sebaliknya, mereka memberikan tugas tambahan pada kamera ultra-lebar. Panjang fokus ultra-lebar yang pendek (ekivalen 13mm) memberikannya jarak fokus minimum yang sangat pendek — sering kali 1 hingga 2 sentimeter dari subjek. Saat pengguna mengetuk mode "Makro" atau aplikasi kamera mendeteksi subjek yang dekat melalui sensor ToF atau pengukur jarak AF deteksi fase, aplikasi akan beralih ke ultra-lebar, menggerakkan VCM-nya ke posisi fokus minimum, menerapkan koreksi distorsi geometris tambahan (karena subjek sekarang berada pada ekstremitas kelengkungan bidang di mana pemetaan ulang polinomial berbeda secara signifikan dari kalibrasi tak terhingga), dan memotong bagian pusat dari sensor ultra-lebar untuk menghasilkan bingkai makro final. Sensor ultra-lebar 12MP–50MP yang besar memberikan kualitas gambar makro yang jauh lebih baik daripada modul khusus 5MP.
 
-## Computational Photography: The Unifying Philosophy
+## Fotografi Komputasional: Filosofi yang Menyatukan
 
-The features above — HDR, Portrait, Night Mode, Slow Motion, Ultra-Wide correction, Periscope zoom fusion, Macro — share a single unifying idea. **Computational photography** is the philosophy that the camera sensor, the ISP, the gyroscope/IMU, the NPU (Neural Processing Unit), and multi-frame signal processing algorithms can work together to produce imagery that no single lens/sensor combination, no matter how expensive the glass, could ever produce on its own.
+Fitur-fitur di atas — HDR, Potret, Mode Malam, Gerak Lambat, koreksi Ultra-Lebar, penggabungan zoom Periskop, Makro — berbagi satu ide pemersatu yang sama. **Fotografi komputasional** adalah filosofi bahwa sensor kamera, ISP, giroskop/IMU, NPU (Neural Processing Unit), dan algoritma pemrosesan sinyal multi-bingkai dapat bekerja sama untuk menghasilkan citra yang tidak dapat dihasilkan oleh kombinasi lensa/sensor tunggal mana pun, tidak peduli seberapa mahal lensanya, jika dilakukan secara mandiri.
 
-The classic DSLR model is: light → lens → sensor → storage. The smartphone model is: light → multiple lenses → multiple sensors → gyro/IMU → multi-frame burst capture → NPU neural inference → per-pixel decision fusion → sophisticated tone mapping → storage. Both start and end at the same place, but the smartphone inserts dozens of additional computational steps in the middle, each of which improves the final result in ways optics alone cannot.
+Model DSLR klasik adalah: cahaya → lensa → sensor → penyimpanan. Model smartphone adalah: cahaya → beberapa lensa → beberapa sensor → gyro/IMU → pengambilan gambar burst multi-bingkai → inferensi saraf NPU → penggabungan keputusan per-piksel → pemetaan nada yang canggih → penyimpanan. Keduanya dimulai dan berakhir di tempat yang sama, tetapi smartphone menyisipkan lusinan langkah komputasi tambahan di tengahnya, yang masing-masing meningkatkan hasil akhir dengan cara yang tidak bisa dilakukan oleh optik saja.
 
-Zooming seamlessly across 0.5× to 10× on a Galaxy S26 Ultra is computational: the HAL blends three different cameras with three different focal lengths across five zoom switch points. Rescuing a backlit portrait where the window behind the subject no longer blows out is computational: 7-frame HDR fusion. A handheld night photo of the Milky Way that would require a tripod and a 30-second exposure on a DSLR is computational: 12-frame gyro-aligned temporal merge. Every feature described in this chapter is computational photography.
+Melakukan zoom secara mulus di rentang 0,5× hingga 10× pada Galaxy S26 Ultra adalah hal komputasional: HAL menggabungkan tiga kamera berbeda dengan tiga panjang fokus berbeda di lima titik pengalihan zoom. Menyelamatkan potret dengan cahaya latar di mana jendela di belakang subjek tidak lagi tampak putih terpotong adalah hal komputasional: penggabungan HDR 7-bingkai. Foto malam genggam Bima Sakti yang memerlukan tripod dan eksposur 30 detik pada DSLR adalah hal komputasional: penggabungan temporal 12-bingkai yang selaras dengan gyro. Setiap fitur yang dijelaskan dalam bab ini adalah fotografi komputasional.
 
 ```mermaid
 graph TD
-    subgraph "Computational Photography Venn Diagram"
-        A[Optics\nLenses, Aperture, OIS]
-        B[Sensors\nCMOS, Bayer, Rolling Shutter]
-        C[Machine Learning\nSegmentation, Denoise, Depth]
-        D[Multi-Frame Signal Processing\nHDR Merge, Night Merge, EIS]
+    subgraph "Diagram Venn Fotografi Komputasional"
+        A["Optik<br/>Lensa, Bukaan, OIS"]
+        B["Sensor<br/>CMOS, Bayer, Rana Bergulir"]
+        C["Pembelajaran Mesin<br/>Segmentasi, Denoise, Kedalaman"]
+        D["Pemrosesan Sinyal Multi-Bingkai<br/>Gabungan HDR, Gabungan Malam, EIS"]
     end
-    A -- Overlap --> E[Portrait Bokeh]
-    B -- Overlap --> F[HDR Bracketed Capture]
-    C -- Overlap --> G[ML Portrait Segmentation]
-    D -- Overlap --> H[Night Sight Temporal Merge]
-    A & B & C & D --> I[Seamless Multi-Camera Zoom]
+    A -- Tumpang Tindih --> E["Bokeh Potret"]
+    B -- Tumpang Tindih --> F["Pengambilan Gambar Bracketed HDR"]
+    C -- Tumpang Tindih --> G["Segmentasi Potret ML"]
+    D -- Tumpang Tindih --> H["Gabungan Temporal Night Sight"]
+    A & B & C & D --> I["Zoom Multi-Kamera yang Mulus"]
 ```
 
-This is the most important idea to carry into the Camera2 API chapters that follow. The Camera2 API is not just a tool to "take a picture." It is a low-level control interface that lets your app fire precise multi-frame bursts, read gyro metadata per frame, select which physical camera fires at which zoom ratio, and stream frames through on-device neural networks — the building blocks for implementing your own computational photography features.
+Ini adalah ide terpenting yang harus dibawa ke dalam bab-bab API Camera2 yang menyusul. API Camera2 bukan sekadar alat untuk "mengambil gambar." Ini adalah antarmuka kontrol tingkat rendah yang memungkinkan aplikasi Anda menembakkan rentetan multi-bingkai yang tepat, membaca metadata gyro per bingkai, memilih kamera fisik mana yang menembak pada rasio zoom mana, dan mengalirkan bingkai melalui jaringan saraf pada perangkat — blok bangunan untuk mengimplementasikan fitur fotografi komputasional Anda sendiri.
 
-## Summary
+## Ringkasan
 
-In this chapter you learned the real-world algorithms behind modern smartphone photography features. HDR uses 3–10 frame exposure bracketing, per-frame feature-based alignment, and tone mapping to capture dynamic range the sensor cannot see in a single exposure. Portrait mode computes a per-pixel depth map via stereo camera disparity, ToF laser ranging, or monocular ML depth estimation, then runs a U-Net subject segmentation and applies a variable per-pixel Gaussian blur scaled by depth. Night mode captures 8–15 short exposures, aligns them using gyro-aided EIS, applies robust temporal pixel merging to reduce noise by 3.5×, and locally tone-maps the result. Slow-motion video at 960 fps must crop the sensor because the MIPI readout bandwidth is the hard bottleneck. Ultra-wide photos undergo geometric distortion correction, chromatic aberration correction, and corner shading correction in the ISP before they become viewable. Periscope telephoto cameras use a 45° prism to fold the light path 90° and fit a 10× optical lens inside an 8.5mm-thick phone. You learned the definition of computational photography: the fusion of Optics, Sensors, Machine Learning, and Multi-Frame Signal Processing to create images beyond the reach of any single lens/sensor system.
+Dalam bab ini Anda mempelajari algoritma dunia nyata di balik fitur fotografi smartphone modern. HDR menggunakan bracketing eksposur 3–10 bingkai, penyelarasan berbasis fitur per bingkai, dan pemetaan nada untuk menangkap rentang dinamis yang tidak dapat dilihat sensor dalam satu eksposur. Mode potret menghitung peta kedalaman per piksel melalui disparitas kamera stereo, pengukuran jarak laser ToF, atau estimasi kedalaman ML monokular, lalu menjalankan segmentasi subjek U-Net dan menerapkan blur Gaussian per piksel variabel yang diskalakan berdasarkan kedalaman. Mode malam mengambil 8–15 eksposur pendek, menyelaraskannya menggunakan EIS berbantuan gyro, menerapkan penggabungan piksel temporal yang kuat untuk mengurangi noise sebesar 3,5×, dan memetakan nada hasilnya secara lokal. Video gerak lambat pada 960 fps harus memotong sensor karena bandwidth pembacaan MIPI adalah hambatan utamanya. Foto ultra-lebar menjalani koreksi distorsi geometris, koreksi aberasi kromatik, dan koreksi bayangan sudut di ISP sebelum menjadi dapat dilihat. Kamera telefoto periskop menggunakan prisma 45° untuk melipat jalur cahaya 90° dan menempatkan lensa optik 10× di dalam ponsel setebal 8,5mm. Anda mempelajari definisi fotografi komputasional: penggabungan Optik, Sensor, Pembelajaran Mesin, dan Pemrosesan Sinyal Multi-Bingkai untuk menciptakan gambar yang melampaui jangkauan sistem lensa/sensor tunggal mana pun.
 
-## What's Next
+## Apa Selanjutnya
 
-Chapter 4 is the hands-on practical chapter. You will install the **Android Camera Parameters** companion app from source or Google Play, launch it on your own phone, and inspect exactly what your own hardware is capable of. You will learn to read Camera IDs and facing directions, check the Hardware Level of each camera (LEGACY / LIMITED / FULL / LEVEL_3), enumerate supported output formats (JPEG, YUV_420_888, PRIVATE, RAW_SENSOR, JPEG_R Ultra HDR), find maximum slow-motion FPS ranges, explore zoom ratios and switch points between your phone's physical cameras, and check whether your primary sensor supports RAW capture — writing down the answers for your specific device, because those answers determine what is and is not possible for your own Camera2 API app to do on that phone.
+Bab 4 adalah bab praktis yang melibatkan tindakan langsung. Anda akan menginstal aplikasi pendamping **Android Camera Parameters** dari sumber atau Google Play, menjalankannya di ponsel Anda sendiri, dan memeriksa secara tepat apa yang mampu dilakukan oleh perangkat keras Anda. Anda akan belajar membaca ID Kamera dan arah hadapnya, memeriksa Level Perangkat Keras dari setiap kamera (LEGACY / LIMITED / FULL / LEVEL_3), menghitung format output yang didukung (JPEG, YUV_420_888, PRIVATE, RAW_SENSOR, JPEG_R Ultra HDR), menemukan rentang FPS gerak lambat maksimum, menjelajahi rasio zoom dan titik pengalihan antar kamera fisik ponsel Anda, dan memeriksa apakah sensor utama Anda mendukung pengambilan RAW — menuliskan jawaban untuk perangkat spesifik Anda, karena jawaban tersebut menentukan apa yang mungkin dan tidak mungkin dilakukan oleh aplikasi API Camera2 Anda sendiri pada ponsel tersebut.

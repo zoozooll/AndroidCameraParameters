@@ -1,4 +1,4 @@
----
+﻿---
 sidebar_position: 13
 title: "Chapter 13: Exposure"
 description: Master the fundamentals of photographic exposure—the Exposure Triangle of ISO, shutter speed, and aperture. Understand EV stops, the Sunny 16 rule, and how different combinations create the same exposure with creative tradeoffs.
@@ -13,7 +13,7 @@ When you take a photo with a smartphone camera, you're capturing light. The *amo
 
 ```mermaid
 graph TD
-    A[Exposure<br/>Light Reaching Sensor] --> B[Shutter Speed<br/>Time Light Enters]
+    A["Exposure<br/>Light Reaching Sensor"] --> B["Shutter Speed<br/>Time Light Enters"]
     A --> C[ISO<br/>Sensor Sensitivity]
     A --> D[Aperture<br/>Size of Opening]
     B <--> C[Equivalent Exposure<br/>Tradeoffs]

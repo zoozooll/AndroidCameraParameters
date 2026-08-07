@@ -1,59 +1,59 @@
 ---
 sidebar_position: 1
-title: "Chapter 1: Welcome to Android Camera2"
-description: Learn why Android Camera2 matters, how it compares to Camera1 and CameraX, what it enables, and what you'll build in this series.
-keywords: [Android Camera2, Camera1 vs Camera2, CameraX, why learn Camera2, Android camera development]
+title: "제1장: 안드로이드 Camera2를 환영합니다"
+description: 안드로이드 Camera2가 왜 중요한지, Camera1 및 CameraX와 어떻게 다른지, 무엇이 가능한지, 그리고 이 시리즈에서 무엇을 만들게 될지 알아보세요.
+keywords: [안드로이드 Camera2, Camera1 대 Camera2, CameraX, Camera2를 배우는 이유, 안드로이드 카메라 개발]
 ---
 
-# Chapter 1: Welcome to Android Camera2
+# 제1장: 안드로이드 Camera2를 환영합니다
 
-> **Chapter Overview:** In this opening chapter, we step back and look at the big picture. Why does Camera2 exist? What problems does it solve compared to the older Camera API and the newer CameraX library? Who should invest time in learning Camera2? And, most importantly, what will you actually build by the end of this series? No deep architecture, no HAL layers, and no pipeline diagrams yet — just clear answers to the questions every developer asks before diving in.
-
-***
-
-## 1.1 Why Camera2?
-
-Take out your smartphone.
-
-Look at the back. You probably see two, three, or even more camera lenses. That little rectangular bump houses more optical and silicon power than a professional DSLR from the mid-2000s.
-
-Now open the default camera app.
-
-Tap the shutter. Instantly, a high-resolution photo is stored in your gallery. The picture likely looks great — vibrant colors, sharp subjects, smooth background blur, and bright shadows even in indoor light.
-
-But the camera app you're using only scratches the surface of what the hardware can do. Hidden beneath that friendly shutter button is an incredibly sophisticated imaging pipeline: one that can shoot RAW photos, record 240 fps slow-motion video, fuse 10 frames for a single night shot, or independently control every micron of lens movement.
-
-Most third-party Android apps never access this power. Why? Because **the old Android camera API (retroactively called Camera1) was extremely limited**. Camera1 was designed for a world of single-camera phones with basic photo and video capture. It couldn't:
-
-- Control exposure time or ISO manually
-- Capture RAW sensor data
-- Record slow-motion at high frame rates
-- Use multiple cameras simultaneously
-- Access per-frame metadata mid-capture
-- Shoot burst photography reliably
-
-Starting in **Android 5.0 (API level 21)**, Google introduced **Camera2 (android.hardware.camera2)** to tear down these walls. Camera2 is not an incremental update — it is a **full redesign**, built from scratch to expose the raw capabilities of modern camera silicon to every Android developer.
-
-In short: **Camera2 exists because smartphone cameras became professional-grade, and the old API couldn't keep up.**
+> **장 개요:** 이 첫 장에서는 한 걸음 물러나 큰 그림을 살펴봅니다. Camera2는 왜 존재할까요? 이전의 Camera API 및 최신 CameraX 라이브러리와 비교하여 어떤 문제를 해결할까요? 누가 Camera2를 배우는 데 시간을 투자해야 할까요? 그리고 가장 중요한 것은, 이 시리즈가 끝날 때쯤 여러분이 실제로 무엇을 만들게 될까요? 아직 깊이 있는 아키텍처나 HAL 레이어, 파이프라인 다이어그램은 다루지 않습니다. 개발자가 시작하기 전에 궁금해하는 질문들에 대한 명확한 답변만 제공합니다.
 
 ***
 
-## 1.2 Camera1 vs Camera2 vs CameraX
+## 1.1 왜 Camera2인가요?
 
-Over a decade of Android camera development has produced **three generations** of camera APIs. Before you write a single line of code, it's essential to understand which API solves which problem.
+스마트폰을 꺼내보세요.
 
-### Three Generations, Three Philosophies
+뒷면을 보세요. 아마 두 개, 세 개, 혹은 그 이상의 카메라 렌즈가 보일 것입니다. 그 작은 직사각형 돌출부에는 2000년대 중반의 전문가용 DSLR보다 더 강력한 광학 및 실리콘 파워가 담겨 있습니다.
+
+이제 기본 카메라 앱을 열어보세요.
+
+셔터를 누릅니다. 즉시 고해상도 사진이 갤러리에 저장됩니다. 실내 조명에서도 선명한 피사체, 매끄러운 배경 흐림, 밝은 그림자 등 사진이 아주 훌륭해 보일 것입니다.
+
+하지만 여러분이 사용하는 카메라 앱은 하드웨어가 할 수 있는 일의 극히 일부분만 활용하고 있을 뿐입니다. 그 친숙한 셔터 버튼 아래에는 믿을 수 없을 정도로 정교한 이미징 파이프라인이 숨겨져 있습니다. RAW 사진을 촬영하거나, 240fps 슬로우 모션 비디오를 녹화하거나, 단 한 번의 야간 촬영을 위해 10개의 프레임을 합성하거나, 렌즈 움직임의 매 미크론을 독립적으로 제어할 수 있는 파이프라인입니다.
+
+대부분의 타사 안드로이드 앱은 이러한 성능에 액세스하지 못합니다. 왜일까요? **이전의 안드로이드 카메라 API(소급하여 Camera1이라고 함)가 매우 제한적이었기 때문입니다.** Camera1은 기본적인 사진 및 비디오 캡처 기능이 있는 단일 카메라 폰 시대를 위해 설계되었습니다. 다음과 같은 작업이 불가능했습니다.
+
+- 노출 시간이나 ISO 수동 제어
+- RAW 센서 데이터 캡처
+- 높은 프레임 속도로 슬로우 모션 녹화
+- 여러 카메라 동시 사용
+- 캡처 도중 프레임별 메타데이터 액세스
+- 안정적인 연속 촬영(Burst)
+
+안드로이드 5.0 (API 레벨 21)부터 구글은 이러한 장벽을 허물기 위해 **Camera2 (android.hardware.camera2)**를 도입했습니다. Camera2는 점진적인 업데이트가 아니라, 현대적인 카메라 실리콘의 원시 기능을 모든 안드로이드 개발자에게 노출하기 위해 처음부터 다시 설계된 **완전한 재설계**입니다.
+
+한마디로: **Camera2는 스마트폰 카메라가 전문가 수준으로 발전했음에도 이전 API가 이를 따라가지 못했기 때문에 존재합니다.**
+
+***
+
+## 1.2 Camera1 대 Camera2 대 CameraX
+
+10년 이상의 안드로이드 카메라 개발 역사를 통해 **세 세대**의 카메라 API가 탄생했습니다. 코드를 한 줄이라도 쓰기 전에 어떤 API가 어떤 문제를 해결하는지 이해하는 것이 필수적입니다.
+
+### 세 세대, 세 가지 철학
 
 ```mermaid
 flowchart LR
-    subgraph YEAR ["Release Timeline"]
+    subgraph YEAR ["출시 타임라인"]
         direction LR
-        C1["Camera1<br/>2008"] --> C2["Camera2<br/>2014"] --> CX["CameraX<br/>2019"]
+        C1["Camera1<br/>2008년"] --> C2["Camera2<br/>2014년"] --> CX["CameraX<br/>2019년"]
     end
     
-    subgraph LEVEL ["Abstraction Level"]
+    subgraph LEVEL ["추상화 레벨"]
         direction TB
-        L1["Low / Deprecated"] --> L2["Low / Powerful"] --> L3["High / Convenient"]
+        L1["낮음 / 지원 중단"] --> L2["낮음 / 강력함"] --> L3["높음 / 편리함"]
     end
     
     YEAR ~~~ LEVEL
@@ -65,136 +65,136 @@ flowchart LR
 
 ### Camera1 — `android.hardware.Camera`
 
-The original camera API, introduced with Android 1.0 and **deprecated in Android 5.0**.
+안드로이드 1.0과 함께 도입되었고 **안드로이드 5.0에서 지원 중단**된 최초의 카메라 API입니다.
 
-- **Model:** Procedural commands. You call methods like `startPreview()`, `takePicture()`, `setFlashMode()`.
-- **Design philosophy:** "The camera is a state machine you command."
-- **Best for:** Legacy apps targeting very old devices (pre-Lollipop). That's it.
-- **Why avoid it:** Google no longer updates it. New hardware features (multi-camera, RAW, HDR) are never back-ported to Camera1. The API surface is tiny. On modern devices, Camera1 is actually **emulated by a Camera2 wrapper** internally, so you pay Camera2 complexity without Camera2 benefits.
+- **모델:** 절차적 명령. `startPreview()`, `takePicture()`, `setFlashMode()`와 같은 메서드를 호출합니다.
+- **설계 철학:** "카메라는 당신이 명령하는 상태 머신이다."
+- **용도:** 아주 오래된 장치(Lollipop 이전)를 대상으로 하는 레거시 앱. 그게 전부입니다.
+- **피해야 하는 이유:** 구글은 더 이상 이를 업데이트하지 않습니다. 새로운 하드웨어 기능(멀티 카메라, RAW, HDR)은 Camera1로 백포트되지 않습니다. API 표면이 매우 작습니다. 최신 장치에서 Camera1은 내부적으로 **Camera2 래퍼에 의해 에뮬레이션**되므로, Camera2의 이점 없이 복잡성만 감수하게 됩니다.
 
 ### Camera2 — `android.hardware.camera2.*`
 
-The modern low-level framework, introduced in Android 5.0 and continuously expanded through every Android version since.
+안드로이드 5.0에서 도입되어 이후 모든 안드로이드 버전을 통해 지속적으로 확장된 현대적인 로우 레벨 프레임워크입니다.
 
-- **Model:** A request/response pipeline. You build immutable `CaptureRequest` objects, submit them to a `CameraCaptureSession`, and receive `CaptureResult` metadata + image buffers asynchronously.
-- **Design philosophy:** "The camera is a programmable pipeline. You control every parameter of every frame."
-- **Best for:** Advanced camera apps, manual photography tools, computer vision pipelines, RAW capture, multi-camera research, high-speed video, and any use case where you need hardware-proximate control.
-- **Why use it:** Full access to every capability the OEM HAL exposes. Direct frame control. The only API path for professional features. Camera2 is what CameraX calls internally.
+- **모델:** 요청/응답 파이프라인. 불변의 `CaptureRequest` 객체를 빌드하여 `CameraCaptureSession`에 제출하고, `CaptureResult` 메타데이터 + 이미지 버퍼를 비동기적으로 받습니다.
+- **설계 철학:** "카메라는 프로그래밍 가능한 파이프라인이다. 당신은 모든 프레임의 모든 파라미터를 제어한다."
+- **용도:** 고급 카메라 앱, 수동 촬영 도구, 컴퓨터 비전 파이프라인, RAW 캡처, 멀티 카메라 연구, 고속 비디오 등 하드웨어에 근접한 제어가 필요한 모든 사례.
+- **사용해야 하는 이유:** OEM HAL이 노출하는 모든 기능에 대한 전체 액세스. 직접적인 프레임 제어. 전문가용 기능을 위한 유일한 API 경로. CameraX가 내부적으로 호출하는 것이 바로 Camera2입니다.
 
 ### CameraX — `androidx.camera.*`
 
-A **Jetpack library** (not a platform API) introduced in beta in 2019 and stabilized around Android 11.
+2019년에 베타로 도입되어 안드로이드 11 즈음에 안정화된 **Jetpack 라이브러리**(플랫폼 API 아님)입니다.
 
-- **Model:** Declarative use cases. You `bindToLifecycle()` a set of `Preview`, `ImageCapture`, `ImageAnalysis`, or `VideoCapture` use cases and the library does the rest.
-- **Design philosophy:** "We've solved the 10,000 edge cases for you. Just tell us what output you need."
-- **Best for:** Most applications that need a camera. QR/barcode scanners, photo uploads, document scanning, simple video recording — any scenario where convenience and reliability beat raw control.
-- **Why use it:** Lifecycle-aware (no resource leaks), resolution selection is automatic, OEM quirks have built-in workarounds, the exact same code runs on thousands of device models with zero `if` statements.
+- **모델:** 선언적 유스케이스. `Preview`, `ImageCapture`, `ImageAnalysis` 또는 `VideoCapture` 유스케이스 세트를 `bindToLifecycle()`하면 나머지는 라이브러리가 처리합니다.
+- **설계 철학:** "우리가 10,000가지의 예외 케이스를 해결해 놓았습니다. 어떤 출력이 필요한지만 알려주세요."
+- **용도:** 카메라가 필요한 대부분의 애플리케이션. QR/바코드 스캐너, 사진 업로드, 문서 스캔, 단순 비디오 녹화 등 편의성과 신뢰성이 원시적인 제어보다 중요한 모든 시나리오.
+- **사용해야 하는 이유:** 수명 주기 인식(리소스 누수 없음), 해상도 선택 자동화, OEM 특이사항에 대한 내장된 해결 방법 제공. 동일한 코드가 `if` 문 없이 수천 개의 기기 모델에서 실행됩니다.
 
-### Side-by-Side Comparison
+### 나란히 비교
 
-| Dimension | Camera1 | Camera2 | CameraX |
+| 비교 항목 | Camera1 | Camera2 | CameraX |
 |:---|:---|:---|:---|
-| **Introduced** | Android 1.0 (2008) | Android 5.0 (2014) | Android 10 (Jetpack) |
-| **Status** | Deprecated | Active, maintained | Recommended (Jetpack) |
-| **Abstraction** | Low (legacy) | Low | High |
-| **Learning curve** | Easy | Very steep | Very gentle |
-| **Manual exposure / ISO / focus** | Limited | Full control | Limited via Interop |
-| **RAW capture** | No | Yes | With Interop workarounds |
-| **Multi-camera (physical streams)** | No | Yes | No |
-| **High-speed video (120+ fps)** | No | Yes | Limited |
-| **Burst / bracketing** | No | Full control | No |
-| **Per-frame metadata** | No | Yes, full + partial results | Exposed via Interop callbacks |
-| **Lifecycle safety** | Manual, error-prone | Manual, error-prone | Automatic, lifecycle-bound |
-| **OEM quirk handling** | None | None | Built-in (1000+ devices tested) |
-| **Code volume for a working app** | Medium | Very high (verbose) | Very low |
-| **Performance** | OK (indirect wrapper) | Maximum possible | Near-maximum (thin overhead) |
+| **도입** | 안드로이드 1.0 (2008) | 안드로이드 5.0 (2014) | 안드로이드 10 (Jetpack) |
+| **상태** | 지원 중단 | 활성, 유지 관리 중 | 권장 (Jetpack) |
+| **추상화** | 낮음 (레거시) | 낮음 | 높음 |
+| **학습 곡선** | 쉬움 | 매우 가파름 | 매우 완만함 |
+| **수동 노출 / ISO / 초점** | 제한적 | 전체 제어 | 상호 운용성을 통해 제한적 |
+| **RAW 캡처** | 아니요 | 예 | 상호 운용성 해결 방법을 통해 가능 |
+| **멀티 카메라 (물리적 스트림)** | 아니요 | 예 | 아니요 |
+| **고속 비디오 (120+ fps)** | 아니요 | 예 | 제한적 |
+| **연속 촬영 / 브래키팅** | 아니요 | 전체 제어 | 아니요 |
+| **프레임별 메타데이터** | 아니요 | 예, 전체 + 부분 결과 | 상호 운용성 콜백을 통해 노출 |
+| **수명 주기 안전성** | 수동, 오류 발생 쉬움 | 수동, 오류 발생 쉬움 | 자동, 수명 주기와 결합 |
+| **OEM 특이사항 처리** | 없음 | 없음 | 기본 내장 (1000개 이상의 기기 테스트) |
+| **작동하는 앱을 위한 코드량** | 중간 | 매우 많음 (장황함) | 매우 적음 |
+| **성능** | 보통 (간접 래퍼) | 최대 가능 | 최대에 가까움 (얇은 오버헤드) |
 
 ***
 
-## 1.3 What Can Camera2 Do?
+## 1.3 Camera2는 무엇을 할 수 있나요?
 
-To concretely understand Camera2's power, imagine features you've seen on flagship phones. Camera2 makes **all of these programmatically accessible**:
+Camera2의 위력을 구체적으로 이해하기 위해 플래그십 폰에서 보았던 기능들을 상상해 보세요. Camera2는 **이 모든 기능을 프로그래밍 방식으로 액세스 가능하게** 만듭니다.
 
-### Professional-Grade Capture
+### 전문가 수준의 캡처
 
-- **Full Manual Exposure:** Dial in shutter speed from 1/8000 s to 30 s, and ISO from 50 to 102,400. Build a real Pro mode UI.
-- **RAW Photography:** Extract 10-bit, 12-bit, 14-bit, or 16-bit **unprocessed Bayer data** directly from the sensor (no demosaic, no noise reduction, no color correction). Write Adobe DNG files using the bundled `DngCreator` for Lightroom editing.
-- **Exposure Bracketing:** Shoot 3, 5, 7, or 9 frames at precisely stepped EV values. Feed them into an HDR fusion algorithm.
-- **Timelapse Locking:** Freeze exposure, focus, and white balance across **thousands of frames** — no flicker as the sun moves or clouds pass.
+- **전체 수동 노출:** 셔터 속도를 1/8000초에서 30초까지, ISO를 50에서 102,400까지 설정하세요. 실제 Pro 모드 UI를 구축할 수 있습니다.
+- **RAW 사진 촬영:** 센서에서 직접 10비트, 12비트, 14비트 또는 16비트의 **처리되지 않은 Bayer 데이터**를 추출하세요 (데모자이킹, 노이즈 감소, 색상 교정 없음). 번들로 제공되는 `DngCreator`를 사용하여 라이트룸 편집용 Adobe DNG 파일을 작성하세요.
+- **노출 브래키팅:** 정밀하게 단계별 EV 값을 적용하여 3, 5, 7 또는 9개의 프레임을 촬영하세요. 이를 HDR 합성 알고리즘에 입력할 수 있습니다.
+- **타임랩스 잠금:** **수천 개의 프레임**에 걸쳐 노출, 초점, 화이트 밸런스를 고정하세요. 태양이 움직이거나 구름이 지나가도 깜빡임이 없습니다.
 
-### Computational Photography Hardware Access
+### 계산 사진학(Computational Photography) 하드웨어 액세스
 
-- **High-Speed Video:** Configure `CameraConstrainedHighSpeedCaptureSession` for 120 fps, 240 fps, or even 960 fps capture. Build slow-motion editors.
-- **Logical Multi-Camera:** Access **both** physical cameras under a logical multi-camera ID **simultaneously**. Grab synchronized YUV frames from a wide and a telephoto lens to compute depth maps on-device.
-- **YUV / PRIVATE Reprocessing (LEVEL_3 devices):** Maintain a full-resolution **circular buffer in the ISP**, then on shutter tap, grab a frame from the past and re-run heavy noise reduction and sharpening. This is how OEMs implement **Zero Shutter Lag (ZSL)**.
-- **Ultra HDR / JPEG_R (Android 14+):** Request and write `ImageFormat.JPEG_R` files that store an 8-bit SDR JPEG **plus** a secondary HDR gain map. Legacy viewers see a normal photo; HDR panels render 1,000+ nit highlights.
-- **Camera Extensions (Android 12+):** Delegate Night, Bokeh (portrait), HDR, and Face Retouch modes **to the OEM HAL** — using the exact same multi-frame AI pipeline the stock camera uses.
+- **고속 비디오:** 120fps, 240fps 또는 960fps 캡처를 위해 `CameraConstrainedHighSpeedCaptureSession`을 구성하세요. 슬로우 모션 편집기를 구축할 수 있습니다.
+- **논리적 멀티 카메라:** 논리적 멀티 카메라 ID 아래에 있는 **두 개의** 물리적 카메라에 **동시에** 액세스하세요. 광각 및 망원 렌즈에서 동기화된 YUV 프레임을 가져와 기기에서 깊이 맵을 계산할 수 있습니다.
+- **YUV / PRIVATE 재처리 (LEVEL_3 기기):** **ISP에 전체 해상도 순환 버퍼**를 유지한 다음, 셔터를 누를 때 과거의 프레임을 가져와 강력한 노이즈 감소 및 샤프닝을 다시 실행하세요. 이것이 OEM이 **제로 셔터 랙 (ZSL)**을 구현하는 방식입니다.
+- **Ultra HDR / JPEG_R (안드로이드 14+):** 8비트 SDR JPEG와 보조 HDR 게인 맵을 저장하는 `ImageFormat.JPEG_R` 파일을 요청하고 작성하세요. 레거시 뷰어에서는 일반 사진으로 보이고, HDR 패널에서는 1,000니트 이상의 하이라이트를 렌더링합니다.
+- **카메라 익스텐션 (안드로이드 12+):** 야간, 보케(인물 사진), HDR, 얼굴 보정 모드를 **OEM HAL에 위임**하세요. 순정 카메라 앱이 사용하는 것과 동일한 멀티 프레임 AI 파이프라인을 사용합니다.
 
-### Advanced Video and Vision Pipelines
+### 고급 비디오 및 비전 파이프라인
 
-- **Multi-Stream Concurrent Output:** Drive a **preview** Surface, a **YUV analysis** Surface (for ML object detection running at 30 fps), and a **JPEG still** Surface from a single capture request — all without copying memory.
-- **Flash Timing Precision:** Explicitly coordinate pre-flash metering, main-flash firing, and rolling-shutter readout on a per-frame basis.
-- **Partial Capture Results:** Receive AE state and focus distance metadata **milliseconds before** the final image buffer is ready — enabling "tap anywhere and the UI updates instantly" responsiveness.
-- **Offline Sessions (API 30+):** If the user backgrounds your app mid-Night-Mode, hand the inflight multi-frame merge to an isolated `CameraOfflineSession` and the HAL finishes processing asynchronously; your app wakes up to the final picture.
+- **멀티 스트림 동시 출력:** 단일 캡처 요청으로 **미리보기** Surface, **YUV 분석** Surface (30fps로 실행되는 ML 객체 감지용), **JPEG 스틸** Surface를 동시에 구동하세요. 메모리 복사 없이 가능합니다.
+- **플래시 타이밍 정밀도:** 프레임별로 예비 플래시 측광, 메인 플래시 발광 및 롤링 셔터 판독을 명시적으로 조정하세요.
+- **부분 캡처 결과:** 최종 이미지 버퍼가 준비되기 **수 밀리초 전**에 AE 상태 및 초점 거리 메타데이터를 받으세요. "어디든 누르면 UI가 즉시 업데이트되는" 응답성을 제공합니다.
+- **오프라인 세션 (API 30+):** 사용자가 야간 모드 도중에 앱을 백그라운드로 보내면, 진행 중인 멀티 프레임 병합을 격리된 `CameraOfflineSession`으로 넘기세요. HAL이 비동기적으로 처리를 완료하고, 앱은 최종 사진과 함께 다시 시작됩니다.
 
-### And That Is Just the Start
+### 그리고 이것은 시작에 불과합니다
 
-Every new Android version expands Camera2. Android 15 (API 35) added `CameraDeviceSetup` so you can probe session configurations **without powering on the sensor at all**, cutting capability-check latency by 10×. The API is alive, evolving, and always one step ahead of the latest camera hardware.
-
-***
-
-## 1.4 Who Should Learn Camera2?
-
-Learning Camera2 properly takes time. The API surface is enormous — 300+ metadata keys, dozens of callbacks, multiple session types, and hundreds of OEM corner cases. You should invest that time if any of these describe you or your project:
-
-### You Are Building an Advanced Camera Application
-
-Your app offers **Pro mode** with manual ISO/shutter/focus/WB dials. Or it captures **RAW photos** and lets users export them for desktop editing. Or it records **slow-motion video**. None of these are possible (or are severely crippled) with CameraX.
-
-### You Are Building a Computer Vision or Research Application
-
-You need **zero-copy, lowest-latency YUV frames** to feed an on-device ML pipeline. Or you require **frame-locked sensor data** (the gyro timestamp in `SENSOR_TIMESTAMP` must match the image within ±1 ms for accurate SLAM / visual-inertial odometry). Or you must control **exact shutter duration per frame** for structured light / depth sensing.
-
-### You Are Building a Camera Capability Diagnostic Tool
-
-Like the companion app to this series — **Android Camera Parameters** ([GitHub](https://github.com/zoozooll/AndroidCameraParameters), [Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)) — you need to exhaustively dump every `CameraCharacteristics` key to visualize what each device supports. CameraX intentionally hides most of this detail.
-
-### You Are Debugging a CameraX or OEM Camera Issue
-
-CameraX does break sometimes on obscure devices. When your CameraX preview is stretched, or a specific Galaxy model returns green frames on night mode, or the Pixel 9 crashes on `VideoCapture`, you **must** drop to Camera2 to reproduce and isolate the bug.
-
-### You Work in Mobile Imaging, OEM Camera Stacks, or Automotive Camera Pipelines
-
-If you touch vendor HAL code, `frameworks/av/camera`, the Camera NDK, or automotive EVS→Camera2 migration — Camera2 fluency is table stakes.
-
-### Who Does **Not** Need to Learn Camera2?
-
-If your requirements are: *"I need to let users take a profile photo or scan a QR code"* — **use CameraX**. Seriously. CameraX is a masterpiece of engineering. It will save you months of work on device compatibility. Camera2 is a power tool; reach for it when you specifically need that power.
+안드로이드의 새 버전이 나올 때마다 Camera2는 확장됩니다. 안드로이드 15 (API 35)에는 `CameraDeviceSetup`이 추가되어 **센서에 전원을 켜지 않고도** 세션 구성을 조사할 수 있게 되었으며, 기능 확인 대기 시간이 10배 단축되었습니다. 이 API는 살아있고 진화하며 항상 최신 카메라 하드웨어보다 한 발 앞서 나갑니다.
 
 ***
 
-## 1.5 What You'll Build Throughout This Book
+## 1.4 누가 Camera2를 배워야 할까요?
 
-Theory without code is abstract. Code without progression is confusing.
+Camera2를 제대로 배우는 데는 시간이 걸립니다. 300개 이상의 메타데이터 키, 수십 개의 콜백, 여러 세션 유형, 수백 개의 OEM 예외 케이스 등 API 표면이 엄청나게 넓습니다. 다음 중 본인이나 본인의 프로젝트에 해당하는 내용이 있다면 그 시간을 투자할 가치가 충분합니다.
 
-Throughout this book you will **progressively build a real, fully functional Camera2 application**. Every chapter adds a feature, and every feature compiles and runs on a real phone. By the final chapter, you will have assembled this complete app:
+### 고급 카메라 애플리케이션을 구축하고 있는 경우
+
+앱에서 수동 ISO/셔터/초점/WB 다이얼이 있는 **Pro 모드**를 제공하거나, **RAW 사진**을 캡처하여 사용자가 데스크톱에서 편집할 수 있도록 내보내거나, **슬로우 모션 비디오**를 녹화하는 경우입니다. 이러한 기능들은 CameraX로는 불가능하거나 심각하게 제약이 따릅니다.
+
+### 컴퓨터 비전 또는 연구용 애플리케이션을 구축하고 있는 경우
+
+기기 내 ML 파이프라인에 공급할 **복사 없는 최저 지연 시간의 YUV 프레임**이 필요하거나, **프레임 고정 센서 데이터**가 필요한 경우입니다 (정확한 SLAM / 시각 관성 오도메트리를 위해 `SENSOR_TIMESTAMP`의 자이로 타임스탬프가 이미지와 ±1ms 이내로 일치해야 함). 또는 구조광 / 깊이 감지를 위해 **프레임당 정확한 셔터 지속 시간**을 제어해야 하는 경우입니다.
+
+### 카메라 기능 진단 도구를 구축하고 있는 경우
+
+이 시리즈의 동반 앱인 **Android Camera Parameters** ([GitHub](https://github.com/zoozooll/AndroidCameraParameters), [Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams))처럼, 각 장치가 무엇을 지원하는지 시각화하기 위해 모든 `CameraCharacteristics` 키를 철저하게 덤프해야 하는 경우입니다. CameraX는 의도적으로 이러한 세부 사항의 대부분을 숨깁니다.
+
+### CameraX 또는 OEM 카메라 문제를 디버깅하고 있는 경우
+
+CameraX도 가끔 생소한 장치에서 오작동할 수 있습니다. CameraX 미리보기가 늘어져 보이거나, 특정 갤럭시 모델에서 야간 모드 시 녹색 프레임이 반환되거나, 픽셀 9에서 `VideoCapture` 시 충돌이 발생하는 경우, 버그를 재현하고 격리하기 위해 **반드시** Camera2로 내려가야 합니다.
+
+### 모바일 이미징, OEM 카메라 스택 또는 자동차 카메라 파이프라인 분야에서 일하는 경우
+
+공급업체 HAL 코드, `frameworks/av/camera`, Camera NDK 또는 자동차용 EVS→Camera2 마이그레이션을 다루는 경우 Camera2 능숙도는 기본 소양입니다.
+
+### Camera2를 배울 필요가 **없는** 사람은 누구인가요?
+
+요구 사항이 *"사용자가 프로필 사진을 찍거나 QR 코드를 스캔할 수 있게 해야 함"* 이라면 **CameraX를 사용하세요**. 진심입니다. CameraX는 엔지니어링의 걸작입니다. 기기 호환성 작업에 소요될 수개월의 시간을 아껴줄 것입니다. Camera2는 강력한 도구이므로, 그 강력함이 구체적으로 필요할 때 선택하세요.
+
+***
+
+## 1.5 이 책을 통해 무엇을 만들게 될까요?
+
+코드 없는 이론은 추상적이고, 진행 단계 없는 코드는 혼란스럽습니다.
+
+이 책을 진행하는 동안 여러분은 **실제로 작동하는 완전한 기능의 Camera2 애플리케이션을 점진적으로 구축**하게 됩니다. 각 장에서 기능을 하나씩 추가하며, 모든 기능은 실제 폰에서 컴파일되고 실행됩니다. 마지막 장에 이르면 다음과 같은 완전한 앱을 조립하게 될 것입니다.
 
 ```mermaid
 flowchart TB
-    subgraph LAYERED ["Full Application Architecture"]
+    subgraph LAYERED ["전체 애플리케이션 아키텍처"]
         direction TB
-        UI["Jetpack Compose UI\nHome / Preview / Settings"] --> VM["ViewModel\n3A State Machine"]
-        VM --> CAM["Camera2 Engine\nSession + Repeating Request"]
-        CAM --> HW["Physical Camera\nSensor + Lens + ISP"]
-        CAM --> OUT["Output Streams\nPreview (TextureView)\nJPEG (ImageReader)\nRAW_SENSOR (ImageReader)\nYUV (ImageAnalysis)"]
+        UI["Jetpack Compose UI<br/>홈 / 미리보기 / 설정"] --> VM["ViewModel<br/>3A 상태 머신"]
+        VM --> CAM["Camera2 엔진<br/>세션 + 반복 요청"]
+        CAM --> HW["물리적 카메라<br/>센서 + 렌즈 + ISP"]
+        CAM --> OUT["출력 스트림<br/>미리보기 (TextureView)<br/>JPEG (ImageReader)<br/>RAW_SENSOR (ImageReader)<br/>YUV (ImageAnalysis)"]
     end
     
-    subgraph FEATURES ["Features Implemented Per Chapter Group"]
+    subgraph FEATURES ["장별로 구현되는 기능 그룹"]
         direction LR
-        P2["Ch 5-9\nCore App:\nPermissions\nCameraManager\nCamera Open\nLive Preview\nPhoto Capture"]
-        P4["Ch 13-17\nManual Modes:\nExposure Dial\nISO Slider\nAF + MF Slider\nWB Presets\nFull 3A Orchestration"]
-        P5["Ch 18-23\nPro Features:\nRAW + DNG\n120/240fps Video\nMulti-Camera Sync\nJPEG_R Ultra HDR\nCamera Extensions\nZero Shutter Lag"]
-        P6["Ch 24-28\nModern Hardening:\nCameraX Interop\nNDK Zero-Copy\nCoroutine + Flow\nCTS / ITS Testing\nFull HAL Arch"]
+        P2["5-9장<br/>핵심 앱:<br/>권한<br/>CameraManager<br/>카메라 열기<br/>라이브 미리보기<br/>사진 캡처"]
+        P4["13-17장<br/>수동 모드:<br/>노출 다이얼<br/>ISO 슬라이더<br/>AF + MF 슬라이더<br/>WB 프리셋<br/>전체 3A 오케스트레이션"]
+        P5["18-23장<br/>프로 기능:<br/>RAW + DNG<br/>120/240fps 비디오<br/>멀티 카메라 동기화<br/>JPEG_R Ultra HDR<br/>카메라 익스텐션<br/>제로 셔터 랙"]
+        P6["24-28장<br/>현대적 강화:<br/>CameraX 상호 운용<br/>NDK 제로 복사<br/>Coroutine + Flow<br/>CTS / ITS 테스트<br/>전체 HAL 아키텍처"]
     end
     
     LAYERED ~~~ FEATURES
@@ -205,30 +205,30 @@ flowchart TB
     style P6 fill:#BBDEFB
 ```
 
-### The Milestones
+### 주요 마일스톤
 
-| Chapter Range | What You Can Do After |
+| 장 범위 | 완료 후 할 수 있는 일 |
 |:---|:---|
-| **Ch 1–4** | You understand the hardware. You know how a lens, a sensor, and an ISP interact. You can read the spec sheet of any phone and tell which Camera2 features it supports. You've installed the Android Camera Parameters companion app and explored your own device. |
-| **Ch 5–9** | You have a **working camera app**. It opens the back camera, shows a live preview on screen, and saves a JPEG photo when you tap the shutter button. Full aspect-ratio correction, correct portrait rotation, and proper lifecycle cleanup all work. |
-| **Ch 10–12** | You understand **why** the code works the way it does. You can trace a CaptureRequest through the pending queue, in-flight queue, HAL, and back out as a CaptureResult. You know how to gate features on the actual hardware level and capabilities reported. |
-| **Ch 13–17** | Your app has a **full Pro Mode**. Manual ISO, shutter, focus distance, and WB color temperature dials. Live histogram / EV readback. Full one-shot-AF → precapture-AE → capture sequence that exactly mimics how OEM stock cameras get perfect results. |
-| **Ch 18–23** | Your app is now **flagship-grade**: saves RAW+JPEG simultaneously, records 120 fps slow-motion video, can capture dual physical YUV streams for portrait depth, writes Ultra HDR JPEG_R files, delegates Bokeh and Night mode to Camera Extensions, and implements Zero-Shutter-Lag reprocessing on LEVEL_3 devices. |
-| **Ch 24–28** | You are a **senior Android Camera engineer**. You can drop-in CameraX via Interop for 90% of apps while using Camera2 for the 10% that need it. You can author NDK native camera pipelines with zero-copy. You wrap all the callbacks in Kotlin Coroutines and Flow for clean, testable code. You understand how to write camera tests that pass CTS ITS. And you can whiteboard the full App→Framework→Binder→Native→HAL→Kernel→Hardware stack on a whiteboard. |
-| **Ch 29 (Encyclopedia)** | You have a **desk reference** of 29 of the most important `CameraCharacteristics` keys, each explained with rationale, a Kotlin query, an Android Camera Parameters pointer, and the OEM pitfalls. This chapter stays open as you ship production code. |
+| **1-4장** | 하드웨어를 이해합니다. 렌즈, 센서, ISP가 어떻게 상호 작용하는지 압니다. 어떤 폰의 사양표를 보고도 어떤 Camera2 기능을 지원하는지 알 수 있습니다. Android Camera Parameters 동반 앱을 설치하고 자신의 기기를 탐색해 보았습니다. |
+| **5-9장** | **작동하는 카메라 앱**을 갖게 됩니다. 후면 카메라를 열고, 화면에 라이브 미리보기를 표시하고, 셔터 버튼을 누르면 JPEG 사진을 저장합니다. 전체 화면 비율 보정, 올바른 세로 회전, 적절한 수명 주기 정리가 모두 작동합니다. |
+| **10-12장** | 코드가 왜 그렇게 작동하는지 이해합니다. 캡처 요청이 대기 큐, 실행 큐, HAL을 거쳐 다시 결과로 나오는 과정을 추적할 수 있습니다. 실제 하드웨어 레벨과 보고된 기능에 따라 기능을 제한하는 방법을 압니다. |
+| **13-17장** | 앱에 **완전한 Pro 모드**가 생깁니다. 수동 ISO, 셔터, 초점 거리, WB 색온도 다이얼을 갖춥니다. 라이브 히스토그램 / EV 판독 기능이 포함됩니다. OEM 순정 카메라가 완벽한 결과를 얻는 방식과 동일한 'AF 트리거 → AE 프리캡처 → 캡처' 시퀀스를 구현합니다. |
+| **18-23장** | 앱이 이제 **플래그십 급**이 됩니다. RAW+JPEG를 동시에 저장하고, 120fps 슬로우 모션 비디오를 녹화하며, 인물 모드 깊이 측정을 위해 듀얼 물리적 YUV 스트림을 캡처할 수 있습니다. Ultra HDR JPEG_R 파일을 작성하고, 보케 및 야간 모드를 카메라 익스텐션에 위임하며, LEVEL_3 기기에서 제로 셔터 랙 재처리를 구현합니다. |
+| **24-28장** | 여러분은 **시니어 안드로이드 카메라 엔지니어**입니다. 앱의 90%에는 상호 운용성을 통해 CameraX를 적용하고, 나머지 10%의 특수 기능에는 Camera2를 사용할 수 있습니다. 제로 복사 기능이 있는 NDK 네이티브 카메라 파이프라인을 작성할 수 있습니다. 깨끗하고 테스트 가능한 코드를 위해 모든 콜백을 Kotlin Coroutines와 Flow로 래핑합니다. CTS ITS를 통과하는 카메라 테스트 작성 방법을 이해합니다. 그리고 '앱 → 프레임워크 → 바인더 → 네이티브 → HAL → 커널 → 하드웨어'로 이어지는 전체 스택을 화이트보드에 그릴 수 있습니다. |
+| **29장 (백과사전)** | 29개의 가장 중요한 `CameraCharacteristics` 키에 대한 **데스크탑 참조서**를 갖게 됩니다. 각 키는 근거, Kotlin 쿼리, Android Camera Parameters 포인터, OEM 함정과 함께 설명됩니다. 이 장은 프로덕션 코드를 출시할 때 항상 열어두게 될 것입니다. |
 
-That is a genuinely rare skill set. Let's start the journey.
+이것은 정말 드문 기술 세트입니다. 여정을 시작해 봅시다.
 
 ***
 
-## 1.6 Summary
+## 1.6 요약
 
-- **Camera2** is the modern low-level Android camera framework, introduced in Android 5.0 to expose the full capability of today's multi-camera, ISP-rich smartphones.
-- **Camera1** is deprecated; **CameraX** is convenient for most use cases but hides power that only Camera2 exposes. You choose based on requirements.
-- Camera2 unlocks **manual controls, RAW photography, high-speed video, logical multi-camera, YUV reprocessing/ZSL, Ultra HDR, OEM Extensions**, and **Offline Sessions**.
-- Invest in Camera2 when you are building Pro-photo tools, vision/research pipelines, diagnostic apps, or debugging deeper layers.
-- Throughout this book you will **incrementally build a full-featured Camera2 application** — from a one-button camera in Chapter 9 to a flagship-grade imaging tool by Chapter 23, hardened by modern Android patterns by Chapter 28.
+- **Camera2**는 현대적인 멀티 카메라와 강력한 ISP를 갖춘 스마트폰의 모든 기능을 노출하기 위해 안드로이드 5.0에서 도입된 최신 로우 레벨 카메라 프레임워크입니다.
+- **Camera1**은 지원이 중단되었습니다. **CameraX**는 대부분의 유스케이스에 편리하지만 Camera2만이 노출하는 강력한 기능을 숨깁니다. 요구 사항에 따라 선택하세요.
+- Camera2는 **수동 제어, RAW 사진, 고속 비디오, 논리적 멀티 카메라, YUV 재처리/ZSL, Ultra HDR, OEM 익스텐션**, 그리고 **오프라인 세션** 기능을 제공합니다.
+- 전문 사진 도구, 비전/연구 파이프라인, 진단 앱을 빌드하거나 더 깊은 레이어를 디버깅할 때 Camera2에 투자하세요.
+- 이 책을 통해 여러분은 **기능이 풍부한 Camera2 애플리케이션을 단계별로 구축**하게 됩니다. 9장의 버튼 하나짜리 카메라에서 시작하여, 23장의 플래그십급 이미징 도구로 발전하고, 28장의 현대적인 안드로이드 패턴으로 강화될 것입니다.
 
-## 1.7 What's Next
+## 1.7 다음 단계
 
-Before writing a single line of Camera2 code, we need to understand the hardware we're commanding. In **Chapter 2: Understanding Smartphone Cameras**, you will learn what each part of a phone camera module actually does: the lens, the image sensor, the ISP, and how raw light becomes a compressed JPEG. By the end, you will see why a "48 MP" label on the box tells you almost nothing about real image quality.
+Camera2 코드를 한 줄이라도 쓰기 전에, 우리가 명령을 내릴 하드웨어를 이해해야 합니다. **제2장: 스마트폰 카메라 이해하기**에서는 렌즈, 이미지 센서, ISP 등 폰 카메라 모듈의 각 부품이 실제로 어떤 역할을 하는지, 그리고 가공되지 않은 빛이 어떻게 압축된 JPEG가 되는지 배우게 됩니다. 마지막에는 상자에 적힌 "48MP"라는 라벨이 실제 이미지 품질에 대해 거의 아무것도 알려주지 않는 이유를 알게 될 것입니다.

@@ -1,52 +1,52 @@
-﻿---
+---
 sidebar_position: 6
-title: "Chapter 6: Discovering Cameras"
-description: Enumerate and query every camera on an Android device using CameraCharacteristics. Learn camera ID semantics, lens facing directions (front/back/external), external USB OTG cameras, and the hardware level hierarchy from LEGACY through LEVEL_3.
-keywords: [CameraCharacteristics, LENS_FACING, camera enumeration, INFO_SUPPORTED_HARDWARE_LEVEL, external USB camera]
+title: "Kapitel 6: Kameras entdecken"
+description: Zählen Sie jede Kamera auf einem Android-Gerät auf und fragen Sie sie mit CameraCharacteristics ab. Lernen Sie die Semantik von Kamera-IDs, die Ausrichtung von Objektiven (Vorderseite/Rückseite/extern), externe USB-OTG-Kameras und die Hierarchie der Hardware-Level von LEGACY bis LEVEL_3 kennen.
+keywords: [CameraCharacteristics, LENS_FACING, Kameraaufzählung, INFO_SUPPORTED_HARDWARE_LEVEL, externe USB-Kamera]
 ---
 
-In Chapter 5, you successfully initialized `CameraManager` and retrieved the list of camera IDs — but a string like `"0"` or `"2"` tells you nothing about what that camera actually **is**. Is it the ultra-wide rear camera? The selfie cam? An external USB webcam attached via OTG? This chapter teaches you how to answer those questions using `CameraCharacteristics`, the metadata container that describes every capability of a camera device.
+In Kapitel 5 haben Sie den `CameraManager` erfolgreich initialisiert und die Liste der Kamera-IDs abgerufen – aber ein String wie `"0"` oder `"2"` sagt Ihnen nichts darüber aus, was diese Kamera eigentlich **ist**. Ist es die Ultraweitwinkel-Rückkamera? Die Selfie-Kamera? Eine externe USB-Webcam, die über OTG angeschlossen ist? Dieses Kapitel lehrt Sie, wie Sie diese Fragen mithilfe von `CameraCharacteristics` beantworten können, dem Metadaten-Container, der jede Fähigkeit eines Kamerageräts beschreibt.
 
-For a production-grade reference implementation of camera enumeration and characteristics inspection, look at the **Android Camera Parameters** app ([GitHub](https://github.com/zoozooll/AndroidCameraParameters), [Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)). It walks every key in `CameraCharacteristics` for every camera on the device and presents the results in a searchable, filterable UI — exactly the tool you'll want when debugging hardware-specific Camera2 issues.
+Für eine produktionsreife Referenzimplementierung der Kameraaufzählung und der Inspektion von Merkmalen schauen Sie sich die App **Android Camera Parameters** an ([GitHub](https://github.com/zoozooll/AndroidCameraParameters), [Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)). Sie durchläuft jeden Schlüssel in `CameraCharacteristics` für jede Kamera auf dem Gerät und präsentiert die Ergebnisse in einer durchsuchbaren, filterbaren Benutzeroberfläche – genau das Werkzeug, das Sie benötigen, wenn Sie hardwarespezifische Camera2-Probleme debuggen.
 
-## Understanding Camera IDs
+## Kamera-IDs verstehen
 
-Before diving into characteristics, we need to address a fundamental source of confusion for new Camera2 developers: **what do the numeric camera ID strings actually mean?**
+Bevor wir in die Merkmale eintauchen, müssen wir eine grundlegende Quelle der Verwirrung für neue Camera2-Entwickler klären: **Was bedeuten die numerischen Kamera-ID-Strings eigentlich?**
 
-When you call `cameraManager.cameraIdList`, you get back an `Array&lt;String&gt;` — for example: `["0", "1", "2", "3", "4"]`. It is **tempting** to hardcode assumptions like:
-- `"0"` = rear wide camera
-- `"1"` = front camera
-- `"2"` = telephoto
+Wenn Sie `cameraManager.cameraIdList` aufrufen, erhalten Sie ein `Array<String>` zurück – zum Beispiel: `["0", "1", "2", "3", "4"]`. Es ist **verlockend**, fest codierte Annahmen zu treffen wie:
+- `"0"` = Rückseitige Weitwinkelkamera
+- `"1"` = Frontkamera
+- `"2"` = Teleobjektiv
 
-**Never do this.** The mapping of ID → physical camera is:
-1. **Device-specific**: A Pixel 8 may use ID `"1"` for the front camera, while a Samsung Galaxy S24 uses ID `"3"`.
-2. **Version-specific**: An OEM OTA update can change the ID list after a device ships.
-3. **Rebuild-specific**: Some multi-camera logical devices (covered in a later Part III chapter) dynamically expose or hide underlying physical cameras based on modes.
+**Tun Sie dies niemals.** Die Zuordnung von ID → physischer Kamera ist:
+1. **Gerätespezifisch**: Ein Pixel 8 kann die ID `"1"` für die Frontkamera verwenden, während ein Samsung Galaxy S24 die ID `"3"` verwendet.
+2. **Versionsspezifisch**: Ein OEM-OTA-Update kann die ID-Liste ändern, nachdem ein Gerät ausgeliefert wurde.
+3. **Rebuild-spezifisch**: Einige logische Multi-Kamera-Geräte (behandelt in einem späteren Kapitel in Teil III) blenden zugrunde liegende physische Kameras je nach Modus dynamisch ein oder aus.
 
-The **only** correct approach is to **query the characteristics of every ID** and select a camera based on the properties you care about (lens facing, hardware level, focal length range, etc.). This is what well-written Camera2 apps do, and it is the pattern we will implement here.
+Der **einzige** korrekte Ansatz besteht darin, die **Merkmale jeder ID abzufragen** und eine Kamera basierend auf den Eigenschaften auszuwählen, die für Sie wichtig sind (Objektivausrichtung, Hardware-Level, Brennweitenbereich usw.). Dies ist das, was gut geschriebene Camera2-Apps tun, und es ist das Muster, das wir hier implementieren werden.
 
-## Camera Enumeration Flow
+## Ablauf der Kameraaufzählung
 
-The overall algorithm for discovering cameras is straightforward on the surface, but has important edge cases around error handling. Let's first see the process as a flowchart, then implement it in code.
+Der allgemeine Algorithmus zum Entdecken von Kameras ist an der Oberfläche einfach, hat aber wichtige Sonderfälle bei der Fehlerbehandlung. Schauen wir uns den Prozess erst als Flussdiagramm an und implementieren ihn dann in Code.
 
 ```mermaid
 flowchart TD
-    A[Start: CameraManager Ready] --> B[Get cameraIdList array]
-    B --> C{Is list empty?}
-    C -->|Yes| D[Error: No cameras found on device]
-    C -->|No| E[Initialize empty camera info list]
-    E --> F[Loop: for each cameraId in list]
+    A["Start: CameraManager bereit"] --> B["Holt cameraIdList-Array"]
+    B --> C{Liste leer?}
+    C -->|Ja| D[Fehler: Keine Kameras auf dem Gerät gefunden]
+    C -->|Nein| E[Initialisiere leere Kamera-Info-Liste]
+    E --> F[Schleife: für jede cameraId in der Liste]
     F --> G[getCameraCharacteristics cameraId]
-    G --> H{Throws CameraAccessException?}
-    H -->|Yes| I[Log error & skip this camera]
-    H -->|No| J[Query LENS_FACING characteristic]
-    J --> K[Query INFO_SUPPORTED_HARDWARE_LEVEL]
-    K --> L[Optionally query additional keys]
-    L --> M[Store camera info in list]
-    M --> N{More cameras in list?}
-    N -->|Yes| F
-    N -->|No| O[Log summary of all discovered cameras]
-    O --> P[Proceed to select a camera to open]
+    G --> H{Wirft CameraAccessException?}
+    H -->|Ja| I[Fehler loggen & diese Kamera überspringen]
+    H -->|Nein| J[LENS_FACING Merkmal abfragen]
+    J --> K[INFO_SUPPORTED_HARDWARE_LEVEL abfragen]
+    K --> L[Optional weitere Schlüssel abfragen]
+    L --> M[Kamera-Info in Liste speichern]
+    M --> N{Weitere Kameras in der Liste?}
+    N -->|Ja| F
+    N -->|Nein| O[Zusammenfassung aller entdeckten Kameras loggen]
+    O --> P[Fortfahren mit der Auswahl einer zu öffnenden Kamera]
 
     style A fill:#e3f2fd
     style C fill:#fff3e0
@@ -62,112 +62,112 @@ flowchart TD
     style P fill:#00c853,color:#fff
 ```
 
-Key observations from the flowchart:
-1. **Always handle empty ID lists**: Rare on phones, but common on Android TV, headless devices, or emulators without a virtual camera.
-2. **Always wrap `getCameraCharacteristics` in try/catch**: A camera could be disconnected mid-enumeration (especially an external USB camera), or a locked-down device policy could restrict certain cameras.
-3. **Iterate fully, then choose**: Collect all candidates first, then select the best one based on your criteria. Don't open the first "good" camera you find — you might miss a better one.
+Wichtige Beobachtungen aus dem Flussdiagramm:
+1. **Behandeln Sie immer leere ID-Listen**: Selten bei Telefonen, aber häufig bei Android TV, Headless-Geräten oder Emulatoren ohne virtuelle Kamera.
+2. **Umschließen Sie `getCameraCharacteristics` immer mit try/catch**: Eine Kamera könnte mitten in der Aufzählung getrennt werden (besonders eine externe USB-Kamera), oder eine restriktive Geräte-Richtlinie könnte bestimmte Kameras einschränken.
+3. **Vollständig iterieren, dann wählen**: Sammeln Sie erst alle Kandidaten und wählen Sie dann den besten basierend auf Ihren Kriterien aus. Öffnen Sie nicht die erstbeste "gute" Kamera, die Sie finden – Sie könnten eine bessere übersehen.
 
-## Introducing CameraCharacteristics
+## Einführung in CameraCharacteristics
 
-`CameraCharacteristics` is an immutable, read-only key-value map that describes the hardware-level capabilities of a camera. It contains several hundred keys covering everything from lens focal length to sensor pixel array size to supported output formats.
+`CameraCharacteristics` ist ein unveränderlicher Nur-Lese-Key-Value-Map, der die hardwareseitigen Fähigkeiten eines Kamerageräts beschreibt. Er enthält mehrere hundert Schlüssel, die alles abdecken, von der Brennweite des Objektivs über die Pixel-Array-Größe des Sensors bis hin zu unterstützten Ausgabeformaten.
 
-You retrieve a characteristics object with:
+Sie rufen ein Characteristics-Objekt wie folgt ab:
 ```kotlin
 val characteristics: CameraCharacteristics =
     cameraManager.getCameraCharacteristics(cameraId)
 ```
 
-And you query individual keys with the generic `get` method:
+Und Sie fragen einzelne Schlüssel mit der generischen `get`-Methode ab:
 ```kotlin
 val lensFacing: Int? = characteristics.get(CameraCharacteristics.LENS_FACING)
 ```
 
-The return type is nullable (`Int?` in this case) because some keys are optional and may not be present on all devices. In practice, the keys we query in this chapter (`LENS_FACING` and `INFO_SUPPORTED_HARDWARE_LEVEL`) are guaranteed to be present for every valid camera, but it is still good practice to handle nulls defensively.
+Der Rückgabetyp ist nullfähig (`Int?` in diesem Fall), da einige Schlüssel optional sind und möglicherweise nicht auf allen Geräten vorhanden sind. In der Praxis sind die Schlüssel, die wir in diesem Kapitel abfragen (`LENS_FACING` und `INFO_SUPPORTED_HARDWARE_LEVEL`), garantiert für jede gültige Kamera vorhanden, aber es ist dennoch gute Praxis, Null-Werte defensiv zu behandeln.
 
 :::note
-This chapter intentionally covers only `LENS_FACING` and `INFO_SUPPORTED_HARDWARE_LEVEL`. The deeper internals of `CameraCharacteristics` (sensor characteristics, output configurations, available capabilities) are the subject of Part III, Chapter 10: The CameraCharacteristics Encyclopedia. We're staying focused on the minimum information you need to pick a camera to open.
+Dieses Kapitel deckt absichtlich nur `LENS_FACING` und `INFO_SUPPORTED_HARDWARE_LEVEL` ab. Die tieferen Interna von `CameraCharacteristics` (Sensormerkmale, Ausgabekonfigurationen, verfügbare Fähigkeiten) sind Thema von Teil III, Kapitel 10: Die Enzyklopädie der CameraCharacteristics. Wir konzentrieren uns auf die minimalen Informationen, die Sie benötigen, um eine Kamera zum Öffnen auszuwählen.
 :::
 
-## Key 1: LENS_FACING — Front, Back, or External
+## Schlüssel 1: LENS_FACING — Vorderseite, Rückseite oder Extern
 
-The first thing almost every camera app needs to know is which direction the lens points. Camera2 defines three constants:
+Das Erste, was fast jede Kamera-App wissen muss, ist, in welche Richtung das Objektiv zeigt. Camera2 definiert drei Konstanten:
 
-| Constant | Value | Meaning | Typical Use Case |
+| Konstante | Wert | Bedeutung | Typischer Anwendungsfall |
 |---|---|---|---|
-| `LENS_FACING_BACK` | `0` | Camera is on the back of the device, facing away from the user | Photo capture, landscape video, AR |
-| `LENS_FACING_FRONT` | `1` | Camera is on the front of the device, facing toward the user | Selfies, video calls |
-| `LENS_FACING_EXTERNAL` | `2` | Camera is external to the device (e.g., USB OTG webcam) | External accessories, specialty cameras |
+| `LENS_FACING_BACK` | `0` | Kamera befindet sich auf der Rückseite des Geräts, vom Benutzer abgewandt | Fotoaufnahme, Landschaftsvideo, AR |
+| `LENS_FACING_FRONT` | `1` | Kamera befindet sich auf der Vorderseite des Geräts, dem Benutzer zugewandt | Selfies, Videoanrufe |
+| `LENS_FACING_EXTERNAL` | `2` | Kamera ist extern am Gerät (z. B. USB-OTG-Webcam) | Externes Zubehör, Spezialkameras |
 
-Here's how you convert the raw integer to a human-readable string:
+So konvertieren Sie den rohen Integer in einen menschenlesbaren String:
 
 ```kotlin
 fun lensFacingToString(facing: Int?): String = when (facing) {
-    CameraCharacteristics.LENS_FACING_BACK -> "Back (LENS_FACING_BACK)"
-    CameraCharacteristics.LENS_FACING_FRONT -> "Front (LENS_FACING_FRONT)"
-    CameraCharacteristics.LENS_FACING_EXTERNAL -> "External / USB OTG (LENS_FACING_EXTERNAL)"
-    null -> "Unknown (null)"
-    else -> "Unknown (value=$facing)"
+    CameraCharacteristics.LENS_FACING_BACK -> "Rückseite (LENS_FACING_BACK)"
+    CameraCharacteristics.LENS_FACING_FRONT -> "Vorderseite (LENS_FACING_FRONT)"
+    CameraCharacteristics.LENS_FACING_EXTERNAL -> "Extern / USB OTG (LENS_FACING_EXTERNAL)"
+    null -> "Unbekannt (null)"
+    else -> "Unbekannt (Wert=$facing)"
 }
 ```
 
-### Special Case: External Cameras (USB OTG)
+### Sonderfall: Externe Kameras (USB OTG)
 
-`LENS_FACING_EXTERNAL` was added in API 23 (Marshmallow). Before opening an external camera, consider:
+`LENS_FACING_EXTERNAL` wurde in API 23 (Marshmallow) hinzugefügt. Bevor Sie eine externe Kamera öffnen, beachten Sie:
 
-1. **USB Host Feature Declaration**: If your app specifically targets external cameras, add `<uses-feature android:name="android.hardware.usb.host" />` to your manifest. Set `required="false"` if the app also works with built-in cameras.
-2. **Permission for External Devices**: On many devices, accessing a USB camera requires the `CAMERA` permission alone. However, some USB webcam chipsets require additional USB host permission confirmation via `UsbManager.requestPermission()`. Handle the `UsbManager.ACTION_USB_DEVICE_ATTACHED` broadcast if you want to auto-detect when a camera is plugged in.
-3. **Hardware Level**: External cameras almost always report `INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL` (see below), which means their feature set is limited by the USB Video Class (UVC) driver. Don't expect manual controls or RAW output from a generic webcam.
+1. **Deklaration des USB-Host-Features**: Wenn Ihre App speziell auf externe Kameras abzielt, fügen Sie `<uses-feature android:name="android.hardware.usb.host" />` zu Ihrem Manifest hinzu. Setzen Sie `required="false"`, wenn die App auch mit integrierten Kameras funktioniert.
+2. **Berechtigung für externe Geräte**: Auf vielen Geräten reicht die Berechtigung `CAMERA` allein aus, um auf eine USB-Kamera zuzugreifen. Einige USB-Webcam-Chipsätze erfordern jedoch eine zusätzliche Bestätigung der USB-Host-Berechtigung über `UsbManager.requestPermission()`. Verarbeiten Sie den Broadcast `UsbManager.ACTION_USB_DEVICE_ATTACHED`, wenn Sie automatisch erkennen möchten, wann eine Kamera angeschlossen wird.
+3. **Hardware-Level**: Externe Kameras melden fast immer `INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL` (siehe unten), was bedeutet, dass ihr Funktionsumfang durch den USB Video Class (UVC)-Treiber eingeschränkt ist. Erwarten Sie keine manuelle Steuerung oder RAW-Ausgabe von einer generischen Webcam.
 
-On a phone with a USB webcam attached, `cameraIdList` might return something like `["0", "1", "100"]` where `"100"` is the dynamically-assigned external camera ID. External camera IDs are typically higher numbers and are **not** stable across reboots or re-plugs.
+Auf einem Telefon mit angeschlossener USB-Webcam könnte `cameraIdList` etwas wie `["0", "1", "100"]` zurückgeben, wobei `"100"` die dynamisch zugewiesene ID der externen Kamera ist. IDs externer Kameras sind typischerweise höhere Nummern und sind **nicht** über Neustarts oder erneutes Einstecken hinweg stabil.
 
-## Key 2: INFO_SUPPORTED_HARDWARE_LEVEL — What Can This Camera Do?
+## Schlüssel 2: INFO_SUPPORTED_HARDWARE_LEVEL — Was kann diese Kamera?
 
-The hardware level is the single most important capability classification in Camera2. It tells you whether the camera hardware and HAL (Hardware Abstraction Layer) implement the full Camera2 pipeline or are using a legacy compatibility wrapper around the old Camera API. There are five values:
+Das Hardware-Level ist die wichtigste Fähigkeitsklassifizierung in Camera2. Es sagt Ihnen, ob die Kamerahardware und der HAL (Hardware Abstraction Layer) die vollständige Camera2-Pipeline implementieren oder einen Legacy-Kompatibilitäts-Shim um die alte Kamera-API verwenden. Es gibt fünf Werte:
 
-| Level | Value | Meaning | Real-World Devices |
+| Level | Wert | Bedeutung | Reale Geräte |
 |---|---|---|---|
-| `LEGACY` | `2` | Legacy HAL mode. The camera runs on top of the old Camera API via a shim. Very limited functionality, no manual controls, no RAW. | Budget phones, pre-2015 devices, many emulators |
-| `LIMITED` | `0` | Limited HAL3 support. Basic capture, basic 3A (Auto-Exposure, Auto-Focus, Auto-White-Balance), but missing advanced features. | Mid-range phones, some front cameras on flagship devices |
-| `FULL` | `1` | Full HAL3 support. Manual sensor controls, per-frame settings, RAW output, reprocessing. | Flagship phone main/rear cameras, Pixel series main cameras |
-| `LEVEL_3` | `3` | Extended HAL3 support. Adds YUV reprocessing, multi-frame input, high-speed resolution configurations. | Latest flagships, Pixel 6+ main cameras |
-| `EXTERNAL` | `4` | External camera (USB/OTG). Limited features, UVC-class device. | USB webcams, HDMI capture sticks |
+| `LEGACY` | `2` | Legacy-HAL-Modus. Die Kamera läuft über einen Shim auf der alten Kamera-API. Sehr eingeschränkte Funktionalität, keine manuelle Steuerung, kein RAW. | Budget-Handys, Geräte vor 2015, viele Emulatoren |
+| `LIMITED` | `0` | Eingeschränkte HAL3-Unterstützung. Grundlegende Aufnahme, grundlegendes 3A (Auto-Belichtung, Autofokus, Auto-Weißabgleich), aber es fehlen fortgeschrittene Funktionen. | Mittelklasse-Handys, einige Frontkameras auf Flaggschiff-Geräten |
+| `FULL` | `1` | Volle HAL3-Unterstützung. Manuelle Sensorsteuerung, Einstellungen pro Frame, RAW-Ausgabe, Reprocessing. | Haupt-/Rückkameras von Flaggschiff-Handys, Hauptkameras der Pixel-Serie |
+| `LEVEL_3` | `3` | Erweiterte HAL3-Unterstützung. Fügt YUV-Reprocessing, Multi-Frame-Eingabe und High-Speed-Auflösungskonfigurationen hinzu. | Neueste Flaggschiffe, Hauptkameras ab Pixel 6 |
+| `EXTERNAL` | `4` | Externe Kamera (USB/OTG). Eingeschränkte Funktionen, Gerät der UVC-Klasse. | USB-Webcams, HDMI-Capture-Sticks |
 
-A good way to think about this hierarchy is as a capability ladder:
+Man kann sich diese Hierarchie gut als eine Leiter der Fähigkeiten vorstellen:
 
 ```
 LEGACY → LIMITED → FULL → LEVEL_3
           ↑
-       EXTERNAL (parallel branch for USB cams)
+       EXTERNAL (paralleler Zweig für USB-Cams)
 ```
 
-Each step builds on the previous one: `FULL` includes everything in `LIMITED`, `LEVEL_3` includes everything in `FULL`. When writing feature detection code, check from the highest level downward — if a camera is `LEVEL_3`, you automatically know it supports `FULL` features too.
+Jede Stufe baut auf der vorherigen auf: `FULL` enthält alles aus `LIMITED`, `LEVEL_3` enthält alles aus `FULL`. Wenn Sie Code zur Funktionserkennung schreiben, prüfen Sie von der höchsten Stufe abwärts – wenn eine Kamera `LEVEL_3` ist, wissen Sie automatisch, dass sie auch `FULL`-Funktionen unterstützt.
 
-Here's the helper function to convert the level to a description:
+Hier ist die Hilfsfunktion, um das Level in eine Beschreibung zu konvertieren:
 
 ```kotlin
 fun hardwareLevelToString(level: Int?): String = when (level) {
     CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY ->
-        "LEGACY (old Camera API shim — limited manual controls)"
+        "LEGACY (Shim der alten Kamera-API — eingeschränkte manuelle Steuerung)"
     CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED ->
-        "LIMITED (basic HAL3 — standard photo/video)"
+        "LIMITED (Basis-HAL3 — Standard Foto/Video)"
     CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_FULL ->
-        "FULL (full HAL3 — manual controls + RAW)"
+        "FULL (volles HAL3 — manuelle Steuerung + RAW)"
     CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_3 ->
-        "LEVEL_3 (extended HAL3 — reprocessing + multi-frame)"
+        "LEVEL_3 (erweitertes HAL3 — Reprocessing + Multi-Frame)"
     CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL ->
-        "EXTERNAL (USB/OTG camera — UVC class)"
-    null -> "Unknown (null)"
-    else -> "Unknown (value=$level)"
+        "EXTERNAL (USB/OTG-Kamera — UVC-Klasse)"
+    null -> "Unbekannt (null)"
+    else -> "Unbekannt (Wert=$level)"
 }
 ```
 
 :::tip
-If you want to write code that only runs on capable hardware, use `>= LIMITED` for basic capture, `>= FULL` for manual controls, and `>= LEVEL_3` for reprocessing pipelines. Never assume a camera is FULL or better — always check. The Android Camera Parameters app on [Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams) shows the hardware level as a prominent badge for every camera so you can quickly see what each device supports.
+Wenn Sie Code schreiben möchten, der nur auf leistungsfähiger Hardware läuft, verwenden Sie `>= LIMITED` für einfache Aufnahmen, `>= FULL` für manuelle Steuerung und `>= LEVEL_3` für Reprocessing-Pipelines. Nehmen Sie niemals an, dass eine Kamera FULL oder besser ist – prüfen Sie dies immer. Die App Android Camera Parameters im [Google Play Store](https://play.google.com/store/apps/details?id=com.minininja.cameraparams) zeigt das Hardware-Level als prominentes Badge für jede Kamera an, sodass Sie schnell sehen können, was jedes Gerät unterstützt.
 :::
 
-## Complete Kotlin Code: Camera Discovery Utility
+## Vollständiger Kotlin-Code: Dienstprogramm zur Kameraentdeckung
 
-Now let's combine everything into a working implementation. We'll extend the `MainActivity.kt` from Chapter 5 with a `discoverAndLogCameras()` method that iterates all cameras, queries each one's `LENS_FACING` and `INFO_SUPPORTED_HARDWARE_LEVEL`, and logs the results to Logcat.
+Kombinieren wir nun alles zu einer funktionierenden Implementierung. Wir erweitern die `MainActivity.kt` aus Kapitel 5 um eine Methode `discoverAndLogCameras()`, die alle Kameras durchläuft, `LENS_FACING` und `INFO_SUPPORTED_HARDWARE_LEVEL` abfragt und die Ergebnisse in Logcat ausgibt.
 
 ```kotlin
 package com.example.camera2tutorial
@@ -229,7 +229,7 @@ class MainActivity : AppCompatActivity() {
         try {
             backgroundThread.join(1000)
         } catch (e: InterruptedException) {
-            Log.e(TAG, "Interrupted while joining background thread", e)
+            Log.e(TAG, "Unterbrochen beim Beenden des Hintergrund-Threads", e)
         }
     }
 
@@ -239,7 +239,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     // -------------------------------------------------------------------------
-    // 📸 CHAPTER 6 ADDITIONS: Camera Discovery & Characteristics Query
+    // 📸 ERGÄNZUNGEN KAPITEL 6: Kameraentdeckung & Abfrage der Merkmale
     // -------------------------------------------------------------------------
     data class CameraInfo(
         val id: String,
@@ -247,9 +247,9 @@ class MainActivity : AppCompatActivity() {
         val hardwareLevel: Int?
     ) {
         fun description(): String = buildString {
-            append("Camera ID: $id | ")
-            append("Facing: ${lensFacingToString(lensFacing)} | ")
-            append("HW Level: ${hardwareLevelToString(hardwareLevel)}")
+            append("Kamera-ID: $id | ")
+            append("Ausrichtung: ${lensFacingToString(lensFacing)} | ")
+            append("HW-Level: ${hardwareLevelToString(hardwareLevel)}")
         }
     }
 
@@ -257,20 +257,20 @@ class MainActivity : AppCompatActivity() {
         val cameraIdList: Array<String> = try {
             cameraManager.cameraIdList
         } catch (e: CameraAccessException) {
-            Log.e(TAG, "Failed to get camera ID list", e)
-            Toast.makeText(this, "Camera service unavailable", Toast.LENGTH_LONG).show()
+            Log.e(TAG, "Fehler beim Abrufen der Kamera-ID-Liste", e)
+            Toast.makeText(this, "Kameradienst nicht verfügbar", Toast.LENGTH_LONG).show()
             return
         }
 
         if (cameraIdList.isEmpty()) {
-            Log.w(TAG, "No cameras found on this device")
-            Toast.makeText(this, "No cameras available", Toast.LENGTH_LONG).show()
+            Log.w(TAG, "Keine Kameras auf diesem Gerät gefunden")
+            Toast.makeText(this, "Keine Kameras verfügbar", Toast.LENGTH_LONG).show()
             return
         }
 
         val discoveredCameras = mutableListOf<CameraInfo>()
         Log.i(TAG, "═══════════════════════════════════════════")
-        Log.i(TAG, "Starting camera discovery (${cameraIdList.size} camera(s))")
+        Log.i(TAG, "Starte Kameraentdeckung (${cameraIdList.size} Kamera(s))")
         Log.i(TAG, "═══════════════════════════════════════════")
 
         for ((index, cameraId) in cameraIdList.withIndex()) {
@@ -284,56 +284,56 @@ class MainActivity : AppCompatActivity() {
                 val info = CameraInfo(cameraId, lensFacing, hardwareLevel)
                 discoveredCameras.add(info)
 
-                Log.i(TAG, "── Camera $index ──")
+                Log.i(TAG, "── Kamera $index ──")
                 Log.i(TAG, info.description())
 
             } catch (e: CameraAccessException) {
-                Log.e(TAG, "Failed to access characteristics for camera $cameraId", e)
+                Log.e(TAG, "Fehler beim Zugriff auf Merkmale für Kamera $cameraId", e)
             } catch (e: IllegalArgumentException) {
-                Log.e(TAG, "Invalid camera ID: $cameraId", e)
+                Log.e(TAG, "Ungültige Kamera-ID: $cameraId", e)
             }
         }
 
         Log.i(TAG, "═══════════════════════════════════════════")
-        Log.i(TAG, "Discovery complete. ${discoveredCameras.size} camera(s) successfully enumerated.")
+        Log.i(TAG, "Entdeckung abgeschlossen. ${discoveredCameras.size} Kamera(s) erfolgreich aufgezählt.")
 
-        // Group and summarize by facing
+        // Nach Ausrichtung gruppieren und zusammenfassen
         val byFacing = discoveredCameras.groupBy { it.lensFacing }
-        Log.i(TAG, "  Back-facing:    ${byFacing[CameraCharacteristics.LENS_FACING_BACK]?.size ?: 0}")
-        Log.i(TAG, "  Front-facing:   ${byFacing[CameraCharacteristics.LENS_FACING_FRONT]?.size ?: 0}")
-        Log.i(TAG, "  External/OTG:   ${byFacing[CameraCharacteristics.LENS_FACING_EXTERNAL]?.size ?: 0}")
+        Log.i(TAG, "  Rückseite:      ${byFacing[CameraCharacteristics.LENS_FACING_BACK]?.size ?: 0}")
+        Log.i(TAG, "  Vorderseite:    ${byFacing[CameraCharacteristics.LENS_FACING_FRONT]?.size ?: 0}")
+        Log.i(TAG, "  Extern/USB:     ${byFacing[CameraCharacteristics.LENS_FACING_EXTERNAL]?.size ?: 0}")
 
-        // Group and summarize by hardware level
+        // Nach Hardware-Level gruppieren und zusammenfassen
         val byLevel = discoveredCameras.groupBy { it.hardwareLevel }
-        Log.i(TAG, "  LEGACY cameras:  ${byLevel[CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY]?.size ?: 0}")
-        Log.i(TAG, "  LIMITED cameras: ${byLevel[CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED]?.size ?: 0}")
-        Log.i(TAG, "  FULL cameras:    ${byLevel[CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_FULL]?.size ?: 0}")
-        Log.i(TAG, "  LEVEL_3 cameras: ${byLevel[CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_3]?.size ?: 0}")
-        Log.i(TAG, "  EXTERNAL cams:   ${byLevel[CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL]?.size ?: 0}")
+        Log.i(TAG, "  LEGACY-Kameras:  ${byLevel[CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY]?.size ?: 0}")
+        Log.i(TAG, "  LIMITED-Kameras: ${byLevel[CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED]?.size ?: 0}")
+        Log.i(TAG, "  FULL-Kameras:    ${byLevel[CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_FULL]?.size ?: 0}")
+        Log.i(TAG, "  LEVEL_3-Kameras: ${byLevel[CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_3]?.size ?: 0}")
+        Log.i(TAG, "  EXTERNAL-Cams:   ${byLevel[CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL]?.size ?: 0}")
         Log.i(TAG, "═══════════════════════════════════════════")
 
         val summary = buildString {
-            append("Discovered ${discoveredCameras.size} camera(s)!\n")
-            append("Back: ${byFacing[CameraCharacteristics.LENS_FACING_BACK]?.size ?: 0} • ")
-            append("Front: ${byFacing[CameraCharacteristics.LENS_FACING_FRONT]?.size ?: 0} • ")
-            append("External: ${byFacing[CameraCharacteristics.LENS_FACING_EXTERNAL]?.size ?: 0}")
+            append("${discoveredCameras.size} Kamera(s) entdeckt!\n")
+            append("Hinten: ${byFacing[CameraCharacteristics.LENS_FACING_BACK]?.size ?: 0} • ")
+            append("Vorne: ${byFacing[CameraCharacteristics.LENS_FACING_FRONT]?.size ?: 0} • ")
+            append("Extern: ${byFacing[CameraCharacteristics.LENS_FACING_EXTERNAL]?.size ?: 0}")
         }
 
         Toast.makeText(this, summary, Toast.LENGTH_LONG).show()
 
-        // Store for later chapters (selecting camera to open)
+        // Für spätere Kapitel speichern (Auswahl einer Kamera zum Öffnen)
         this.discoveredCameras = discoveredCameras
     }
 
     private var discoveredCameras: List<CameraInfo> = emptyList()
 
-    // Helper: get the "default" back camera ID (first back-facing we find)
+    // Helfer: Standard-ID der Rückkamera abrufen (erste rückseitige Kamera, die wir finden)
     fun getDefaultBackCameraId(): String? =
         discoveredCameras.firstOrNull {
             it.lensFacing == CameraCharacteristics.LENS_FACING_BACK
         }?.id
 
-    // Helper: get the "default" front camera ID
+    // Helfer: Standard-ID der Frontkamera abrufen
     fun getDefaultFrontCameraId(): String? =
         discoveredCameras.firstOrNull {
             it.lensFacing == CameraCharacteristics.LENS_FACING_FRONT
@@ -345,11 +345,11 @@ class MainActivity : AppCompatActivity() {
         private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
 
         fun lensFacingToString(facing: Int?): String = when (facing) {
-            CameraCharacteristics.LENS_FACING_BACK -> "Back"
-            CameraCharacteristics.LENS_FACING_FRONT -> "Front"
-            CameraCharacteristics.LENS_FACING_EXTERNAL -> "External/USB"
-            null -> "Unknown(null)"
-            else -> "Unknown($facing)"
+            CameraCharacteristics.LENS_FACING_BACK -> "Rückseite"
+            CameraCharacteristics.LENS_FACING_FRONT -> "Vorderseite"
+            CameraCharacteristics.LENS_FACING_EXTERNAL -> "Extern/USB"
+            null -> "Unbekannt(null)"
+            else -> "Unbekannt($facing)"
         }
 
         fun hardwareLevelToString(level: Int?): String = when (level) {
@@ -358,8 +358,8 @@ class MainActivity : AppCompatActivity() {
             CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_FULL -> "FULL"
             CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_3 -> "LEVEL_3"
             CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL -> "EXTERNAL"
-            null -> "Unknown(null)"
-            else -> "Unknown($level)"
+            null -> "Unbekannt(null)"
+            else -> "Unbekannt($level)"
         }
     }
 
@@ -379,7 +379,7 @@ class MainActivity : AppCompatActivity() {
             } else {
                 Toast.makeText(
                     this,
-                    "Camera permission is required to use this app.",
+                    "Die Kameraberechtigung ist erforderlich, um diese App zu nutzen.",
                     Toast.LENGTH_LONG
                 ).show()
                 finish()
@@ -387,95 +387,3 @@ class MainActivity : AppCompatActivity() {
         }
     }
 }
-```
-
-### Key Patterns in the Code
-
-1. **`data class CameraInfo`**: Instead of passing around raw tuples, we encapsulate the properties we care about in a typed data class. This makes the code readable and trivially extensible (just add a new field like `focalLengths` later without changing the call sites).
-
-2. **`CameraAccessException` try/catch inside the loop**: If one camera fails (for example, an external camera is unplugged mid-enumeration), the loop continues and the remaining cameras are still discovered. Failure of one camera must not poison the entire enumeration.
-
-3. **Dual `groupBy` summaries**: Grouping cameras by both facing and hardware level, then counting each group, gives you an immediate at-a-glance picture of the device's camera topology. This pattern is lifted directly from the Android Camera Parameters app's overview screen ([GitHub](https://github.com/zoozooll/AndroidCameraParameters)).
-
-4. **`getDefaultBackCameraId()` and `getDefaultFrontCameraId()`**: These helper functions demonstrate the correct way to select a camera — by querying characteristics, not by hardcoding ID `"0"` or `"1"`. We will use these helpers in Chapter 7 when we actually open a camera.
-
-## Expected Logcat Output
-
-When you run this on a real device (e.g., a modern flagship with 4+ cameras), the Logcat output filtered by `Camera2Tutorial` should look something like this:
-
-```
-I/Camera2Tutorial: ═══════════════════════════════════════════
-I/Camera2Tutorial: Starting camera discovery (5 camera(s))
-I/Camera2Tutorial: ═══════════════════════════════════════════
-I/Camera2Tutorial: ── Camera 0 ──
-I/Camera2Tutorial: Camera ID: 0 | Facing: Back | HW Level: LEVEL_3
-I/Camera2Tutorial: ── Camera 1 ──
-I/Camera2Tutorial: Camera ID: 1 | Facing: Front | HW Level: FULL
-I/Camera2Tutorial: ── Camera 2 ──
-I/Camera2Tutorial: Camera ID: 2 | Facing: Back | HW Level: LIMITED
-I/Camera2Tutorial: ── Camera 3 ──
-I/Camera2Tutorial: Camera ID: 3 | Facing: Back | HW Level: LIMITED
-I/Camera2Tutorial: ── Camera 4 ──
-I/Camera2Tutorial: Camera ID: 4 | Facing: Back | HW Level: LIMITED
-I/Camera2Tutorial: ═══════════════════════════════════════════
-I/Camera2Tutorial: Discovery complete. 5 camera(s) successfully enumerated.
-I/Camera2Tutorial:   Back-facing:    4
-I/Camera2Tutorial:   Front-facing:   1
-I/Camera2Tutorial:   External/OTG:   0
-I/Camera2Tutorial:   LEGACY cameras:  0
-I/Camera2Tutorial:   LIMITED cameras: 3
-I/Camera2Tutorial:   FULL cameras:    1
-I/Camera2Tutorial:   LEVEL_3 cameras: 1
-I/Camera2Tutorial:   EXTERNAL cams:   0
-I/Camera2Tutorial: ═══════════════════════════════════════════
-```
-
-In this example output, we have:
-- **Camera 0** (LEVEL_3, Back): The main wide-angle rear camera, the highest-quality shooter.
-- **Camera 1** (FULL, Front): The front selfie camera, FULL-level so manual controls are available.
-- **Cameras 2, 3, 4** (LIMITED, Back): Ultra-wide, telephoto, and possibly a depth or macro sensor — all LIMITED-level, meaning they support basic capture but not full manual control (this is extremely common on auxiliary rear cameras even on flagships).
-
-## Troubleshooting Camera Discovery Issues
-
-### `cameraIdList` returns an empty array on an emulator
-
-Most Android emulators ship with a simulated rear and front camera, but they must be enabled in the AVD (Android Virtual Device) settings. Open the AVD Manager, edit your virtual device, go to **Advanced Settings**, and set **Back camera** and **Front camera** to either `Emulated` (uses the host's webcam) or `VirtualScene` (renders a fake 3D scene). Then cold-boot the emulator.
-
-### All cameras report LEGACY on a phone that should have FULL support
-
-This happens in two scenarios:
-1. **You're on a custom ROM or rooted device with an old camera HAL**: The OEM didn't implement HAL3, so the compatibility shim is used even though the sensor hardware is capable.
-2. **You're using a work profile or managed device**: Some MDM (Mobile Device Management) policies restrict camera capabilities, and the camera service may report a degraded level to apps in the work profile.
-
-Install the Android Camera Parameters app from [Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams) to cross-reference. If the Play Store app also shows LEGACY, it's a device-level limitation, not a bug in your code.
-
-### External USB camera doesn't appear in the list
-
-First, verify your USB OTG adapter works: plug in a USB mouse and check if it moves the cursor. If the hardware works, verify:
-- The device is running API 23+ (external camera support was added in Marshmallow).
-- The webcam is USB Video Class (UVC) compliant. Most consumer webcams are, but specialty industrial cameras may need a custom driver.
-- Some devices block USB host mode when the battery is below a certain level. Charge the device and try again.
-
-## Summary
-
-In this chapter, you turned a meaningless array of camera ID strings into actionable information about the camera hardware on a device. You learned:
-
-1. **Camera ID Semantics**: Why you should never hardcode assumptions about which ID maps to which camera, and how IDs can vary across devices, OTAs, and reboots.
-2. **CameraCharacteristics Basics**: How to retrieve a characteristics object via `cameraManager.getCameraCharacteristics(cameraId)` and query individual keys using the generic `get` method.
-3. **LENS_FACING**: The three possible lens directions (`LENS_FACING_BACK`, `LENS_FACING_FRONT`, `LENS_FACING_EXTERNAL`), with deep dives into USB OTG external camera requirements (USB host feature, dynamic IDs, UVC limitations).
-4. **INFO_SUPPORTED_HARDWARE_LEVEL**: The five-level capability ladder (LEGACY → LIMITED → FULL → LEVEL_3, plus EXTERNAL for USB cams), what each level guarantees in terms of feature support, and how to write feature-gating code based on the minimum required level.
-5. **Robust Camera Discovery**: The complete `discoverAndLogCameras()` implementation with per-camera try/catch, a `CameraInfo` data class, human-readable description strings, group-by summaries for facing and hardware level, and helper functions to select the default back/front camera.
-
-You now have real Camera2 metadata flowing through your application. This is a major milestone — the enumeration code you wrote here is reusable in every Camera2 project you'll ever build.
-
-## What's Next
-
-With a camera selected (via `getDefaultBackCameraId()`), it's time to actually power it on and talk to the hardware. In **Chapter 7: Opening a Camera**, you will:
-
-- Learn what `CameraDevice` represents (an active, opened connection to a physical camera).
-- Implement the `CameraDevice.StateCallback` with handlers for `onOpened`, `onDisconnected`, and `onError`.
-- Understand the lifecycle rules for when to open, reopen, and close the camera in sync with `onPause` and `onResume`.
-- Handle every common `CameraAccessException` error code: `CAMERA_IN_USE`, `MAX_CAMERAS_IN_USE`, `CAMERA_DISABLED`, and `CAMERA_ERROR`.
-- Use a `Semaphore` to prevent concurrent open operations, with `tryAcquire` timeout for deadlock safety.
-
-By the end of Chapter 7, your code will hold an active, open `CameraDevice` object — the prerequisite for creating a capture session and, finally, showing camera preview.

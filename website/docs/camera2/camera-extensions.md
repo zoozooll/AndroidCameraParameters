@@ -35,21 +35,21 @@ The most important conceptual shift: a `CameraExtensionSession` does **not** rou
 flowchart LR
     subgraph STANDARD["Standard CameraCaptureSession (Direct Pipeline)"]
         direction TB
-        S1["Sensor → ISP\n(Demosaic, NR, Color)"]
-        S2["Standard Surface Allocator\n(GPU / HAL Gralloc)"]
-        S3["App Output Surface\n(Preview, JPEG, MediaCodec)"]
+        S1["Sensor → ISP<br/>(Demosaic, NR, Color)"]
+        S2["Standard Surface Allocator<br/>(GPU / HAL Gralloc)"]
+        S3["App Output Surface<br/>(Preview, JPEG, MediaCodec)"]
         S1 --> S2 --> S3
-        SLAT["Latency: 1–2 frame intervals\n(33–66 ms at 30fps)"]
+        SLAT["Latency: 1–2 frame intervals<br/>(33–66 ms at 30fps)"]
     end
 
     subgraph EXTENSION["CameraExtensionSession (EIPP Pipeline)"]
         direction TB
-        E1["Sensor → ISP\n(RAW / Low-level YUV only)"]
-        E2["Frame Accumulation Buffer\n(6–20 frames in\nVendor Private Memory)"]
-        E3["Extension Intermediate\nProcessing Pipeline (EIPP)\nRuns on DSP / NPU / ISP:\nNight: Align + Merge + TNR\nBokeh: Segmentation + Blur\nHDR: Align + Merge + Tonemap"]
-        E4["Processed Output Surface\n(JPEG / YUV)"]
+        E1["Sensor → ISP<br/>(RAW / Low-level YUV only)"]
+        E2["Frame Accumulation Buffer<br/>(6–20 frames in<br/>Vendor Private Memory)"]
+        E3["Extension Intermediate<br/>Processing Pipeline (EIPP)<br/>Runs on DSP / NPU / ISP:<br/>Night: Align + Merge + TNR<br/>Bokeh: Segmentation + Blur<br/>HDR: Align + Merge + Tonemap"]
+        E4["Processed Output Surface<br/>(JPEG / YUV)"]
         E1 --> E2 --> E3 --> E4
-        ELAT["Latency: 500–8000 ms\n(frame count × base interval)"]
+        ELAT["Latency: 500–8000 ms<br/>(frame count × base interval)"]
     end
 
     style STANDARD fill:#e6f7ff,stroke:#0369a1
@@ -328,7 +328,7 @@ sequenceDiagram
         U->>APP: Tap (Standard)
         APP->>CAM: session.capture(builder)
         CAM->>HAL: dispatch_capture(request)
-        HAL->>ISP: Single Frame\nExpose + Demosaic + NR
+        HAL->>ISP: Single Frame<br/>Expose + Demosaic + NR
         ISP-->>HAL: Processed YUV Frame
         HAL->>ISP: JPEG Encode
         ISP-->>HAL: JPEG Bytes
@@ -341,11 +341,11 @@ sequenceDiagram
         U->>APP: Tap (Portrait)
         APP->>CAM: extSession.capture(builder)
         CAM->>HAL: ext_dispatch_capture(request, BOKEH)
-        HAL->>ISP: Capture 3 Frames\n(Exposure Averaging)
+        HAL->>ISP: Capture 3 Frames<br/>(Exposure Averaging)
         ISP-->>HAL: RAW / Low-YUV × 3
-        HAL->>EIPP: Submit Buffer Batch\nRun Segmentation + Blur
-        EIPP-->>EIPP: MiDaS Depth Inference\nBilateral Blur (20 passes)
-        EIPP-->>HAL: Alpha Matte + Blurred BG\nComposited YUV
+        HAL->>EIPP: Submit Buffer Batch<br/>Run Segmentation + Blur
+        EIPP-->>EIPP: MiDaS Depth Inference<br/>Bilateral Blur (20 passes)
+        EIPP-->>HAL: Alpha Matte + Blurred BG<br/>Composited YUV
         HAL->>ISP: JPEG Encode Composite
         ISP-->>HAL: JPEG Bytes
         HAL-->>CAM: ext_capture_completed

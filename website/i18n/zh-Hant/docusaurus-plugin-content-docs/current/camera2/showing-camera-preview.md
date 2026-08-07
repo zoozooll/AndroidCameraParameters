@@ -1,114 +1,114 @@
 ---
 sidebar_position: 8
-title: "Chapter 8: Showing Camera Preview"
-description: Render live camera frames on the screen using TextureView, SurfaceTexture, Surface, and CameraCaptureSession. Implement SurfaceTextureListener, correct aspect ratio with Matrix transforms in configureTransform, build a TEMPLATE_PREVIEW CaptureRequest, and start the preview stream with setRepeatingRequest.
-keywords: [TextureView preview, SurfaceTexture, CameraCaptureSession, setRepeatingRequest, configureTransform Matrix]
+title: "第 8 章：顯示相機預覽"
+description: 使用 TextureView、SurfaceTexture、Surface 和 CameraCaptureSession 在螢幕上渲染即時相機畫面。實現 SurfaceTextureListener，在 configureTransform 中使用 Matrix 變換校正縱橫比，建構 TEMPLATE_PREVIEW 擷取請求，並使用 setRepeatingRequest 啟動預覽串流。
+keywords: [TextureView 預覽, SurfaceTexture, CameraCaptureSession, setRepeatingRequest, configureTransform Matrix]
 ---
 
-This is the chapter you've been waiting for. After three chapters of building scaffolding (permissions, threading, CameraManager, enumeration, open/close lifecycle), you will finally **see the camera output rendered live on the Android device screen**. Preview is the soul of a camera app — it's what the user looks at to frame a shot, check focus, and verify exposure before tapping the shutter. Getting it right makes the difference between a janky, unusable app and a polished, responsive camera experience.
+這是你一直期待的章節。在經過三章的架構搭建（權限、執行緒、CameraManager、枚舉、打開/關閉生命週期）後，你終於要**在 Android 設備螢幕上看到即時渲染的相機輸出了**。預覽是相機應用的核心——它是用戶在點擊快門前觀察畫面、檢查對焦和驗證曝光的窗口。做得好，它就是流暢響應的相機體驗；做得不好，應用就會顯得卡頓且難以使用。
 
-For a reference preview implementation that handles edge cases across hundreds of devices, see the preview screen in the **Android Camera Parameters** app ([GitHub](https://github.com/zoozooll/AndroidCameraParameters) / [Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)). Its preview pipeline includes orientation-aware transforms, multi-resolution output surfaces, and smooth frame-rate throttling — all built on the same fundamental components we cover here.
+如需查看處理數百種設備邊緣情況的參考預覽實現，請參閱 **Android Camera Parameters** 應用（[GitHub](https://github.com/zoozooll/AndroidCameraParameters) / [Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)）中的預覽螢幕。其預覽管線包括感知朝向的變換、多解析度輸出 Surface 和平滑的幀率節流——所有這些都建立在我們在此處涵蓋的基礎組件之上。
 
-## The Preview Pipeline: Components Overview
+## 預覽管線：組件概覽
 
-Before we dive into code, let's map the conceptual journey of a single preview frame from the camera sensor to the phone's display. Every frame passes through five layers:
+在深入程式碼之前，讓我們先梳理一下單幀預覽從相機感光元件到手機螢幕的邏輯旅程。每一幀都會經過五層：
 
 ```
-Camera Sensor → CameraDevice Pipeline → Surface (BufferQueue) → SurfaceTexture → TextureView → Display
+相機感光元件 → CameraDevice 管線 → Surface (BufferQueue) → SurfaceTexture → TextureView → 顯示器
 ```
 
-Each layer plays a specific, non-interchangeable role. Skipping or shortcutting any of them produces black screens, distorted aspect ratios, or tearing. Let's define each component:
+每一層都扮演著特定的、不可替代的角色。跳過或忽略其中任何一層都會導致黑屏、縱橫比失調或畫面撕裂。讓我們定義每一个組件：
 
-### 1. Surface — The Image Destination Buffer
+### 1. Surface — 影像目標緩衝區
 
-A `Surface` is the Camera2 API's generic concept of **a destination for processed image frames**. Under the hood, a Surface wraps an Android `BufferQueue`: a ring buffer of graphic buffers (typically 3–5 buffers deep) managed by the system compositor (SurfaceFlinger). When Camera2 "renders a frame" to a Surface, it dequeues an empty buffer from the queue, fills it with pixel data, and enqueues it back for the consumer to use.
+`Surface` 是 Camera2 API 對**處理後影像幀目標**的通用概念。在底層，Surface 包裝了一个 Android `BufferQueue`：一个由系統合成器 (SurfaceFlinger) 管理的圖形緩衝區環形佇列（通常深度為 3–5 個緩衝區）。當 Camera2 向 Surface 「渲染一幀」時，它從佇列中取出一个空緩衝區，填入像素數據，然後將其放回佇列供消費者使用。
 
-Anything that can consume graphic buffers can expose a `Surface`. The most common consumers are:
-- **SurfaceTexture** → feeds a `TextureView` (for on-screen preview — this chapter)
-- **Surface of a MediaRecorder/MediaCodec** → video encoding (not covered in this series)
-- **ImageReader Surface** → CPU-accessible `Image` objects for JPEG/RAW capture (Chapter 9)
+任何能消耗圖形緩衝區的組件都可以暴露一个 `Surface`。最常見的消費者包括：
+- **SurfaceTexture** → 饋送給 `TextureView`（用於螢幕預覽——本章內容）
+- **MediaRecorder/MediaCodec 的 Surface** → 影片編碼（本系列不涵蓋）
+- **ImageReader Surface** → 供 CPU 存取的用於 JPEG/RAW 拍攝的 `Image` 物件（第 9 章）
 
-### 2. SurfaceTexture — The GPU-to-GPU Bridge
+### 2. SurfaceTexture — GPU 到 GPU 的橋樑
 
-`SurfaceTexture` is the magic class that turns a raw stream of camera frames into a texture that the GPU can sample and render. It is the consumer end of the Surface's BufferQueue, but instead of handing buffers to the CPU, it converts them into an OpenGL ES `GL_TEXTURE_EXTERNAL_OES` texture. This allows `TextureView` to composite the camera frame onto the view hierarchy using standard GPU rendering — no CPU copy required, so 60+ FPS preview is trivially achievable.
+`SurfaceTexture` 是一个魔法類別，它將原始的相機幀串流轉換為 GPU 可以採樣並渲染的紋理。它是 Surface 的 BufferQueue 的消費者端，但它並不將緩衝區交給 CPU，而是將其轉換為 OpenGL ES `GL_TEXTURE_EXTERNAL_OES` 紋理。這使得 `TextureView` 可以使用標準 GPU 渲染將相機幀合成到視圖層級中——無需 CPU 拷貝，因此輕而易舉地實現 60+ FPS 的預覽。
 
-You get a `Surface` for a `SurfaceTexture` with:
+你可以透過以下方式獲取 `SurfaceTexture` 的 `Surface`：
 ```kotlin
 val surface = Surface(surfaceTexture)
 ```
 
-### 3. TextureView — The On-Screen Window
+### 3. TextureView — 螢幕上的視窗
 
-`TextureView` is a `View` subclass that can display the contents of a `SurfaceTexture`. It is the modern successor to the older `SurfaceView`, and the recommended choice for Camera2 preview for three reasons:
-- It behaves like a normal View (can be animated, transformed, alpha-blended, placed in scrollable containers).
-- It doesn't force the Activity to use a transparent window (unlike SurfaceView, which punches a "hole" in the view hierarchy).
-- Its `SurfaceTextureListener` gives us precise lifecycle callbacks for when the surface is created, destroyed, or resized.
+`TextureView` 是一个 `View` 子類別，可以顯示 `SurfaceTexture` 的內容。它是舊版 `SurfaceView` 的現代繼承者，是 Camera2 預覽的推薦選擇，原因有三：
+- 它的行為類似於正常的 View（可以進行動畫處理、變換、透明混合、放置在可滾動容器中）。
+- 它不強制 Activity 使用透明視窗（不像 SurfaceView 會在視圖層級中打一个「洞」）。
+- 它的 `SurfaceTextureListener` 提供了精確的生命週期回呼，告知 Surface 何時建立、銷毀或調整大小。
 
-To get callback-driven access to the underlying SurfaceTexture, `TextureView` exposes `setSurfaceTextureListener()` with four callbacks:
-- `onSurfaceTextureAvailable(surfaceTexture, width, height)` — surface is ready to receive frames (fires once when the view is laid out).
-- `onSurfaceTextureSizeChanged(surfaceTexture, width, height)` — the surface size changed (e.g., device rotated).
-- `onSurfaceTextureDestroyed(surfaceTexture)` — about to be destroyed; we must stop the preview before this returns.
-- `onSurfaceTextureUpdated(surfaceTexture)` — fires for **every new frame** (can be used to drive face-tracking overlays, etc.).
+為了透過回呼存取底層的 SurfaceTexture，`TextureView` 暴露了 `setSurfaceTextureListener()`，包含四個回呼：
+- `onSurfaceTextureAvailable(surfaceTexture, width, height)` — Surface 已準備好接收幀（在視圖佈局完成後觸發一次）。
+- `onSurfaceTextureSizeChanged(surfaceTexture, width, height)` — Surface 尺寸發生變化（例如設備旋轉）。
+- `onSurfaceTextureDestroyed(surfaceTexture)` — 即將被銷毀；我們必須在此返回前停止預覽。
+- `onSurfaceTextureUpdated(surfaceTexture)` — **每一新幀**都會觸發（可用於驅動人臉追蹤覆蓋層等）。
 
-### 4. CameraCaptureSession — The Configured Pipeline
+### 4. CameraCaptureSession — 已配置的管線
 
-Before a `CameraDevice` can produce any frames, you must create a `CameraCaptureSession`. A session is a **configuration of all the output Surfaces that the camera pipeline will write to**. You can think of it as "plumbing" the camera ISP (Image Signal Processor) to route its output to one or more sinks. For preview-only, the session has one Surface (the TextureView's). When we add photo capture in Chapter 9, the session will have two Surfaces: preview + `ImageReader`.
+在 `CameraDevice` 產生任何幀之前，你必須建立一个 `CameraCaptureSession`。工作階段是**相機管線將寫入的所有輸出 Surface 的配置**。你可以將其視為對相機 ISP（影像訊號處理器）進行「接管」，將其輸出路由到一个或多個接收器。對於僅預覽模式，工作階段只有一个 Surface（TextureView 的）。當我們要在第 9 章添加照片拍攝時，工作階段將有兩個 Surface：預覽 + `ImageReader`。
 
-Key rules:
-- A session is created with `CameraDevice.createCaptureSession(outputSurfaces, stateCallback, handler)`.
-- The session is only usable **after** `StateCallback.onConfigured(session)` fires.
-- A `CameraDevice` can have only **one active session at a time**. Creating a new session closes the previous one.
-- The session owns *all* outputs for its lifetime; adding a new surface (e.g., suddenly deciding to record video) requires tearing down the old session and creating a new one with all surfaces (preview + recorder).
+關鍵規則：
+- 工作階段透過 `CameraDevice.createCaptureSession(outputSurfaces, stateCallback, handler)` 建立。
+- 工作階段僅在 `StateCallback.onConfigured(session)` 觸發**後**才可用。
+- 一个 `CameraDevice` **一次只能有一个活動工作階段**。建立新工作階段會關閉前一个。
+- 工作階段在其生命週期內擁有*所有*輸出；添加新 Surface（例如突然決定錄製影片）需要拆除舊工作階段並建立一个包含所有 Surface（預覽 + 錄製器）的新工作階段。
 
-### 5. Repeating Capture Request (TEMPLATE_PREVIEW)
+### 5. 重複擷取請求 (TEMPLATE_PREVIEW)
 
-Once the session is configured, how does continuous preview happen? Camera2 is a request-driven API — every frame is a `CaptureRequest` submitted to the session. For preview, we submit **one request and mark it as repeating**: the camera hardware will re-run that same request (with the same sensor settings, targets, and 3A state) continuously, producing frames as fast as the pipeline allows (typically 30–120 FPS).
+配置好工作階段後，連續預覽是如何實現的？Camera2 是一个請求驅動的 API——每一幀都是提交給工作階段的一个 `CaptureRequest`。對於預覽，我們提交**一个請求並將其標記為重複 (repeating)**：相機硬體將不斷重複執行該請求（使用相同的感光元件設定、目標和 3A 狀態），以管線允許的最快速度（通常 30–120 FPS）產生畫面。
 
-A repeating request is submitted with:
+透過以下方式提交重複請求：
 ```kotlin
 session.setRepeatingRequest(previewRequest, captureCallback, backgroundHandler)
 ```
 
-The template for preview is `CameraDevice.TEMPLATE_PREVIEW`. Camera2 provides several pre-built templates that configure hundreds of low-level parameters (exposure, frame rate range, 3A mode, noise reduction, etc.) appropriately for the use case. For preview, `TEMPLATE_PREVIEW` optimizes for **low latency and smooth frame rate**, even if that means slightly reduced sensor dynamic range compared to `TEMPLATE_STILL_CAPTURE` (used in Chapter 9 for photos).
+預覽模板是 `CameraDevice.TEMPLATE_PREVIEW`。Camera2 提供了幾種預建構模板，它們會根據用例適當地配置數百個低級參數（曝光、幀率範圍、3A 模式、降噪等）。對於預覽，`TEMPLATE_PREVIEW` 針對**低延遲和平滑幀率**進行了優化，即使這意味著與 `TEMPLATE_STILL_CAPTURE`（第 9 章用於照片）相比，感光元件的動態範圍會略有降低。
 
-## End-to-End Preview Flowchart
+## 端到端預覽流程圖
 
-The flowchart below shows how all these components connect. Follow it closely when reading the code — every block corresponds to a real function call.
+下面的流程圖顯示了所有這些組件是如何連接的。閱讀程式碼時請仔細對照——每個方塊都對應一个真實的函式呼叫。
 
 ```mermaid
 flowchart TD
-    subgraph ActivityStart["🟦 Activity Startup (onCreate/onResume)"]
-        A1[startBackgroundThread]
-        A2[TextureView added to layout]
-        A3[set SurfaceTextureListener]
+    subgraph ActivityStart["🟦 Activity 啟動 (onCreate/onResume)"]
+        A1[startBackgroundThread 背景執行緒啟動]
+        A2[TextureView 添加到佈局]
+        A3[設定 SurfaceTextureListener]
     end
 
-    subgraph SurfaceReady["🟩 Surface Texture Lifecycle"]
-        B1[onSurfaceTextureAvailable ST,w,h]
-        B2[configureTransform Matrix ⚠️]
-        B3[Create Surface from ST]
+    subgraph SurfaceReady["🟩 Surface Texture 生命週期"]
+        B1[onSurfaceTextureAvailable]
+        B2[configureTransform Matrix 矩陣變換 ⚠️]
+        B3[從 ST 建立 Surface]
     end
 
-    subgraph CameraOpen["🟪 Chapter 7 Camera Opening"]
+    subgraph CameraOpen["🟪 第 7 章 相機打開"]
         C1[openCamera selectedCameraId]
         C2[StateCallback.onOpened cameraDevice]
     end
 
-    subgraph SessionCreation["🟨 Capture Session Pipeline"]
-        D1[Get TEMPLATE_PREVIEW CaptureRequest.Builder]
+    subgraph SessionCreation["🟨 擷取工作階段管線"]
+        D1[獲取 TEMPLATE_PREVIEW 建構器]
         D2[builder.addTarget previewSurface]
-        D3[Build previewRequest]
-        D4[createCaptureSession surfaces=previewSurface]
+        D3[建構 previewRequest]
+        D4[createCaptureSession]
         D5[Session.onConfigured session]
     end
 
-    subgraph PreviewStreaming["🟩 LIVE PREVIEW"]
-        E1[session.setRepeatingRequest previewRequest]
-        E2[Camera produces frames continuously 🎥]
-        E3[Frames flow: Sensor→Surface→ST→TextureView→Screen 📱]
+    subgraph PreviewStreaming["🟩 即時預覽"]
+        E1[session.setRepeatingRequest]
+        E2[相機連續產生幀 🎥]
+        E3[畫面流動: 感光元件→Surface→ST→TextureView→螢幕 📱]
     end
 
-    subgraph Teardown["🟥 onPause / Surface Destroy"]
+    subgraph Teardown["🟥 onPause / Surface 銷毀"]
         F1[onSurfaceTextureDestroyed]
         F2[session.stopRepeating]
         F3[session.close]
@@ -140,15 +140,16 @@ flowchart TD
     style F1 fill:#d32f2f,color:#fff
 ```
 
-The orange highlighted block (`configureTransform`) and green highlighted block (LIVE PREVIEW) are the two most critical steps. Skip `configureTransform`, and your preview will be stretched, rotated, or squashed. Wire everything else correctly but fail to call `setRepeatingRequest`, and the screen stays black with no errors logged.
+橙色高亮方塊 (`configureTransform`) 和綠色高亮方塊 (即時預覽) 是兩個最關鍵的步驟。跳過 `configureTransform`，你的預覽將被拉伸、旋轉或擠壓。如果正確連接了其他所有部分但未能呼叫 `setRepeatingRequest`，螢幕將保持黑色且不會記錄任何錯誤。
 
-## Step 1: Add TextureView to the Layout XML
+## 第 1 步：將 TextureView 添加到佈局 XML
 
-First, create or update `app/src/main/res/layout/activity_main.xml` to include a full-screen `TextureView`. We'll also add a `TextView` overlay as a status indicator so we can see the preview size.
+首先，建立或更新 `app/src/main/res/layout/activity_main.xml` 以包含全螢幕 `TextureView`。我們還將添加一个 `TextView` 覆蓋層作為狀態指示器，以便我們可以看到預覽尺寸。
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
@@ -168,35 +169,34 @@ First, create or update `app/src/main/res/layout/activity_main.xml` to include a
         android:padding="8dp"
         android:textColor="#FFFFFFFF"
         android:textSize="12sp"
-        tools:text="Initializing camera..." />
+        tools:text="正在初始化相機..." />
 
 </FrameLayout>
 ```
 
-Why `FrameLayout` as the root? Because preview is a full-screen layer, and `FrameLayout` stacks children with Z-ordering (later children draw on top). Later we'll add a shutter button overlay. The `TextureView` uses `match_parent` on both dimensions — but don't worry, we'll use `configureTransform` below to letterbox it correctly, so the pixels themselves are never stretched even though the view fills the screen.
+為什麼要用 `FrameLayout` 作為根視圖？因為預覽是一个全螢幕層，而 `FrameLayout` 會按 Z 軸順序堆疊子視圖（後添加的子視圖繪在頂部）。稍後我們將添加一个快門按鈕覆蓋層。`TextureView` 在兩個維度上都使用 `match_parent`——但別擔心，我們稍後會使用 `configureTransform` 進行正確的黑邊填充處理（letterboxing），這樣即使視圖填滿螢幕，像素本身也永遠不會被拉伸。
 
-## Step 2: configureTransform — The Secret Sauce of Correct Preview Aspect Ratio
+## 第 2 步：configureTransform — 正確預覽縱橫比的秘訣
 
-If you do nothing and just pipe frames into a full-screen TextureView, the preview will be **stretched**. Why? Because camera sensors have a fixed aspect ratio (almost always 4:3 for still capture, sometimes 16:9 for video modes), and the phone display has a different aspect ratio (often ~20:9 on modern flagships). If the camera outputs a 4032×3024 (4:3) preview frame and the TextureView stretches it to 1080×2400 (20:9), faces look thin and tall.
+如果你什麼都不做，只是將畫面傳輸到全螢幕 TextureView，預覽將會被**拉伸**。為什麼？因為相機感光元件具有固定的縱橫比（靜態拍攝幾乎總是 4:3，影片模式有時是 16:9），而手機螢幕具有不同的縱橫比（現代旗艦機通常約為 20:9）。如果相機輸出 4032×3024 (4:3) 的預覽幀，而 TextureView 將其拉伸到 1080×2400 (20:9)，人臉看起來就會又瘦又長。
 
-The solution is **`configureTransform(viewWidth: Int, viewHeight: Int)`**: a method that computes a `Matrix` (rotation + center-crop scaling) and applies it to the TextureView. The matrix does three things:
-1. **Rotate** the image by the number of degrees the device is rotated relative to the camera sensor's natural orientation.
-2. **Scale** the image so that it fills the TextureView entirely while maintaining aspect ratio (center-crop style, letterbox with black bars if you prefer).
-3. **Re-center** the scaled/rotated image so it sits in the middle of the view.
+解決方案是 **`configureTransform(viewWidth: Int, viewHeight: Int)`**：一个計算 `Matrix`（旋轉 + 中心裁剪縮放）並將其應用於 TextureView 的方法。該矩陣做三件事：
+1. 根據設備相對於相機感光元件自然方向旋轉的角度，**旋轉**影像。
+2. **縮放**影像，使其在保持縱橫比同時填滿整個 TextureView（中心裁剪風格，或者如果你願意，也可以留黑邊）。
+3. **重新居中**縮放/旋轉後的影像，使其位於視圖正中。
 
-This is the single most-copied function from the official Android Camera2 samples — every developer needs it, and it's easy to get wrong. Here's the canonical version:
+這是官方 Android Camera2 範例中最常被複製的函式——每個開發者都需要它，而且很容易出錯。以下是標準版本：
 
 ```kotlin
 /**
- * Configures the necessary Matrix transformation to `textureView`.
- * This method should be called after the camera preview size is determined
- * and also the size of `textureView` is fixed.
+ * 配置 `textureView` 所需的 Matrix 變換。
+ * 此方法應在確定相機預覽尺寸且 `textureView` 尺寸固定後呼叫。
  *
- * @param viewWidth  The width of `textureView`
- * @param viewHeight The height of `textureView`
- * @param previewSize The camera-selected preview Size (width, height)
- * @param sensorOrientationDegrees The SENSOR_ORIENTATION characteristic of the camera
- * @param deviceDisplayRotationDegrees The display's rotation (0/90/180/270) relative to natural
+ * @param viewWidth  `textureView` 的寬度
+ * @param viewHeight `textureView` 的高度
+ * @param previewSize 相機選定的預覽尺寸 (width, height)
+ * @param sensorOrientationDegrees 相機的 SENSOR_ORIENTATION 特性
+ * @param deviceDisplayRotationDegrees 螢幕相對於自然方向的旋轉角度 (0/90/180/270)
  */
 private fun configureTransform(
     viewWidth: Int,
@@ -224,7 +224,7 @@ private fun configureTransform(
     val centerX = viewRect.centerX()
     val centerY = viewRect.centerY()
 
-    // Step 1: Account for device rotation relative to sensor orientation
+    // 第 1 步：考慮設備相對於感光元件方向的旋轉
     if (Surface.ROTATION_90 == rotation || Surface.ROTATION_270 == rotation) {
         bufferRect.offset(centerX - bufferRect.centerX(), centerY - bufferRect.centerY())
         matrix.setRectToRect(viewRect, bufferRect, android.graphics.Matrix.ScaleToFit.FILL)
@@ -242,7 +242,7 @@ private fun configureTransform(
         matrix.postRotate(180f, centerX, centerY)
     }
 
-    // Step 2: Also account for how the sensor is mounted relative to the device
+    // 第 2 步：還要考慮感光元件相對於設備的安裝方式
     val relativeRotation = (sensorOrientationDegrees - rotation + 360) % 360
     if (relativeRotation != 0) {
         matrix.postRotate(relativeRotation.toFloat(), centerX, centerY)
@@ -252,15 +252,15 @@ private fun configureTransform(
 }
 ```
 
-A key detail: `previewSize` is the camera's output size, reported as (width, height) in **sensor orientation**. The TextureView's dimensions are in **display orientation**. The RectF trick with swapped width/height (`bufferRect` uses `previewSize.height` for width and vice versa) accounts for this sensor-vs-display coordinate flip.
+一个關鍵細節：`previewSize` 是相機的輸出尺寸，按**感光元件方向**報告為 (width, height)。TextureView 的維度按**顯示方向**計算。使用交換了寬/高的 RectF 技巧（`bufferRect` 使用 `previewSize.height` 作為寬度，反之亦然）解決了這種感光元件與顯示器座標的翻轉。
 
-You'll need two pieces of CameraCharacteristics information to call this:
-- `SENSOR_ORIENTATION` — how many degrees the sensor is rotated relative to the device's natural orientation. For rear cameras, this is almost always 90°. For front cameras, it's typically 270° (so the image is mirrored correctly). Read it once per camera in the discovery phase.
-- Display rotation — from `(getSystemService(Context.WINDOW_SERVICE) as WindowManager).defaultDisplay.rotation` (on newer APIs use `display?.rotation`).
+你需要兩項 CameraCharacteristics 資訊來呼叫此方法：
+- `SENSOR_ORIENTATION` — 感光元件相對於設備自然方向旋轉的角度。對於後置相機，這幾乎總是 90°。對於前置相機，通常是 270°（以便影像正確鏡像）。在發現階段為每個相機讀取一次。
+- 螢幕旋轉角度 — 來自 `(getSystemService(Context.WINDOW_SERVICE) as WindowManager).defaultDisplay.rotation`（在較新的 API 上使用 `display?.rotation`）。
 
-## Step 3: Choose a Preview Size from SCALER_STREAM_CONFIGURATION_MAP
+## 第 3 步：從 SCALER_STREAM_CONFIGURATION_MAP 中選擇預覽尺寸
 
-Before we can write `configureTransform` or create a session, we need to know what preview size the camera can output. For every camera, `CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP` returns a `StreamConfigurationMap` containing all valid (format, size) pairs the camera can produce. For preview on a `SurfaceTexture`, we query for output sizes against the class `SurfaceTexture::class.java`:
+在編寫 `configureTransform` 或建立工作階段之前，我們需要知道相機可以輸出什麼預覽尺寸。對於每個相機，`CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP` 會返回一个 `StreamConfigurationMap`，其中包含相機可以產出的所有有效（格式，尺寸）對。對於 `SurfaceTexture` 上的預覽，我們針對類別 `SurfaceTexture::class.java` 查詢輸出尺寸：
 
 ```kotlin
 private fun chooseOptimalPreviewSize(
@@ -270,13 +270,13 @@ private fun chooseOptimalPreviewSize(
     targetAspectRatio: Double
 ): android.util.Size {
     val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
-        ?: throw IllegalStateException("No stream configuration map available")
+        ?: throw IllegalStateException("無可用串流配置映射")
 
-    // All sizes supported for SurfaceTexture output (preview class)
+    // SurfaceTexture 輸出（預覽類別）支援的所有尺寸
     val choices = map.getOutputSizes(SurfaceTexture::class.java).toList()
 
-    // Prefer sizes that match aspect ratio, then ones that fit in max dimensions,
-    // then pick the largest (best quality) among the remaining.
+    // 優先選擇匹配縱橫比的尺寸，然後是符合最大維度的尺寸，
+    // 最後在剩餘尺寸中挑選最大的（畫質最好的）。
     val acceptable = choices.filter {
         it.width <= maxWidth
             && it.height <= maxHeight
@@ -286,17 +286,17 @@ private fun chooseOptimalPreviewSize(
     val chosen = acceptable.ifEmpty { choices }
         .maxByOrNull { it.width * it.height }!!
 
-    Log.d(TAG, "Selected preview size: ${chosen.width}x${chosen.height} " +
-        "(from ${choices.size} options, maxAllowed=${maxWidth}x${maxHeight})")
+    Log.d(TAG, "選定的預覽尺寸: ${chosen.width}x${chosen.height} " +
+        "(來自 ${choices.size} 個選項, 最大允許尺寸=${maxWidth}x${maxHeight})")
     return chosen
 }
 ```
 
-Common sense default parameters: `maxWidth = 1920`, `maxHeight = 1080`, `targetAspectRatio = textureView.width.toDouble() / textureView.height`. The preview surface doesn't need to be 4K — 1080p is enough for framing on a phone screen, uses less power, and keeps the pipeline latency low.
+常識性的預設參數：`maxWidth = 1920`, `maxHeight = 1080`, `targetAspectRatio = textureView.width.toDouble() / textureView.height`。預覽 Surface 不需要 4K——1080p 足以在手機螢幕上取景，耗電更少，並能保持較低的管線延遲。
 
-## Step 4: Full Chapter 8 Code — Live Preview
+## 第 4 步：第 8 章完整程式碼 — 即時預覽
 
-Here is the complete `MainActivity.kt` integrating every piece from this chapter: the layout-based `TextureView`, `SurfaceTextureListener`, size selection, `configureTransform`, `CameraCaptureSession` creation, and the all-important `setRepeatingRequest(TEMPLATE_PREVIEW)`.
+以下是整合了本章所有部分的完整 `MainActivity.kt`：基於佈局的 `TextureView`、`SurfaceTextureListener`、尺寸選擇、`configureTransform`、`CameraCaptureSession` 建立，以及最重要的 `setRepeatingRequest(TEMPLATE_PREVIEW)`。
 
 ```kotlin
 package com.example.camera2tutorial
@@ -331,6 +331,7 @@ import java.util.Collections
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 import kotlin.math.max
+import kotlin.math.min
 
 class MainActivity : AppCompatActivity() {
 
@@ -338,11 +339,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var textureView: TextureView
     private lateinit var statusTextView: TextView
 
-    // Threading
+    // 執行緒
     private lateinit var backgroundThread: HandlerThread
     private lateinit var backgroundHandler: Handler
 
-    // Camera
+    // 相機
     private lateinit var cameraManager: CameraManager
     private var cameraDevice: CameraDevice? = null
     private var captureSession: CameraCaptureSession? = null
@@ -354,14 +355,14 @@ class MainActivity : AppCompatActivity() {
 
     private val cameraOpenCloseLock = Semaphore(1)
 
-    // ------------------------- Lifecycle -------------------------
+    // ------------------------- 生命週期 -------------------------
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         textureView = findViewById(R.id.textureView)
         statusTextView = findViewById(R.id.statusTextView)
-        statusTextView.text = "Waiting for TextureView layout..."
+        statusTextView.text = "正在等待 TextureView 佈局..."
 
         if (allPermissionsGranted()) {
             initializeCameraManager()
@@ -378,7 +379,7 @@ class MainActivity : AppCompatActivity() {
 
         if (allPermissionsGranted()) {
             if (!this::cameraManager.isInitialized) initializeCameraManager()
-            // If texture view is already available, open camera and create session now
+            // 如果 texture view 已經可用，現在就打開相機並建立工作階段
             if (textureView.isAvailable) {
                 openCameraAndStartPreview(textureView.width, textureView.height)
             }
@@ -405,7 +406,7 @@ class MainActivity : AppCompatActivity() {
         try { backgroundThread.join(1000) } catch (_: InterruptedException) {}
     }
 
-    // ------------------------- Chapter 6 condensed: Discovery -------------------------
+    // ------------------------- 第 6 章簡略版：發現 -------------------------
     data class CameraInfo(val id: String, val facing: Int?, val hwLevel: Int?, val chars: CameraCharacteristics)
 
     private fun initializeCameraManager() {
@@ -429,13 +430,13 @@ class MainActivity : AppCompatActivity() {
         selectedCameraId = chosen.id
         sensorOrientation = chosen.chars.get(CameraCharacteristics.SENSOR_ORIENTATION) ?: 90
 
-        Log.d(TAG, "Selected camera id=$selectedCameraId, sensorOrientation=$sensorOrientation°")
+        Log.d(TAG, "選定的相機 ID=$selectedCameraId, sensorOrientation=$sensorOrientation°")
 
-        // Hook up the SurfaceTexture listener — it will trigger the actual preview start
+        // 掛接 SurfaceTexture 監聽器 — 它將觸發實際的預覽啟動
         textureView.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
             override fun onSurfaceTextureAvailable(st: SurfaceTexture, width: Int, height: Int) {
-                Log.d(TAG, "✅ SurfaceTexture available: ${width}x$height")
-                statusTextView.text = "SurfaceTexture ready — opening camera..."
+                Log.d(TAG, "✅ SurfaceTexture 可用: ${width}x$height")
+                statusTextView.text = "SurfaceTexture 已就緒 — 正在打開相機..."
                 openCameraAndStartPreview(width, height)
             }
             override fun onSurfaceTextureSizeChanged(st: SurfaceTexture, w: Int, h: Int) {
@@ -444,79 +445,79 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             override fun onSurfaceTextureDestroyed(st: SurfaceTexture): Boolean {
-                Log.d(TAG, "⛔ SurfaceTexture destroyed")
+                Log.d(TAG, "⛔ SurfaceTexture 已銷毀")
                 return true
             }
             override fun onSurfaceTextureUpdated(st: SurfaceTexture) {
-                // Called on EVERY frame. Keep work here <1ms. Count frames for FPS if desired.
+                // 每一幀都會被呼叫。此處工作應保持 <1ms。如果需要可以計算幀數以得出 FPS。
             }
         }
     }
 
-    // ------------------------- Chapter 7 condensed: openCamera -------------------------
+    // ------------------------- 第 7 章簡略版：openCamera -------------------------
     private val deviceStateCallback = object : CameraDevice.StateCallback() {
         override fun onOpened(camera: CameraDevice) {
             cameraOpenCloseLock.release()
             cameraDevice = camera
-            Log.d(TAG, "✅ Camera ${camera.id} opened → creating capture session")
-            statusTextView.text = "Camera open — creating capture session..."
+            Log.d(TAG, "✅ 相機 ${camera.id} 已打開 → 正在建立擷取工作階段")
+            statusTextView.text = "相機已打開 — 正在建立擷取工作階段..."
 
-            // ⬇️ Chapter 8: With camera open AND SurfaceTexture available,
-            // we now create the capture session
+            // ⬇️ 第 8 章：相機已打開且 SurfaceTexture 可用，
+            // 我們現在建立擷取工作階段
             createCaptureSession()
         }
         override fun onDisconnected(camera: CameraDevice) {
             cameraOpenCloseLock.release()
             cameraDevice?.close()
             cameraDevice = null
-            Log.w(TAG, "Camera ${camera.id} disconnected")
+            Log.w(TAG, "相機 ${camera.id} 已斷開連接")
         }
         override fun onError(camera: CameraDevice, error: Int) {
             cameraOpenCloseLock.release()
             cameraDevice?.close()
             cameraDevice = null
             val msg = when (error) {
-                ERROR_CAMERA_IN_USE -> "Camera in use by another app"
-                else -> "Camera error $error"
+                ERROR_CAMERA_IN_USE -> "相機正被另一个應用使用"
+                else -> "相機錯誤 $error"
             }
             Toast.makeText(this@MainActivity, msg, Toast.LENGTH_LONG).show()
         }
     }
 
-    // ------------------------- 🎯 CHAPTER 8: Preview Pipeline -------------------------
+    // ------------------------- 🎯 第 8 章：預覽管線 -------------------------
     private fun openCameraAndStartPreview(viewWidth: Int, viewHeight: Int) {
         val camId = selectedCameraId ?: return
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
             != PackageManager.PERMISSION_GRANTED) return
         if (!cameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
-            Toast.makeText(this, "Camera lock timeout", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "相機鎖定逾時", Toast.LENGTH_SHORT).show()
             return
         }
 
-        // 1) Decide preview size BEFORE opening the session
+        // 1) 在打開工作階段之前確定預覽尺寸
         val chars = cameraManager.getCameraCharacteristics(camId)
         previewSize = chooseOptimalPreviewSize(chars, viewWidth, viewHeight)
 
-        // 2) Apply aspect-correction transform to TextureView
+        // 2) 向 TextureView 應用縱橫比校正變換
         configureTransform(viewWidth, viewHeight)
 
-        // 3) Configure the SurfaceTexture buffer size to MATCH the chosen preview size
+        // 3) 配置 SurfaceTexture 緩衝區尺寸，以比對選定的預覽尺寸
         textureView.surfaceTexture!!.setDefaultBufferSize(previewSize.width, previewSize.height)
 
-        statusTextView.text = "Preview size: ${previewSize.width}×${previewSize.height}"
+        statusTextView.text = "預覽尺寸: ${previewSize.width}×${previewSize.height}"
 
-        // 4) Open the camera — session creation continues in onOpened → createCaptureSession()
+        // 4) 打開相機 — 工作階段建立將在 onOpened → createCaptureSession() 中繼續
         try {
             cameraManager.openCamera(camId, deviceStateCallback, backgroundHandler)
         } catch (e: CameraAccessException) {
             cameraOpenCloseLock.release()
-            Toast.makeText(this, "Failed to open camera: ${e.reason}", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "無法打開相機: ${e.reason}", Toast.LENGTH_LONG).show()
         }
     }
 
     /**
-     * Create a CameraCaptureSession whose sole output surface is the TextureView preview surface.
-     * Then build a TEMPLATE_PREVIEW request and start repeating.
+     * 建立一個唯一的輸出 Surface 是 TextureView 預覽 Surface 的 CameraCaptureSession。
+     * 然後建構一个 TEMPLATE_PREVIEW 請求並開始重複。
      */
     private fun createCaptureSession() {
         val camera = cameraDevice ?: return
@@ -526,56 +527,55 @@ class MainActivity : AppCompatActivity() {
         val outputSurfaces = Collections.singletonList(previewSurface)
 
         try {
-            // Build the TEMPLATE_PREVIEW CaptureRequest.Builder once
+            // 一次性建構 TEMPLATE_PREVIEW CaptureRequest.Builder
             previewRequestBuilder =
                 camera.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW).apply {
                     addTarget(previewSurface)
                 }
 
-            // Create the capture session
+            // 建立擷取工作階段
             camera.createCaptureSession(
                 outputSurfaces,
                 object : CameraCaptureSession.StateCallback() {
                     override fun onConfigured(session: CameraCaptureSession) {
                         captureSession = session
                         previewRequest = previewRequestBuilder!!.build()
-                        Log.d(TAG, "✅ CaptureSession configured → starting repeating preview")
-                        statusTextView.text = "🎥 LIVE PREVIEW: ${previewSize.width}×${previewSize.height}"
+                        Log.d(TAG, "✅ CaptureSession 已配置 → 正在啟動重複預覽")
+                        statusTextView.text = "🎥 即時預覽: ${previewSize.width}×${previewSize.height}"
 
-                        // ⭐ THIS IS THE MAGIC LINE THAT STARTS THE PREVIEW:
+                        // ⭐ 啟動預覽的神奇一行：
                         session.setRepeatingRequest(
                             previewRequest!!,
-                            null,  // CaptureCallback is null for preview — we don't need per-frame metadata
+                            null,  // 預覽不需要每幀元數據，故 CaptureCallback 為 null
                             backgroundHandler
                         )
                     }
 
                     override fun onConfigureFailed(session: CameraCaptureSession) {
-                        Log.e(TAG, "❌ CaptureSession configuration FAILED")
+                        Log.e(TAG, "❌ CaptureSession 配置失敗")
                         Toast.makeText(
                             this@MainActivity,
-                            "Capture session failed — preview unavailable",
+                            "擷取工作階段失敗 — 預覽不可用",
                             Toast.LENGTH_LONG
                         ).show()
                     }
 
                     override fun onClosed(session: CameraCaptureSession) {
-                        // Optional: symmetric cleanup hook
+                        // 可選：對稱清理掛鉤
                         if (captureSession === session) captureSession = null
                     }
                 },
                 backgroundHandler
             )
         } catch (e: CameraAccessException) {
-            Log.e(TAG, "createCaptureSession threw CameraAccessException", e)
+            Log.e(TAG, "createCaptureSession 拋出了 CameraAccessException", e)
         } catch (e: IllegalStateException) {
-            Log.e(TAG, "Camera was closed while creating session", e)
+            Log.e(TAG, "建立工作階段時相機已關閉", e)
         }
     }
 
     /**
-     * Choose the largest preview size that matches the view's aspect ratio
-     * and fits in the given max dimensions.
+     * 選擇與視圖縱橫比相匹配且符合給定最大維度的最大預覽尺寸。
      */
     private fun chooseOptimalPreviewSize(
         characteristics: CameraCharacteristics,
@@ -584,12 +584,12 @@ class MainActivity : AppCompatActivity() {
     ): Size {
         val map: StreamConfigurationMap =
             characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
-                ?: throw IllegalStateException("StreamConfigurationMap unavailable")
+                ?: throw IllegalStateException("StreamConfigurationMap 不可用")
 
         val viewAspect = max(viewWidth, viewHeight).toDouble() / min(viewWidth, viewHeight)
         val choices = map.getOutputSizes(SurfaceTexture::class.java).toList()
 
-        // Reasonable upper bound for preview — no need for a 4K preview stream
+        // 預覽的合理上限 — 不需要 4K 預覽串流
         val maxPreviewPixels = 1920 * 1080
 
         val aspectMatches = choices.filter {
@@ -602,14 +602,13 @@ class MainActivity : AppCompatActivity() {
             .sortedByDescending { it.width * it.height }
             .first()
 
-        Log.d(TAG, "Preview size choice: ${final.width}×${final.height} " +
-            "(from ${choices.size} options, targetAspect=%.2f)".format(viewAspect))
+        Log.d(TAG, "預覽尺寸選擇: ${final.width}×${final.height} " +
+            "(來自 ${choices.size} 個選項, 目標縱橫比=%.2f)".format(viewAspect))
         return final
     }
 
     /**
-     * Applies a Matrix to TextureView so preview pixels render at correct aspect ratio
-     * (no stretch) and correct orientation (no rotation).
+     * 向 TextureView 應用 Matrix，以便預覽像素以正確的縱橫比（不拉伸）和正確的朝向（不旋轉）進行渲染。
      */
     private fun configureTransform(viewWidth: Int, viewHeight: Int) {
         if (!this::previewSize.isInitialized) return
@@ -640,10 +639,10 @@ class MainActivity : AppCompatActivity() {
         }
         matrix.postRotate(rotationDegrees.toFloat(), cx, cy)
         textureView.setTransform(matrix)
-        Log.d(TAG, "configureTransform applied (rotation=$rotationDegrees°, scale=%.2f)".format(scale))
+        Log.d(TAG, "已應用 configureTransform (旋轉角度=$rotationDegrees°, 縮放倍率=%.2f)".format(scale))
     }
 
-    // ------------------------- Teardown -------------------------
+    // ------------------------- 拆除 -------------------------
     private fun closeCameraAndPreview() {
         try {
             cameraOpenCloseLock.acquire()
@@ -660,14 +659,14 @@ class MainActivity : AppCompatActivity() {
             cameraDevice?.close()
             cameraDevice = null
 
-            Log.d(TAG, "🔒 Preview & camera fully torn down")
+            Log.d(TAG, "🔒 預覽和相機已完全拆除")
         } catch (_: InterruptedException) {
         } finally {
             cameraOpenCloseLock.release()
         }
     }
 
-    // ------------------------- Boilerplate -------------------------
+    // ------------------------- 樣板程式碼 -------------------------
     companion object {
         private const val TAG = "Camera2Tutorial"
         private const val REQUEST_CODE_PERMISSIONS = 10
@@ -686,7 +685,7 @@ class MainActivity : AppCompatActivity() {
             if (allPermissionsGranted()) {
                 initializeCameraManager()
             } else {
-                Toast.makeText(this, "Camera permission required", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "需要相機權限", Toast.LENGTH_LONG).show()
                 finish()
             }
         }
@@ -694,87 +693,87 @@ class MainActivity : AppCompatActivity() {
 }
 ```
 
-### The 5 Lines That Actually Start Preview
+### 真正啟動預覽的 5 行程式碼
 
-Out of 350+ lines of infrastructure, **just five consecutive statements** in the code above are responsible for actually getting frames onto the screen:
+在 350 多行基礎程式碼中，上述程式碼中僅有的**五個連續語句**負責真正將畫面呈現到螢幕上：
 
 ```kotlin
-// Line A: Build a TEMPLATE_PREVIEW request targeting the preview Surface
+// 行 A：建構一個針對預覽 Surface 的 TEMPLATE_PREVIEW 請求
 previewRequestBuilder = camera.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW).apply {
     addTarget(previewSurface)
 }
 
-// Line B: Create the capture session with the preview surface as its output
+// 行 B：建立以預覽 Surface 為輸出的擷取工作階段
 camera.createCaptureSession(outputSurfaces, object : CameraCaptureSession.StateCallback() {
     override fun onConfigured(session: CameraCaptureSession) {
-        // Line C: Build the immutable CaptureRequest from the builder
+        // 行 C：從建構器建構不可變的 CaptureRequest
         previewRequest = previewRequestBuilder!!.build()
-        // Line D: ⭐ Start the continuous repeating stream of preview frames
+        // 行 D：⭐ 啟動連續重複的預覽幀串流
         session.setRepeatingRequest(previewRequest!!, null, backgroundHandler)
     }
 }, backgroundHandler)
 ```
 
-Skip `addTarget(previewSurface)` and the session won't know where to send frames, resulting in a black screen. Skip `setRepeatingRequest` and the camera waits for a capture that never comes — also black. Get the builder template wrong (`TEMPLATE_STILL_CAPTURE` instead of `TEMPLATE_PREVIEW`) and preview frames come at 5 FPS. All five lines (plus `configureTransform` for aspect) must be correct.
+跳過 `addTarget(previewSurface)`，工作階段將不知道將畫面發送到哪裡，導致黑屏。跳過 `setRepeatingRequest`，相機將等待一个永遠不會到來的擷取——同樣會黑屏。搞錯建構器模板（使用 `TEMPLATE_STILL_CAPTURE` 而非 `TEMPLATE_PREVIEW`），預覽畫面將以 5 FPS 的低速產生。這五行（外加用於校正縱橫比的 `configureTransform`）必須全部正確。
 
-## Verification: What Success Looks Like
+## 驗證：成功後的表現
 
-When you run the Chapter 8 app on a physical device, you should observe the following behavior as a series of checkpoints:
+當你在物理設備上執行第 8 章的應用時，你應該觀察到以下行為，將其作為一系列檢查點：
 
-1. **Splash (0s)**: Status shows *"Waiting for TextureView layout..."* — the view is being inflated.
-2. **SurfaceTexture ready (~0.1s)**: Status updates to *"SurfaceTexture ready — opening camera..."*. The `onSurfaceTextureAvailable` callback fired.
-3. **Camera opened (~0.5s)**: Status changes to *"Camera open — creating capture session..."*. Logcat shows the `previewSize` selection line and the `configureTransform applied` line.
-4. **Session configured (~0.7s)**: Status changes to **🎥 LIVE PREVIEW: 1920×1080** and **you see the camera image on the screen**! It's smooth (30–60 FPS), correctly oriented, and the aspect ratio looks natural (no stretchy faces).
-5. **Press Home / background the app**: Logcat shows `🔒 Preview & camera fully torn down`. When you return, preview resumes instantaneously.
-6. **Rotate the device to landscape**: `onSurfaceTextureSizeChanged` fires, `configureTransform` re-runs with new dimensions, and the preview re-centers itself correctly in landscape without a glitch.
+1. **閃屏 (0s)**：狀態顯示 *「正在等待 TextureView 佈局...」* —— 視圖正在被加載填充。
+2. **SurfaceTexture 就緒 (~0.1s)**：狀態更新為 *「SurfaceTexture 已就緒 — 正在打開相機...」*。`onSurfaceTextureAvailable` 回呼已觸發。
+3. **相機已打開 (~0.5s)**：狀態更改為 *「相機已打開 — 正在建立擷取工作階段...」*。Logcat 顯示了 `previewSize` 選擇行和 `configureTransform applied` 行。
+4. **工作階段已配置 (~0.7s)**：狀態更改為 **🎥 即時預覽: 1920×1080**，並且**你在螢幕上看到了相機影像**！畫面流暢 (30–60 FPS)，朝向正確，縱橫比看起來很自然（人臉没有被拉伸）。
+5. **按下主螢幕鍵 / 將應用置於背景**：Logcat 顯示 `🔒 預覽和相機已完全拆除`。當你返回時，預覽會立即恢復。
+6. **將設備旋轉至橫向**：`onSurfaceTextureSizeChanged` 觸發，`configureTransform` 以新維度重新執行，預覽在橫向模式下正確地重新居中，且没有發生故障。
 
-If you don't see a preview image, systematically check the five starting lines above and verify that `setDefaultBufferSize` was called on the `SurfaceTexture` before creating the session. This step (`textureView.surfaceTexture!!.setDefaultBufferSize(previewSize.width, previewSize.height)`) is a **silent failure point**: miss it, and some devices deliver black frames with zero error messages.
+如果你没有看到預覽影像，請系統地檢查上述五個啟動行，並確認在建立工作階段之前在 `SurfaceTexture` 上呼叫了 `setDefaultBufferSize`。這一步 (`textureView.surfaceTexture!!.setDefaultBufferSize(previewSize.width, previewSize.height)`) 是一个**無聲失敗點**：如果漏掉它，某些設備會交付全黑畫面且没有任何錯誤訊息。
 
-## Troubleshooting Preview Issues
+## 預覽問題排查
 
-### Black screen, no errors in Logcat
+### 黑屏，Logcat 中無錯誤
 
-This is the most common and most frustrating Chapter 8 bug. Check in order:
+這是第 8 章中最常見也最令人沮喪的 bug。請按順序檢查：
 
-1. **Is `setDefaultBufferSize` called?** It must be called with the SAME `previewSize.width/height` as the session uses BEFORE the session is created.
-2. **Did `addTarget(previewSurface)` run?** Log the list of targets on the `previewRequestBuilder` right before `.build()`.
-3. **Did `setRepeatingRequest` actually fire?** Add a `CaptureCallback` (replace `null` with a callback that logs `onCaptureStarted`) and see if frames are being produced. If `onCaptureStarted` never fires, the session never went active — backtrack to `onConfigured` vs `onConfigureFailed`.
-4. **Is `hardwareAccelerated="true"` set on the Activity?** (Chapter 2 requirement.) If not, TextureView silently doesn't render.
+1. **是否呼叫了 `setDefaultBufferSize`？** 它必須使用與工作階段所用的相同的 `previewSize.width/height`，且必須在工作階段建立之前呼叫。
+2. **是否執行了 `addTarget(previewSurface)`？** 在 `.build()` 之前記錄 `previewRequestBuilder` 上的目標列表。
+3. **`setRepeatingRequest` 是否真的觸發了？** 添加一个 `CaptureCallback`（將 `null` 替換為記錄 `onCaptureStarted` 的回呼），看看是否正在產生幀。如果 `onCaptureStarted` 從未觸發，則說明工作階段從未進入活動狀態——回溯檢查 `onConfigured` 與 `onConfigureFailed`。
+4. **Activity 上是否設定了 `hardwareAccelerated="true"`？**（第 2 章的要求。）如果未設定，TextureView 將靜默地不進行渲染。
 
-### Preview is upside-down or rotated 90°
+### 預覽倒置或旋轉了 90°
 
-Your `configureTransform` function is incorrect. Add debug logging to `rotationDegrees` inside `configureTransform` and compare with `sensorOrientation`. A common bug: applying the sensor rotation and the device rotation in the wrong order. For the Pixel lineup, rear sensors are 90° from natural; on some Samsung devices they are 270°. Always read `SENSOR_ORIENTATION` rather than hardcoding.
+你的 `configureTransform` 函式不正確。在 `configureTransform` 內部為 `rotationDegrees` 添加偵錯日誌，並與 `sensorOrientation` 進行比較。一个常見的 bug 是：感光元件旋轉和設備旋轉的應用順序不對。對於 Pixel 系列，後置感光元件相對於自然方向旋轉了 90°；在某些三星設備上，它們旋轉了 270°。請始終讀取 `SENSOR_ORIENTATION` 而不是硬編碼。
 
-### Preview appears stretched (tall thin faces or short wide faces)
+### 預覽顯得拉伸（人臉又瘦又長或又扁又寬）
 
-This means `configureTransform` ran but didn't scale correctly. Log `viewAspect`, the final chosen `previewSize` aspect, and the `scale` variable. The scale should be >1.0 (center-crop) or &lt;1.0 (letterbox with bars). If scale is exactly 1.0 and aspect ratios mismatch, you're stretching the pixels to fill.
+這意味著 `configureTransform` 執行了但没有正確縮放。記錄 `viewAspect`、最終選定的 `previewSize` 縱橫比以及 `scale` 變數。`scale` 應當 >1.0（中心裁剪）或 &lt;1.0（留黑邊）。如果 `scale` 正好是 1.0 且縱橫比不匹配，則說明你在拉伸像素以填充視圖。
 
-### Preview runs at low frame rate (feels like 5–10 FPS)
+### 預覽幀率過低（感覺像是 5–10 FPS）
 
-Check two things:
-1. **Template used**: `TEMPLATE_STILL_CAPTURE` runs at still-capture frame rates (low). You must use `TEMPLATE_PREVIEW`.
-2. **Preview size**: Did `chooseOptimalPreviewSize` select a 4K (3840×2160) preview? That's ~8× the pixels of 1080p and will kill frame rate on budget devices. Add the `maxPreviewPixels` ceiling seen in the code above.
+檢查兩件事：
+1. **所用模板**：`TEMPLATE_STILL_CAPTURE` 以靜態拍攝幀率（較低）執行。你必須使用 `TEMPLATE_PREVIEW`。
+2. **預覽尺寸**：`chooseOptimalPreviewSize` 是否選擇了 4K (3840×2160) 預覽？這大約是 1080p 像素量的 8 倍，會拖慢入門級設備的幀率。請參考上述程式碼添加 `maxPreviewPixels` 上限。
 
-## Summary
+## 小結
 
-This chapter was the payoff for all the infrastructure work. You now have a working camera preview app. You learned:
+本章是對所有基礎架構工作的回報。你現在擁有了一个可以工作的相機預覽應用。你學到了：
 
-1. **The Five Preview Pipeline Components**: `Surface` (buffer queue), `SurfaceTexture` (GPU texture conversion), `TextureView` (on-screen display), `CameraCaptureSession` (plumbing all outputs together), and the repeating `TEMPLATE_PREVIEW` `CaptureRequest` (continuous frame generation).
-2. **TextureView + SurfaceTextureListener**: How to set up the full-screen TextureView via XML layout, hook `onSurfaceTextureAvailable` to know when the GPU surface is ready, and wire up `onSurfaceTextureSizeChanged` for runtime resize/re-orientation.
-3. **Preview Size Selection**: How to read `SCALER_STREAM_CONFIGURATION_MAP`, query `getOutputSizes(SurfaceTexture::class.java)`, and pick the largest size that matches the view's aspect ratio with a 1080p ceiling to keep latency and power low.
-4. **configureTransform**: The canonical aspect-correction matrix that rotates preview frames to match device orientation and center-crop-scales them so no stretching occurs. Why width/height are swapped between buffer Rect and view Rect.
-5. **CameraCaptureSession + setRepeatingRequest**: Building a `TEMPLATE_PREVIEW` request builder, `addTarget(previewSurface)`, creating the session, and in `onConfigured` calling `session.setRepeatingRequest()` — the single line that actually starts the frame stream.
+1. **預覽管線的五個組件**：`Surface`（緩衝區佇列）、`SurfaceTexture` (GPU 紋理轉換)、`TextureView`（螢幕顯示）、`CameraCaptureSession`（將所有輸出連接在一起）以及重複的 `TEMPLATE_PREVIEW` 類型的 `CaptureRequest`（連續幀產生）。
+2. **TextureView + SurfaceTextureListener**：如何透過 XML 佈局設定全螢幕 TextureView，掛接 `onSurfaceTextureAvailable` 以獲知 GPU Surface 何時就緒，並為執行時的尺寸調整/重新定向連接 `onSurfaceTextureSizeChanged`。
+3. **預覽尺寸選擇**：如何讀取 `SCALER_STREAM_CONFIGURATION_MAP`，查詢 `getOutputSizes(SurfaceTexture::class.java)`，並在保持 1080p 上限以確保低延遲和低功耗的前提下，選擇與視圖縱橫比最匹配的最大尺寸。
+4. **configureTransform**：標準的縱橫比校正矩陣，用於旋轉預覽幀以比對設備朝向，並進行中心裁剪縮放以防拉伸。以及為什麼在緩衝區 Rect 和視圖 Rect 之間交換寬/高。
+5. **CameraCaptureSession + setRepeatingRequest**：建構 `TEMPLATE_PREVIEW` 請求建構器，執行 `addTarget(previewSurface)`，建立工作階段，並在 `onConfigured` 中呼叫 `session.setRepeatingRequest()` —— 真正開啟畫面串流的那一行程式碼。
 
-The Android Camera Parameters app on [Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams) uses a direct descendant of this exact preview pipeline. Its overlay system (showing per-frame 3A state, ISO, exposure time, lens position) is built on top of the CaptureCallback parameter you passed as `null` — preview frames keep flowing, and we snoop the metadata without interrupting the stream.
+[Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams) 上的 **Android Camera Parameters** 應用使用了完全相同的預覽管線。其覆蓋層系統（顯示逐幀 3A 狀態、ISO、曝光時間、鏡頭位置）是建立在你作為 `null` 傳遞的 CaptureCallback 參數之上的——預覽幀持續流動，而我們在不中斷串流的情況下監聽元數據。
 
-## What's Next
+## 下一章
 
-A live preview is a stunning demo, but it's not a camera **app** until you can capture and save a photo. In **Chapter 9: Taking Photos**, we will:
+即時預覽是一个驚豔的演示，但在你能拍攝並儲存照片之前，它還不能被稱為相機**應用**。在**第 9 章：拍照**中，我們將：
 
-1. Introduce `ImageReader` with JPEG format, the CPU-accessible sink for high-quality still frames.
-2. Learn how to set JPEG compression quality and manage the `maxImages` buffer queue depth.
-3. Walk the precapture AE (auto-exposure) trigger flow: stop repeating → precapture AE trigger start → wait for AE converged → capture still → save bytes → unlock AE → resume repeating.
-4. Implement Scoped Storage–compatible photo saving via `MediaStore` on Android 10+, and direct `FileOutputStream` on older versions, always remembering to `.close()` the `Image` to avoid buffer starvation.
-5. Add a `CaptureCallback` chain with per-capture state tracking so the precapture wait is correct.
+1. 引入 JPEG 格式的 `ImageReader`，它是供 CPU 存取的高品質靜態幀接收器。
+2. 學習如何設定 JPEG 壓縮品質並管理 `maxImages` 緩衝區佇列深度。
+3. 走通預擷取 AE（自動曝光）觸發流程：停止重複 → 開啟預擷取 AE 觸發 → 等待 AE 收斂 → 擷取靜態影像 → 儲存位元組數據 → 解鎖 AE → 恢復重複。
+4. 在 Android 10+ 上透過 `MediaStore` 實現相容分區儲存（Scoped Storage）的照片儲存，在舊版本上透過直接的 `FileOutputStream` 實現，並始終記得 `.close()` 掉 `Image` 以避免緩衝區匱乏。
+5. 添加帶有逐次擷取狀態追蹤的 `CaptureCallback` 鏈，以確保預擷取等待正確無誤。
 
-By the end of Chapter 9, your tutorial project will be a **usable, real camera application**: tap a button, hear the shutter, and find your JPEG photo in the device's Pictures folder. You can then compare output quality side-by-side with the Android Camera Parameters app ([GitHub](https://github.com/zoozooll/AndroidCameraParameters)) to see the difference manual controls make!
+到第 9 章結束時，你的教程專案將成為一个**實用的、真正的相機應用程式**：點擊按鈕，聽到快門聲，然後在設備的 Pictures 文件夾中找到你的 JPEG 照片。到那時，你可以將輸出畫質與 **Android Camera Parameters** 應用（[GitHub](https://github.com/zoozooll/AndroidCameraParameters)）進行橫向對比，看看手動控制能帶來多大差異！

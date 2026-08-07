@@ -1,31 +1,31 @@
 ﻿---
 sidebar_position: 29
-title: "Camera Metadata Encyclopedia"
-description: Complete reference guide for all essential CameraCharacteristics metadata keys including Sensor, Lens, Control, Scaler, Request, Flash, JPEG, Statistics, and Info categories.
-keywords: [CameraCharacteristics, CameraMetadata, Sensor, Lens, Control, Scaler, camera metadata reference]
+title: "Ensiklopedia Metadata Kamera"
+description: Panduan referensi lengkap untuk semua kunci metadata CameraCharacteristics penting termasuk kategori Sensor, Lensa, Kontrol, Scaler, Permintaan, Lampu Kilat, JPEG, Statistik, dan Info.
+keywords: [CameraCharacteristics, CameraMetadata, Sensor, Lensa, Kontrol, Scaler, referensi metadata kamera]
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-# Camera Metadata Encyclopedia
+# Ensiklopedia Metadata Kamera
 
-## Companion App
+## Aplikasi Pendamping
 
-Inspect every key in this encyclopedia live on your own device — install the Android Camera Parameters app:
+Periksa setiap kunci dalam ensiklopedia ini secara langsung pada perangkat Anda sendiri — instal aplikasi Android Camera Parameters:
 
-- **GitHub (Open Source):** [github.com/zoozooll/AndroidCameraParameters](https://github.com/zoozooll/AndroidCameraParameters)
+- **GitHub (Sumber Terbuka):** [github.com/zoozooll/AndroidCameraParameters](https://github.com/zoozooll/AndroidCameraParameters)
 - **Google Play:** [play.google.com/store/apps/details?id=com.minininja.cameraparams](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)
 
-The app is a living implementation of every concept on this page. Every metadata entry below tells you exactly which tab and screen displays that value so you can cross-reference with a real device in your hand.
+Aplikasi ini adalah implementasi hidup dari setiap konsep di halaman ini. Setiap entri metadata di bawah ini memberi tahu Anda tab dan layar mana yang menampilkan nilai tersebut sehingga Anda dapat mereferensikan silang dengan perangkat nyata di tangan Anda.
 
 ---
 
-## Metadata Taxonomy
+## Taksonomi Metadata
 
 ```mermaid
 mindmap
-  root((Camera2 Metadata))
+  root((Metadata Camera2))
     Sensor
       SENSOR_INFO_ACTIVE_ARRAY_SIZE
       SENSOR_INFO_PIXEL_ARRAY_SIZE
@@ -34,13 +34,13 @@ mindmap
       SENSOR_INFO_WHITE_LEVEL
       SENSOR_INFO_COLOR_FILTER_ARRANGEMENT
       SENSOR_INFO_TIMESTAMP_SOURCE
-    Lens
+    Lensa
       LENS_FACING
       LENS_INFO_AVAILABLE_FOCAL_LENGTHS
       LENS_INFO_MINIMUM_FOCUS_DISTANCE
       LENS_INFO_AVAILABLE_APERTURES
       LENS_INFO_OPTICAL_STABILIZATION_MODE
-    Control
+    Kontrol
       CONTROL_AE_AVAILABLE_MODES
       CONTROL_AF_AVAILABLE_MODES
       CONTROL_AWB_AVAILABLE_MODES
@@ -50,11 +50,11 @@ mindmap
       SCALER_STREAM_CONFIGURATION_MAP
       SCALER_AVAILABLE_MAX_DIGITAL_ZOOM
       SCALER_CROPPING_TYPE
-    Request
+    Permintaan
       REQUEST_AVAILABLE_CAPABILITIES
       REQUEST_PARTIAL_RESULT_COUNT
       REQUEST_MAX_NUM_OUTPUT_STREAMS
-    Flash
+    Lampu Kilat
       FLASH_INFO_AVAILABLE
       FLASH_INFO_STRENGTH_MAXIMUM_LEVEL
     JPEG
@@ -68,62 +68,62 @@ mindmap
 
 ---
 
-## Introduction
+## Pendahuluan
 
-Welcome to the Camera Metadata Encyclopedia, the definitive reference for understanding the 300+ metadata keys that describe every capability of an Android camera device. If the previous chapters in this series taught you *how* to operate Camera2 — opening sessions, building requests, streaming surfaces — this encyclopedia teaches you *what* your camera is actually capable of doing. Every feature you enable in a `CaptureRequest.Builder` must first be validated against `CameraCharacteristics`. Skip this validation and your app will crash on a certain percentage of devices, or worse, silently produce corrupted output.
+Selamat datang di Ensiklopedia Metadata Kamera, referensi definitif untuk memahami 300+ kunci metadata yang menjelaskan setiap kemampuan perangkat kamera Android. Jika bab-bab sebelumnya dalam seri ini mengajarkan Anda *cara* mengoperasikan Camera2 — membuka sesi, membangun permintaan, streaming surface — ensiklopedia ini mengajarkan Anda *apa* yang sebenarnya mampu dilakukan kamera Anda. Setiap fitur yang Anda aktifkan dalam `CaptureRequest.Builder` harus divalidasi terlebih dahulu terhadap `CameraCharacteristics`. Lewati validasi ini dan aplikasi Anda akan crash pada persentase perangkat tertentu, atau lebih buruk lagi, secara diam-diam menghasilkan output yang rusak.
 
-This encyclopedia exists because Camera2 metadata is notoriously under-documented in the official Android SDK reference. The documentation tells you the type of each key (a `Range&lt;Int&gt;`, a `FloatArray`, etc.) but rarely tells you the *semantics*: what a "diopter" means in practice, why an active array size differs from a pixel array size, or which sequence of keys you must check together before exposing a manual-ISO button. The entries here bridge that gap with production-grade code, common OEM pitfalls, and real device behavior drawn from thousands of device profiles in the Android Camera Parameters database.
+Ensiklopedia ini ada karena metadata Camera2 sangat kurang didokumentasikan dalam referensi SDK Android resmi. Dokumentasi memberi tahu Anda tipe dari setiap kunci (seperti `Range<Int>`, `FloatArray`, dll.) tetapi jarang memberi tahu Anda *semantik*-nya: apa arti "dioptri" dalam praktiknya, mengapa ukuran array aktif berbeda dari ukuran array piksel, atau urutan kunci mana yang harus Anda periksa bersama sebelum mengekspos tombol ISO manual. Entri di sini menjembatani celah tersebut dengan kode tingkat produksi, jebakan OEM yang umum, dan perilaku perangkat nyata yang diambil dari ribuan profil perangkat dalam basis data Android Camera Parameters.
 
-Think of this page as a lookup table for your camera application architecture. When you design a settings screen, go to the Control section. When you build a zoom UI, go to Scaler. When you write a RAW processing pipeline, go to Sensor. Every entry follows the same six-point structure so you can jump directly to the code you need without re-learning layout. The companion app on your phone then validates that the same queries work against real silicon from Samsung, Sony, HiSilicon, MediaTek, and Google Tensor.
+Anggap halaman ini sebagai tabel pencarian untuk arsitektur aplikasi kamera Anda. Saat Anda mendesain layar pengaturan, buka bagian Kontrol. Saat Anda membangun UI zoom, buka Scaler. Saat Anda menulis pipeline pemrosesan RAW, buka Sensor. Setiap entri mengikuti struktur enam poin yang sama sehingga Anda dapat melompat langsung ke kode yang Anda butuhkan tanpa mempelajari kembali tata letaknya. Aplikasi pendamping di ponsel Anda kemudian memvalidasi bahwa kueri yang sama berfungsi terhadap silikon nyata dari Samsung, Sony, HiSilicon, MediaTek, dan Google Tensor.
 
-No device supports every key in this encyclopedia. That is the entire point. The correct pattern for Camera2 development is: query the key → null-check the result → feature-gate the UI → document the fallback path. This page gives you the query, the check, and the pitfall you will hit if you skip it.
-
----
-
-## How Camera2 Metadata is Organized
-
-Camera2 metadata lives in three parallel class hierarchies, all rooted in `android.hardware.camera2.CameraMetadata`. The static description of what a camera *can* do lives in `CameraCharacteristics` — you query this exactly once per camera ID after discovering it via `CameraManager.getCameraIdList()`. The per-request description of what you *want* the camera to do lives in `CaptureRequest` — you populate keys via `CaptureRequest.Builder.set()`. The per-frame description of what the camera *actually did* lives in `CaptureResult` (or its total variant `TotalCaptureResult`) — you read keys from the callback in `CameraCaptureSession.CaptureCallback.onCaptureCompleted()`.
-
-Every key in all three hierarchies extends `CaptureResult.Key<T>` (or its siblings `CameraCharacteristics.Key<T>` and `CaptureRequest.Key<T>`) and is a strongly-typed field descriptor. There are over 300 public keys across the three classes, plus additional OEM-private keys accessible via `CameraCharacteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_SESSION_KEYS)` on certain vendor extensions. The categories in this encyclopedia follow the conceptual groupings used by the HAL3 interface specification: Sensor describes the imager, Lens describes the optics, Control describes the 3A (auto-exposure, auto-focus, auto-white-balance) algorithms, Scaler describes the crop-and-resize pipeline, Request describes cross-cutting capability flags, Flash describes the torch/flash LED, JPEG describes the still-image encoder, and Info describes the camera package and HAL version.
+Tidak ada perangkat yang mendukung setiap kunci dalam ensiklopedia ini. Itulah intinya. Pola yang benar untuk pengembangan Camera2 adalah: kueri kunci → periksa null hasilnya → batasi fitur UI → dokumentasikan jalur cadangan. Halaman ini memberi Anda kueri, pemeriksaan, dan jebakan yang akan Anda temui jika Anda melewatkannya.
 
 ---
 
-## Conventions Used in This Encyclopedia
+## Bagaimana Metadata Camera2 Diorganisir
 
-Every metadata entry below follows exactly six sections:
+Metadata Camera2 hidup dalam tiga hierarki kelas paralel, semuanya berakar pada `android.hardware.camera2.CameraMetadata`. Deskripsi statis tentang apa yang *bisa* dilakukan kamera hidup di `CameraCharacteristics` — Anda menanyakan ini tepat satu kali per ID kamera setelah menemukannya melalui `CameraManager.getCameraIdList()`. Deskripsi per permintaan tentang apa yang Anda *inginkan* untuk dilakukan kamera hidup di `CaptureRequest` — Anda mengisi kunci melalui `CaptureRequest.Builder.set()`. Deskripsi per bingkai tentang apa yang kamera *sebenarnya lakukan* hidup di `CaptureResult` (atau varian totalnya `TotalCaptureResult`) — Anda membaca kunci dari callback di `CameraCaptureSession.CaptureCallback.onCaptureCompleted()`.
 
-1. **What is it?** A 1–2 paragraph definition of the key, its type, and its semantics.
-2. **Why does it exist?** The design rationale that led Android engineers to expose this key rather than deriving the value implicitly.
-3. **Which devices support it?** The minimum hardware level, capability flags, and Android version where this key becomes meaningful.
-4. **How do I query it?** A complete Kotlin code snippet with null-safety, showing the exact `characteristics.get()` call plus error handling.
-5. **How can I inspect it with Android Camera Parameters?** The exact tab hierarchy in the companion app where you can see this value rendered on a device.
-6. **Common pitfalls.** One or more real-world issues developers hit, usually involving OEM fragmentation, hidden state coupling between keys, or misunderstanding of units.
-
-Code snippets use idiomatic Kotlin with nullable-safe operators (`?.`) and the Elvis operator (`?:`) plus `run` blocks for fallback. All snippets assume you already hold a `CameraCharacteristics` instance named `characteristics` obtained via `cameraManager.getCameraCharacteristics(cameraId)`. Snippets that produce user-visible output use string formatting with units (diopters, nanoseconds, EV steps) so you can drop them directly into a `PreferenceScreen` or a `TextView` debug overlay.
-
-The companion app references always use the same pattern: *Tab Name / Sub-tab Name*. For example "Overview / Hardware Level" means: open the app, tap the Overview tab in the bottom navigation, then look for the Hardware Level card. If a key appears in multiple screens we list the canonical primary location first.
+Setiap kunci di ketiga hierarki tersebut memperluas `CaptureResult.Key<T>` (atau saudara-saudaranya `CameraCharacteristics.Key<T>` dan `CaptureRequest.Key<T>`) dan merupakan deskriptor bidang yang bertipe kuat. Ada lebih dari 300 kunci publik di ketiga kelas tersebut, ditambah kunci privat OEM tambahan yang dapat diakses melalui `CameraCharacteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_SESSION_KEYS)` pada ekstensi vendor tertentu. Kategori dalam ensiklopedia ini mengikuti pengelompokan konseptual yang digunakan oleh spesifikasi antarmuka HAL3: Sensor menjelaskan imager, Lensa menjelaskan optik, Kontrol menjelaskan algoritma 3A (auto-exposure, auto-focus, auto-white-balance), Scaler menjelaskan pipeline pemotongan-dan-pengubahan-ukuran, Permintaan menjelaskan flag kemampuan lintas-subsistem, Lampu Kilat menjelaskan LED senter/kilat, JPEG menjelaskan encoder gambar diam, dan Info menjelaskan paket kamera dan versi HAL.
 
 ---
 
-## Sensor Category
+## Konvensi yang Digunakan dalam Ensiklopedia Ini
+
+Setiap entri metadata di bawah ini mengikuti tepat enam bagian:
+
+1. **Apa itu?** Definisi 1–2 paragraf tentang kunci, tipe, dan semantiknya.
+2. **Mengapa itu ada?** Rasional desain yang mengarahkan insinyur Android untuk mengekspos kunci ini alih-alih menurunkan nilainya secara implisit.
+3. **Perangkat mana yang mendukungnya?** Tingkat perangkat keras minimum, flag kemampuan, dan versi Android di mana kunci ini menjadi bermakna.
+4. **Bagaimana cara menanyakannya?** Cuplikan kode Kotlin lengkap dengan keamanan null, menunjukkan panggilan `characteristics.get()` yang tepat plus penanganan kesalahan.
+5. **Bagaimana cara memeriksanya dengan Android Camera Parameters?** Hierarki tab yang tepat dalam aplikasi pendamping di mana Anda dapat melihat nilai ini dirender pada perangkat.
+6. **Jebakan umum.** Satu atau lebih masalah dunia nyata yang ditemui pengembang, biasanya melibatkan fragmentasi OEM, keterkaitan status tersembunyi antar kunci, atau kesalahpahaman tentang unit.
+
+Cuplikan kode menggunakan Kotlin idiomatik dengan operator keamanan null (`?.`) dan operator Elvis (`?:`) ditambah blok `run` untuk cadangan. Semua cuplikan mengasumsikan Anda sudah memegang instansi `CameraCharacteristics` bernama `characteristics` yang diperoleh melalui `cameraManager.getCameraCharacteristics(cameraId)`. Cuplikan yang menghasilkan output yang terlihat pengguna menggunakan pemformatan string dengan unit (dioptri, nanodetik, langkah EV) sehingga Anda dapat memasukkannya langsung ke dalam `PreferenceScreen` atau overlay debug `TextView`.
+
+Referensi aplikasi pendamping selalu menggunakan pola yang sama: *Nama Tab / Nama Sub-tab*. Misalnya "Overview / Hardware Level" berarti: buka aplikasi, ketuk tab Overview di navigasi bawah, lalu cari kartu Hardware Level. Jika kunci muncul di beberapa layar, kita mencantumkan lokasi utama kanonik terlebih dahulu.
+
+---
+
+## Kategori Sensor
 
 ### SENSOR_INFO_ACTIVE_ARRAY_SIZE
 
-**1. What is it?**
+**1. Apa itu?**
 
-`SENSOR_INFO_ACTIVE_ARRAY_SIZE` is a `android.graphics.Rect` describing the pixel coordinates of the active imaging area within the full sensor die. In practice this is the largest rectangle of pixels that can actually be read out and delivered to an output stream. The rectangle is always axis-aligned and expressed in pixel-coordinate space where `(0,0)` is the top-left corner of the full pixel array. Typical values look like `Rect(0, 0, 8000, 6000)` for an 8K×6K sensor, or `Rect(120, 160, 3880, 2880)` when the sensor manufacturer leaves a small inactive border (optically-black pixels) around the edge.
+`SENSOR_INFO_ACTIVE_ARRAY_SIZE` adalah `android.graphics.Rect` yang menjelaskan koordinat piksel dari area pencitraan aktif di dalam die sensor penuh. Dalam praktiknya ini adalah persegi panjang piksel terbesar yang sebenarnya dapat dibaca dan dikirim ke aliran output. Persegi panjang tersebut selalu selaras dengan sumbu dan dinyatakan dalam ruang koordinat piksel di mana `(0,0)` adalah sudut kiri atas dari array piksel penuh. Nilai tipikal terlihat seperti `Rect(0, 0, 8000, 6000)` untuk sensor 8K×6K, atau `Rect(120, 160, 3880, 2880)` ketika produsen sensor menyisakan batas tidak aktif kecil (piksel hitam optik) di sekitar tepinya.
 
-Every output stream you configure — whether JPEG, YUV_420_888, RAW, or a preview SurfaceTexture — is ultimately cropped from this active area. When you request a 4:3 JPEG at 12MP the camera ISP crops the active array to 4:3 aspect ratio and scales down. When you apply digital zoom via `SCALER_CROP_REGION`, that crop region is itself cropped relative to the active array, not the pixel array.
+Setiap aliran output yang Anda konfigurasi — baik JPEG, YUV_420_888, RAW, atau SurfaceTexture pratinjau — pada akhirnya dipotong dari area aktif ini. Saat Anda meminta JPEG 4:3 pada 12MP, ISP kamera memotong array aktif ke rasio aspek 4:3 dan mengecilkan ukurannya. Saat Anda menerapkan zoom digital melalui `SCALER_CROP_REGION`, wilayah pemotongan tersebut dipotong relatif terhadap array aktif, bukan array piksel.
 
-**2. Why does it exist?**
+**2. Mengapa itu ada?**
 
-Sensor dies always contain more physical photodiodes than are delivered to the ISP pipeline. The outermost rows and columns are "dummy" or "optically black" pixels used for dark-current calibration and lens-shading correction — not real picture data. Without `SENSOR_INFO_ACTIVE_ARRAY_SIZE` developers would have no way to know which coordinate system to use for `SCALER_CROP_REGION` or face-based crop tracking. Camera1 used to hide this distinction entirely, which made digital-zoom math inconsistent across OEMs. Camera2 exposes it explicitly so crop regions can be calculated with pixel-perfect precision.
+Die sensor selalu mengandung lebih banyak fotodioda fisik daripada yang dikirim ke pipeline ISP. Baris dan kolom terluar adalah piksel "dummy" atau "hitam optik" yang digunakan untuk kalibrasi arus-gelap dan koreksi bayangan lensa — bukan data gambar nyata. Tanpa `SENSOR_INFO_ACTIVE_ARRAY_SIZE`, pengembang tidak akan tahu sistem koordinat mana yang digunakan untuk `SCALER_CROP_REGION` atau pelacakan pemotongan berbasis wajah. Camera1 dulu menyembunyikan perbedaan ini sepenuhnya, yang membuat matematika zoom digital tidak konsisten di berbagai OEM. Camera2 mengeksposnya secara eksplisit sehingga wilayah pemotongan dapat dihitung dengan presisi setingkat piksel.
 
-**3. Which devices support it?**
+**3. Perangkat mana yang mendukungnya?**
 
-All Camera2 devices support this key at all hardware levels: LEGACY, LIMITED, FULL, and LEVEL_3. It is listed in `CameraCharacteristics.getAvailableCaptureResultKeys()` for every camera ID, including external USB cameras. The rect is always non-empty and its width/height never exceed `SENSOR_INFO_PIXEL_ARRAY_SIZE`.
+Semua perangkat Camera2 mendukung kunci ini di semua tingkat perangkat keras: LEGACY, LIMITED, FULL, dan LEVEL_3. Ini terdaftar di `CameraCharacteristics.getAvailableCaptureResultKeys()` untuk setiap ID kamera, termasuk kamera USB eksternal. Rect tersebut selalu tidak kosong dan lebar/tingginya tidak pernah melebihi `SENSOR_INFO_PIXEL_ARRAY_SIZE`.
 
-**4. How do I query it?**
+**4. Bagaimana cara menanyakannya?**
 
 ```kotlin
 val activeArray: Rect? = characteristics.get(
@@ -134,44 +134,44 @@ activeArray?.let { rect ->
     val widthPx = rect.width()
     val heightPx = rect.height()
     val megapixels = (widthPx * heightPx) / 1_000_000.0
-    Log.d(TAG, "Active array: ${widthPx}×${heightPx}px (%.1f MP)".format(megapixels))
-    Log.d(TAG, "  Left=${rect.left}, Top=${rect.top}, Right=${rect.right}, Bottom=${rect.bottom}")
+    Log.d(TAG, "Array aktif: ${widthPx}×${heightPx}px (%.1f MP)".format(megapixels))
+    Log.d(TAG, "  Kiri=${rect.left}, Atas=${rect.top}, Kanan=${rect.right}, Bawah=${rect.bottom}")
 } ?: run {
-    Log.w(TAG, "Active array size not available on this device")
+    Log.w(TAG, "Ukuran array aktif tidak tersedia pada perangkat ini")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Bagaimana cara memeriksanya dengan Android Camera Parameters?**
 
-Navigate to **Sensor / Sensor Info**. The active array is rendered as the second line of the "Sensor Geometry" card, below the pixel array size. The companion app also draws the active array rectangle visually superimposed on a scaled representation of the pixel array, so you can see at a glance how much of the physical die is actually usable.
+Navigasi ke **Sensor / Sensor Info**. Array aktif dirender sebagai baris kedua dari kartu "Sensor Geometry", di bawah ukuran array piksel. Aplikasi pendamping juga menggambar persegi panjang array aktif yang secara visual ditempatkan di atas representasi skala dari array piksel, sehingga Anda dapat melihat sekilas seberapa banyak dari die fisik yang sebenarnya dapat digunakan.
 
-**6. Common pitfalls**
+**6. Jebakan umum**
 
-The single biggest mistake is querying `SENSOR_INFO_PIXEL_ARRAY_SIZE` and then expecting JPEG output at that resolution. Full-size still images always use the active array dimensions, never the pixel array. On a typical 50MP Samsung ISOCELL sensor the pixel array might be 8192×6144 but the active array is 8000×6000. If you allocate a 50.3MP buffer (from pixel array) you get a 48MP image and the remaining pixels are silently dropped, or worse, you get a corrupted buffer on legacy HAL devices. Always use `activeArray.width() * activeArray.height()` for buffer sizing, never the pixel array product. The second common pitfall is using active array coordinates without including the offset: when the rect top/left are non-zero, your crop-region math must add that origin or the zoom drifts toward the top-left.
+Kesalahan tunggal terbesar adalah menanyakan `SENSOR_INFO_PIXEL_ARRAY_SIZE` dan kemudian mengharapkan output JPEG pada resolusi tersebut. Gambar diam ukuran penuh selalu menggunakan dimensi array aktif, tidak pernah array piksel. Pada sensor Samsung ISOCELL 50MP yang khas, array piksel mungkin 8192×6144 tetapi array aktifnya adalah 8000×6000. Jika Anda mengalokasikan buffer 50,3MP (dari array piksel), Anda akan mendapatkan gambar 48MP dan piksel yang tersisa dibuang secara diam-diam, atau lebih buruk lagi, Anda mendapatkan buffer yang rusak pada perangkat HAL lama. Selalu gunakan `activeArray.width() * activeArray.height()` untuk ukuran buffer, jangan pernah hasil kali array piksel. Jebakan umum kedua adalah menggunakan koordinat array aktif tanpa menyertakan offset: ketika top/left rect tidak nol, matematika wilayah pemotongan Anda harus menambahkan titik asal tersebut atau zoom akan bergeser ke arah kiri atas.
 
 ---
 
 ### SENSOR_INFO_PIXEL_ARRAY_SIZE
 
-**1. What is it?**
+**1. Apa itu?**
 
-`SENSOR_INFO_PIXEL_ARRAY_SIZE` is a `android.util.Size` representing the total number of physical photodiodes on the sensor die, including any optically-black or dummy border pixels. This is the "marketing megapixel" number: a 108MP sensor advertises pixel array dimensions of 12000×9000 regardless of how many are actually delivered to the ISP pipeline. Type-wise it is a simple `Size` with `.width` and `.height` fields.
+`SENSOR_INFO_PIXEL_ARRAY_SIZE` adalah `android.util.Size` yang mewakili jumlah total fotodioda fisik pada die sensor, termasuk piksel batas hitam optik atau dummy. Ini adalah angka "megapiksel pemasaran": sensor 108MP mengiklankan dimensi array piksel 12000×9000 terlepas dari berapa banyak yang sebenarnya dikirim ke pipeline ISP. Secara tipe ini adalah `Size` sederhana dengan bidang `.width` dan `.height`.
 
-The relationship to the active array is always:
+Hubungannya dengan array aktif selalu:
 - `pixelArray.width >= activeArray.width`
 - `pixelArray.height >= activeArray.height`
 
-The difference is typically 100–400 pixels on each axis, used for optical black (OB) lines and factory lens-shading calibration.
+Perbedaannya biasanya 100–400 piksel pada setiap sumbu, digunakan untuk baris hitam optik (OB) dan kalibrasi bayangan lensa pabrik.
 
-**2. Why does it exist?**
+**2. Mengapa itu ada?**
 
-RAW capture pipelines need the full pixel dimensions to parse RAW10/RAW12/RAW16 buffers correctly, because the RAW format (when `SENSOR_INFO_PRE_CORRECTION_ACTIVE_ARRAY_SIZE` is not available) sometimes includes the OB lines. Developers writing custom demosaic or dark-frame subtraction code also need to know how many pixels on each border to strip before processing. On the consumer-facing side, marketing teams and benchmark apps use pixel array size to report "true" sensor resolution without the OEM's ISP crop.
+Pipeline pengambilan gambar RAW memerlukan dimensi piksel penuh untuk mengurai buffer RAW10/RAW12/RAW16 dengan benar, karena format RAW (ketika `SENSOR_INFO_PRE_CORRECTION_ACTIVE_ARRAY_SIZE` tidak tersedia) terkadang menyertakan baris OB. Pengembang yang menulis kode demosaic kustom atau pengurangan frame gelap juga perlu tahu berapa banyak piksel pada setiap batas yang harus dibuang sebelum diproses. Di sisi konsumen, tim pemasaran dan aplikasi benchmark menggunakan ukuran array piksel untuk melaporkan resolusi sensor "sebenarnya" tanpa pemotongan ISP dari OEM.
 
-**3. Which devices support it?**
+**3. Perangkat mana yang mendukungnya?**
 
-All hardware levels expose this key. There is no capability flag prerequisite. RAW-capable devices (those advertising `REQUEST_AVAILABLE_CAPABILITIES_RAW`) are required by the Camera2 CDD to report pixel array size accurate to within one row/column of the physical sensor specification.
+Semua tingkat perangkat keras mengekspos kunci ini. Tidak ada prasyarat flag kemampuan. Perangkat yang mampu RAW (yang mengiklankan `REQUEST_AVAILABLE_CAPABILITIES_RAW`) diwajibkan oleh Camera2 CDD untuk melaporkan ukuran array piksel yang akurat hingga dalam satu baris/kolom dari spesifikasi sensor fisik.
 
-**4. How do I query it?**
+**4. Bagaimana cara menanyakannya?**
 
 ```kotlin
 val pixelArray: Size? = characteristics.get(
@@ -180,45 +180,45 @@ val pixelArray: Size? = characteristics.get(
 
 pixelArray?.let { size ->
     val mp = (size.width * size.height) / 1_000_000.0
-    Log.d(TAG, "Pixel array: ${size.width}×${size.height}px (%.1f MP marketing)".format(mp))
+    Log.d(TAG, "Array piksel: ${size.width}×${size.height}px (pemasaran %.1f MP)".format(mp))
     
     characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)?.let { active ->
         val usablePct = (active.width() * active.height()).toDouble() /
                         (size.width * size.height).toDouble() * 100.0
-        Log.d(TAG, "  %.1f%% of pixels are deliverable via active array".format(usablePct))
+        Log.d(TAG, "  %.1f%% piksel dapat dikirim melalui array aktif".format(usablePct))
     }
 } ?: run {
-    Log.w(TAG, "Pixel array size not available")
+    Log.w(TAG, "Ukuran array piksel tidak tersedia")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Bagaimana cara memeriksanya dengan Android Camera Parameters?**
 
-Open **Sensor / Sensor Info** and look at the first entry in the "Sensor Geometry" card, labeled "Pixel Array". The app renders it as width×height with the marketing megapixel count in parentheses (e.g. "8192 × 6144 (50.3 MP)"). If you tap the row a dialog opens with a comparison table of pixel array vs. active array vs. pre-correction active array.
+Buka **Sensor / Sensor Info** dan lihat entri pertama di kartu "Sensor Geometry", berlabel "Pixel Array". Aplikasi merendernya sebagai lebar×tinggi dengan jumlah megapiksel pemasaran dalam tanda kurung (misalnya "8192 × 6144 (50.3 MP)"). Jika Anda mengetuk baris tersebut, sebuah dialog terbuka dengan tabel perbandingan array piksel vs array aktif vs array aktif pra-koreksi.
 
-**6. Common pitfalls**
+**6. Jebakan umum**
 
-Confusing pixel array with deliverable JPEG size is universal among first-time Camera2 developers. The sequence is always: (1) query `SCALER_STREAM_CONFIGURATION_MAP.getOutputSizes(ImageFormat.JPEG)` to get the *actual* resolutions the encoder can produce, (2) the largest JPEG size will equal (or be a scaled crop of) `SENSOR_INFO_ACTIVE_ARRAY_SIZE`, never the pixel array. If you write code that computes a 4:3 crop from pixel array dimensions, the result will be slightly wider than what the ISP can actually deliver, and the camera device will silently clamp it — introducing subtle pixel drift in face-tracking zoom. Second, on reprocessing-capable devices that advertise `REQUEST_AVAILABLE_CAPABILITIES_PRIVATE_REPROCESSING`, the reprocessing input size uses pixel array semantics; using active array for reprocessing causes frame-alignment errors.
+Membingungkan array piksel dengan ukuran JPEG yang dapat dikirim adalah hal yang universal di kalangan pengembang Camera2 pemula. Urutannya selalu: (1) kueri `SCALER_STREAM_CONFIGURATION_MAP.getOutputSizes(ImageFormat.JPEG)` untuk mendapatkan resolusi *aktual* yang dapat dihasilkan encoder, (2) ukuran JPEG terbesar akan sama dengan (atau potongan berskala dari) `SENSOR_INFO_ACTIVE_ARRAY_SIZE`, tidak pernah array piksel. Jika Anda menulis kode yang menghitung pemotongan 4:3 dari dimensi array piksel, hasilnya akan sedikit lebih lebar dari yang sebenarnya dapat dikirim oleh ISP, dan perangkat kamera akan secara diam-diam membatasinya — memperkenalkan pergeseran piksel halus dalam zoom pelacakan wajah. Kedua, pada perangkat yang mampu memproses ulang yang mengiklankan `REQUEST_AVAILABLE_CAPABILITIES_PRIVATE_REPROCESSING`, ukuran input pemrosesan ulang menggunakan semantik array piksel; menggunakan array aktif untuk pemrosesan ulang menyebabkan kesalahan penyelarasan bingkai.
 
 ---
 
 ### SENSOR_INFO_SENSITIVITY_RANGE
 
-**1. What is it?**
+**1. Apa itu?**
 
-`SENSOR_INFO_SENSITIVITY_RANGE` is a `android.util.Range&lt;Int&gt;` specifying the minimum and maximum ISO (analog gain) values the sensor can apply *during raw readout*. Units are ISO arithmetic: 100 is base ISO (cleanest image, lowest noise), 6400 or higher is high-sensitivity mode (noisier image, shorter shutter time for the same EV). Typical ranges on modern devices are `[100, 6400]` for mid-range phones and `[50, 12800]` or `[32, 25600]` for flagship sensors with large pixel wells.
+`SENSOR_INFO_SENSITIVITY_RANGE` adalah `android.util.Range<Int>` yang menentukan nilai ISO minimum dan maksimum (gain analog) yang dapat diterapkan sensor *selama pembacaan mentah*. Unitnya adalah aritmatika ISO: 100 adalah ISO dasar (gambar terbersih, noise terendah), 6400 atau lebih tinggi adalah mode sensitivitas tinggi (gambar lebih ber-noise, waktu rana lebih pendek untuk EV yang sama). Rentang tipikal pada perangkat modern adalah `[100, 6400]` untuk ponsel kelas menengah dan `[50, 12800]` atau `[32, 25600]` untuk sensor unggulan dengan sumur piksel besar.
 
-Sensitivity is applied *before* any digital gain in the ISP pipeline. The values returned here correspond to what you set in `CaptureRequest.SENSOR_SENSITIVITY` when manual control is enabled.
+Sensitivitas diterapkan *sebelum* penguatan digital apa pun di pipeline ISP. Nilai yang dikembalikan di sini sesuai dengan apa yang Anda setel di `CaptureRequest.SENSOR_SENSITIVITY` ketika kontrol manual diaktifkan.
 
-**2. Why does it exist?**
+**2. Mengapa itu ada?**
 
-Every CMOS sensor has a physical minimum gain level (determined by the readout amplifier) and a maximum level (determined by how much the analog signal can be amplified before clipping or unacceptable noise). Without an explicit range, each OEM would use different implicit defaults. Camera2 exposes the range so that manual-exposure UI sliders can have correct min/max endpoints, and so developers can validate a manual ISO request *before* submitting it to the capture session — avoiding the vague `IllegalArgumentException` the session throws if you request out-of-range values.
+Setiap sensor CMOS memiliki tingkat penguatan minimum fisik (ditentukan oleh penguat pembacaan) dan tingkat maksimum (ditentukan oleh seberapa banyak sinyal analog dapat dikuatkan sebelum terjadi clipping atau noise yang tidak dapat diterima). Tanpa rentang yang eksplisit, setiap OEM akan menggunakan default implisit yang berbeda. Camera2 mengekspos rentang tersebut sehingga slider UI eksposur manual dapat memiliki titik akhir min/max yang benar, dan agar pengembang dapat memvalidasi permintaan ISO manual *sebelum* mengirimkannya ke sesi pengambilan gambar — menghindari `IllegalArgumentException` yang tidak jelas yang dilemparkan sesi jika Anda meminta nilai di luar rentang.
 
-**3. Which devices support it?**
+**3. Perangkat mana yang mendukungnya?**
 
-All devices expose this key as a `Range&lt;Int&gt;`. However, the values are only *controllable* if the device advertises `REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR` in its capability list. On LIMITED-level devices without that flag, the range will still return values (typically `[100, 800]`) but setting `SENSOR_SENSITIVITY` in a CaptureRequest is ignored — the AE algorithm remains in charge. Always feature-gate manual ISO UI on the MANUAL_SENSOR flag, not on the range being non-null.
+Semua perangkat mengekspos kunci ini sebagai `Range<Int>`. Namun, nilainya hanya dapat *dikontrol* jika perangkat mengiklankan `REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR` dalam daftar kemampuannya. Pada perangkat tingkat LIMITED tanpa flag tersebut, rentang tersebut akan tetap mengembalikan nilai (biasanya `[100, 800]`) tetapi menyetel `SENSOR_SENSITIVITY` dalam CaptureRequest akan diabaikan — algoritma AE tetap memegang kendali. Selalu batasi fitur UI ISO manual pada flag MANUAL_SENSOR, bukan pada rentang yang tidak null.
 
-**4. How do I query it?**
+**4. Bagaimana cara menanyakannya?**
 
 ```kotlin
 val sensitivityRange: Range<Int>? = characteristics.get(
@@ -233,53 +233,53 @@ val hasManualSensor = capabilities?.contains(
 ) ?: false
 
 sensitivityRange?.let { range ->
-    Log.d(TAG, "Sensitivity range: ISO ${range.lower} to ISO ${range.upper}")
-    Log.d(TAG, "  Manual ISO control available: $hasManualSensor")
+    Log.d(TAG, "Rentang sensitivitas: ISO ${range.lower} hingga ISO ${range.upper}")
+    Log.d(TAG, "  Kontrol ISO manual tersedia: $hasManualSensor")
     
     if (hasManualSensor) {
         val stopCount = log2(range.upper.toDouble() / range.lower.toDouble())
-        Log.d(TAG, "  Dynamic range: %.1f stops".format(stopCount))
+        Log.d(TAG, "  Rentang dinamis: %.1f stop".format(stopCount))
     } else {
-        Log.w(TAG, "  WARNING: Range reported but MANUAL_SENSOR flag is ABSENT.")
-        Log.w(TAG, "  Setting SENSOR_SENSITIVITY will be IGNORED by AE algorithm!")
+        Log.w(TAG, "  PERINGATAN: Rentang dilaporkan tetapi flag MANUAL_SENSOR ABSEN.")
+        Log.w(TAG, "  Penyetelan SENSOR_SENSITIVITY akan DIABAIKAN oleh algoritma AE!")
     }
 } ?: run {
-    Log.w(TAG, "Sensitivity range not available")
+    Log.w(TAG, "Rentang sensitivitas tidak tersedia")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Bagaimana cara memeriksanya dengan Android Camera Parameters?**
 
-Navigate to **Sensor / Manual Sensor** where the sensitivity range appears as "ISO Range" in the first card. On devices with MANUAL_SENSOR capability the range is shown with a slider preview indicating what the manual UI exposes. On non-manual devices the app explicitly marks the range as "Read Only" and displays a warning banner explaining that values are for informational purposes only.
+Navigasi ke **Sensor / Manual Sensor** di mana rentang sensitivitas muncul sebagai "ISO Range" di kartu pertama. Pada perangkat dengan kemampuan MANUAL_SENSOR, rentang tersebut ditampilkan dengan pratinjau slider yang menunjukkan apa yang diekspos oleh UI manual. Pada perangkat non-manual, aplikasi secara eksplisit menandai rentang tersebut sebagai "Read Only" dan menampilkan banner peringatan yang menjelaskan bahwa nilai tersebut hanya untuk tujuan informasi.
 
-**6. Common pitfalls**
+**6. Jebakan umum**
 
-The first pitfall: seeing a valid sensitivity range and enabling manual ISO controls without checking `MANUAL_SENSOR`. This works on the developer's test device (a Pixel 8, say, which has FULL hardware level) but the slider silently does nothing on 60% of mid-range phones in the field. The user sees the UI, drags the slider, sees no noise difference, and leaves a one-star review. Always check both keys together.
+Jebakan pertama: melihat rentang sensitivitas yang valid dan mengaktifkan kontrol ISO manual tanpa memeriksa `MANUAL_SENSOR`. Ini berfungsi pada perangkat pengujian pengembang (seperti Pixel 8, yang memiliki tingkat perangkat keras FULL) tetapi slider tersebut secara diam-diam tidak melakukan apa pun pada 60% ponsel kelas menengah di lapangan. Pengguna melihat UI, menggeser slider, tidak melihat perbedaan noise, dan memberikan ulasan bintang satu. Selalu periksa kedua kunci secara bersamaan.
 
-The second pitfall: units confusion. `SENSOR_SENSITIVITY` uses ISO *arithmetic*, not logarithmic. A slider that goes from 100 to 6400 *linearly* makes the top 75% of the track feel identical (6400 to 3200 is one stop, 3200 to 1600 is another stop, ..., 200 to 100 is the last stop) while the bottom 25% covers 6 stops. Correct sliders interpolate values using a logarithmic scale so each 10% of track equals roughly one stop.
+Jebakan kedua: kebingungan unit. `SENSOR_SENSITIVITY` menggunakan aritmatika ISO, bukan logaritmik. Slider yang berjalan dari 100 ke 6400 secara *linear* membuat 75% bagian atas lintasan terasa identik (6400 ke 3200 adalah satu stop, 3200 ke 1600 adalah stop lainnya, ..., 200 ke 100 adalah stop terakhir) sementara 25% bagian bawah mencakup 6 stop. Slider yang benar menginterpolasi nilai menggunakan skala logaritmik sehingga setiap 10% lintasan setara dengan kira-kira satu stop.
 
 ---
 
 ### SENSOR_INFO_EXPOSURE_TIME_RANGE
 
-**1. What is it?**
+**1. Apa itu?**
 
-`SENSOR_INFO_EXPOSURE_TIME_RANGE` is a `android.util.Range&lt;Long&gt;` specifying the minimum and maximum shutter duration the sensor can expose a single frame for, measured in **nanoseconds**. Every value in this range corresponds to a valid argument for `CaptureRequest.SENSOR_EXPOSURE_TIME` when manual sensor control is enabled. Typical ranges span from roughly `Range(1_000_000L, 1_000_000_000L)` (1 millisecond minimum up to 1 second maximum) on mid-range devices, up to `Range(100_000L, 10_000_000_000L)` (0.1 ms to 10 seconds) on flagship FULL-level devices with dedicated night-mode support. A few LEVEL_3 cinema-grade external cameras go up to 30 seconds or longer.
+`SENSOR_INFO_EXPOSURE_TIME_RANGE` adalah `android.util.Range<Long>` yang menentukan durasi rana minimum dan maksimum yang dapat digunakan sensor untuk mengekspos satu bingkai, diukur dalam **nanodetik**. Setiap nilai dalam rentang ini sesuai dengan argumen yang valid untuk `CaptureRequest.SENSOR_EXPOSURE_TIME` ketika kontrol sensor manual diaktifkan. Rentang tipikal berkisar dari kira-kira `Range(1_000_000L, 1_000_000_000L)` (minimum 1 milidetik hingga maksimum 1 detik) pada perangkat kelas menengah, hingga `Range(100_000L, 10_000_000_000L)` (0,1 ms hingga 10 detik) pada perangkat unggulan tingkat FULL dengan dukungan mode malam khusus. Beberapa kamera eksternal tingkat bioskop LEVEL_3 bisa mencapai 30 detik atau lebih lama.
 
-The conversion between nanoseconds and common time units is:
-- 1 microsecond = 1,000 ns
-- 1 millisecond = 1,000,000 ns
-- 1 second = 1,000,000,000 ns
+Konversi antara nanodetik dan unit waktu umum adalah:
+- 1 mikrodetik = 1.000 ns
+- 1 milidetik = 1.000.000 ns
+- 1 detik = 1.000.000.000 ns
 
-**2. Why does it exist?**
+**2. Mengapa itu ada?**
 
-The Camera HAL needs an explicit shutter-time contract with the application layer for two reasons. First, long exposures interact with `SENSOR_FRAME_DURATION` in non-obvious ways: if you request a 5-second exposure, the minimum frame duration jumps to 5 seconds plus sensor blanking, which means preview callbacks stop arriving for 5 seconds and the UI appears frozen. Second, the very shortest exposures (microseconds) interact with the rolling-shutter skew of the sensor; below the minimum exposure time the sensor's readout timing can't keep up and output frames contain corrupted scan lines.
+HAL Kamera memerlukan kontrak waktu rana yang eksplisit dengan lapisan aplikasi karena dua alasan. Pertama, eksposur panjang berinteraksi dengan `SENSOR_FRAME_DURATION` dengan cara yang tidak jelas: jika Anda meminta eksposur 5 detik, durasi bingkai minimum melonjak menjadi 5 detik plus sensor blanking, yang berarti callback pratinjau berhenti tiba selama 5 detik dan UI tampak membeku. Kedua, eksposur yang sangat singkat (mikrodetik) berinteraksi dengan skew rana bergulir (rolling-shutter) dari sensor; di bawah waktu eksposur minimum, pengaturan waktu pembacaan sensor tidak dapat mengimbangi dan bingkai output berisi garis pindai yang rusak.
 
-**3. Which devices support it?**
+**3. Perangkat mana yang mendukungnya?**
 
-Like sensitivity range, this key is present on all devices but only *controllable* when `MANUAL_SENSOR` is in the capability list. LIMITED devices that lack manual-sensor support will still report a plausible exposure range (usually 1 ms to 1/30 s) so that AE-timing analysis tools can reason about the AE algorithm's behavior, but manual settings are ignored. Full manual control requires both the range *and* the capability flag.
+Seperti rentang sensitivitas, kunci ini ada di semua perangkat tetapi hanya dapat *dikontrol* ketika `MANUAL_SENSOR` ada dalam daftar kemampuan. Perangkat tingkat LIMITED yang tidak memiliki dukungan sensor manual akan tetap melaporkan rentang eksposur yang masuk akal (biasanya 1 ms hingga 1/30 s) sehingga alat analisis pengaturan waktu AE dapat menalar perilaku algoritma AE, tetapi pengaturan manual diabaikan. Kontrol manual penuh memerlukan baik rentang tersebut *maupun* flag kemampuan.
 
-**4. How do I query it?**
+**4. Bagaimana cara menanyakannya?**
 
 ```kotlin
 fun Long.nanosToSeconds(): Double = this / 1_000_000_000.0
@@ -295,12 +295,12 @@ val hasManualSensor = characteristics.get(
 )?.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR) ?: false
 
 exposureRange?.let { range ->
-    Log.d(TAG, "Exposure time range:")
+    Log.d(TAG, "Rentang waktu eksposur:")
     Log.d(TAG, "  Min: ${range.lower} ns = %.4f ms = %.7f s"
         .format(range.lower.nanosToMillis(), range.lower.nanosToSeconds()))
     Log.d(TAG, "  Max: ${range.upper} ns = %.2f ms = %.4f s"
         .format(range.upper.nanosToMillis(), range.upper.nanosToSeconds()))
-    Log.d(TAG, "  Manual shutter control available: $hasManualSensor")
+    Log.d(TAG, "  Kontrol rana manual tersedia: $hasManualSensor")
     
     val shutterSpeeds = listOf(
         0.001, 0.002, 0.004, 0.008, 0.016, 0.033,
@@ -310,41 +310,41 @@ exposureRange?.let { range ->
         val ns = s.secondsToNanos()
         ns >= range.lower && ns <= range.upper
     }
-    Log.d(TAG, "  Supported common stops: $supportedSpeeds seconds")
+    Log.d(TAG, "  Stop umum yang didukung: $supportedSpeeds detik")
 } ?: run {
-    Log.w(TAG, "Exposure time range not available")
+    Log.w(TAG, "Rentang waktu eksposur tidak tersedia")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Bagaimana cara memeriksanya dengan Android Camera Parameters?**
 
-Go to **Sensor / Manual Sensor** card, titled "Exposure Range". The app shows the value three ways: raw nanoseconds, milliseconds, and seconds for both endpoints. A horizontal timeline below visualizes the range with common shutter-speed stops (1/1000 s through 8 s) marked as ticks, so you can see at a glance whether long-exposure night photography is possible. Manual control capability is indicated by a green checkmark (controllable) or red "read-only" label.
+Buka kartu **Sensor / Manual Sensor**, berjudul "Exposure Range". Aplikasi menunjukkan nilai dalam tiga cara: nanodetik mentah, milidetik, dan detik untuk kedua titik akhir. Garis waktu horizontal di bawah memvisualisasikan rentang dengan stop kecepatan rana umum (1/1000 s hingga 8 s) yang ditandai sebagai centang, sehingga Anda dapat langsung melihat apakah fotografi malam eksposur panjang dimungkinkan. Kemampuan kontrol manual ditunjukkan oleh centang hijau (dapat dikontrol) atau label merah "read-only".
 
-**6. Common pitfalls**
+**6. Jebakan umum**
 
-The preview-freeze pitfall: developers set a 4-second exposure for a low-light still capture but forget that the same `CaptureRequest` applies to ALL surfaces in the session, including the preview `SurfaceTexture`. Result: for 4 seconds, no preview frames arrive, the screen freezes, and the user thinks the app crashed. The fix is a single-frame repeating request for the preview surface at normal 30 fps, then a separate `setRepeatingBurst` or `capture` call with the long exposure applied only to the JPEG/RAW surfaces via `CaptureRequest.Builder.addTarget()`.
+Jebakan pratinjau-membeku: pengembang menyetel eksposur 4 detik untuk pengambilan foto diam dalam cahaya rendah tetapi lupa bahwa `CaptureRequest` yang sama berlaku untuk SEMUA surface dalam sesi, termasuk `SurfaceTexture` pratinjau. Hasilnya: selama 4 detik, tidak ada bingkai pratinjau yang tiba, layar membeku, dan pengguna mengira aplikasi crash. Perbaikannya adalah permintaan berulang bingkai tunggal untuk surface pratinjau pada 30 fps normal, lalu panggilan `setRepeatingBurst` atau `capture` terpisah dengan eksposur panjang yang diterapkan hanya pada surface JPEG/RAW melalui `CaptureRequest.Builder.addTarget()`.
 
-The second pitfall is integer overflow in conversions. Multiplication and division with `1_000_000_000` pushes against the 32-bit integer limit. Always use `Long` (64-bit) for any variable that holds nanoseconds, and write explicit helper extension functions (like `nanosToSeconds()` above) so you never divide in the wrong order. A 1-second exposure stored as an Int overflows at roughly 2.1 seconds, causing the HAL to receive a negative exposure time, which either crashes the session or clamps silently to minimum on certain MediaTek HALs.
+Jebakan kedua adalah integer overflow dalam konversi. Perkalian dan pembagian dengan `1.000.000.000` mendorong batas integer 32-bit. Selalu gunakan `Long` (64-bit) untuk variabel apa pun yang menampung nanodetik, dan tulis fungsi ekstensi pembantu eksplisit (seperti `nanosToSeconds()` di atas) sehingga Anda tidak pernah membagi dalam urutan yang salah. Eksposur 1 detik yang disimpan sebagai Int akan meluap pada kira-kira 2,1 detik, menyebabkan HAL menerima waktu eksposur negatif, yang bisa membuat sesi crash atau membatasi nilai secara diam-diam ke minimum pada HAL MediaTek tertentu.
 
 ---
 
 ### SENSOR_INFO_WHITE_LEVEL
 
-**1. What is it?**
+**1. Apa itu?**
 
-`SENSOR_INFO_WHITE_LEVEL` is a single `Int` representing the maximum analog-to-digital converter (ADC) code value that a RAW sensor pixel can reach before clipping. For a RAW10 sensor (10 bits per pixel per channel) the white level is typically 1023 (2¹⁰−1). For RAW12 it is typically 4095. For RAW14 it is typically 16383. Some sensors round down slightly (e.g. 16300 instead of 16383 for RAW14) to leave headroom for HDR highlights or pixel-defect correction; the exact value is sensor-calibrated at the factory.
+`SENSOR_INFO_WHITE_LEVEL` adalah `Int` tunggal yang mewakili nilai kode konverter analog-ke-digital (ADC) maksimum yang dapat dicapai oleh piksel sensor RAW sebelum terjadi clipping. Untuk sensor RAW10 (10 bit per piksel per saluran), tingkat putih biasanya 1023 (2¹⁰−1). Untuk RAW12 biasanya 4095. Untuk RAW14 biasanya 16383. Beberapa sensor membulatkan sedikit ke bawah (misalnya 16300 alih-alih 16383 untuk RAW14) untuk menyisakan ruang (headroom) bagi highlight HDR atau koreksi piksel cacat; nilai tepatnya dikalibrasi sensor di pabrik.
 
-This is the per-channel saturation value. In any RAW frame from this sensor, any pixel channel at (or above) the white level represents blown-out highlights with no recoverable detail.
+Ini adalah nilai saturasi per saluran. Dalam setiap bingkai RAW dari sensor ini, setiap saluran piksel pada (atau di atas) tingkat putih mewakili highlight yang "terbakar" (blown-out) tanpa detail yang dapat dipulihkan.
 
-**2. Why does it exist?**
+**2. Mengapa itu ada?**
 
-The RAW pixel format always uses the same bit depth per channel. A RAW10 buffer stores every pixel in 16-bit aligned integers, and developers unfamiliar with RAW processing naturally divide by 65535 (the max 16-bit value) when normalizing to floating point. This produces images that are dim, washed-out, and with incorrect black point subtraction. `SENSOR_INFO_WHITE_LEVEL` gives you the correct divisor: divide RAW pixels by `WHITE_LEVEL - BLACK_LEVEL_PATTERN` (not 65535) to get the 0.0–1.0 linear light range. Every RAW sensor also has a `SENSOR_BLACK_LEVEL_PATTERN` key giving the per-channel zero-exposure offset; combining the two gives you the full RAW-to-float normalization curve.
+Format piksel RAW selalu menggunakan kedalaman bit yang sama per saluran. Buffer RAW10 menyimpan setiap piksel dalam integer selaras 16-bit, dan pengembang yang tidak terbiasa dengan pemrosesan RAW secara alami membagi dengan 65535 (nilai 16-bit maks) saat menormalisasi ke floating point. Ini menghasilkan gambar yang redup, pudar, dan dengan pengurangan titik hitam yang salah. `SENSOR_INFO_WHITE_LEVEL` memberi Anda pembagi yang benar: bagi piksel RAW dengan `WHITE_LEVEL - BLACK_LEVEL_PATTERN` (bukan 65535) untuk mendapatkan rentang cahaya linear 0,0–1,0. Setiap sensor RAW juga memiliki kunci `SENSOR_BLACK_LEVEL_PATTERN` yang memberikan offset nol-eksposur per saluran; menggabungkan keduanya memberi Anda kurva normalisasi RAW-ke-float yang lengkap.
 
-**3. Which devices support it?**
+**3. Perangkat mana yang mendukungnya?**
 
-This key is required on any device that reports `REQUEST_AVAILABLE_CAPABILITIES_RAW` in its capability list — i.e. any camera that can output RAW10/RAW12/RAW16 buffers via `ImageReader`. On non-RAW devices the key may still be present (returning a nominal value matching the sensor's native bit depth) but there is no way to read RAW pixels, so the key is purely informational.
+Kunci ini diperlukan pada perangkat apa pun yang melaporkan `REQUEST_AVAILABLE_CAPABILITIES_RAW` dalam daftar kemampuannya — yaitu, kamera apa pun yang dapat mengeluarkan buffer RAW10/RAW12/RAW16 melalui `ImageReader`. Pada perangkat non-RAW, kunci tersebut mungkin tetap ada (mengembalikan nilai nominal yang sesuai dengan kedalaman bit asli sensor) tetapi tidak ada cara untuk membaca piksel RAW, sehingga kunci tersebut murni informatif.
 
-**4. How do I query it?**
+**4. Bagaimana cara menanyakannya?**
 
 ```kotlin
 val whiteLevel: Int? = characteristics.get(
@@ -359,60 +359,60 @@ whiteLevel?.let { wl ->
     Log.d(TAG, "SENSOR_INFO_WHITE_LEVEL = $wl")
     
     val bits = ceil(log2(wl.toDouble() + 1.0)).toInt()
-    Log.d(TAG, "  Effective RAW bit depth: $bits bits per channel")
-    Log.d(TAG, "  Largest RAW pixel value (saturation): $wl")
+    Log.d(TAG, "  Kedalaman bit RAW efektif: $bits bit per saluran")
+    Log.d(TAG, "  Nilai piksel RAW terbesar (saturasi): $wl")
     
     blackLevelPattern?.let { bl ->
         if (bl.size == 4) {
-            Log.d(TAG, "  Black level pattern (R, Gr, Gb, B) = [${bl[0]}, ${bl[1]}, ${bl[2]}, ${bl[3]}]")
+            Log.d(TAG, "  Pola tingkat hitam (R, Gr, Gb, B) = [${bl[0]}, ${bl[1]}, ${bl[2]}, ${bl[3]}]")
             val avgBlack = (bl[0] + bl[1] + bl[2] + bl[3]) / 4.0
             val usableDnRange = wl - avgBlack
             val stops = log2(usableDnRange / avgBlack)
-            Log.d(TAG, "  Normalization divisor: ${wl - avgBlack.toInt()}")
-            Log.d(TAG, "  Estimated RAW dynamic range: %.1f stops".format(stops))
+            Log.d(TAG, "  Pembagi normalisasi: ${wl - avgBlack.toInt()}")
+            Log.d(TAG, "  Estimasi rentang dinamis RAW: %.1f stop".format(stops))
         }
     } ?: run {
-        Log.d(TAG, "  No black-level pattern. Assume 0. Normalize by $wl directly.")
+        Log.d(TAG, "  Tidak ada pola tingkat hitam. Asumsikan 0. Normalisasi dengan $wl secara langsung.")
     }
 } ?: run {
-    Log.w(TAG, "White level not available — RAW output may not be supported")
+    Log.w(TAG, "Tingkat putih tidak tersedia — output RAW mungkin tidak didukung")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Bagaimana cara memeriksanya dengan Android Camera Parameters?**
 
-The white level is in **Sensor / Sensor Info** under the "RAW Sensor Parameters" card, next to black level pattern and color filter arrangement. If RAW capability is present the companion app shows a live preview of a horizontal gradient bar normalized correctly with the device's own white level, so you can visually compare the correct normalization (using the key) against the common mistake of dividing by 65535 — the mistaken version appears visibly darker.
+Tingkat putih ada di **Sensor / Sensor Info** di bawah kartu "RAW Sensor Parameters", di samping pola tingkat hitam dan susunan filter warna. Jika kemampuan RAW ada, aplikasi pendamping menunjukkan pratinjau langsung dari bilah gradien horizontal yang dinormalisasi dengan benar menggunakan tingkat putih perangkat itu sendiri, sehingga Anda dapat secara visual membandingkan normalisasi yang benar (menggunakan kunci) terhadap kesalahan umum membagi dengan 65535 — versi yang salah akan tampak jauh lebih gelap.
 
-**6. Common pitfalls**
+**6. Jebakan umum**
 
-Normalizing by 65535 instead of white level is the universal first mistake in RAW processing. A RAW10 photo normalized by 65535 comes out at roughly 1/64th brightness — nearly pure black. Developers notice this and apply a 64× gain multiplier to compensate, which introduces banding because they're stretching 10 bits of information into 16 bits of precision, compressing the tonal range. Correct code subtracts the black level first, then divides by (white level minus black level). This gives a properly-exposed linear light image ready for gamma and tone-mapping.
+Menormalisasi dengan 65535 alih-alih tingkat putih adalah kesalahan pertama yang universal dalam pemrosesan RAW. Foto RAW10 yang dinormalisasi dengan 65535 keluar dengan kecerahan sekitar 1/64 — hampir murni hitam. Pengembang menyadari hal ini dan menerapkan pengali gain 64× untuk mengimbanginya, yang memperkenalkan banding karena mereka meregangkan 10 bit informasi ke dalam presisi 16 bit, mengompresi rentang nada. Kode yang benar mengurangi tingkat hitam terlebih dahulu, lalu membagi dengan (tingkat putih dikurangi tingkat hitam). Ini memberikan gambar cahaya linear yang terekspos dengan benar dan siap untuk gamma serta pemetaan nada.
 
-A second pitfall: white level can vary *per frame* on certain HDR sensors, where the ADC gain changes between long and short exposures for staggered-HDR readout. Check `CaptureResult.SENSOR_DYNAMIC_WHITE_LEVEL` in each `onCaptureCompleted` callback on Android 13+ devices; use the per-frame value when available instead of the static `CameraCharacteristics` constant. Sticky caching of the static white level on HDR sensors produces clipped highlights on the short-exposure frame.
+Jebakan kedua: tingkat putih dapat bervariasi *per bingkai* pada sensor HDR tertentu, di mana penguatan ADC berubah antara eksposur panjang dan pendek untuk pembacaan HDR bertahap (staggered-HDR). Periksa `CaptureResult.SENSOR_DYNAMIC_WHITE_LEVEL` di setiap callback `onCaptureCompleted` pada perangkat Android 13+; gunakan nilai per-bingkai jika tersedia alih-alih konstanta statis `CameraCharacteristics`. Melakukan caching tingkat putih statis pada sensor HDR akan menghasilkan highlight yang terpotong (clipped) pada bingkai eksposur pendek.
 
 ---
 
 ### SENSOR_INFO_COLOR_FILTER_ARRANGEMENT
 
-**1. What is it?**
+**1. Apa itu?**
 
-`SENSOR_INFO_COLOR_FILTER_ARRANGEMENT` is an `Int` enum describing the layout of the Bayer color filter array (CFA) on top of the sensor's photodiodes. The CFA is the microscopic color mosaic that gives each pixel a red, green, or blue color sensitivity (two green pixels per 2×2 block). Possible values are:
-- `SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_RGGB` — the most common (top row Red-Green, second row Green-Blue)
-- `SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_GRBG` — green-red / blue-green variant
-- `SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_BGGR` — blue-green / green-red variant (common on Sony sensors)
-- `SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_GBRG` — green-blue / red-green variant
-- `SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_MONOCHROME` — no color filter, pure luminance sensor (infrared or dedicated night-vision cameras)
+`SENSOR_INFO_COLOR_FILTER_ARRANGEMENT` adalah enum `Int` yang menjelaskan tata letak array filter warna (CFA) Bayer di atas fotodioda sensor. CFA adalah mosaik warna mikroskopis yang memberikan sensitivitas warna merah, hijau, atau biru pada setiap piksel (dua piksel hijau per blok 2×2). Nilai yang mungkin adalah:
+- `SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_RGGB` — yang paling umum (baris atas Merah-Hijau, baris kedua Hijau-Biru)
+- `SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_GRBG` — varian hijau-merah / biru-hijau
+- `SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_BGGR` — varian biru-hijau / hijau-merah (umum pada sensor Sony)
+- `SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_GBRG` — varian hijau-biru / merah-hijau
+- `SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_MONOCHROME` — tidak ada filter warna, sensor luminans murni (kamera inframerah atau penglihatan malam khusus)
 
-The arrangement describes the (x=0, y=0) top-left pixel of the active array. Every 2×2 block repeats this pattern across the entire sensor surface.
+Susunan tersebut menjelaskan piksel kiri atas (x=0, y=0) dari array aktif. Setiap blok 2×2 mengulangi pola ini di seluruh permukaan sensor.
 
-**2. Why does it exist?**
+**2. Mengapa itu ada?**
 
-RAW sensor data is monochrome-by-nature. A demosaic algorithm must be applied to reconstruct a full RGB image by interpolating the missing two color channels for each pixel. The demosaic algorithm *must* know which color is at each physical location. If you run an RGGB demosaic on a BGGR sensor you get an image with inverted colors: red pixels become blue, blue become red, and the human eye immediately notices the wrong skin tones. Demosaic quality is also CFA-dependent — adaptive algorithms like AMaZE or LMMSE need the exact arrangement to pick the correct interpolation direction.
+Data sensor RAW bersifat monokrom secara alami. Algoritma demosaic harus diterapkan untuk merekonstruksi gambar RGB penuh dengan menginterpolasi dua saluran warna yang hilang untuk setiap piksel. Algoritma demosaic *harus* tahu warna mana yang ada di setiap lokasi fisik. Jika Anda menjalankan demosaic RGGB pada sensor BGGR, Anda akan mendapatkan gambar dengan warna terbalik: piksel merah menjadi biru, biru menjadi merah, dan mata manusia akan langsung menyadari warna kulit yang salah. Kualitas demosaic juga bergantung pada CFA — algoritma adaptif seperti AMaZE atau LMMSE memerlukan susunan yang tepat untuk memilih arah interpolasi yang benar.
 
-**3. Which devices support it?**
+**3. Perangkat mana yang mendukungnya?**
 
-Required on all RAW-capable devices. On devices without RAW output the key may still be present (allowing analytical tools to describe sensor construction) but there's no code path that *needs* the value. External USB cameras via the EXTERNAL hardware level sometimes omit this key; you must fall back to a `SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_RGGB` default, because USB UVC cameras almost universally use RGGB.
+Diwajibkan pada semua perangkat yang mampu RAW. Pada perangkat tanpa output RAW, kunci tersebut mungkin tetap ada (memungkinkan alat analisis untuk menjelaskan konstruksi sensor) tetapi tidak ada jalur kode yang *memerlukan* nilai tersebut. Kamera USB eksternal melalui tingkat perangkat keras EXTERNAL terkadang menghilangkan kunci ini; Anda harus menggunakan default `SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_RGGB`, karena kamera USB UVC hampir secara universal menggunakan RGGB.
 
-**4. How do I query it?**
+**4. Bagaimana cara menanyakannya?**
 
 ```kotlin
 val cfa: Int? = characteristics.get(
@@ -426,66 +426,66 @@ cfa?.let { arrangement ->
         CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_BGGR -> "BGGR"
         CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_GBRG -> "GBRG"
         CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_MONOCHROME -> "MONOCHROME"
-        else -> "UNKNOWN (value=$arrangement)"
+        else -> "TIDAK DIKETAHUI (nilai=$arrangement)"
     }
-    Log.d(TAG, "Color Filter Arrangement = $arrangementName")
+    Log.d(TAG, "Susunan Filter Warna = $arrangementName")
     
     val isMono = arrangement == CameraCharacteristics
         .SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_MONOCHROME
     
-    Log.d(TAG, "  Is monochrome sensor: $isMono")
+    Log.d(TAG, "  Apakah sensor monokrom: $isMono")
     if (isMono) {
-        Log.d(TAG, "  Demosaic: NOT REQUIRED. Pixels are already luminance-only.")
-        Log.d(TAG, "  Tip: Skip de-Bayer step. Directly treat RAW as grayscale.")
+        Log.d(TAG, "  Demosaic: TIDAK DIPERLUKAN. Piksel sudah luminans saja.")
+        Log.d(TAG, "  Tips: Lewati langkah de-Bayer. Perlakukan RAW sebagai grayscale secara langsung.")
     } else {
-        Log.d(TAG, "  Demosaic: REQUIRED. Use CFA '$arrangementName' in RAW decoder.")
-        Log.d(TAG, "  Pixel (0,0) channel: " + when (arrangement) {
-            CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_RGGB -> "Red"
-            CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_GRBG -> "Green (Red row)"
-            CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_BGGR -> "Blue"
-            CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_GBRG -> "Green (Blue row)"
+        Log.d(TAG, "  Demosaic: DIPERLUKAN. Gunakan CFA '$arrangementName' dalam decoder RAW.")
+        Log.d(TAG, "  Saluran piksel (0,0): " + when (arrangement) {
+            CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_RGGB -> "Merah"
+            CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_GRBG -> "Hijau (baris Merah)"
+            CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_BGGR -> "Biru"
+            CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_GBRG -> "Hijau (baris Biru)"
             else -> "?"
         })
     }
 } ?: run {
-    Log.w(TAG, "No CFA info. Defaulting to RGGB for external USB / legacy devices.")
+    Log.w(TAG, "Tidak ada info CFA. Menggunakan default RGGB untuk perangkat USB eksternal / lama.")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Bagaimana cara memeriksanya dengan Android Camera Parameters?**
 
-Open **Sensor / Sensor Info** and look at the "Color Filter Array" row in the RAW Sensor Parameters card. The app renders a 4×4 pixel visual representation of the mosaic using the actual arrangement reported by the sensor — red, green, and blue squares tiled the way the silicon sees them. Monochrome sensors are rendered as a flat gray grid with the label "NO CFA".
+Buka **Sensor / Sensor Info** dan lihat baris "Color Filter Array" di kartu RAW Sensor Parameters. Aplikasi merender representasi visual piksel 4×4 menggunakan susunan aktual yang dilaporkan oleh sensor — kotak merah, hijau, dan biru yang disusun seperti yang dilihat oleh silikon. Sensor monokrom dirender sebagai kisi abu-abu datar dengan label "NO CFA".
 
-**6. Common pitfalls**
+**6. Jebakan umum**
 
-The hard failure mode is hardcoding RGGB demosaic. Every Sony Exmor-RS sensor on the market ships with BGGR, so if you hardcode RGGB your code works on the Samsung ISOCELL phone you tested with and produces a color-inverted image on every Xperia, most Pixels, and all iPhones running Android (if such a thing existed). The fix is straightforward: read the key and branch your demosaic. Many open-source RAW libraries (libraw, OpenImageIO) accept a CFA enum directly, so map the Android CFA value to the library constant and pass it through.
+Kegagalan fatal adalah melakukan hardcoding demosaic RGGB. Setiap sensor Sony Exmor-RS di pasar dikirimkan dengan BGGR, jadi jika Anda melakukan hardcoding RGGB, kode Anda akan berfungsi pada ponsel Samsung ISOCELL yang Anda gunakan untuk pengujian tetapi akan menghasilkan gambar dengan warna terbalik pada setiap Xperia, sebagian besar Pixel, dan semua iPhone yang menjalankan Android (jika ada). Perbaikannya mudah: baca kuncinya dan arahkan demosaic Anda. Banyak pustaka RAW sumber terbuka (libraw, OpenImageIO) menerima enum CFA secara langsung, jadi petakan nilai CFA Android ke konstanta pustaka dan teruskan.
 
-The second pitfall: `SENSOR_INFO_COLOR_FILTER_ARRANGEMENT` describes the active array top-left pixel. If you crop the RAW buffer (say, to extract a 1000×1000 region for face processing), the CFA pattern *shifts* by (crop.left mod 2, crop.top mod 2). Cropping one pixel right converts an RGGB pattern to GRBG in the cropped sub-image. Cropping both one right and one down converts RGGB to BGGR. Most developers forget this and demosaic the crop with the original pattern, producing a high-frequency color moiré that looks like a demosaic bug but is actually a coordinate bug. Fix by adjusting the CFA for the crop parity or by always cropping on even boundaries.
+Jebakan kedua: `SENSOR_INFO_COLOR_FILTER_ARRANGEMENT` menjelaskan piksel kiri atas array aktif. Jika Anda memotong buffer RAW (misalnya, untuk mengekstrak wilayah 1000×1000 untuk pemrosesan wajah), pola CFA akan *bergeser* sebesar (crop.left mod 2, crop.top mod 2). Memotong satu piksel ke kanan mengubah pola RGGB menjadi GRBG dalam sub-gambar yang dipotong. Memotong satu piksel ke kanan dan satu ke bawah mengubah RGGB menjadi BGGR. Sebagian besar pengembang melupakan hal ini dan mendemosaic hasil potong dengan pola asli, menghasilkan moiré warna frekuensi tinggi yang terlihat seperti bug demosaic tetapi sebenarnya adalah bug koordinat. Perbaiki dengan menyesuaikan CFA untuk paritas potongan atau dengan selalu memotong pada batas genap.
 
 ---
 
-## Lens Category
+## Kategori Lensa
 
 ### LENS_FACING
 
-**1. What is it?**
+**1. Apa itu?**
 
-`LENS_FACING` is an `Int` enum describing the physical mounting direction of the camera module relative to the device screen. The three possible values are:
-- `LENS_FACING_BACK` — camera points away from the user (the "main" camera, used for landscape photography)
-- `LENS_FACING_FRONT` — camera points toward the user (selfie camera, always mounted in the screen bezel or notch)
-- `LENS_FACING_EXTERNAL` — USB webcam, HDMI capture card, or other hot-pluggable camera with unknown orientation
+`LENS_FACING` adalah enum `Int` yang menjelaskan arah pemasangan fisik modul kamera relatif terhadap layar perangkat. Tiga nilai yang mungkin adalah:
+- `LENS_FACING_BACK` — kamera menghadap menjauhi pengguna (kamera "utama", digunakan untuk fotografi lanskap)
+- `LENS_FACING_FRONT` — kamera menghadap ke arah pengguna (kamera selfie, selalu dipasang di bezel atau notch layar)
+- `LENS_FACING_EXTERNAL` — webcam USB, kartu capture HDMI, atau kamera hot-pluggable lainnya dengan orientasi yang tidak diketahui
 
-This key is static per camera ID; it never changes during the lifetime of a device (foldables excepted — see `INFO_DEVICE_STATE_ORIENTATIONS` for dynamic state).
+Kunci ini statis per ID kamera; ia tidak pernah berubah selama masa pakai perangkat (kecuali perangkat lipat — lihat `INFO_DEVICE_STATE_ORIENTATIONS` untuk status dinamis).
 
-**2. Why does it exist?**
+**2. Mengapa itu ada?**
 
-The most visible impact of facing is in the preview transform. Android requires that the back-facing camera preview rotate with the device orientation using the sensor's natural landscape orientation plus `SENSOR_ORIENTATION`; for the front-facing camera the preview must also be **mirrored horizontally** so the user sees themselves as though looking in a mirror. Without a facing key each application would have to guess which camera is which using heuristics (first ID = back, second = front) which break on multi-camera devices where IDs 0, 1, 2, 3 are all back-facing.
+Dampak paling nyata dari arah hadap adalah pada transformasi pratinjau. Android mengharuskan pratinjau kamera yang menghadap ke belakang berputar sesuai orientasi perangkat menggunakan orientasi alami sensor plus `SENSOR_ORIENTATION`; untuk kamera yang menghadap ke depan, pratinjau juga harus **dicerminkan secara horizontal** sehingga pengguna melihat diri mereka seolah-olah sedang bercermin. Tanpa kunci arah hadap, setiap aplikasi harus menebak kamera mana yang mana menggunakan heuristik (ID pertama = belakang, kedua = depan) yang akan rusak pada perangkat multi-kamera di mana ID 0, 1, 2, 3 semuanya menghadap ke belakang.
 
-**3. Which devices support it?**
+**3. Perangkat mana yang mendukungnya?**
 
-Every camera ID on every device reports this key. It is impossible to enumerate a valid camera ID via `CameraManager.getCameraIdList()` that does not have `LENS_FACING` populated. Even LEGACY-level Camera1-wrapped devices expose it. External USB cameras get `LENS_FACING_EXTERNAL` by default.
+Setiap ID kamera pada setiap perangkat melaporkan kunci ini. Tidak mungkin menghitung ID kamera yang valid melalui `CameraManager.getCameraIdList()` yang tidak memiliki `LENS_FACING`. Bahkan perangkat tingkat LEGACY yang dibungkus Camera1 mengeksposnya. Kamera USB eksternal mendapatkan `LENS_FACING_EXTERNAL` secara default.
 
-**4. How do I query it?**
+**4. Bagaimana cara menanyakannya?**
 
 ```kotlin
 val facing: Int? = characteristics.get(
@@ -494,10 +494,10 @@ val facing: Int? = characteristics.get(
 
 facing?.let { f ->
     val (name, emoji) = when (f) {
-        CameraCharacteristics.LENS_FACING_BACK -> "Back" to "📷"
-        CameraCharacteristics.LENS_FACING_FRONT -> "Front" to "🤳"
-        CameraCharacteristics.LENS_FACING_EXTERNAL -> "External" to "🔌"
-        else -> "Unknown ($f)" to "❓"
+        CameraCharacteristics.LENS_FACING_BACK -> "Belakang" to "📷"
+        CameraCharacteristics.LENS_FACING_FRONT -> "Depan" to "🤳"
+        CameraCharacteristics.LENS_FACING_EXTERNAL -> "Eksternal" to "🔌"
+        else -> "Tidak Diketahui ($f)" to "❓"
     }
     Log.d(TAG, "LENS_FACING = $name $emoji")
     
@@ -505,7 +505,7 @@ facing?.let { f ->
         CameraCharacteristics.SENSOR_ORIENTATION
     ) ?: 0
     
-    Log.d(TAG, "  Sensor orientation (natural rotation): $sensorOrientation°")
+    Log.d(TAG, "  Orientasi sensor (rotasi alami): $sensorOrientation°")
     
     val totalDisplayRotation = when (f) {
         CameraCharacteristics.LENS_FACING_FRONT -> {
@@ -518,40 +518,40 @@ facing?.let { f ->
         }
         else -> displayRotation
     }
-    Log.d(TAG, "  Calculated display rotation: $totalDisplayRotation°")
-    Log.d(TAG, "  Front camera: MUST horizontally mirror preview TextureView/SurfaceView")
+    Log.d(TAG, "  Hasil rotasi tampilan: $totalDisplayRotation°")
+    Log.d(TAG, "  Kamera depan: HARUS mencerminkan pratinjau TextureView/SurfaceView secara horizontal")
 } ?: run {
-    Log.e(TAG, "LENS_FACING is null — this should never happen on a valid camera ID")
+    Log.e(TAG, "LENS_FACING null — ini tidak boleh terjadi pada ID kamera yang valid")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Bagaimana cara memeriksanya dengan Android Camera Parameters?**
 
-Navigate to **Overview / Cameras**. The first card lists every camera ID as a row, showing facing, sensor orientation, megapixel count, and hardware level in compact form. Front cameras have a "🤳" badge, back cameras have "📷", and external USB cameras show "🔌". Tapping any camera row opens the detail view where facing is shown as the first metadata field.
+Navigasi ke **Overview / Cameras**. Kartu pertama mencantumkan setiap ID kamera sebagai sebuah baris, menunjukkan arah hadap, orientasi sensor, jumlah megapiksel, dan tingkat perangkat keras dalam bentuk kompak. Kamera depan memiliki lencana "🤳", kamera belakang memiliki "📷", dan kamera USB eksternal menunjukkan "🔌". Mengetuk baris kamera mana pun akan membuka tampilan detail di mana arah hadap ditampilkan sebagai bidang metadata pertama.
 
-**6. Common pitfalls**
+**6. Jebakan umum**
 
-The selfie mirroring pitfall is universal: developers correctly mirror the preview `TextureView` for a natural "looking in a mirror" experience, but then capture the JPEG via `ImageReader` and wonder why the photo is *not* mirrored. The mirroring is a **display-only transform** applied to the preview surface. The actual sensor pixels (and therefore the JPEG bytes) are never mirrored. Users hate this: "My selfies look flipped!" The fix is to write the horizontal flip into the JPEG's EXIF orientation tag using `ExifInterface`. Set `TAG_ORIENTATION` to `ORIENTATION_FLIP_HORIZONTAL` for front cameras. Most gallery apps respect this flag and display the photo mirrored; photo editors do the same. If you truly need pixel-fliped output (for upload to a server that ignores EXIF), then post-process the `Bitmap` with `Canvas` and a horizontal `Matrix.preScale(-1f, 1f)` before saving.
+Jebakan pencerminan selfie bersifat universal: pengembang mencerminkan `TextureView` pratinjau dengan benar untuk pengalaman "bercermin" yang alami, tetapi kemudian mengambil JPEG melalui `ImageReader` dan heran mengapa foto tersebut *tidak* dicerminkan. Pencerminan adalah **transformasi tampilan saja** yang diterapkan pada surface pratinjau. Piksel sensor yang sebenarnya (dan oleh karena itu byte JPEG) tidak pernah dicerminkan. Pengguna membencinya: "Selfie saya terlihat terbalik!" Perbaikannya adalah dengan menulis rotasi horizontal ke dalam tag orientasi EXIF JPEG menggunakan `ExifInterface`. Setel `TAG_ORIENTATION` ke `ORIENTATION_FLIP_HORIZONTAL` untuk kamera depan. Sebagian besar aplikasi galeri menghormati flag ini dan menampilkan foto yang dicerminkan; editor foto melakukan hal yang sama. Jika Anda benar-benar memerlukan output piksel yang dicerminkan (untuk diunggah ke server yang mengabaikan EXIF), maka proseslah `Bitmap` dengan `Canvas` dan `Matrix.preScale(-1f, 1f)` horizontal sebelum disimpan.
 
-A second pitfall: foldable devices with under-display cameras. The same logical camera ID can report `LENS_FACING_FRONT` when unfolded but the preview transform changes because the sensor orientation changes. See `INFO_DEVICE_STATE_ORIENTATIONS` in the Info section. Never cache `LENS_FACING` + `SENSOR_ORIENTATION` as a static pair — requery both when the device reports a configuration change.
+Jebakan kedua: perangkat lipat dengan kamera di bawah layar. ID kamera logis yang sama dapat melaporkan `LENS_FACING_FRONT` saat dibuka tetapi transformasi pratinjau berubah karena orientasi sensor berubah. Lihat `INFO_DEVICE_STATE_ORIENTATIONS` di bagian Info. Jangan pernah menyimpan pasangan `LENS_FACING` + `SENSOR_ORIENTATION` sebagai konstanta statis — tanyakan ulang keduanya saat perangkat melaporkan perubahan konfigurasi.
 
 ---
 
 ### LENS_INFO_AVAILABLE_FOCAL_LENGTHS
 
-**1. What is it?**
+**1. Apa itu?**
 
-`LENS_INFO_AVAILABLE_FOCAL_LENGTHS` is a `FloatArray` listing the discrete optical focal lengths (in millimeters) that this camera can produce via physical lens movement or multi-camera switching. Single-camera devices report a one-element array like `[4.2]` meaning a 4.2 mm prime lens. Multi-camera logical devices (backing the same camera ID with multiple physical sensors) report an array like `[1.7, 5.0, 12.0]` meaning ultra-wide (1.7 mm), wide-angle (5.0 mm), and periscope telephoto (12.0 mm) options are available. Note this is **optical** focal length, not the 35mm-equivalent marketing number. To get 35mm-equivalent multiply by `LENS_INFO_AVAILABLE_FOCAL_LENGTHS[i] / SENSOR_INFO_PHYSICAL_SIZE.width`.
+`LENS_INFO_AVAILABLE_FOCAL_LENGTHS` adalah `FloatArray` yang mencantumkan panjang fokus optik diskrit (dalam milimeter) yang dapat dihasilkan oleh kamera ini melalui gerakan lensa fisik atau peralihan multi-kamera. Perangkat kamera tunggal melaporkan array satu elemen seperti `[4.2]` yang berarti lensa prime 4,2 mm. Perangkat logis multi-kamera (yang mendukung ID kamera yang sama dengan beberapa sensor fisik) melaporkan array seperti `[1.7, 5.0, 12.0]` yang berarti tersedia opsi ultra-lebar (1,7 mm), sudut lebar (5,0 mm), dan telefoto periskop (12,0 mm). Perlu dicatat ini adalah panjang fokus **optik**, bukan angka pemasaran setara 35mm. Untuk mendapatkan setara 35mm, kalikan dengan `LENS_INFO_AVAILABLE_FOCAL_LENGTHS[i] / SENSOR_INFO_PHYSICAL_SIZE.width`.
 
-**2. Why does it exist?**
+**2. Mengapa itu ada?**
 
-Focal length is the fundamental property that determines the angle of view of a photograph. The Camera2 zoom subsystem was redesigned for multi-camera devices to allow the framework to *seamlessly switch* between physical cameras as the user pinches to zoom. Without knowing which optical focal lengths are available, developers cannot design a zoom UI that highlights optical zoom "sweet spots" (1×, 3×, 5×) where the framework is using a real lens with no digital crop. This key lets you render a zoom bar with visual notches at each focal length.
+Panjang fokus adalah properti dasar yang menentukan sudut pandang sebuah foto. Subsistem zoom Camera2 didesain ulang untuk perangkat multi-kamera agar memungkinkan framework untuk *beralih secara mulus* di antara kamera fisik saat pengguna mencubit untuk melakukan zoom. Tanpa mengetahui panjang fokus mana yang tersedia, pengembang tidak dapat mendesain UI zoom yang menyoroti "titik manis" zoom optik (1×, 3×, 5×) di mana framework menggunakan lensa nyata tanpa potongan digital. Kunci ini memungkinkan Anda merender bilah zoom dengan tanda visual pada setiap panjang fokus.
 
-**3. Which devices support it?**
+**3. Perangkat mana yang mendukungnya?**
 
-All hardware levels. Single-camera devices always have a single-element array. Multi-camera capability (`REQUEST_AVAILABLE_CAPABILITIES_LOGICAL_MULTI_CAMERA`) is correlated with longer arrays, but not strictly required — some OEMs expose a multi-focal-length array via LEGACY-level camera wrapping. The array is guaranteed to be sorted in increasing order on compliant devices.
+Semua tingkat perangkat keras. Perangkat kamera tunggal selalu memiliki array satu elemen. Kemampuan multi-kamera (`REQUEST_AVAILABLE_CAPABILITIES_LOGICAL_MULTI_CAMERA`) berkorelasi dengan array yang lebih panjang, tetapi tidak diwajibkan secara ketat — beberapa OEM mengekspos array multi-panjang-fokus melalui pembungkus tingkat LEGACY. Array tersebut dijamin diurutkan secara menaik pada perangkat yang patuh.
 
-**4. How do I query it?**
+**4. Bagaimana cara menanyakannya?**
 
 ```kotlin
 val focalLengths: FloatArray? = characteristics.get(
@@ -563,18 +563,18 @@ val sensorSize: SizeF? = characteristics.get(
 )
 
 focalLengths?.let { fLengths ->
-    Log.d(TAG, "Optical focal lengths (${fLengths.size} discrete values):")
+    Log.d(TAG, "Panjang fokus optik (${fLengths.size} nilai diskrit):")
     
     fLengths.sort()
     fLengths.forEachIndexed { index, mm ->
-        Log.d(TAG, "  [$index] ${"%.2f".format(mm)}mm (optical)")
+        Log.d(TAG, "  [$index] ${"%.2f".format(mm)}mm (optik)")
         
         sensorSize?.let { size ->
             val fullFrameDiagonalMm = 43.27
             val cropFactor = fullFrameDiagonalMm / hypot(size.width.toDouble(), size.height.toDouble())
             val equivalent35mm = mm * cropFactor
             val angleOfViewDeg = 2.0 * atan(size.width.toDouble() / (2.0 * mm.toDouble())) * 180.0 / Math.PI
-            Log.d(TAG, "       35mm-equiv: ${"%.1f".format(equivalent35mm)}mm | " +
+            Log.d(TAG, "       Setara 35mm: ${"%.1f".format(equivalent35mm)}mm | " +
                        "AoV: ${"%.0f".format(angleOfViewDeg)}° | " +
                        "Crop: ${"%.2f".format(cropFactor)}×")
         }
@@ -582,43 +582,43 @@ focalLengths?.let { fLengths ->
     
     if (fLengths.size > 1) {
         val zoomRatios = fLengths.map { it / fLengths[0] }
-        Log.d(TAG, "  Optical zoom steps (relative to widest): " +
+        Log.d(TAG, "  Langkah zoom optik (relatif terhadap terlebar): " +
                    zoomRatios.joinToString("×, ") { "%.1f".format(it) } + "×")
     }
 } ?: run {
-    Log.w(TAG, "Available focal lengths array unavailable")
+    Log.w(TAG, "Array panjang fokus yang tersedia tidak tersedia")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Bagaimana cara memeriksanya dengan Android Camera Parameters?**
 
-Open **Lens / Lens Info**. The focal lengths appear as the "Focal Lengths" card showing each optical focal length with its 35mm-equivalent, angle of view, and crop factor. On multi-camera logical devices each focal length has a badge that says which physical camera ID backs it, and tapping renders a visual representation of the angle of view cone (the wider the angle, the wider the triangle diagram).
+Buka **Lens / Lens Info**. Panjang fokus muncul sebagai kartu "Focal Lengths" yang menunjukkan setiap panjang fokus optik dengan setara 35mm, sudut pandang, dan faktor crop-nya. Pada perangkat logis multi-kamera, setiap panjang fokus memiliki lencana yang menyebutkan ID kamera fisik mana yang mendukungnya, dan mengetuknya akan merender representasi visual dari kerucut sudut pandang (semakin lebar sudutnya, semakin lebar diagram segitiganya).
 
-**6. Common pitfalls**
+**6. Jebakan umum**
 
-Focal length vs. focus distance: the most commonly confused pair in all of Camera2. `LENS_INFO_AVAILABLE_FOCAL_LENGTHS` (in mm) is the **optical property of the lens** — how wide or narrow the scene is. `LENS_FOCUS_DISTANCE` (in diopters, 1/m) is the **current AF position** — how far away the camera is focused. Setting `LENS_FOCAL_LENGTH` switches between physical cameras; setting `LENS_FOCUS_DISTANCE` moves the autofocus motor inside one lens. The two are orthogonal and independent. Developers often build one slider that tries to control both, with bizarre results.
+Panjang fokus vs jarak fokus: pasangan yang paling sering tertukar di seluruh Camera2. `LENS_INFO_AVAILABLE_FOCAL_LENGTHS` (dalam mm) adalah **properti optik lensa** — seberapa lebar atau sempit adegannya. `LENS_FOCUS_DISTANCE` (dalam dioptri, 1/m) adalah **posisi AF saat ini** — seberapa jauh kamera difokuskan. Menyetel `LENS_FOCAL_LENGTH` beralih di antara kamera fisik; menyetel `LENS_FOCUS_DISTANCE` menggerakkan motor fokus otomatis di dalam satu lensa. Keduanya ortogonal dan independen. Pengembang sering membangun satu slider yang mencoba mengontrol keduanya, dengan hasil yang aneh.
 
-Second pitfall: assuming the array is sorted. On most FULL-level devices it is, but on certain LEGACY wrappers from Xiaomi and Oppo the widest lens is the last element, not the first. Always call `fLengths.sort()` before computing zoom-step ratios. Computing ratio against the wrong element yields a 0.25× "zoom" that your UI cannot display correctly.
+Jebakan kedua: mengasumsikan array sudah diurutkan. Pada sebagian besar perangkat tingkat FULL sudah, tetapi pada pembungkus LEGACY tertentu dari Xiaomi dan Oppo, lensa terlebar adalah elemen terakhir, bukan yang pertama. Selalu panggil `fLengths.sort()` sebelum menghitung rasio langkah zoom. Menghitung rasio terhadap elemen yang salah menghasilkan "zoom" 0,25× yang tidak dapat ditampilkan UI Anda dengan benar.
 
 ---
 
 ### LENS_INFO_MINIMUM_FOCUS_DISTANCE
 
-**1. What is it?**
+**1. Apa itu?**
 
-`LENS_INFO_MINIMUM_FOCUS_DISTANCE` is a single `Float` measured in **diopters (D)**, defined as the inverse of the closest focusable distance in meters. A value of `10.0` means the lens can focus on objects as close as 0.1 meters (10 cm). A value of `0.0` means the lens is fixed-focus ("focus free") — it cannot change its focus distance at all, because it is optimized for infinity. Most selfie cameras, budget phone cameras, and wide-angle front cameras are fixed-focus. Values of 20D or higher indicate a macro-capable module that can focus on objects touching the lens.
+`LENS_INFO_MINIMUM_FOCUS_DISTANCE` adalah `Float` tunggal yang diukur dalam **dioptri (D)**, didefinisikan sebagai kebalikan dari jarak fokus terdekat dalam meter. Nilai `10.0` berarti lensa dapat fokus pada objek sedekat 0,1 meter (10 cm). Nilai `0.0` berarti lensa adalah fokus tetap (fixed-focus) — ia tidak dapat mengubah jarak fokusnya sama sekali, karena dioptimalkan untuk tak terhingga. Sebagian besar kamera selfie, kamera ponsel anggaran, dan kamera depan sudut lebar adalah fokus tetap. Nilai 20D atau lebih tinggi menunjukkan modul yang mampu makro yang dapat fokus pada objek yang menyentuh lensa.
 
-Diopters are mathematically convenient because they're linear in the lens equation: `1 / distance = 1 / focal_length + 1 / sensor_distance`. When you set `CaptureRequest.LENS_FOCUS_DISTANCE` to a value, the HAL interprets it as a diopter.
+Dioptri secara matematis nyaman karena bersifat linear dalam persamaan lensa: `1 / jarak = 1 / panjang_fokus + 1 / jarak_sensor`. Saat Anda menyetel `CaptureRequest.LENS_FOCUS_DISTANCE` ke suatu nilai, HAL menafsirkannya sebagai dioptri.
 
-**2. Why does it exist?**
+**2. Mengapa itu ada?**
 
-Without a minimum focus distance, there is no programmatic way to know whether a camera is even capable of manual focus. If you show a manual focus slider on a fixed-focus camera (0.0 diopters) the slider's movement produces zero change in the image — confusing users. The key also defines the valid range of the `LENS_FOCUS_DISTANCE` request parameter: valid values always span `[0.0, minimum_focus_distance]` (infinity to closest-focus). For macro photography you know exactly how close you can get before the image goes soft.
+Tanpa jarak fokus minimum, tidak ada cara terprogram untuk mengetahui apakah sebuah kamera bahkan mampu melakukan fokus manual. Jika Anda menampilkan slider fokus manual pada kamera fokus tetap (0,0 dioptri), pergerakan slider tersebut tidak menghasilkan perubahan apa pun pada gambar — membingungkan pengguna. Kunci ini juga mendefinisikan rentang valid dari parameter permintaan `LENS_FOCUS_DISTANCE`: nilai yang valid selalu berkisar antara `[0.0, minimum_focus_distance]` (tak terhingga hingga fokus terdekat). Untuk fotografi makro, Anda tahu persis seberapa dekat Anda bisa mendekat sebelum gambar menjadi lembut.
 
-**3. Which devices support it?**
+**3. Perangkat mana yang mendukungnya?**
 
-Exposed on all devices, but meaningful only when combined with manual control. The `MANUAL_SENSOR` capability flag (again) determines whether setting `LENS_FOCUS_DISTANCE` actually changes the lens. LIMITED-level devices may report `LENS_INFO_MINIMUM_FOCUS_DISTANCE = 10.0` but if `MANUAL_SENSOR` is absent, writing `LENS_FOCUS_DISTANCE` in a capture request is silently ignored by the AF system. LEGACY-wrapped devices sometimes report `0.0` even though the physical module *can* focus — this is a known LEGACY wrapper limitation.
+Diekspos di semua perangkat, tetapi hanya bermakna jika dikombinasikan dengan kontrol manual. Flag kemampuan `MANUAL_SENSOR` (sekali lagi) menentukan apakah penyetelan `LENS_FOCUS_DISTANCE` benar-benar mengubah lensa. Perangkat tingkat LIMITED mungkin melaporkan `LENS_INFO_MINIMUM_FOCUS_DISTANCE = 10.0` tetapi jika `MANUAL_SENSOR` absen, penulisan `LENS_FOCUS_DISTANCE` dalam capture request secara diam-diam diabaikan oleh sistem AF. Perangkat yang dibungkus LEGACY terkadang melaporkan `0.0` meskipun modul fisiknya *dapat* fokus — ini adalah batasan pembungkus LEGACY yang diketahui.
 
-**4. How do I query it?**
+**4. Bagaimana cara menanyakannya?**
 
 ```kotlin
 val minFocusDiopters: Float? = characteristics.get(
@@ -630,73 +630,73 @@ val hasManualSensor = characteristics.get(
 )?.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR) ?: false
 
 minFocusDiopters?.let { d ->
-    Log.d(TAG, "LENS_INFO_MINIMUM_FOCUS_DISTANCE = %.2f D (diopters)".format(d))
+    Log.d(TAG, "LENS_INFO_MINIMUM_FOCUS_DISTANCE = %.2f D (dioptri)".format(d))
     
     val closestFocusMeters = if (d > 0.0f) (1.0 / d.toDouble()) else Double.POSITIVE_INFINITY
     val closestFocusCm = if (d > 0.0f) (100.0 / d.toDouble()) else Double.POSITIVE_INFINITY
     
     when {
         d == 0.0f -> {
-            Log.d(TAG, "  Lens type: FIXED-FOCUS (cannot change focus at all)")
-            Log.d(TAG, "  Closest focus: effectively infinity (landscape only)")
-            Log.d(TAG, "  UI action: HIDE manual focus slider entirely.")
+            Log.d(TAG, "  Jenis lensa: FOKUS TETAP (tidak dapat mengubah fokus sama sekali)")
+            Log.d(TAG, "  Fokus terdekat: secara efektif tak terhingga (lanskap saja)")
+            Log.d(TAG, "  Tindakan UI: SEMBUNYIKAN slider fokus manual sepenuhnya.")
         }
         d < 2.0f -> {
-            Log.d(TAG, "  Lens type: Soft-focusable (close focus is ~${"%.0f".format(closestFocusCm)} cm)")
-            Log.d(TAG, "  UI: Show slider but user won't see much change.")
+            Log.d(TAG, "  Jenis lensa: Dapat fokus lembut (fokus dekat ~${"%.0f".format(closestFocusCm)} cm)")
+            Log.d(TAG, "  UI: Tunjukkan slider tetapi pengguna tidak akan melihat banyak perubahan.")
         }
         d >= 2.0f && d < 10.0f -> {
-            Log.d(TAG, "  Lens type: Standard focus (closest ~${"%.0f".format(closestFocusCm)} cm)")
+            Log.d(TAG, "  Jenis lensa: Fokus standar (terdekat ~${"%.0f".format(closestFocusCm)} cm)")
         }
         d >= 10.0f && d < 20.0f -> {
-            Log.d(TAG, "  Lens type: Close-focus capable (closest ~${"%.0f".format(closestFocusCm)} cm)")
+            Log.d(TAG, "  Jenis lensa: Mampu fokus dekat (terdekat ~${"%.0f".format(closestFocusCm)} cm)")
         }
         else -> {
-            Log.d(TAG, "  Lens type: MACRO capable (closest ${"%.1f".format(closestFocusCm)} cm!)")
+            Log.d(TAG, "  Jenis lensa: Mampu MAKRO (terdekat ${"%.1f".format(closestFocusCm)} cm!)")
         }
     }
     
     if (hasManualSensor) {
-        Log.d(TAG, "  Manual focus: CONTROLLABLE via CaptureRequest.LENS_FOCUS_DISTANCE")
-        Log.d(TAG, "  Valid range: [0.0 (∞) → %.2f D (${"%.0f".format(closestFocusCm)} cm)]".format(d))
+        Log.d(TAG, "  Fokus manual: DAPAT DIKONTROL via CaptureRequest.LENS_FOCUS_DISTANCE")
+        Log.d(TAG, "  Rentang valid: [0.0 (∞) → %.2f D (${"%.0f".format(closestFocusCm)} cm)]".format(d))
     } else {
-        Log.w(TAG, "  WARNING: Lens reports focus range but MANUAL_SENSOR absent.")
-        Log.w(TAG, "  Manual focus slider would do nothing. Hide it.")
+        Log.w(TAG, "  PERINGATAN: Lensa melaporkan rentang fokus tetapi MANUAL_SENSOR absen.")
+        Log.w(TAG, "  Slider fokus manual tidak akan melakukan apa-apa. Sembunyikan.")
     }
 } ?: run {
-    Log.w(TAG, "Minimum focus distance not available")
+    Log.w(TAG, "Jarak fokus minimum tidak tersedia")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Bagaimana cara memeriksanya dengan Android Camera Parameters?**
 
-Look in **Lens / Lens Info** under "Minimum Focus Distance". The app renders the value three ways: raw diopters, closest distance in centimeters, and closest distance in inches, so you can immediately tell if a camera is macro-capable. If the value is 0.0 a red banner warns "FIXED FOCUS — manual focus slider not available". The manual focus screen in the app reads this key first and refuses to show its slider when minimum focus is 0.0 or when MANUAL_SENSOR is missing.
+Lihat di **Lens / Lens Info** di bawah "Minimum Focus Distance". Aplikasi merender nilai dalam tiga cara: dioptri mentah, jarak terdekat dalam sentimeter, dan jarak terdekat dalam inci, sehingga Anda dapat langsung tahu apakah sebuah kamera mampu makro. Jika nilainya 0,0, banner merah memperingatkan "FIXED FOCUS — slider fokus manual tidak tersedia". Layar fokus manual di aplikasi membaca kunci ini terlebih dahulu dan menolak untuk menampilkan slider-nya ketika fokus minimum adalah 0,0 atau ketika MANUAL_SENSOR hilang.
 
-**6. Common pitfalls**
+**6. Jebakan umum**
 
-Number one: showing a manual focus slider when `minFocusDistance == 0.0f`. The slider goes from 0.0 to 0.0 — a single point. UI-wise this is a no-op track that does nothing, and QA will file it as a bug. The correct behavior is to check both `minFocusDistance > 0.0` and `MANUAL_SENSOR` capability. If either check fails, remove or disable the focus slider from the settings panel. In Compose: `if (minFocus > 0f && hasManualSensor) { ManualFocusSlider(...) }`.
+Nomor satu: menampilkan slider fokus manual ketika `minFocusDistance == 0.0f`. Slider berjalan dari 0,0 ke 0,0 — satu titik. Dari sisi UI ini adalah lintasan tanpa operasi yang tidak melakukan apa-apa, dan QA akan melaporkannya sebagai bug. Perilaku yang benar adalah memeriksa baik `minFocusDistance > 0.0` maupun kemampuan `MANUAL_SENSOR`. Jika salah satu pemeriksaan gagal, hapus atau nonaktifkan slider fokus dari panel pengaturan. Dalam Compose: `if (minFocus > 0f && hasManualSensor) { ManualFocusSlider(...) }`.
 
-Second pitfall: diopter scale inverted on the slider. Diopters grow *toward* the camera (10 D = 10 cm, 1 D = 1 m, 0 D = ∞). If you naively map slider-left = 0.0 and slider-right = minFocusDistance, "pulling the slider right" focuses *closer* instead of farther, which is opposite user expectation for a "focus near → far" slider. Flip the mapping: slider position `p ∈ [0,1]` should map to `focus = (1.0 - p) * minFocusDistance` so that slider-left = infinity and slider-right = closest focus.
+Jebakan kedua: skala dioptri terbalik pada slider. Dioptri tumbuh *ke arah* kamera (10 D = 10 cm, 1 D = 1 m, 0 D = ∞). Jika Anda secara naif memetakan slider-kiri = 0,0 dan slider-kanan = minFocusDistance, "menarik slider ke kanan" akan fokus *lebih dekat* alih-alih lebih jauh, yang berlawanan dengan ekspektasi pengguna untuk slider "fokus dekat → jauh". Balik pemetaannya: posisi slider `p ∈ [0,1]` harus dipetakan ke `focus = (1.0 - p) * minFocusDistance` sehingga slider-kiri = tak terhingga dan slider-kanan = fokus terdekat.
 
 ---
 
 ### LENS_INFO_AVAILABLE_APERTURES
 
-**1. What is it?**
+**1. Apa itu?**
 
-`LENS_INFO_AVAILABLE_APERTURES` is a `FloatArray` of f-stop numbers representing the discrete aperture sizes the lens can achieve. An f-stop is the ratio `focal_length / iris_diameter` — lower numbers mean a wider aperture (more light, shallower depth of field), higher numbers mean a narrower aperture (less light, deeper focus). Most modern smartphones have a fixed aperture: `[1.8]` or `[1.7]` or `[2.2]` depending on the lens. A small number of premium devices (Samsung Galaxy S9–S23 Ultra, some Xiaomi flagships) feature a *mechanical dual-aperture* iris that physically switches between two stops like `[1.5, 2.4]`.
+`LENS_INFO_AVAILABLE_APERTURES` adalah `FloatArray` angka f-stop yang mewakili ukuran bukaan (aperture) diskrit yang dapat dicapai lensa. F-stop adalah rasio `panjang_fokus / diameter_iris` — angka yang lebih rendah berarti bukaan yang lebih lebar (lebih banyak cahaya, kedalaman bidang lebih dangkal), angka yang lebih tinggi berarti bukaan yang lebih sempit (kurang cahaya, fokus lebih dalam). Sebagian besar smartphone modern memiliki bukaan tetap: `[1.8]` atau `[1.7]` atau `[2.2]` tergantung pada lensanya. Sejumlah kecil perangkat premium (Samsung Galaxy S9–S23 Ultra, beberapa ponsel unggulan Xiaomi) memiliki iris *dual-aperture mekanis* yang secara fisik beralih di antara dua stop seperti `[1.5, 2.4]`.
 
-The array is sorted in increasing order on CDD-compliant devices.
+Array tersebut diurutkan secara menaik pada perangkat yang patuh CDD.
 
-**2. Why does it exist?**
+**2. Mengapa itu ada?**
 
-Photography's "exposure triangle" is ISO, shutter speed, and aperture. On smartphones with fixed apertures the triangle collapses to two variables because aperture is locked. The available apertures array tells the developer exactly whether the "A" in ISO+SS+A is actually a third variable or a constant. Manual exposure UIs that show an aperture slider for fixed-aperture cameras are buggy.
+"Segitiga eksposur" fotografi adalah ISO, kecepatan rana, dan bukaan. Pada smartphone dengan bukaan tetap, segitiga tersebut menciut menjadi dua variabel karena bukaan terkunci. Array bukaan yang tersedia memberi tahu pengembang secara tepat apakah "A" dalam ISO+SS+A benar-benar variabel ketiga atau konstanta. UI eksposur manual yang menampilkan slider bukaan untuk kamera bukaan tetap adalah bug.
 
-**3. Which devices support it?**
+**3. Perangkat mana yang mendukungnya?**
 
-All devices report this array. Single-element arrays (fixed aperture) dominate the market. Multi-element arrays exist only on flagship devices with physical dual-aperture mechanisms, approximately &lt;1% of the active device population as of 2024. No capability flag prerequisites: if the array has more than one entry, you can set `CaptureRequest.LENS_APERTURE` to any of those entries and it will work — no MANUAL_SENSOR check required, because the mechanical iris switching is independent of the sensor gain/timing controls.
+Semua perangkat melaporkan array ini. Array satu elemen (bukaan tetap) mendominasi pasar. Array multi-elemen hanya ada pada perangkat unggulan dengan mekanisme iris dual-aperture fisik, kira-kira &lt;1% dari populasi perangkat aktif pada tahun 2024. Tidak ada prasyarat flag kemampuan: jika array memiliki lebih dari satu entri, Anda dapat menyetel `CaptureRequest.LENS_APERTURE` ke salah satu entri tersebut dan itu akan berfungsi — tidak diperlukan pemeriksaan MANUAL_SENSOR, karena peralihan iris mekanis independen dari kontrol gain/timing sensor.
 
-**4. How do I query it?**
+**4. Bagaimana cara menanyakannya?**
 
 ```kotlin
 val apertures: FloatArray? = characteristics.get(
@@ -705,64 +705,64 @@ val apertures: FloatArray? = characteristics.get(
 
 apertures?.let { stops ->
     stops.sort()
-    Log.d(TAG, "Available apertures: f/${stops.joinToString(", f/") { "%.1f".format(it) }}")
+    Log.d(TAG, "Bukaan tersedia: f/${stops.joinToString(", f/") { "%.1f".format(it) }}")
     
     when (stops.size) {
         0 -> {
-            Log.e(TAG, "  ERROR: Empty aperture array (HAL violation)")
+            Log.e(TAG, "  KESALAHAN: Array bukaan kosong (pelanggaran HAL)")
         }
         1 -> {
             val f = stops[0]
-            Log.d(TAG, "  FIXED aperture f/${"%.1f".format(f)}.")
-            Log.d(TAG, "  Exposure triangle: 2 variables (ISO + Shutter Speed only).")
-            Log.d(TAG, "  UI: HIDE aperture selector / disable button.")
+            Log.d(TAG, "  Bukaan TETAP f/${"%.1f".format(f)}.")
+            Log.d(TAG, "  Segitiga eksposur: 2 variabel (ISO + Kecepatan Rana saja).")
+            Log.d(TAG, "  UI: SEMBUNYIKAN pemilih bukaan / nonaktifkan tombol.")
         }
         else -> {
-            Log.d(TAG, "  VARIABLE aperture (${stops.size} stops — mechanical iris!)")
+            Log.d(TAG, "  Bukaan VARIABEL (${stops.size} stop — iris mekanis!)")
             stops.forEachIndexed { i, f ->
                 val lightGainedVersusSmallest = (stops.last() / f) * (stops.last() / f)
-                Log.d(TAG, "    [$i] f/${"%.1f".format(f)} — ${"%.1f".format(lightGainedVersusSmallest)}× light vs f/${"%.1f".format(stops.last())}")
+                Log.d(TAG, "    [$i] f/${"%.1f".format(f)} — cahaya ${"%.1f".format(lightGainedVersusSmallest)}× vs f/${"%.1f".format(stops.last())}")
             }
-            Log.d(TAG, "  UI: SHOW aperture selector. Set via CaptureRequest.LENS_APERTURE.")
+            Log.d(TAG, "  UI: TAMPILKAN pemilih bukaan. Setel via CaptureRequest.LENS_APERTURE.")
         }
     }
 } ?: run {
-    Log.w(TAG, "Available apertures array unavailable")
+    Log.w(TAG, "Array bukaan yang tersedia tidak tersedia")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Bagaimana cara memeriksanya dengan Android Camera Parameters?**
 
-Go to **Lens / Lens Info** — the apertures appear as "Aperture" with one or more pill-shaped buttons for each available stop. On variable-aperture devices tapping each button live-switches the aperture and dims/brightens the preview accordingly so you can see the real depth-of-field change. On fixed-aperture devices the pill is grayed out and the tooltip explains "Fixed aperture — not controllable".
+Buka **Lens / Lens Info** — bukaan muncul sebagai "Aperture" dengan satu atau lebih tombol berbentuk pil untuk setiap stop yang tersedia. Pada perangkat bukaan variabel, mengetuk setiap tombol akan mengalihkan bukaan secara langsung dan meredupkan/mencerahkan pratinjau sehingga Anda dapat melihat perubahan kedalaman bidang yang nyata. Pada perangkat bukaan tetap, pil tersebut berwarna abu-abu dan tooltip menjelaskan "Bukaan tetap — tidak dapat dikontrol".
 
-**6. Common pitfalls**
+**6. Jebakan umum**
 
-Treating aperture as a controllable parameter on every device. Many developers learn the exposure triangle from a DSLR and assume all three controls exist on a phone. When they write `captureRequest.set(CaptureRequest.LENS_APERTURE, 2.8f)` on a fixed f/1.8 camera, the HAL silently ignores the request (on good HALs) or crashes the session (on bad LEGACY wrappers). Always check `apertures.size > 1` before exposing aperture UI. Count on two fingers: fewer than 2 entries = no selector.
+Memperlakukan bukaan sebagai parameter yang dapat dikontrol di setiap perangkat. Banyak pengembang mempelajari segitiga eksposur dari DSLR dan berasumsi ketiga kontrol tersebut ada di ponsel. Saat mereka menulis `captureRequest.set(CaptureRequest.LENS_APERTURE, 2.8f)` pada kamera f/1.8 tetap, HAL secara diam-diam mengabaikan permintaan tersebut (pada HAL yang baik) atau membuat sesi crash (pada pembungkus LEGACY yang buruk). Selalu periksa `apertures.size > 1` sebelum mengekspos UI bukaan. Hitung dengan dua jari: kurang dari 2 entri = tidak ada pemilih.
 
-The second pitfall: confusing f-stop units with linear brightness. F/stops are quadratic. f/1.4 lets in 2× more light than f/2.0 and 4× more light than f/2.8. When displaying an aperture slider, label it with the actual f-stops from the array, not with linear percentages, because each full stop step visually halves or doubles the image brightness.
+Jebakan kedua: membingungkan unit f-stop dengan kecerahan linear. F-stop bersifat kuadratik. f/1.4 membiarkan cahaya masuk 2× lebih banyak daripada f/2.0 dan 4× lebih banyak daripada f/2.8. Saat menampilkan slider bukaan, beri label dengan f-stop aktual dari array, bukan dengan persentase linear, karena setiap langkah stop penuh secara visual membagi dua atau melipatgandakan kecerahan gambar.
 
 ---
 
 ### LENS_INFO_OPTICAL_STABILIZATION_MODE
 
-**1. What is it?**
+**1. Apa itu?**
 
-`LENS_INFO_OPTICAL_STABILIZATION_MODE` (note: paired with `LENS_INFO_AVAILABLE_OPTICAL_STABILIZATION` for the array of modes) is an `IntArray` listing whether hardware optical image stabilization (OIS) is available and which modes the HAL supports. Standard values are:
-- `LENS_OPTICAL_STABILIZATION_MODE_OFF` — no OIS, all stabilization must be done in software (EIS)
-- `LENS_OPTICAL_STABILIZATION_MODE_ON` — standard still-image OIS, gyro moves the lens group up/down/left/right by fractions of a millimeter to cancel hand tremor
-- `LENS_OPTICAL_STABILIZATION_MODE_VIDEO_STABILIZATION` — optimized OIS profile for video capture, with tuned filtering to match frame timing
+`LENS_INFO_OPTICAL_STABILIZATION_MODE` (catatan: dipasangkan dengan `LENS_INFO_AVAILABLE_OPTICAL_STABILIZATION` untuk array mode) adalah `IntArray` yang mencantumkan apakah stabilisasi gambar optik perangkat keras (OIS) tersedia dan mode mana yang didukung HAL. Nilai standarnya adalah:
+- `LENS_OPTICAL_STABILIZATION_MODE_OFF` — tidak ada OIS, semua stabilisasi harus dilakukan di perangkat lunak (EIS)
+- `LENS_OPTICAL_STABILIZATION_MODE_ON` — OIS gambar diam standar, gyro menggerakkan grup lensa ke atas/bawah/kiri/kanan sepersekian milimeter untuk membatalkan getaran tangan
+- `LENS_OPTICAL_STABILIZATION_MODE_VIDEO_STABILIZATION` — profil OIS yang dioptimalkan untuk pengambilan video, dengan pemfilteran yang disetel untuk mencocokkan waktu bingkai
 
-The companion key in CaptureRequests is `LENS_OPTICAL_STABILIZATION_MODE` which selects the active mode from the available list.
+Kunci pendamping di CaptureRequest adalah `LENS_OPTICAL_STABILIZATION_MODE` yang memilih mode aktif dari daftar yang tersedia.
 
-**2. Why does it exist?**
+**2. Mengapa itu ada?**
 
-OIS and software EIS (electronic image stabilization) are two separate stabilization technologies that interact with each other in important ways. OIS physically moves the lens, requiring the crop margin reserved for EIS warping to be adjusted. On the majority of 2019–2024 Android devices the HAL does not permit both OIS and `CONTROL_VIDEO_STABILIZATION_MODE_ON` to be enabled simultaneously — enabling both causes a HAL conflict because the ISP's EIS warp calculator expects a static optical path and the OIS motor moves it anyway.
+OIS dan EIS (stabilisasi gambar elektronik) perangkat lunak adalah dua teknologi stabilisasi terpisah yang berinteraksi satu sama lain dengan cara yang penting. OIS secara fisik menggerakkan lensa, yang mengharuskan margin potongan yang dicadangkan untuk warping EIS disesuaikan. Pada mayoritas perangkat Android 2019–2024, HAL tidak mengizinkan OIS dan `CONTROL_VIDEO_STABILIZATION_MODE_ON` diaktifkan secara bersamaan — mengaktifkan keduanya menyebabkan konflik HAL karena kalkulator warp EIS milik ISP mengharapkan jalur optik statis tetapi motor OIS tetap menggerakkannya.
 
-**3. Which devices support it?**
+**3. Perangkat mana yang mendukungnya?**
 
-All devices expose the available-modes array. The presence of `ON` in the array indicates actual OIS hardware. Flagship phones, most mid-range phones, and modern telephoto/periscope lenses include OIS. Budget phones (under $300 USD) and selfie cameras typically have `[OFF]` only. OIS is independent of hardware level: there exist LIMITED-level devices with OIS and FULL-level devices without.
+Semua perangkat mengekspos array mode-tersedia. Kehadiran `ON` dalam array menunjukkan adanya perangkat keras OIS yang sebenarnya. Ponsel unggulan, sebagian besar ponsel kelas menengah, dan lensa telefoto/periskop modern menyertakan OIS. Ponsel anggaran (di bawah $300 USD) dan kamera selfie biasanya hanya memiliki `[OFF]`. OIS independen dari tingkat perangkat keras: ada perangkat tingkat LIMITED dengan OIS dan perangkat tingkat FULL tanpanya.
 
-**4. How do I query it?**
+**4. Bagaimana cara menanyakannya?**
 
 ```kotlin
 val availableOisModes: IntArray? = characteristics.get(
@@ -772,13 +772,13 @@ val availableOisModes: IntArray? = characteristics.get(
 availableOisModes?.let { modes ->
     val modeNames = modes.map { m ->
         when (m) {
-            CameraCharacteristics.LENS_OPTICAL_STABILIZATION_MODE_OFF -> "OFF"
-            CameraCharacteristics.LENS_OPTICAL_STABILIZATION_MODE_ON -> "ON"
+            CameraCharacteristics.LENS_OPTICAL_STABILIZATION_MODE_OFF -> "MATI"
+            CameraCharacteristics.LENS_OPTICAL_STABILIZATION_MODE_ON -> "HIDUP"
             CameraCharacteristics.LENS_OPTICAL_STABILIZATION_MODE_VIDEO_STABILIZATION -> "VIDEO"
-            else -> "UNKNOWN($m)"
+            else -> "TIDAK DIKETAHUI($m)"
         }
     }
-    Log.d(TAG, "Available OIS modes: [${modeNames.joinToString(", ")}]")
+    Log.d(TAG, "Mode OIS tersedia: [${modeNames.joinToString(", ")}]")
     
     val hasOisHardware = modes.contains(
         CameraCharacteristics.LENS_OPTICAL_STABILIZATION_MODE_ON
@@ -786,7 +786,7 @@ availableOisModes?.let { modes ->
         CameraCharacteristics.LENS_OPTICAL_STABILIZATION_MODE_VIDEO_STABILIZATION
     )
     
-    Log.d(TAG, "  Hardware OIS present: $hasOisHardware")
+    Log.d(TAG, "  Perangkat keras OIS ada: $hasOisHardware")
     
     characteristics.get(
         CameraCharacteristics.CONTROL_AVAILABLE_VIDEO_STABILIZATION_MODES
@@ -794,65 +794,65 @@ availableOisModes?.let { modes ->
         val hasEis = eisModes.contains(
             CameraCharacteristics.CONTROL_VIDEO_STABILIZATION_MODE_ON
         )
-        Log.d(TAG, "  Software EIS available: $hasEis")
+        Log.d(TAG, "  Software EIS tersedia: $hasEis")
         
         if (hasOisHardware && hasEis) {
-            Log.w(TAG, "  CAUTION: Device claims both OIS + EIS.")
-            Log.w(TAG, "  Many HALs allow ONLY ONE AT A TIME — test simultaneously.")
-            Log.w(TAG, "  If session creation fails with both enabled, pick ONE.")
+            Log.w(TAG, "  PERINGATAN: Perangkat mengklaim baik OIS + EIS.")
+            Log.w(TAG, "  Banyak HAL mengizinkan HANYA SATU PADA SATU WAKTU — uji secara simultan.")
+            Log.w(TAG, "  Jika pembuatan sesi gagal dengan keduanya diaktifkan, pilih SATU.")
         }
     }
     
     val recommendedMode = when {
         modes.contains(CameraCharacteristics
-            .LENS_OPTICAL_STABILIZATION_MODE_VIDEO_STABILIZATION) -> "VIDEO profile"
+            .LENS_OPTICAL_STABILIZATION_MODE_VIDEO_STABILIZATION) -> "Profil VIDEO"
         modes.contains(CameraCharacteristics
-            .LENS_OPTICAL_STABILIZATION_MODE_ON) -> "ON"
-        else -> "OFF (no OIS hardware)"
+            .LENS_OPTICAL_STABILIZATION_MODE_ON) -> "HIDUP"
+        else -> "MATI (tidak ada perangkat keras OIS)"
     }
-    Log.d(TAG, "  Recommended OIS for video recording: $recommendedMode")
+    Log.d(TAG, "  OIS yang direkomendasikan untuk perekaman video: $recommendedMode")
 } ?: run {
-    Log.w(TAG, "OIS info unavailable")
+    Log.w(TAG, "Info OIS tidak tersedia")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Bagaimana cara memeriksanya dengan Android Camera Parameters?**
 
-Navigate to **Lens / Stabilization**. The card shows "Available OIS Modes" as a list with ON/OFF state indicators. Below it the companion app also shows EIS modes and a warning banner if both are available, explaining the mutual-exclusivity risk. The preview activity in the app allows toggling OIS and EIS independently so you can immediately see whether enabling both causes a session failure on your device.
+Navigasi ke **Lens / Stabilization**. Kartu menunjukkan "Available OIS Modes" sebagai daftar dengan indikator status ON/OFF. Di bawahnya, aplikasi pendamping juga menunjukkan mode EIS dan banner peringatan jika keduanya tersedia, menjelaskan risiko mutual-exclusivity. Aktivitas pratinjau di aplikasi memungkinkan peralihan OIS dan EIS secara independen sehingga Anda dapat langsung melihat apakah mengaktifkan keduanya menyebabkan kegagalan sesi pada perangkat Anda.
 
-**6. Common pitfalls**
+**6. Jebakan umum**
 
-Mutual exclusivity: the number one issue is enabling `LENS_OPTICAL_STABILIZATION_MODE = ON` and `CONTROL_VIDEO_STABILIZATION_MODE = ON` simultaneously. On Samsung Exynos devices this silently drops OIS (stabilization is less effective than pure OIS). On MediaTek devices the CaptureSession creation throws a `CameraAccessException` with no diagnostic message. On Snapdragon 8 Gen 1+ devices it works but introduces a jittery 1–2 frame delay in the preview because the EIS warp waits for the OIS gyro delay. The safe rule: choose OIS OR EIS, never both. Prefer OIS when available (it corrects before capture, preserves more light), fall back to EIS when the lens lacks the hardware.
+Mutual exclusivity: masalah nomor satu adalah mengaktifkan `LENS_OPTICAL_STABILIZATION_MODE = ON` dan `CONTROL_VIDEO_STABILIZATION_MODE = ON` secara bersamaan. Pada perangkat Samsung Exynos, ini secara diam-diam mematikan OIS (stabilisasi menjadi kurang efektif daripada OIS murni). Pada perangkat MediaTek, pembuatan CaptureSession melemparkan `CameraAccessException` tanpa pesan diagnostik. Pada perangkat Snapdragon 8 Gen 1+, ini berfungsi tetapi memperkenalkan penundaan 1-2 bingkai yang tersendat pada pratinjau karena warp EIS menunggu keterlambatan gyro OIS. Aturan amannya: pilih OIS ATAU EIS, jangan pernah keduanya. Lebih suka OIS saat tersedia (karena ia mengoreksi sebelum pengambilan, mempertahankan lebih banyak cahaya), gunakan EIS sebagai cadangan saat lensa tidak memiliki perangkat kerasnya.
 
-Second pitfall: video-optimized OIS vs. still OIS. Many flagships ship with `LENS_OPTICAL_STABILIZATION_MODE_VIDEO_STABILIZATION` in the array as a separate mode. If you set `ON` for video recording the OIS uses the still-image gyro filter, which over-corrects fast pans and makes the footage look "jittery stuck in place". Use the VIDEO-specific mode for video capture sessions and `ON` only for stills.
+Jebakan kedua: OIS yang dioptimalkan untuk video vs OIS foto diam. Banyak ponsel unggulan dikirimkan dengan `LENS_OPTICAL_STABILIZATION_MODE_VIDEO_STABILIZATION` dalam array sebagai mode terpisah. Jika Anda menyetel `ON` untuk perekaman video, OIS menggunakan filter gyro foto diam, yang mengoreksi gerakan pan cepat secara berlebihan dan membuat rekaman terlihat seperti "jittery stuck in place". Gunakan mode khusus VIDEO untuk sesi pengambilan video dan `ON` hanya untuk foto diam.
 
 ---
 
-## Control Category
+## Kategori Kontrol
 
 ### CONTROL_AE_AVAILABLE_MODES
 
-**1. What is it?**
+**1. Apa itu?**
 
-`CONTROL_AE_AVAILABLE_MODES` is an `IntArray` of `CONTROL_AE_MODE_*` constants describing which auto-exposure operating modes the 3A AE algorithm supports. The standard values are:
-- `CONTROL_AE_MODE_OFF` — AE locked; exposure time and ISO are taken from the manual `SENSOR_EXPOSURE_TIME` and `SENSOR_SENSITIVITY` keys only.
-- `CONTROL_AE_MODE_ON` — standard automatic exposure; the camera adjusts both shutter and gain automatically.
-- `CONTROL_AE_MODE_ON_AUTO_FLASH` — AE + automatic flash firing in low light.
-- `CONTROL_AE_MODE_ON_ALWAYS_FLASH` — AE + forced flash firing.
-- `CONTROL_AE_MODE_ON_AUTO_FLASH_REDEYE` — AE + pre-flash pulse for red-eye reduction.
-- `CONTROL_AE_MODE_ON_EXTERNAL_FLASH` — AE configured for an off-camera strobe.
+`CONTROL_AE_AVAILABLE_MODES` adalah `IntArray` dari konstanta `CONTROL_AE_MODE_*` yang menjelaskan mode pengoperasian eksposur otomatis mana yang didukung oleh algoritma 3A AE. Nilai standarnya adalah:
+- `CONTROL_AE_MODE_OFF` — AE dikunci; waktu eksposur dan ISO diambil dari kunci manual `SENSOR_EXPOSURE_TIME` dan `SENSOR_SENSITIVITY` saja.
+- `CONTROL_AE_MODE_ON` — eksposur otomatis standar; kamera menyesuaikan rana dan penguatan secara otomatis.
+- `CONTROL_AE_MODE_ON_AUTO_FLASH` — AE + penembakan lampu kilat otomatis dalam cahaya rendah.
+- `CONTROL_AE_MODE_ON_ALWAYS_FLASH` — AE + penembakan lampu kilat paksa.
+- `CONTROL_AE_MODE_ON_AUTO_FLASH_REDEYE` — AE + pulsa pra-kilat untuk pengurangan efek mata merah.
+- `CONTROL_AE_MODE_ON_EXTERNAL_FLASH` — AE dikonfigurasi untuk strobo di luar kamera.
 
-The CaptureRequest equivalent `CONTROL_AE_MODE` selects one of these values per request.
+Padanan CaptureRequest `CONTROL_AE_MODE` memilih salah satu dari nilai-nilai ini per permintaan.
 
-**2. Why does it exist?**
+**2. Mengapa itu ada?**
 
-Each AE mode requires different internal HAL state. For example, red-eye reduction mode needs to configure a pre-flash sequence (typically three short pulses at ~1/16th power) timed 20–50 ms before the main flash. External flash mode disables built-in flash metering entirely and expects a sync cable signal. If the HAL does not support red-eye (e.g. budget phone with only a single flash driver), the mode must be absent from the available list. Asking the HAL to use a mode it doesn't support results in either a fallback to `ON` (good HALs) or a session crash (bad LEGACY wrappers).
+Setiap mode AE memerlukan status HAL internal yang berbeda. Misalnya, mode pengurangan mata merah perlu mengonfigurasi urutan pra-kilat (biasanya tiga pulsa pendek pada daya ~1/16) yang dijadwalkan 20–50 ms sebelum kilat utama. Mode lampu kilat eksternal menonaktifkan pengukuran lampu kilat bawaan sepenuhnya dan mengharapkan sinyal kabel sinkronisasi. Jika HAL tidak mendukung mata merah (misalnya ponsel anggaran dengan hanya satu driver lampu kilat), mode tersebut harus absen dari daftar yang tersedia. Meminta HAL untuk menggunakan mode yang tidak didukungnya akan menghasilkan cadangan ke `ON` (pada HAL yang baik) atau crash sesi (pada pembungkus LEGACY yang buruk).
 
-**3. Which devices support it?**
+**3. Perangkat mana yang mendukungnya?**
 
-All hardware levels. The absolute minimum set, guaranteed on any valid camera ID, is `[OFF, ON]`. Flash-related modes are present only when `FLASH_INFO_AVAILABLE = true`. Red-eye is optional even on flash-equipped devices; many budget HALs skip the pre-flash pulse circuit for cost reasons.
+Semua tingkat perangkat keras. Set minimum absolut, yang dijamin pada ID kamera valid mana pun, adalah `[OFF, ON]`. Mode terkait lampu kilat hanya ada ketika `FLASH_INFO_AVAILABLE = true`. Mata merah bersifat opsional bahkan pada perangkat yang dilengkapi lampu kilat; banyak HAL anggaran melewatkan sirkuit pulsa pra-kilat karena alasan biaya.
 
-**4. How do I query it?**
+**4. Bagaimana cara menanyakannya?**
 
 ```kotlin
 val aeModes: IntArray? = characteristics.get(
@@ -862,16 +862,16 @@ val aeModes: IntArray? = characteristics.get(
 aeModes?.let { modes ->
     val map = modes.map { m ->
         m to when (m) {
-            CameraCharacteristics.CONTROL_AE_MODE_OFF -> "OFF (manual only)"
-            CameraCharacteristics.CONTROL_AE_MODE_ON -> "ON"
+            CameraCharacteristics.CONTROL_AE_MODE_OFF -> "MATI (manual saja)"
+            CameraCharacteristics.CONTROL_AE_MODE_ON -> "HIDUP"
             CameraCharacteristics.CONTROL_AE_MODE_ON_AUTO_FLASH -> "ON_AUTO_FLASH"
             CameraCharacteristics.CONTROL_AE_MODE_ON_ALWAYS_FLASH -> "ON_ALWAYS_FLASH"
             CameraCharacteristics.CONTROL_AE_MODE_ON_AUTO_FLASH_REDEYE -> "ON_AUTO_FLASH_REDEYE"
             CameraCharacteristics.CONTROL_AE_MODE_ON_EXTERNAL_FLASH -> "ON_EXTERNAL_FLASH"
-            else -> "UNKNOWN($m)"
+            else -> "TIDAK DIKETAHUI($m)"
         }
     }
-    Log.d(TAG, "Available AE modes:")
+    Log.d(TAG, "Mode AE tersedia:")
     map.forEach { (v, s) -> Log.d(TAG, "  $v — $s") }
     
     val hasFlash = characteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE)
@@ -884,24 +884,24 @@ aeModes?.let { modes ->
     )
     
     if (!hasAutoFlash && hasFlash) {
-        Log.w(TAG, "  Flash exists but AUTO_FLASH mode is missing? " +
-                   "Fallback: ALWAYS_FLASH or manual torch.")
+        Log.w(TAG, "  Lampu kilat ada tetapi mode AUTO_FLASH hilang? " +
+                   "Cadangan: ALWAYS_FLASH atau senter manual.")
     }
     if (hasRedeye) {
-        Log.d(TAG, "  Red-eye reduction: SUPPORTED via pre-flash pulses.")
+        Log.d(TAG, "  Pengurangan mata merah: DIDUKUNG melalui pulsa pra-kilat.")
     }
 } ?: run {
-    Log.w(TAG, "AE modes list unavailable")
+    Log.w(TAG, "Daftar mode AE tidak tersedia")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Bagaimana cara memeriksanya dengan Android Camera Parameters?**
 
-Look in **Control / 3A Modes**, the first card titled "AE Modes". Every available mode is rendered as a toggleable button. Tapping the button live-applies that mode to the preview capture session so you can observe the behavior change — for example tapping RED_EYE while pointing at a person's face triggers the pre-flash sequence visible in the preview frame.
+Lihat di **Control / 3A Modes**, kartu pertama berjudul "AE Modes". Setiap mode yang tersedia dirender sebagai tombol yang dapat dialihkan. Mengetuk tombol akan menerapkan mode tersebut secara langsung ke sesi pengambilan pratinjau sehingga Anda dapat mengamati perubahan perilakunya — misalnya mengetuk RED_EYE sambil mengarahkan ke wajah seseorang akan memicu urutan pra-kilat yang terlihat di bingkai pratinjau.
 
-**6. Common pitfalls**
+**6. Jebakan umum**
 
-The double-OFF pitfall: `CONTROL_AE_MODE_OFF` alone does **NOT** enable manual exposure. Every developer hits this within the first week of Camera2. There is a global "master override" key called `CONTROL_MODE`. If `CONTROL_MODE` is still set to the default `CONTROL_MODE_AUTO`, the HAL interprets individual 3A-mode OFF values as "don't change the auto behavior" — exactly the opposite of what you expect. The correct manual-exposure sequence is:
+Jebakan double-OFF: `CONTROL_AE_MODE_OFF` saja **TIDAK** mengaktifkan eksposur manual. Setiap pengembang menemui hal ini dalam minggu pertama menggunakan Camera2. Ada kunci "master override" global yang disebut `CONTROL_MODE`. Jika `CONTROL_MODE` is still set to the default `CONTROL_MODE_AUTO`, HAL menafsirkan nilai OFF mode 3A individual sebagai "jangan ubah perilaku otomatis" — kebalikan dari apa yang Anda harapkan. Urutan eksposur manual yang benar adalah:
 
 ```kotlin
 builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
@@ -912,31 +912,31 @@ builder.set(CaptureRequest.SENSOR_SENSITIVITY, iso)
 builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, exposureNs)
 ```
 
-Both `CONTROL_MODE` and `CONTROL_AE_MODE` must be `OFF`. Setting only the second yields a request that looks valid (no exception thrown) but AE continues to run — developers stare at their logging and cannot understand why ISO keeps changing despite setting it explicitly.
+Baik `CONTROL_MODE` maupun `CONTROL_AE_MODE` harus `OFF`. Menyetel yang kedua saja menghasilkan permintaan yang tampak valid (tidak ada pengecualian yang dilemparkan) tetapi AE terus berjalan — pengembang menatap log mereka dan tidak mengerti mengapa ISO terus berubah meskipun telah menyetelnya secara eksplisit.
 
 ---
 
 ### CONTROL_AF_AVAILABLE_MODES
 
-**1. What is it?**
+**1. Apa itu?**
 
-`CONTROL_AF_AVAILABLE_MODES` is an `IntArray` listing all supported autofocus operating modes. Standard values:
-- `CONTROL_AF_MODE_OFF` — AF disabled; lens focus position is taken from `LENS_FOCUS_DISTANCE` (requires MANUAL_SENSOR).
-- `CONTROL_AF_MODE_AUTO` — single-shot AF: trigger focus with `CONTROL_AF_TRIGGER = START`, locks when converged.
-- `CONTROL_AF_MODE_MACRO` — single-shot AF with search algorithm optimized for close distances (&lt;30 cm).
-- `CONTROL_AF_MODE_CONTINUOUS_PICTURE` — continuous refocusing, aggressive, tuned for still capture: hunts quickly, refocuses whenever scene changes.
-- `CONTROL_AF_MODE_CONTINUOUS_VIDEO` — continuous refocusing, slow and smooth: avoids "focus breathing" artifacts during video recording by driving the lens gradually.
-- `CONTROL_AF_MODE_EDOF` — extended depth-of-field: software post-processing simulates sharp focus from ~30 cm to infinity, no physical lens motor movement.
+`CONTROL_AF_AVAILABLE_MODES` adalah `IntArray` yang mencantumkan semua mode pengoperasian fokus otomatis yang didukung. Nilai standar:
+- `CONTROL_AF_MODE_OFF` — AF dinonaktifkan; posisi fokus lensa diambil dari `LENS_FOCUS_DISTANCE` (memerlukan MANUAL_SENSOR).
+- `CONTROL_AF_MODE_AUTO` — AF bidikan tunggal: pemicu fokus dengan `CONTROL_AF_TRIGGER = START`, terkunci saat memusat.
+- `CONTROL_AF_MODE_MACRO` — AF bidikan tunggal dengan algoritma pencarian yang dioptimalkan untuk jarak dekat (&lt;30 cm).
+- `CONTROL_AF_MODE_CONTINUOUS_PICTURE` — pemfokusan ulang terus menerus, agresif, disetel untuk pengambilan foto diam: berburu dengan cepat, memfokuskan ulang setiap kali adegan berubah.
+- `CONTROL_AF_MODE_CONTINUOUS_VIDEO` — pemfokusan ulang terus menerus, lambat dan halus: menghindari artefak "focus breathing" selama perekaman video dengan menggerakkan lensa secara bertahap.
+- `CONTROL_AF_MODE_EDOF` — extended depth-of-field: pemrosesan ulang perangkat lunak mensimulasikan fokus tajam dari ~30 cm ke tak terhingga, tidak ada gerakan motor lensa fisik.
 
-**2. Why does it exist?**
+**2. Mengapa itu ada?**
 
-Different use cases require fundamentally different AF strategies. Video cannot tolerate the aggressive hunting of still-image continuous AF because each focus change visibly warps the image (focus breathing) and produces audible motor noise on the microphone track. Macro scenes need a search range limited to close distances because searching the full ∞→0.1m range takes 800 ms or longer. EDOF requires no lens motor at all. The key communicates which HAL algorithms are actually compiled in.
+Kasus penggunaan yang berbeda memerlukan strategi AF yang secara fundamental berbeda. Video tidak dapat mentoleransi perburuan agresif dari AF berkelanjutan gambar diam karena setiap perubahan fokus secara visual merusak gambar (focus breathing) dan menghasilkan noise motor yang terdengar pada trek mikrofon. Adegan makro memerlukan rentang pencarian yang terbatas pada jarak dekat karena mencari seluruh rentang ∞→0,1m memakan waktu 800 ms atau lebih lama. EDOF tidak memerlukan motor lensa sama sekali. Kunci ini mengomunikasikan algoritma HAL mana yang sebenarnya dikompilasi di dalamnya.
 
-**3. Which devices support it?**
+**3. Perangkat mana yang mendukungnya?**
 
-All hardware levels. Minimum set: almost every device includes `[AUTO, CONTINUOUS_PICTURE]`. `MACRO` is optional on fixed-focus devices (when `LENS_INFO_MINIMUM_FOCUS_DISTANCE = 0.0` then MACRO is typically omitted because AF can't close-focus anyway). `EDOF` appears only on budget devices with small sensors and post-processing focus. `CONTINUOUS_VIDEO` is present on any device that can record video via `MediaRecorder` — i.e., almost all.
+Semua tingkat perangkat keras. Set minimum: hampir setiap perangkat menyertakan `[AUTO, CONTINUOUS_PICTURE]`. `MACRO` bersifat opsional pada perangkat fokus tetap (ketika `LENS_INFO_MINIMUM_FOCUS_DISTANCE = 0.0`, maka MACRO biasanya dihilangkan karena AF tidak bisa fokus dekat). `EDOF` hanya muncul pada perangkat anggaran dengan sensor kecil dan fokus pasca-pemrosesan. `CONTINUOUS_VIDEO` ada di perangkat apa pun yang dapat merekam video via `MediaRecorder` — yaitu, hampir semua.
 
-**4. How do I query it?**
+**4. Bagaimana cara menanyakannya?**
 
 ```kotlin
 val afModes: IntArray? = characteristics.get(
@@ -944,16 +944,16 @@ val afModes: IntArray? = characteristics.get(
 )
 
 afModes?.let { modes ->
-    Log.d(TAG, "Available AF modes:")
+    Log.d(TAG, "Mode AF tersedia:")
     modes.forEach { m ->
         val s = when (m) {
-            CameraCharacteristics.CONTROL_AF_MODE_OFF -> "OFF (manual focus position)"
-            CameraCharacteristics.CONTROL_AF_MODE_AUTO -> "AUTO (single-shot, trigger once)"
-            CameraCharacteristics.CONTROL_AF_MODE_MACRO -> "MACRO (single-shot, near-optimized)"
-            CameraCharacteristics.CONTROL_AF_MODE_CONTINUOUS_PICTURE -> "CONTINUOUS_PICTURE (fast hunt, stills)"
-            CameraCharacteristics.CONTROL_AF_MODE_CONTINUOUS_VIDEO -> "CONTINUOUS_VIDEO (smooth, no breathing)"
-            CameraCharacteristics.CONTROL_AF_MODE_EDOF -> "EDOF (software-extended DoF, no motor)"
-            else -> "UNKNOWN($m)"
+            CameraCharacteristics.CONTROL_AF_MODE_OFF -> "MATI (posisi fokus manual)"
+            CameraCharacteristics.CONTROL_AF_MODE_AUTO -> "AUTO (bidikan tunggal, pemicu sekali)"
+            CameraCharacteristics.CONTROL_AF_MODE_MACRO -> "MACRO (bidikan tunggal, optimal jarak dekat)"
+            CameraCharacteristics.CONTROL_AF_MODE_CONTINUOUS_PICTURE -> "CONTINUOUS_PICTURE (buru cepat, foto diam)"
+            CameraCharacteristics.CONTROL_AF_MODE_CONTINUOUS_VIDEO -> "CONTINUOUS_VIDEO (halus, tanpa breathing)"
+            CameraCharacteristics.CONTROL_AF_MODE_EDOF -> "EDOF (EDOF perangkat lunak, tanpa motor)"
+            else -> "TIDAK DIKETAHUI($m)"
         }
         Log.d(TAG, "  $m — $s")
     }
@@ -967,57 +967,57 @@ afModes?.let { modes ->
     val hasEdof = modes.contains(CameraCharacteristics.CONTROL_AF_MODE_EDOF)
     
     if (hasEdof) {
-        Log.w(TAG, "  EDOF present: AF state machine will always report INACTIVE.")
-        Log.w(TAG, "  Do not wait for AF_STATE_FOCUSED_LOCKED on EDOF lenses.")
+        Log.w(TAG, "  EDOF ada: mesin status AF akan selalu melaporkan INACTIVE.")
+        Log.w(TAG, "  Jangan menunggu AF_STATE_FOCUSED_LOCKED pada lensa EDOF.")
     }
     
-    Log.d(TAG, "  Mode selector for video recording: " +
+    Log.d(TAG, "  Pemilih mode untuk perekaman video: " +
                if (hasContinuousVideo) "CONTINUOUS_VIDEO" else
-               if (hasContinuousPicture) "CONTINUOUS_PICTURE (FALLBACK)" else
-               "AUTO (FALLBACK)")
+               if (hasContinuousPicture) "CONTINUOUS_PICTURE (CADANGAN)" else
+               "AUTO (CADANGAN)")
 } ?: run {
-    Log.w(TAG, "AF modes list unavailable")
+    Log.w(TAG, "Daftar mode AF tidak tersedia")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Bagaimana cara memeriksanya dengan Android Camera Parameters?**
 
-Open **Control / 3A Modes** and look at the "AF Modes" card. Each available mode is a button. The companion app shows a live AF state indicator alongside each mode: when you tap CONTINUOUS_PICTURE while waving your hand in front of the lens, the state machine cycles PASSIVE_SCAN → PASSIVE_FOCUSED; when you tap CONTINUOUS_VIDEO the state machine transitions only every ~2 seconds even with scene motion — visible proof of the slower tuning. EDOF mode displays a tooltip explaining that no motor movement occurs.
+Buka **Control / 3A Modes** dan lihat kartu "AF Modes". Setiap mode yang tersedia adalah sebuah tombol. Aplikasi pendamping menunjukkan indikator status AF langsung di samping setiap mode: saat Anda mengetuk CONTINUOUS_PICTURE sambil melambaikan tangan di depan lensa, mesin status beralih PASSIVE_SCAN → PASSIVE_FOCUSED; saat Anda mengetuk CONTINUOUS_VIDEO, mesin status bertransisi hanya setiap ~2 detik bahkan dengan gerakan adegan — bukti nyata dari penyetelan yang lebih lambat. Mode EDOF menampilkan tooltip yang menjelaskan bahwa tidak ada gerakan motor yang terjadi.
 
-**6. Common pitfalls**
+**6. Jebakan umum**
 
-Using CONTINUOUS_PICTURE for video: this produces footage that "breathes" with each refocus because the still-mode tuning drives the AF motor to its new position in ~80 ms. When the lens is wide-aperture (f/1.8) the focus plane visibly shifts, which users perceive as a "jittery video". Worse, on phones with microphones close to the lens motor, the recording picks up a faint but audible "tick tick tick" as the motor moves each frame. Use CONTINUOUS_VIDEO (or fall back to AUTO with periodic triggering) for any MediaRecorder/MediaCodec output surface.
+Menggunakan CONTINUOUS_PICTURE untuk video: ini menghasilkan rekaman yang "bernapas" (breathing) dengan setiap pemfokusan ulang karena penyetelan mode foto diam menggerakkan motor AF ke posisi barunya dalam ~80 ms. Ketika lensa memiliki bukaan lebar (f/1.8), bidang fokus bergeser secara visual, yang dirasakan pengguna sebagai "video tersendat". Lebih buruk lagi, pada ponsel dengan mikrofon yang dekat dengan motor lensa, rekaman akan menangkap suara "tik tik tik" samar tapi terdengar saat motor bergerak di setiap bingkai. Gunakan CONTINUOUS_VIDEO (atau kembali ke AUTO dengan pemicuan periodik) untuk surface output MediaRecorder/MediaCodec mana pun.
 
-EDOF is the second pitfall: on EDOF devices the AF state machine *never transitions to FOCUSED_LOCKED*. Developers that block capture on `CaptureResult.CONTROL_AF_STATE == CONTROL_AF_STATE_FOCUSED_LOCKED` hang forever waiting for a state that will never arrive. EDOF uses `CONTROL_AF_STATE_INACTIVE` for the steady state because there is no physical motor to lock. The correct pattern when starting a still capture is: if `AF_MODE == EDOF` → skip AF trigger, fire immediately. Otherwise: trigger AF, wait for FOCUSED_LOCKED or NOT_FOCUSED_LOCKED, then fire.
+EDOF adalah jebakan kedua: pada perangkat EDOF, mesin status AF *tidak pernah bertransisi ke FOCUSED_LOCKED*. Pengembang yang memblokir pengambilan gambar pada `CaptureResult.CONTROL_AF_STATE == CONTROL_AF_STATE_FOCUSED_LOCKED` akan menunggu selamanya untuk status yang tidak akan pernah tiba. EDOF menggunakan `CONTROL_AF_STATE_INACTIVE` untuk status stabil karena tidak ada motor fisik yang harus dikunci. Pola yang benar saat memulai pengambilan foto diam adalah: jika `AF_MODE == EDOF` → lewati pemicu AF, langsung tembak. Jika tidak: pemicu AF, tunggu FOCUSED_LOCKED atau NOT_FOCUSED_LOCKED, lalu tembak.
 
 ---
 
 ### CONTROL_AWB_AVAILABLE_MODES
 
-**1. What is it?**
+**1. Apa itu?**
 
-`CONTROL_AWB_AVAILABLE_MODES` is an `IntArray` enumerating the auto-white-balance and fixed-color-temperature modes the AWB algorithm supports. Standard values:
-- `CONTROL_AWB_MODE_OFF` — AWB disabled; color correction is taken from `COLOR_CORRECTION_TRANSFORM` and `COLOR_CORRECTION_GAINS` (requires MANUAL_POST_PROCESSING capability for manual control, otherwise ignored).
-- `CONTROL_AWB_MODE_AUTO` — continuous AWB convergence; estimates scene color temperature from image statistics.
-- `CONTROL_AWB_MODE_INCANDESCENT` — fixed warm white balance ~2700K (tungsten / indoor light bulbs).
-- `CONTROL_AWB_MODE_FLUORESCENT` — fixed cool-white fluorescent ~4500K.
-- `CONTROL_AWB_MODE_WARM_FLUORESCENT` — fixed warm fluorescent ~3000K.
-- `CONTROL_AWB_MODE_DAYLIGHT` — fixed daylight ~5500K.
-- `CONTROL_AWB_MODE_CLOUDY_DAYLIGHT` — fixed overcast daylight ~6500K.
-- `CONTROL_AWB_MODE_TWILIGHT` — fixed dusk/dawn ~4000K.
-- `CONTROL_AWB_MODE_SHADE` — fixed deep-shade ~7500K.
+`CONTROL_AWB_AVAILABLE_MODES` adalah `IntArray` yang menghitung mode keseimbangan putih otomatis dan suhu warna tetap yang didukung oleh algoritma AWB. Nilai standar:
+- `CONTROL_AWB_MODE_OFF` — AWB dinonaktifkan; koreksi warna diambil dari `COLOR_CORRECTION_TRANSFORM` dan `COLOR_CORRECTION_GAINS` (memerlukan kemampuan MANUAL_POST_PROCESSING untuk kontrol manual, jika tidak akan diabaikan).
+- `CONTROL_AWB_MODE_AUTO` — pemusatan AWB terus menerus; memperkirakan suhu warna adegan dari statistik gambar.
+- `CONTROL_AWB_MODE_INCANDESCENT` — keseimbangan putih hangat tetap ~2700K (bola lampu tungsten / dalam ruangan).
+- `CONTROL_AWB_MODE_FLUORESCENT` — fluoresen putih dingin tetap ~4500K.
+- `CONTROL_AWB_MODE_WARM_FLUORESCENT` — fluoresen hangat tetap ~3000K.
+- `CONTROL_AWB_MODE_DAYLIGHT` — cahaya siang tetap ~5500K.
+- `CONTROL_AWB_MODE_CLOUDY_DAYLIGHT` — cahaya siang mendung tetap ~6500K.
+- `CONTROL_AWB_MODE_TWILIGHT` — senja/fajar tetap ~4000K.
+- `CONTROL_AWB_MODE_SHADE` — bayangan dalam tetap ~7500K.
 
-Each preset corresponds to a fixed set of RGB gains applied in the ISP color-correction pipeline.
+Setiap preset sesuai dengan set gain RGB tetap yang diterapkan dalam pipeline koreksi warna ISP.
 
-**2. Why does it exist?**
+**2. Mengapa itu ada?**
 
-AWB presets solve the "how do I make the photo look like what my eye saw" problem under predictable lighting. The generic `AUTO` mode sometimes makes incorrect decisions: a wall painted pure red causes the AWB algorithm to think the scene is lit by cyan light, so it applies an overall green cast. If the user is explicitly taking a photo under a tungsten bulb, selecting `INCANDESCENT` tells the HAL: "I know the light temperature — use the gains calibrated for this illuminant, not the auto estimator."
+Preset AWB memecahkan masalah "bagaimana cara membuat foto terlihat seperti apa yang dilihat mata saya" di bawah pencahayaan yang dapat diprediksi. Mode generik `AUTO` terkadang membuat keputusan yang salah: dinding yang dicat merah murni menyebabkan algoritma AWB mengira adegan diterangi oleh cahaya sian, sehingga ia menerapkan cast hijau secara keseluruhan. Jika pengguna secara eksplisit mengambil foto di bawah bola lampu tungsten, memilih `INCANDESCENT` memberi tahu HAL: "Saya tahu suhu cahayanya — gunakan gain yang dikalibrasi untuk iluminan ini, bukan estimator otomatis."
 
-**3. Which devices support it?**
+**3. Perangkat mana yang mendukungnya?**
 
-All devices. The minimum set is `[OFF, AUTO]`. All eight preset modes appear on ~70% of devices; the remaining 30% (older devices, certain USB cameras) omit the rarer ones like `WARM_FLUORESCENT` or `SHADE`. There is no flash dependency: these are fixed color calibration values independent of illumination source.
+Semua perangkat. Set minimum adalah `[OFF, AUTO]`. Kedelapan mode preset muncul pada ~70% perangkat; sisanya 30% (perangkat lama, kamera USB tertentu) menghilangkan mode yang lebih jarang seperti `WARM_FLUORESCENT` atau `SHADE`. Tidak ada ketergantungan lampu kilat: ini adalah nilai kalibrasi warna tetap yang independen dari sumber pencahayaan.
 
-**4. How do I query it?**
+**4. Bagaimana cara menanyakannya?**
 
 ```kotlin
 val awbModes: IntArray? = characteristics.get(
@@ -1027,29 +1027,29 @@ val awbModes: IntArray? = characteristics.get(
 awbModes?.let { modes ->
     val labelFor: (Int) -> Pair<String, Int> = { m ->
         when (m) {
-            CameraCharacteristics.CONTROL_AWB_MODE_OFF -> "OFF (manual CC gains)" to 0
-            CameraCharacteristics.CONTROL_AWB_MODE_AUTO -> "AUTO (continuous estimate)" to -1
+            CameraCharacteristics.CONTROL_AWB_MODE_OFF -> "MATI (gain CC manual)" to 0
+            CameraCharacteristics.CONTROL_AWB_MODE_AUTO -> "AUTO (estimasi terus menerus)" to -1
             CameraCharacteristics.CONTROL_AWB_MODE_INCANDESCENT -> "INCANDESCENT (Tungsten)" to 2700
-            CameraCharacteristics.CONTROL_AWB_MODE_FLUORESCENT -> "FLUORESCENT (Cool White)" to 4500
+            CameraCharacteristics.CONTROL_AWB_MODE_FLUORESCENT -> "FLUORESCENT (Putih Dingin)" to 4500
             CameraCharacteristics.CONTROL_AWB_MODE_WARM_FLUORESCENT -> "WARM_FLUORESCENT" to 3000
             CameraCharacteristics.CONTROL_AWB_MODE_DAYLIGHT -> "DAYLIGHT" to 5500
             CameraCharacteristics.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT -> "CLOUDY_DAYLIGHT" to 6500
             CameraCharacteristics.CONTROL_AWB_MODE_TWILIGHT -> "TWILIGHT" to 4000
             CameraCharacteristics.CONTROL_AWB_MODE_SHADE -> "SHADE" to 7500
-            else -> "UNKNOWN($m)" to -1
+            else -> "TIDAK DIKETAHUI($m)" to -1
         }
     }
     
-    Log.d(TAG, "Available AWB modes:")
+    Log.d(TAG, "Mode AWB tersedia:")
     modes.forEach { m ->
         val (s, k) = labelFor(m)
-        val kelvinStr = if (k > 0) " ~${k}K" else if (k == 0) " (manual CTCC via MANUAL_POST_PROCESSING)" else ""
+        val kelvinStr = if (k > 0) " ~${k}K" else if (k == 0) " (CTCC manual via MANUAL_POST_PROCESSING)" else ""
         Log.d(TAG, "  $m — $s$kelvinStr")
     }
     
     val presetCount = modes.count { it != CameraCharacteristics.CONTROL_AWB_MODE_OFF &&
                                      it != CameraCharacteristics.CONTROL_AWB_MODE_AUTO }
-    Log.d(TAG, "  Fixed presets available: $presetCount / 7 standard")
+    Log.d(TAG, "  Preset tetap tersedia: $presetCount / 7 standar")
     
     val missing = listOf(
         CameraCharacteristics.CONTROL_AWB_MODE_INCANDESCENT,
@@ -1062,52 +1062,52 @@ awbModes?.let { modes ->
     ).filter { !modes.contains(it) }
     
     if (missing.isNotEmpty()) {
-        Log.w(TAG, "  Missing standard AWB presets: $missing")
-        Log.w(TAG, "  UI: Show only presets that exist. Don't hardcode all 8.")
+        Log.w(TAG, "  Preset AWB standar yang hilang: $missing")
+        Log.w(TAG, "  UI: Tunjukkan hanya preset yang ada. Jangan hardcode ke-8-nya.")
     }
 } ?: run {
-    Log.w(TAG, "AWB modes list unavailable")
+    Log.w(TAG, "Daftar mode AWB tidak tersedia")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Bagaimana cara memeriksanya dengan Android Camera Parameters?**
 
-Look in **Control / 3A Modes** under the "AWB Modes" card. Each preset is a button with a small color swatch showing the approximate cast of that preset. If you start with AUTO under indoor lighting then tap INCANDESCENT, the preview immediately cools down (less orange) because the preset removes the tungsten orange cast. Tapping SHADE under daylight warms up the preview slightly because the preset compensates for the blue shift of shade light.
+Lihat di **Control / 3A Modes** di bawah kartu "AWB Modes". Setiap preset adalah tombol dengan contoh warna kecil yang menunjukkan perkiraan cast dari preset tersebut. Jika Anda mulai dengan AUTO di bawah pencahayaan dalam ruangan lalu mengetuk INCANDESCENT, pratinjau segera mendingin (kurang oranye) karena preset menghilangkan cast oranye tungsten. Mengetuk SHADE di bawah cahaya siang akan menghangatkan pratinjau sedikit karena preset mengompensasi pergeseran biru dari cahaya bayangan.
 
-**6. Common pitfalls**
+**6. Jebakan umum**
 
-Assuming preset temperature values match across OEMs. Android CDD does not require `DAYLIGHT` to be exactly 5500K; it only requires the preset to be "approximately daylight." In practice: Samsung's `DAYLIGHT` is ~5200K (slightly warm), Google Pixel's `DAYLIGHT` is ~5700K (slightly cool), and OnePlus's `DAYLIGHT` is ~5400K. If you build a custom color pipeline and rely on DAYLIGHT producing exact 5500K gains, the output colors will shift 200–500K depending on device. For precise cross-device color, use `MANUAL_POST_PROCESSING` capability and set `COLOR_CORRECTION_GAINS` + `COLOR_CORRECTION_TRANSFORM` manually using a calibrated scene (X-Rite color chart).
+Mengasumsikan nilai suhu preset cocok di berbagai OEM. Android CDD tidak mengharuskan `DAYLIGHT` tepat 5500K; ia hanya mengharuskan preset tersebut "kira-kira cahaya siang". Dalam praktiknya: `DAYLIGHT` Samsung ~5200K (sedikit hangat), Pixel Google ~5700K (sedikit dingin), dan `DAYLIGHT` OnePlus ~5400K. Jika Anda membangun pipeline warna kustom dan mengandalkan DAYLIGHT yang menghasilkan gain tepat 5500K, warna output akan bergeser 200–500K tergantung perangkat. Untuk warna lintas-perangkat yang presisi, gunakan kemampuan `MANUAL_POST_PROCESSING` dan setel `COLOR_CORRECTION_GAINS` + `COLOR_CORRECTION_TRANSFORM` secara manual menggunakan adegan terkalibrasi (bagan warna X-Rite).
 
-AWB_MODE_OFF without MANUAL_POST_PROCESSING is the second pitfall. Like AE, the global master override matters. Setting AWB to OFF while `CONTROL_MODE != OFF` produces a request where the HAL ignores the OFF setting. Manual AWB (custom color temperature) requires both `CONTROL_MODE = OFF` AND `MANUAL_POST_PROCESSING` capability, not just `MANUAL_SENSOR`. MANUAL_SENSOR gives ISO/shutter; MANUAL_POST_PROCESSING gives color gains and tonemap.
+AWB_MODE_OFF tanpa MANUAL_POST_PROCESSING adalah jebakan kedua. Seperti AE, master override global sangat penting. Menyetel AWB ke OFF saat `CONTROL_MODE != OFF` menghasilkan permintaan di mana HAL mengabaikan pengaturan OFF. AWB manual (suhu warna kustom) memerlukan baik `CONTROL_MODE = OFF` DAN kemampuan `MANUAL_POST_PROCESSING`, bukan hanya `MANUAL_SENSOR`. MANUAL_SENSOR memberikan ISO/rana; MANUAL_POST_PROCESSING memberikan gain warna dan tonemap.
 
 ---
 
 ### CONTROL_AVAILABLE_EFFECTS
 
-**1. What is it?**
+**1. Apa itu?**
 
-`CONTROL_AVAILABLE_EFFECTS` is an `IntArray` of built-in OEM color filters that apply inside the ISP pipeline. Standard effect values:
-- `CONTROL_EFFECT_MODE_OFF` — no color effect (default).
-- `CONTROL_EFFECT_MODE_MONO` — grayscale / black-and-white.
-- `CONTROL_EFFECT_MODE_NEGATIVE` — inverted colors (film negative look).
-- `CONTROL_EFFECT_MODE_SOLARIZE` — Sabattier-style partial inversion.
-- `CONTROL_EFFECT_MODE_SEPIA` — brown-tone vintage look.
-- `CONTROL_EFFECT_MODE_POSTERIZE` — reduced color palette / banded.
-- `CONTROL_EFFECT_MODE_WHITEBOARD` — enhanced for whiteboard capture (boost contrast, remove shadows).
-- `CONTROL_EFFECT_MODE_BLACKBOARD` — enhanced for dark chalkboard capture (boost dim strokes, crop to board edges on some HALs).
-- `CONTROL_EFFECT_MODE_AQUA` — boosted blue channel / underwater look.
+`CONTROL_AVAILABLE_EFFECTS` adalah `IntArray` dari filter warna OEM bawaan yang diterapkan di dalam pipeline ISP. Nilai efek standar:
+- `CONTROL_EFFECT_MODE_OFF` — tidak ada efek warna (default).
+- `CONTROL_EFFECT_MODE_MONO` — skala abu-abu / hitam-putih.
+- `CONTROL_EFFECT_MODE_NEGATIVE` — warna terbalik (tampilan negatif film).
+- `CONTROL_EFFECT_MODE_SOLARIZE` — inversi parsial gaya Sabattier.
+- `CONTROL_EFFECT_MODE_SEPIA` — tampilan vintage nada cokelat.
+- `CONTROL_EFFECT_MODE_POSTERIZE` — palet warna yang dikurangi / ber-band.
+- `CONTROL_EFFECT_MODE_WHITEBOARD` — ditingkatkan untuk pengambilan gambar papan tulis (tingkatkan kontras, hapus bayangan).
+- `CONTROL_EFFECT_MODE_BLACKBOARD` — ditingkatkan untuk pengambilan gambar papan tulis gelap (tingkatkan goresan redup, potong ke tepi papan pada beberapa HAL).
+- `CONTROL_EFFECT_MODE_AQUA` — peningkatan saluran biru / tampilan bawah air.
 
-Plus OEM-specific values (100+, 101+, etc.) that are entirely vendor-defined.
+Plus nilai-nilai khusus OEM (100+, 101+, dll.) yang sepenuhnya ditentukan vendor.
 
-**2. Why does it exist?**
+**2. Mengapa itu ada?**
 
-Built-in ISP effects run at full preview resolution and zero CPU cost because they are implemented in hardware lookup tables inside the camera ISP. Running the equivalent effect on the CPU/GPU via RenderScript or Vulkan costs 5–15 ms per frame at 4K resolution, eating into frame budget. The key advertises which LUTs are baked into the HAL.
+Efek ISP bawaan berjalan pada resolusi pratinjau penuh dan nol biaya CPU karena diimplementasikan dalam tabel pencarian perangkat keras di dalam ISP kamera. Menjalankan efek yang setara pada CPU/GPU via RenderScript atau Vulkan memakan biaya 5–15 ms per bingkai pada resolusi 4K, memakan anggaran bingkai. Kunci ini mengiklankan LUT mana yang dipanggang ke dalam HAL.
 
-**3. Which devices support it?**
+**3. Perangkat mana yang mendukungnya?**
 
-All devices list at minimum `[OFF]`. Mid-range and budget phones typically include 3–6 effects (MONO, SEPIA, NEGATIVE, plus maybe POSTERIZE). Flagship Samsung and Xiaomi devices offer 12+ effects including OEM extensions like "Vintage," "Blue Ice," and "Provia" via vendor-private values not in the standard enum. Pixel devices have the fewest effects, offering only OFF and MONO in most generations.
+Semua perangkat mencantumkan setidaknya `[OFF]`. Ponsel kelas menengah dan anggaran biasanya menyertakan 3–6 efek (MONO, SEPIA, NEGATIVE, ditambah mungkin POSTERIZE). Perangkat unggulan Samsung dan Xiaomi menawarkan 12+ efek termasuk ekstensi OEM seperti "Vintage," "Blue Ice," dan "Provia" melalui nilai privat vendor yang tidak ada dalam enum standar. Perangkat Pixel memiliki efek paling sedikit, biasanya hanya menawarkan OFF dan MONO di sebagian besar generasi.
 
-**4. How do I query it?**
+**4. Bagaimana cara menanyakannya?**
 
 ```kotlin
 val effects: IntArray? = characteristics.get(
@@ -1116,9 +1116,9 @@ val effects: IntArray? = characteristics.get(
 
 effects?.let { effs ->
     val standardName = mapOf(
-        CameraCharacteristics.CONTROL_EFFECT_MODE_OFF to "OFF (no effect)",
-        CameraCharacteristics.CONTROL_EFFECT_MODE_MONO to "MONO (B&W)",
-        CameraCharacteristics.CONTROL_EFFECT_MODE_NEGATIVE to "NEGATIVE (invert)",
+        CameraCharacteristics.CONTROL_EFFECT_MODE_OFF to "MATI (tanpa efek)",
+        CameraCharacteristics.CONTROL_EFFECT_MODE_MONO to "MONO (Hitam Putih)",
+        CameraCharacteristics.CONTROL_EFFECT_MODE_NEGATIVE to "NEGATIVE (balik)",
         CameraCharacteristics.CONTROL_EFFECT_MODE_SOLARIZE to "SOLARIZE",
         CameraCharacteristics.CONTROL_EFFECT_MODE_SEPIA to "SEPIA",
         CameraCharacteristics.CONTROL_EFFECT_MODE_POSTERIZE to "POSTERIZE",
@@ -1127,57 +1127,57 @@ effects?.let { effs ->
         CameraCharacteristics.CONTROL_EFFECT_MODE_AQUA to "AQUA"
     )
     
-    Log.d(TAG, "Available ISP effects (${effs.size} modes):")
+    Log.d(TAG, "Efek ISP tersedia (${effs.size} mode):")
     effs.forEach { e ->
         val standard = standardName[e]
         if (standard != null) {
             Log.d(TAG, "  $e — $standard")
         } else {
-            Log.d(TAG, "  $e — OEM_PRIVATE_EFFECT (vendor-defined)")
+            Log.d(TAG, "  $e — OEM_PRIVATE_EFFECT (ditentukan vendor)")
         }
     }
     
     val oemCount = effs.count { it > CameraCharacteristics.CONTROL_EFFECT_MODE_AQUA }
     if (oemCount > 0) {
-        Log.w(TAG, "  OEM-private effects: $oemCount. Behavior NOT portable across devices.")
-        Log.w(TAG, "  Same numeric effect on Samsung ≠ same visual result on Xiaomi.")
+        Log.w(TAG, "  Efek privat OEM: $oemCount. Perilaku TIDAK portabel antar perangkat.")
+        Log.w(TAG, "  Efek numerik yang sama pada Samsung ≠ hasil visual yang sama pada Xiaomi.")
     }
 } ?: run {
-    Log.w(TAG, "Effects list unavailable")
+    Log.w(TAG, "Daftar efek tidak tersedia")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Bagaimana cara memeriksanya dengan Android Camera Parameters?**
 
-Navigate to **Control / Effects**. Each effect is a small thumbnail showing a preview swatch with the effect name. Tapping the thumbnail applies the effect to the live preview instantly — you can compare MONO vs. SEPIA vs. AQUA side by side by switching quickly. OEM-private effects are labeled "OEM [number]" with a warning tooltip explaining they may not be portable. Below the effects gallery is a benchmark card showing the frame rate with effects ON vs. OFF, demonstrating the zero-cost nature of ISP effects vs. GPU processing.
+Navigasi ke **Control / Effects**. Setiap efek adalah thumbnail kecil yang menunjukkan contoh pratinjau dengan nama efek. Mengetuk thumbnail menerapkan efek tersebut ke pratinjau langsung secara instan — Anda dapat membandingkan MONO vs SEPIA vs AQUA berdampingan dengan beralih cepat. Efek privat OEM diberi label "OEM [nomor]" dengan tooltip peringatan yang menjelaskan bahwa mereka mungkin tidak portabel. Di bawah galeri efek ada kartu benchmark yang menunjukkan laju bingkai dengan efek HIDUP vs MATI, mendemonstrasikan sifat nol-biaya dari efek ISP vs pemrosesan GPU.
 
 **6. Common pitfalls**
 
-Portability: built-in effects are the single most OEM-variable feature in all of Camera2. Even the *standard* MONO mode is not visually consistent: Samsung MONO applies a red-channel-weighted luminance (`0.30R + 0.50G + 0.20B`) with a slight S-curve; Pixel MONO uses BT.709 weighting (`0.2126R + 0.7152G + 0.0722B`) with no S-curve. SEPIA tones range from reddish-brown (LG) through pure yellow-sepia (Sony) to near-cool-brown (OnePlus). If your app's core visual identity depends on a specific filter look, implement it in GPU shaders with fixed coefficients. Reserve ISP effects for: (1) zero-cost preview convenience, or (2) platform-specific features on devices you have QA-tested. Never advertise an effect as "Sepia" in your marketing if the visual output varies by 100ΔE across devices.
+Portabilitas: efek bawaan adalah fitur tunggal yang paling bervariasi menurut OEM di seluruh Camera2. Bahkan mode MONO yang *standar* tidak konsisten secara visual: MONO Samsung menerapkan luminans berbobot saluran merah (`0.30R + 0.50G + 0.20B`) dengan kurva-S sedikit; MONO Pixel menggunakan bobot BT.709 (`0.2126R + 0.7152G + 0.0722B`) tanpa kurva-S. Nada SEPIA berkisar dari cokelat-kemerahan (LG) hingga kuning-sepia murni (Sony) hingga cokelat-hampir-dingin (OnePlus). Jika identitas visual inti aplikasi Anda bergantung pada tampilan filter tertentu, implementasikan dalam shader GPU dengan koefisien tetap. Cadangkan efek ISP untuk: (1) kenyamanan pratinjau tanpa biaya, atau (2) fitur khusus platform pada perangkat yang telah Anda uji QA. Jangan pernah mengiklankan efek sebagai "Sepia" di pemasaran Anda jika output visualnya bervariasi sebesar 100ΔE antar perangkat.
 
-Second pitfall: effects + face detection + HDR pipeline interact. On certain Sony and MediaTek HALs, enabling SEPIA or NEGATIVE effect disables HDR processing (because the ISP HDR tonemap and SEPIA LUT share the same hardware pipeline stage). Developers enable HDR and SEPIA, capture an image, and see no HDR highlights recovery. The only fix is to apply effects post-capture when HDR is active.
+Jebakan kedua: efek + deteksi wajah + pipeline HDR berinteraksi. Pada HAL Sony dan MediaTek tertentu, mengaktifkan efek SEPIA atau NEGATIVE menonaktifkan pemrosesan HDR (karena tonemap HDR ISP dan LUT SEPIA berbagi tahap pipeline perangkat keras yang sama). Pengembang mengaktifkan HDR dan SEPIA, menangkap gambar, dan tidak melihat pemulihan highlight HDR. Satu-satunya perbaikan adalah menerapkan efek pasca-pengambilan saat HDR aktif.
 
 ---
 
 ### CONTROL_AE_COMPENSATION_RANGE
 
-**1. What is it?**
+**1. Apa itu?**
 
-`CONTROL_AE_COMPENSATION_RANGE` is a `android.util.Range&lt;Int&gt;` specifying the minimum and maximum EV adjustment offsets you can pass to `CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION`. Critically, the values are **in integer steps**, not in stops. Each step corresponds to `CONTROL_AE_COMPENSATION_STEP`, which is a `Rational` (fraction) like `Rational(1, 3)` (0.333 EV per step). Combined:
-- `range = [-12, +12]`, `step = 1/3 EV` → effective EV range = -4 EV to +4 EV (in 1/3 stop increments)
-- `range = [-24, +24]`, `step = 1/2 EV` → effective EV range = -12 EV to +12 EV (in 1/2 stop increments)
+`CONTROL_AE_COMPENSATION_RANGE` adalah `android.util.Range<Int>` yang menentukan offset penyesuaian EV minimum dan maksimum yang dapat Anda teruskan ke `CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION`. Secara kritis, nilainya adalah **dalam langkah integer**, bukan dalam stop. Setiap langkah sesuai dengan `CONTROL_AE_COMPENSATION_STEP`, yang merupakan `Rational` (pecahan) seperti `Rational(1, 3)` (0,333 EV per langkah). Gabungannya:
+- `range = [-12, +12]`, `step = 1/3 EV` → rentang EV efektif = -4 EV hingga +4 EV (dalam kenaikan 1/3 stop)
+- `range = [-24, +24]`, `step = 1/2 EV` → rentang EV efektif = -12 EV hingga +12 EV (dalam kenaikan 1/2 stop)
 
-The compensation value is added to whatever exposure the AE algorithm would have chosen, biasing the image brighter (+) or darker (−).
+Nilai kompensasi ditambahkan ke eksposur apa pun yang dipilih oleh algoritma AE, membias gambar menjadi lebih terang (+) atau lebih gelap (−).
 
-**2. Why does it exist?**
+**2. Mengapa itu ada?**
 
-The AE algorithm makes global scene-based decisions. When a bright light occupies 10% of the frame (window in an indoor scene), AE underexposes the indoor area. The user wants to "add +1 EV" and have the indoor area brighter, even if the window clips. EV compensation is the standard photographer's control for this — every DSLR has a ± dial.
+Algoritma AE membuat keputusan global berbasis adegan. Ketika cahaya terang menempati 10% bingkai (jendela dalam adegan dalam ruangan), AE mengekspos area dalam ruangan terlalu gelap (underexpose). Pengguna ingin "menambah +1 EV" agar area dalam ruangan lebih terang, meskipun jendela menjadi putih murni (clip). Kompensasi EV adalah kontrol standar fotografer untuk ini — setiap DSLR memiliki dial ±.
 
-**3. Which devices support it?**
+**3. Perangkat mana yang mendukungnya?**
 
-All hardware levels, with a CDD minimum requirement of at least ±3 EV of range in some step size. LIMITED devices typically offer `[-12, +12]` with 1/3 or 1/2 step (±4 EV or ±6 EV total). FULL devices offer `[-24, +24]` or wider. No capability flags required — if the range exists (and it always does), setting `CONTROL_AE_EXPOSURE_COMPENSATION` works regardless of MANUAL_SENSOR.
+Semua tingkat perangkat keras, dengan persyaratan minimum CDD setidaknya ±3 EV rentang dalam beberapa ukuran langkah. Perangkat LIMITED biasanya menawarkan `[-12, +12]` dengan langkah 1/3 atau 1/2 (total ±4 EV atau ±6 EV). Perangkat FULL menawarkan `[-24, +24]` atau lebih luas. Tidak diperlukan flag kemampuan — jika rentang tersebut ada (dan selalu ada), pengaturan `CONTROL_AE_EXPOSURE_COMPENSATION` akan berfungsi terlepas dari MANUAL_SENSOR.
 
-**4. How do I query it?**
+**4. Bagaimana cara menanyakannya?**
 
 ```kotlin
 val compensationRange: Range<Int>? = characteristics.get(
@@ -1195,68 +1195,68 @@ compensationRange?.let { rng ->
     val evMin = rng.lower * stepValue
     val evMax = rng.upper * stepValue
     
-    Log.d(TAG, "CONTROL_AE_COMPENSATION_RANGE = [${rng.lower}, ${rng.upper}] (steps)")
-    Log.d(TAG, "CONTROL_AE_COMPENSATION_STEP = ${step.numerator}/${step.denominator} = ${"%.4f".format(stepValue)} EV/step")
-    Log.d(TAG, "  EFFECTIVE EV range: ${"%.1f".format(evMin)} EV — ${"%.1f".format(evMax)} EV")
+    Log.d(TAG, "CONTROL_AE_COMPENSATION_RANGE = [${rng.lower}, ${rng.upper}] (langkah)")
+    Log.d(TAG, "CONTROL_AE_COMPENSATION_STEP = ${step.numerator}/${step.denominator} = ${"%.4f".format(stepValue)} EV/langkah")
+    Log.d(TAG, "  Rentang EV EFEKTIF: ${"%.1f".format(evMin)} EV — ${"%.1f".format(evMax)} EV")
     Log.d(TAG, "  Total latitude: ${"%.1f".format(evMax - evMin)} EV")
     
     val discreteSteps = (rng.upper - rng.lower) + 1
-    Log.d(TAG, "  Discrete positions: $discreteSteps (including 0)")
+    Log.d(TAG, "  Posisi diskrit: $discreteSteps (termasuk 0)")
     
     val sliderPositions: List<Pair<Int, Double>> = (rng.lower..rng.upper step max(1, discreteSteps / 10))
         .map { stepIdx -> stepIdx to stepIdx * stepValue }
     
-    Log.d(TAG, "  Sample slider positions (step → EV):")
+    Log.d(TAG, "  Contoh posisi slider (langkah → EV):")
     sliderPositions.take(11).forEach { (idx, ev) ->
         val marker = when {
             idx == rng.lower -> " (MIN)"
-            idx == 0 -> " (ZERO/METERED)"
+            idx == 0 -> " (NOL/METERED)"
             idx == rng.upper -> " (MAX)"
             else -> ""
         }
-        Log.d(TAG, "    step=$idx → EV=${"%+.2f".format(ev)}$marker")
+        Log.d(TAG, "    langkah=$idx → EV=${"%+.2f".format(ev)}$marker")
     }
 } ?: run {
-    Log.w(TAG, "AE compensation info unavailable")
+    Log.w(TAG, "Info kompensasi AE tidak tersedia")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Bagaimana cara memeriksanya dengan Android Camera Parameters?**
 
-Navigate to **Control / 3A Modes** and look at the "Exposure Compensation" card. The card shows the effective EV range as a double-ended label (e.g. "−4 EV to +4 EV"), the step size (e.g. "1/3 EV steps"), and a live draggable slider with 21 discrete notches for the example above. Dragging the slider applies the compensation in real time and the preview brightens or darkens immediately. Below the slider the raw integer step value and effective EV value are displayed side by side, so you can see the step-to-EV multiplication in action.
+Navigasi ke **Control / 3A Modes** dan lihat kartu "Exposure Compensation". Kartu tersebut menunjukkan rentang EV efektif sebagai label berujung ganda (misalnya "−4 EV hingga +4 EV"), ukuran langkah (misalnya "Langkah 1/3 EV"), dan slider langsung yang dapat digeser dengan 21 titik diskrit untuk contoh di atas. Menggeser slider menerapkan kompensasi secara real time dan pratinjau menjadi lebih terang atau lebih gelap seketika. Di bawah slider, nilai langkah integer mentah dan nilai EV efektif ditampilkan berdampingan, sehingga Anda dapat melihat perkalian langkah-ke-EV secara langsung.
 
 **6. Common pitfalls**
 
-Units, units, units. The number-one mistake: treating the `Range&lt;Int&gt;` values as *stops* directly. A developer sees `[-12, +12]`, shows a slider with labels "−12 EV" through "+12 EV", and the slider's maximum effect is only +4 EV (because step is 1/3). The user complains: "Why is the +12 EV setting only +4 stops?" The fix is simple: multiply `sliderInt × step.numerator / step.denominator` before formatting the EV label, and set the slider's internal max to `range.upper`, not to the human-readable stop count. UI sliders should store the integer step internally and display the converted EV value to the user.
+Unit, unit, unit. Kesalahan nomor satu: memperlakukan nilai `Range<Int>` sebagai *stop* secara langsung. Seorang pengembang melihat `[-12, +12]`, menunjukkan slider dengan label "−12 EV" hingga "+12 EV", padahal efek maksimum slider hanya +4 EV (karena langkahnya 1/3). Pengguna mengeluh: "Mengapa pengaturan +12 EV hanya +4 stop?" Perbaikannya sederhana: kalikan `sliderInt × step.numerator / step.denominator` sebelum memformat label EV, dan setel nilai maksimal internal slider ke `range.upper`, bukan ke jumlah stop yang terbaca manusia. Slider UI harus menyimpan langkah integer secara internal dan menampilkan nilai EV yang telah dikonversi kepada pengguna.
 
-Second pitfall: compensation persists across requests. Unlike ISO or shutter time, AE compensation is a sticky state within the 3A algorithm on most HALs. If you set compensation = +6 for one still capture and then forget to reset it to 0 for the next capture, the next preview and capture will all be 2 stops bright. Always return compensation to 0 after a one-off shot, or explicitly set it in every repeating request rather than relying on the HAL's default state.
+Jebakan kedua: kompensasi menetap di seluruh permintaan. Berbeda dengan ISO atau waktu rana, kompensasi AE adalah status yang lengket (sticky) dalam algoritma 3A pada sebagian besar HAL. Jika Anda menyetel kompensasi = +6 untuk satu pengambilan foto diam dan kemudian lupa menyetel ulang ke 0 untuk pengambilan berikutnya, pratinjau dan pengambilan berikutnya semuanya akan 2 stop lebih terang. Selalu kembalikan kompensasi ke 0 setelah bidikan sekali jalan, atau setel secara eksplisit di setiap permintaan berulang daripada mengandalkan status default HAL.
 
 ---
 
-## Scaler Category
+## Kategori Scaler
 
 ### SCALER_STREAM_CONFIGURATION_MAP
 
-**1. What is it?**
+**1. Apa itu?**
 
-`SCALER_STREAM_CONFIGURATION_MAP` is a `android.hardware.camera2.params.StreamConfigurationMap` object — the single most important data structure in all of Camera2 for discovering supported output. It contains:
-- `getOutputSizes(int format)` — supported resolutions for `ImageFormat.JPEG`, `ImageFormat.YUV_420_888`, `ImageFormat.RAW_SENSOR`, etc.
-- `getOutputSizes(Class<T> klass)` — supported resolutions for `SurfaceTexture` (preview), `MediaRecorder`, `MediaCodec`, `RenderScript.Allocation`.
-- `getHighSpeedVideoSizes()` / `getHighSpeedVideoFpsRanges()` — resolutions and framerates for constrained high-speed video (120 fps, 240 fps, etc.).
-- `getValidOutputFormatsForInput()` — input formats supported for reprocessing on `PRIVATE_REPROCESSING` or `YUV_REPROCESSING` devices.
-- `getOutputMinFrameDuration(int format, Size size)` — fastest possible frame interval (nanoseconds) for this format/size pair, i.e., max fps = 1e9 / minFrameDuration.
+`SCALER_STREAM_CONFIGURATION_MAP` adalah objek `android.hardware.camera2.params.StreamConfigurationMap` — struktur data tunggal yang paling penting di seluruh Camera2 untuk menemukan output yang didukung. Objek ini berisi:
+- `getOutputSizes(int format)` — resolusi yang didukung untuk `ImageFormat.JPEG`, `ImageFormat.YUV_420_888`, `ImageFormat.RAW_SENSOR`, dll.
+- `getOutputSizes(Class<T> klass)` — resolusi yang didukung untuk `SurfaceTexture` (pratinjau), `MediaRecorder`, `MediaCodec`, `RenderScript.Allocation`.
+- `getHighSpeedVideoSizes()` / `getHighSpeedVideoFpsRanges()` — resolusi dan framerate untuk video kecepatan tinggi terbatas (120 fps, 240 fps, dll.).
+- `getValidOutputFormatsForInput()` — format input yang didukung untuk pemrosesan ulang pada perangkat `PRIVATE_REPROCESSING` atau `YUV_REPROCESSING`.
+- `getOutputMinFrameDuration(int format, Size size)` — interval bingkai tercepat yang mungkin (nanodetik) untuk pasangan format/ukuran ini, yaitu, fps maks = 1e9 / minFrameDuration.
 
-This map is the authoritative source for "what resolutions can I configure"; never use hardcoded 1920×1080 or 3840×2160 values without checking the map first.
+Peta ini adalah sumber otoritatif untuk "resolusi apa yang bisa saya konfigurasi"; jangan pernah menggunakan nilai 1920×1080 atau 3840×2160 yang di-hardcode tanpa memeriksa peta terlebih dahulu.
 
-**2. Why does it exist?**
+**2. Mengapa itu ada?**
 
-Camera2 supports 8+ output formats × 30+ possible surface classes × vendor-specific resolutions. Before `StreamConfigurationMap` existed (Camera1 era), developers had to iterate through the `getSupportedPictureSizes()` / `getSupportedPreviewSizes()` lists separately for each surface class and manually cross-match aspect ratios. The unified map solves this by returning, for every format-surface pair, the exact resolution list the HAL can drive. Min-frame-duration data lets you determine whether 4K60 is possible or if 4K30 is the ceiling on a given device.
+Camera2 mendukung 8+ format output × 30+ kemungkinan kelas surface × resolusi khusus vendor. Sebelum `StreamConfigurationMap` ada (era Camera1), pengembang harus mengulang daftar `getSupportedPictureSizes()` / `getSupportedPreviewSizes()` secara terpisah untuk setiap kelas surface dan mencocokkan rasio aspek secara manual. Peta terpadu memecahkan ini dengan mengembalikan, untuk setiap pasangan format-surface, daftar resolusi tepat yang dapat digerakkan oleh HAL. Data durasi-bingkai-min memungkinkan Anda menentukan apakah 4K60 dimungkinkan atau jika 4K30 adalah batas atas pada perangkat tertentu.
 
-**3. Which devices support it?**
+**3. Perangkat mana yang mendukungnya?**
 
-All valid Camera2 devices. LEGACY-level devices generate the map internally by wrapping Camera1's `Parameters.getSupported*Sizes()` methods, which can occasionally cause LEGACY quirks (resolutions reported but not drivable, or vice-versa). FULL-level devices guarantee every size in the map is actually drivable at its listed min-frame-duration. High-speed sizes are only populated for devices with `CONSTRAINED_HIGH_SPEED_VIDEO` capability.
+Semua perangkat Camera2 yang valid. Perangkat tingkat LEGACY menghasilkan peta secara internal dengan membungkus metode `Parameters.getSupported*Sizes()` dari Camera1, yang terkadang dapat menyebabkan keanehan LEGACY (resolusi dilaporkan tetapi tidak dapat digerakkan, atau sebaliknya). Perangkat tingkat FULL menjamin setiap ukuran dalam peta benar-benar dapat digerakkan pada durasi bingkai minimum yang tercantum. Ukuran kecepatan tinggi hanya diisi untuk perangkat dengan kemampuan `CONSTRAINED_HIGH_SPEED_VIDEO`.
 
-**4. How do I query it?**
+**4. Bagaimana cara menanyakannya?**
 
 ```kotlin
 val configMap: StreamConfigurationMap? = characteristics.get(
@@ -1264,49 +1264,49 @@ val configMap: StreamConfigurationMap? = characteristics.get(
 )
 
 configMap?.let { map ->
-    Log.d(TAG, "Stream Configuration Map summary:")
+    Log.d(TAG, "Ringkasan Stream Configuration Map:")
     
-    // JPEG (still photos)
+    // JPEG (foto diam)
     val jpegSizes = map.getOutputSizes(ImageFormat.JPEG)?.sortedByDescending { it.width * it.height }
         ?: emptyArray()
-    Log.d(TAG, "  JPEG still sizes (${jpegSizes.size}): " +
+    Log.d(TAG, "  Ukuran foto diam JPEG (${jpegSizes.size}): " +
                if (jpegSizes.isNotEmpty())
-                   "${jpegSizes.first().width}×${jpegSizes.first().height} (max) " +
-                   "down to ${jpegSizes.last().width}×${jpegSizes.last().height}"
-               else "none")
+                   "${jpegSizes.first().width}×${jpegSizes.first().height} (maks) " +
+                   "hingga ${jpegSizes.last().width}×${jpegSizes.last().height}"
+               else "tidak ada")
     
-    // YUV_420_888 (image analysis)
+    // YUV_420_888 (analisis gambar)
     val yuvSizes = map.getOutputSizes(ImageFormat.YUV_420_888)?.sortedByDescending { it.width * it.height }
         ?: emptyArray()
-    Log.d(TAG, "  YUV_420_888 sizes (${yuvSizes.size}): " +
-               if (yuvSizes.isNotEmpty()) "${yuvSizes.first()} (max)" else "none")
+    Log.d(TAG, "  Ukuran YUV_420_888 (${yuvSizes.size}): " +
+               if (yuvSizes.isNotEmpty()) "${yuvSizes.first()} (maks)" else "tidak ada")
     
-    // SurfaceTexture (preview)
+    // SurfaceTexture (pratinjau)
     val previewSizes = map.getOutputSizes(SurfaceTexture::class.java)
         ?.sortedByDescending { it.width * it.height } ?: emptyArray()
-    Log.d(TAG, "  Preview (SurfaceTexture) sizes (${previewSizes.size}): " +
-               if (previewSizes.isNotEmpty()) "${previewSizes.first()} (max)" else "none")
+    Log.d(TAG, "  Ukuran pratinjau (SurfaceTexture) (${previewSizes.size}): " +
+               if (previewSizes.isNotEmpty()) "${previewSizes.first()} (maks)" else "tidak ada")
     
-    // RAW10/RAW12 (if supported)
+    // RAW10/RAW12 (jika didukung)
     if (characteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
             ?.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW) == true) {
         val rawSizes = map.getOutputSizes(ImageFormat.RAW_SENSOR)
-        Log.d(TAG, "  RAW_SENSOR sizes (${rawSizes?.size ?: 0}): ${rawSizes?.joinToString() ?: "none"}")
+        Log.d(TAG, "  Ukuran RAW_SENSOR (${rawSizes?.size ?: 0}): ${rawSizes?.joinToString() ?: "tidak ada"}")
     }
     
-    // Max frame rates
+    // Laju bingkai maks
     jpegSizes.firstOrNull()?.let { maxJpeg ->
         val ns = map.getOutputMinFrameDuration(ImageFormat.JPEG, maxJpeg)
         val fps = 1_000_000_000.0 / ns.toDouble()
-        Log.d(TAG, "  Max JPEG (${maxJpeg}): ${ns}ns/frame = ${"%.1f".format(fps)} fps ceiling")
+        Log.d(TAG, "  JPEG Maks (${maxJpeg}): ${ns}ns/bingkai = batas atas ${"%.1f".format(fps)} fps")
     }
     
     previewSizes.firstOrNull { it.width <= 1920 && it.height <= 1080 }?.let { fhd ->
         val ns = map.getOutputMinFrameDuration(SurfaceTexture::class.java, fhd)
-        Log.d(TAG, "  1080p preview min frame: ${ns}ns (${"%.0f".format(1e9 / ns)} fps max)")
+        Log.d(TAG, "  Bingkai min pratinjau 1080p: ${ns}ns (${"%.0f".format(1e9 / ns)} fps maks)")
     }
     
-    // High-speed video
+    // Video kecepatan tinggi
     val hsCaps = characteristics.get(
         CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES
     )?.contains(
@@ -1315,29 +1315,29 @@ configMap?.let { map ->
     if (hsCaps) {
         val hsSizes = map.highSpeedVideoSizes
         val hsRanges = map.highSpeedVideoFpsRanges
-        Log.d(TAG, "  High-speed video sizes: ${hsSizes?.joinToString() ?: "none"}")
-        Log.d(TAG, "  High-speed FPS ranges: ${hsRanges?.joinToString() ?: "none"}")
+        Log.d(TAG, "  Ukuran video kecepatan tinggi: ${hsSizes?.joinToString() ?: "tidak ada"}")
+        Log.d(TAG, "  Rentang FPS kecepatan tinggi: ${hsRanges?.joinToString() ?: "tidak ada"}")
     }
     
-    // Aspect ratio matching helper demonstration
+    // Demonstrasi pembantu pencocokan rasio aspek
     val sensor = characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)!!
     val sensorAr = sensor.width().toDouble() / sensor.height().toDouble()
     val ratios = setOf(4.0/3.0, 16.0/9.0, 18.0/9.0, 1.0, 20.0/9.0, sensorAr)
-    Log.d(TAG, "  Sensor aspect ratio: ${"%.3f".format(sensorAr)} (w:h)")
-    Log.d(TAG, "  Common target ratios: 4:3=${"%.3f".format(4.0/3.0)}, " +
+    Log.d(TAG, "  Rasio aspek sensor: ${"%.3f".format(sensorAr)} (l:t)")
+    Log.d(TAG, "  Rasio target umum: 4:3=${"%.3f".format(4.0/3.0)}, " +
                "16:9=${"%.3f".format(16.0/9.0)}, 1:1=1.000")
 } ?: run {
-    Log.w(TAG, "Stream configuration map unavailable — this is a FATAL error")
+    Log.w(TAG, "Stream configuration map tidak tersedia — ini adalah kesalahan FATAL")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Bagaimana cara memeriksanya dengan Android Camera Parameters?**
 
-Go to **Streams / Formats**. The tab opens with a format selector chip bar (JPEG, YUV, RAW, Preview SurfaceTexture, MediaRecorder, ...). Selecting a format renders the supported resolutions sorted by pixel count descending. Each resolution row shows: pixel dimensions, megapixels, aspect ratio badge, and the min-frame-duration-derived max FPS. Tapping any resolution opens a detail sheet with `getOutputMinFrameDuration()` for that specific format-size pair, plus a "Try this size in preview" button that live-switches the companion app's preview to the selected resolution so you can confirm it actually works. The Streams tab also has a dedicated "High Speed" sub-tab for `getHighSpeedVideoSizes()` when the capability is present.
+Buka **Streams / Formats**. Tab terbuka dengan bilah chip pemilih format (JPEG, YUV, RAW, SurfaceTexture Pratinjau, MediaRecorder, ...). Memilih format akan merender resolusi yang didukung diurutkan berdasarkan jumlah piksel menurun. Setiap baris resolusi menunjukkan: dimensi piksel, megapiksel, lencana rasio aspek, dan FPS maks yang diturunkan dari durasi-bingkai-min. Mengetuk resolusi mana pun akan membuka lembar detail dengan `getOutputMinFrameDuration()` untuk pasangan format-ukuran tersebut, ditambah tombol "Coba ukuran ini di pratinjau" yang secara langsung mengalihkan pratinjau aplikasi pendamping ke resolusi yang dipilih sehingga Anda dapat mengonfirmasi fungsinya. Tab Streams juga memiliki sub-tab "High Speed" khusus untuk `getHighSpeedVideoSizes()` ketika kemampuan tersebut ada.
 
 **6. Common pitfalls**
 
-Rotation / orientation in aspect ratio math. The camera's natural orientation is landscape: `SENSOR_ORIENTATION = 90` means the sensor's pixel rows run portrait relative to the device's portrait screen. A `getOutputSizes()` call for JPEG returns `3840×2160` (landscape) but on a portrait-oriented back camera this appears to the user as 2160×3840 (portrait). If your UI computes aspect ratios using the raw `Size.width / Size.height` values without accounting for 90°/270° rotation, you will swap 16:9 and 9:16 and label 3840×2160 as "widescreen" when it should match the screen's 9:19.5 aspect ratio. Correct code:
+Rotasi / orientasi dalam matematika rasio aspek. Orientasi alami kamera adalah lanskap: `SENSOR_ORIENTATION = 90` berarti baris piksel sensor berjalan secara portrait relatif terhadap layar potret perangkat. Panggilan `getOutputSizes()` untuk JPEG mengembalikan `3840×2160` (lanskap) tetapi pada kamera belakang yang berorientasi portrait, ini tampak bagi pengguna sebagai 2160×3840 (potret). Jika UI Anda menghitung rasio aspek menggunakan nilai mentah `Size.width / Size.height` tanpa memperhitungkan rotasi 90°/270°, Anda akan menukar 16:9 dan 9:16 dan melabeli 3840×2160 sebagai "widescreen" padahal seharusnya sesuai dengan rasio aspek layar 9:19,5. Kode yang benar:
 
 ```kotlin
 fun Size.aspectRatioForDisplay(sensorOrientationDeg: Int): Double {
@@ -1347,27 +1347,27 @@ fun Size.aspectRatioForDisplay(sensorOrientationDeg: Int): Double {
 }
 ```
 
-Second pitfall: LEGACY-wrapped HALs report sizes in the StreamConfigurationMap that Camera1 cannot actually drive. A common pattern is `LEGACY` map listing 4K JPEG when the maximum Camera1 can produce is 1080p. If `INFO_SUPPORTED_HARDWARE_LEVEL == LEGACY`, treat the maximum JPEG size with suspicion; prefer `Parameters.getSupportedPictureSizes()` or verify by actually creating an `ImageReader` and performing one test capture before exposing it in the UI.
+Jebakan kedua: HAL yang dibungkus LEGACY melaporkan ukuran dalam StreamConfigurationMap yang tidak dapat digerakkan oleh Camera1. Pola umum adalah daftar `LEGACY` mencantumkan JPEG 4K padahal maksimum yang dapat dihasilkan Camera1 hanya 1080p. Jika `INFO_SUPPORTED_HARDWARE_LEVEL == LEGACY`, perlakukan ukuran JPEG maksimum dengan curiga; lebih baik gunakan `Parameters.getSupportedPictureSizes()` atau verifikasi dengan benar-benar membuat `ImageReader` dan melakukan satu pengambilan gambar uji sebelum mengeksposnya di UI.
 
 ---
 
 ### SCALER_AVAILABLE_MAX_DIGITAL_ZOOM
 
-**1. What is it?**
+**1. Apa itu?**
 
-`SCALER_AVAILABLE_MAX_DIGITAL_ZOOM` is a single `Float` representing the maximum allowable crop ratio for digital zoom. A value of `10.0f` means you can crop to 1/10th of the active array in each dimension (the crop region's width and height are no smaller than 1/10th of the active array's width and height). This is *purely digital zoom* — it is a ISP crop + upscale operation with inherent quality loss. For example, zoom = 2.0× means: crop the active array to 50% width × 50% height, then scale it back up to output stream size using the ISP's scaler block.
+`SCALER_AVAILABLE_MAX_DIGITAL_ZOOM` adalah `Float` tunggal yang mewakili rasio pemotongan maksimum yang diizinkan untuk zoom digital. Nilai `10.0f` berarti Anda dapat memotong hingga 1/10 dari array aktif di setiap dimensi (lebar dan tinggi wilayah pemotongan tidak lebih kecil dari 1/10 lebar dan tinggi array aktif). Ini adalah *zoom digital murni* — ini adalah operasi pemotongan ISP + peningkatan skala (upscale) dengan kehilangan kualitas bawaan. Misalnya, zoom = 2.0× berarti: potong array aktif menjadi lebar 50% × tinggi 50%, lalu skalakan kembali ke ukuran aliran output menggunakan blok scaler ISP.
 
-This key defines the valid range of the `CaptureRequest.SCALER_CROP_REGION` rectangle's inverse size.
+Kunci ini mendefinisikan rentang valid dari kebalikan ukuran persegi panjang `CaptureRequest.SCALER_CROP_REGION`.
 
-**2. Why does it exist?**
+**2. Mengapa itu ada?**
 
-Without an explicit max zoom ratio, developers would crop the active array to arbitrary sizes. Cropping to 1 pixel × 1 pixel and asking the HAL to upscale to 4K output is mathematically legal but produces a 0.0-MP image. The HAL uses minimum-dimension limits (each output surface has a minimum output size, typically ≥64 px on each axis) and the max-zoom key communicates the combined constraints as a single developer-friendly ratio.
+Tanpa rasio zoom maks yang eksplisit, pengembang akan memotong array aktif ke ukuran sembarang. Memotong menjadi 1 piksel × 1 piksel dan meminta HAL untuk meningkatkan skala ke output 4K secara matematis sah tetapi menghasilkan gambar 0,0-MP. HAL menggunakan batas dimensi minimum (setiap surface output memiliki ukuran output minimum, biasanya ≥64 px pada setiap sumbu) dan kunci zoom maks mengomunikasikan gabungan batasan tersebut sebagai rasio tunggal yang ramah pengembang.
 
-**3. Which devices support it?**
+**3. Perangkat mana yang mendukungnya?**
 
-All hardware levels. The value is always ≥ 1.0. LIMITED devices typically ship with max zoom between 4× and 8×. FULL devices and devices with `LOGICAL_MULTI_CAMERA` capability often ship with 10×, 20×, or even 100× max digital zoom to match the marketing zoom specifications. No capability flag prerequisites.
+Semua tingkat perangkat keras. Nilainya selalu ≥ 1.0. Perangkat LIMITED biasanya dikirimkan dengan zoom maks antara 4× dan 8×. Perangkat FULL dan perangkat dengan kemampuan `LOGICAL_MULTI_CAMERA` sering kali dikirimkan dengan zoom digital maks 10×, 20×, atau bahkan 100× untuk mencocokkan spesifikasi zoom pemasaran. Tidak ada prasyarat flag kemampuan.
 
-**4. How do I query it?**
+**4. Bagaimana cara menanyakannya?**
 
 ```kotlin
 val maxDigitalZoom: Float? = characteristics.get(
@@ -1381,67 +1381,67 @@ maxDigitalZoom?.let { maxZoom ->
     val activeW = active.width()
     val activeH = active.height()
     
-    Log.d(TAG, "  Active array: ${activeW}×${activeH}")
+    Log.d(TAG, "  Array aktif: ${activeW}×${activeH}")
     val minCropW = ceil(activeW / maxZoom).toInt()
     val minCropH = ceil(activeH / maxZoom).toInt()
-    Log.d(TAG, "  Minimum crop region size at max zoom: ${minCropW}×${minCropH}px")
+    Log.d(TAG, "  Ukuran wilayah pemotongan minimum pada zoom maks: ${minCropW}×${minCropH}px")
     
     val optical = characteristics.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS)
     if (optical != null && optical.size > 1) {
         val opticalMax = optical.last() / optical[0]
-        Log.d(TAG, "  Optical zoom from multi-camera: ${"%.1f".format(opticalMax)}×")
-        Log.d(TAG, "  'Marketing' zoom (optical × digital): " +
+        Log.d(TAG, "  Zoom optik dari multi-kamera: ${"%.1f".format(opticalMax)}×")
+        Log.d(TAG, "  Zoom 'Pemasaran' (optik × digital): " +
                    "${"%.1f".format(opticalMax)} × ${"%.1f".format(maxZoom)} = " +
                    "${"%.0f".format(opticalMax * maxZoom)}×")
     }
     
     val stepCount = 100
-    Log.d(TAG, "  Slider zoom values (0 → $stepCount):")
+    Log.d(TAG, "  Nilai zoom slider (0 → $stepCount):")
     for (i in 0..stepCount step 25) {
         val zoom = 1.0 + (maxZoom - 1.0) * (i.toDouble() / stepCount.toDouble())
         Log.d(TAG, "    pos $i → zoom=${"%.2f".format(zoom)}×")
     }
 } ?: run {
-    Log.w(TAG, "Max digital zoom not available")
+    Log.w(TAG, "Zoom digital maks tidak tersedia")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Bagaimana cara memeriksanya dengan Android Camera Parameters?**
 
-Navigate to **Zoom / Crop Region**. The card titled "Maximum Digital Zoom" shows the ratio (e.g. "10.0×") and a visual crop-rectangle preview that is draggable and pinchable up to exactly this maximum. The companion app draws a "quality gradient" on the zoom slider: the zoom ratio at which physical cameras switch (based on focal lengths) is marked as the quality transition line; below that line the zoom is optical (green) and above that line the slider turns amber (digital, quality degradation). You can visually compare 1×, 3× optical, and 10× digital zoom side by side in the preview.
+Navigasi ke **Zoom / Crop Region**. Kartu berjudul "Maximum Digital Zoom" menunjukkan rasionya (misalnya "10.0×") dan pratinjau persegi panjang pemotongan visual yang dapat digerakkan dan dicubit hingga tepat maksimum ini. Aplikasi pendamping menggambar "gradien kualitas" pada slider zoom: rasio zoom di mana kamera fisik beralih (berdasarkan panjang fokus) ditandai sebagai garis transisi kualitas; di bawah garis tersebut zoom bersifat optik (hijau) dan di atas garis tersebut slider berubah menjadi kuning (digital, degradasi kualitas). Anda dapat secara visual membandingkan zoom 1×, 3× optik, dan 10× digital berdampingan dalam pratinjau.
 
 **6. Common pitfalls**
 
-Treating max digital zoom as "quality zoom". Marketing materials advertise "100× Space Zoom" but this key tells you the *digital* zoom ceiling. 100× zoom on a 48MP active array crops to roughly 480×360 pixels and upscales 100× — the result has fewer than 0.17 megapixels of real information, blurred beyond recognition except for bright point light sources against dark backgrounds (the moon, stars). Correct UI: mark zoom values on the slider with color coding. Green region = pure optical zoom positions (switching between physical cameras at the focal length sweet spots). Yellow = small digital crop (1×–3× optical-camera base, still reasonable). Red = heavy digital zoom (5×+) that is effectively marketing-only and produces unusable detail at anything other than the moon.
+Memperlakukan zoom digital maks sebagai "zoom kualitas". Materi pemasaran mengiklankan "100× Space Zoom" tetapi kunci ini memberi tahu Anda batas atas zoom *digital*. Zoom 100× pada array aktif 48MP memotong menjadi sekitar 480×360 piksel dan ditingkatkan skalanya 100× — hasilnya memiliki kurang dari 0,17 megapiksel informasi nyata, kabur dan tidak dapat dikenali kecuali untuk sumber titik cahaya terang pada latar belakang gelap (bulan, bintang). UI yang benar: tandai nilai zoom pada slider dengan pengkodean warna. Wilayah hijau = posisi zoom optik murni (peralihan antara kamera fisik pada titik manis panjang fokus). Kuning = potongan digital kecil (basis kamera optik 1×–3×, masih wajar). Merah = zoom digital berat (5×+) yang secara efektif hanya untuk pemasaran dan menghasilkan detail yang tidak dapat digunakan pada apa pun selain bulan.
 
-Second pitfall: zoom math sign error. The crop rectangle for zoom ratio z is computed as:
+Jebakan kedua: kesalahan tanda matematika zoom. Persegi panjang pemotongan untuk rasio zoom z dihitung sebagai:
 ```
 cropWidth  = activeWidth  / z
 cropHeight = activeHeight / z
 ```
-Common mistake is `crop = size * z` which produces a crop rectangle LARGER than the active array. The HAL will then clamp the crop to the active array, so zoom appears stuck at 1× for values of z > 1. Always **divide** active array size by zoom ratio.
+Kesalahan umum adalah `crop = size * z` yang menghasilkan persegi panjang pemotongan yang LEBIH BESAR dari array aktif. HAL kemudian akan membatasi potongan ke array aktif, sehingga zoom tampak macet di 1× untuk nilai z > 1. Selalu **bagi** ukuran array aktif dengan rasio zoom.
 
 ---
 
 ### SCALER_CROPPING_TYPE
 
-**1. What is it?**
+**1. Apa itu?**
 
-`SCALER_CROPPING_TYPE` is an `Int` enum describing how the HAL validates the `SCALER_CROP_REGION` rectangle you submit in each CaptureRequest. Two values:
-- `SCALER_CROPPING_TYPE_CENTER_ONLY` — the crop region is *always centered* within the active array, regardless of the (left, top) you submit. The HAL ignores the offset and centers the crop automatically.
-- `SCALER_CROPPING_TYPE_FREEFORM` — the crop region may be placed anywhere inside the active array with arbitrary (left, top) as long as the dimensions match the zoom scale.
+`SCALER_CROPPING_TYPE` adalah enum `Int` yang menjelaskan bagaimana HAL memvalidasi persegi panjang `SCALER_CROP_REGION` yang Anda kirimkan di setiap CaptureRequest. Dua nilai:
+- `SCALER_CROPPING_TYPE_CENTER_ONLY` — wilayah pemotongan *selalu berada di tengah* dalam array aktif, terlepas dari (kiri, atas) yang Anda kirimkan. HAL mengabaikan offset dan memusatkan potongan secara otomatis.
+- `SCALER_CROPPING_TYPE_FREEFORM` — wilayah pemotongan dapat ditempatkan di mana saja di dalam array aktif dengan (kiri, atas) sembarang selama dimensinya sesuai dengan skala zoom.
 
-The distinction is critical for face-tracked zoom, action sports framing, and any application where you want the crop to move off-center to follow a moving subject.
+Perbedaannya sangat penting untuk zoom pelacakan wajah, pembingkaian olahraga aksi, dan aplikasi apa pun di mana Anda ingin potongan bergerak menjauhi pusat untuk mengikuti subjek yang bergerak.
 
-**2. Why does it exist?**
+**2. Mengapa itu ada?**
 
-CENTER_ONLY cropping exists because it is cheap in hardware. The ISP scaler needs only a single division operation per frame to compute the crop. Freeform cropping adds a programmable offset register to the scaler pipeline, which adds gate count to the ISP silicon. Budget SoCs (MediaTek Helio G-series, Snapdragon 4-series) ship with CENTER_ONLY to save cost. The key lets the framework advertise which kind of scaler is on the silicon so the application can gracefully degrade.
+Pemotongan CENTER_ONLY ada karena biayanya murah di perangkat keras. Scaler ISP hanya memerlukan satu operasi pembagian per bingkai untuk menghitung pemotongan. Pemotongan bebas (FREEFORM) menambahkan register offset yang dapat diprogram ke pipeline scaler, yang menambah jumlah gerbang pada silikon ISP. SoC anggaran (MediaTek seri Helio G, Snapdragon seri 4) dikirimkan dengan CENTER_ONLY untuk menghemat biaya. Kunci ini memungkinkan framework mengiklankan jenis scaler mana yang ada pada silikon sehingga aplikasi dapat terdegradasi secara anggun.
 
-**3. Which devices support it?**
+**3. Perangkat mana yang mendukungnya?**
 
-All hardware levels. FULL-level devices almost always have FREEFORM because the CDD strongly recommends it for FULL conformance. LIMITED devices split roughly 50/50 FREEFORM vs. CENTER_ONLY depending on SoC vintage and cost. LEGACY devices always report CENTER_ONLY (Camera1 API never had a "move crop offset" API). Roughly 60% of active 2020–2024 mid-range Android devices ship with CENTER_ONLY.
+Semua tingkat perangkat keras. Perangkat tingkat FULL hampir selalu memiliki FREEFORM karena CDD sangat merekomendasikannya untuk kesesuaian FULL. Perangkat LIMITED terbagi kira-kira 50/50 antara FREEFORM vs CENTER_ONLY tergantung pada jenis SoC dan biaya. Perangkat LEGACY selalu melaporkan CENTER_ONLY (API Camera1 tidak pernah memiliki API "pindah offset potong"). Sekitar 60% perangkat Android kelas menengah 2020–2024 dikirimkan dengan CENTER_ONLY.
 
-**4. How do I query it?**
+**4. Bagaimana cara menanyakannya?**
 
 ```kotlin
 val croppingType: Int? = characteristics.get(
@@ -1454,81 +1454,81 @@ croppingType?.let { type ->
             "CENTER_ONLY" to false
         CameraCharacteristics.SCALER_CROPPING_TYPE_FREEFORM ->
             "FREEFORM" to true
-        else -> "UNKNOWN($type)" to false
+        else -> "TIDAK DIKETAHUI($type)" to false
     }
     Log.d(TAG, "SCALER_CROPPING_TYPE = $name")
-    Log.d(TAG, "  SCALER_CROP_REGION offset honored? $free")
+    Log.d(TAG, "  Offset SCALER_CROP_REGION dihormati? $free")
     
     if (free) {
-        Log.d(TAG, "  Supported use cases:")
-        Log.d(TAG, "    ✓ Face-tracking crop (move zoom region to face)")
-        Log.d(TAG, "    ✓ Action framing (follow subject moving horizontally)")
-        Log.d(TAG, "    ✓ Rule-of-thirds offset crop")
+        Log.d(TAG, "  Kasus penggunaan yang didukung:")
+        Log.d(TAG, "    ✓ Potong pelacakan wajah (pindahkan wilayah zoom ke wajah)")
+        Log.d(TAG, "    ✓ Pembingkaian aksi (ikuti subjek yang bergerak horizontal)")
+        Log.d(TAG, "    ✓ Potong offset rule-of-thirds")
     } else {
-        Log.w(TAG, "  CENTER_ONLY crop limitations:")
-        Log.w(TAG, "    ✗ Face-tracking crop: HAL ignores offset, stays centered")
-        Log.w(TAG, "    ✗ Subject-tracking zoom: will NOT follow movement")
-        Log.w(TAG, "    ✗ Any non-centered crop rectangle")
-        Log.w(TAG, "  UI: Disable 'track face' and 'follow subject' controls.")
+        Log.w(TAG, "  Batasan potongan CENTER_ONLY:")
+        Log.w(TAG, "    ✗ Potong pelacakan wajah: HAL mengabaikan offset, tetap di tengah")
+        Log.w(TAG, "    ✗ Zoom pelacakan subjek: TIDAK AKAN mengikuti pergerakan")
+        Log.w(TAG, "    ✗ Persegi panjang potongan non-sentris apa pun")
+        Log.w(TAG, "  UI: Nonaktifkan kontrol 'lacak wajah' dan 'ikuti subjek'.")
     }
     
     characteristics.get(CameraCharacteristics.STATISTICS_INFO_AVAILABLE_FACE_DETECT_MODES)
         ?.let { faceModes ->
             val hasFace = faceModes.any { it > 0 }
             if (hasFace && !free) {
-                Log.w(TAG, "  Face detection present but CENTER_ONLY crop: " +
-                           "cannot move crop rectangle to detected face.")
-                Log.w(TAG, "  Implement face track via UI post-crop + re-scale, not via CROP_REGION.")
+                Log.w(TAG, "  Deteksi wajah ada tetapi potongan CENTER_ONLY: " +
+                           "tidak dapat memindahkan persegi panjang potongan ke wajah yang terdeteksi.")
+                Log.w(TAG, "  Implementasikan pelacakan wajah via UI pasca-potong + skala-ulang, bukan via CROP_REGION.")
             }
         }
 } ?: run {
-    Log.w(TAG, "Cropping type unavailable — assume CENTER_ONLY for safety")
+    Log.w(TAG, "Jenis pemotongan tidak tersedia — asumsikan CENTER_ONLY demi keamanan")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Bagaimana cara memeriksanya dengan Android Camera Parameters?**
 
-Open **Zoom / Crop Region**. The top-right of the screen shows a badge: either "FREEFORM CROP" (green badge with "Arbitrary position OK") or "CENTER ONLY" (amber badge with "Fixed center position"). The draggable crop-rectangle overlay enforces the actual HAL behavior: if the type is CENTER_ONLY, dragging the rectangle springs back to the center with an animated bounce, and a toast explains "CENTER_ONLY: offset is ignored by the HAL." If FREEFORM, you can drag the crop rectangle anywhere inside the active array bounds and the live preview re-crops accordingly.
+Buka **Zoom / Crop Region**. Bagian kanan atas layar menunjukkan lencana: baik "FREEFORM CROP" (lencana hijau dengan "Posisi sembarang OK") atau "CENTER ONLY" (lencana kuning dengan "Posisi tengah tetap"). Overlay persegi panjang potongan yang dapat digerakkan menegakkan perilaku HAL yang sebenarnya: jika jenisnya adalah CENTER_ONLY, menyeret persegi panjang akan membuatnya membal kembali ke tengah dengan animasi, dan sebuah toast menjelaskan "CENTER_ONLY: offset diabaikan oleh HAL." Jika FREEFORM, Anda dapat menyeret persegi panjang potongan ke mana saja di dalam batas array aktif dan pratinjau langsung akan memoton ulang sesuai.
 
 **6. Common pitfalls**
 
-Implementing face-tracked zoom on CENTER_ONLY devices. The naïve approach: detect face at (x=60% of frame, y=30%), then build a `SCALER_CROP_REGION` centered at those coordinates with zoom 2.0×. Result: on CENTER_ONLY HALs, the HAL drops the offset and centers the crop — the face appears in the same (60%, 30%) position of the cropped image instead of being framed center. Users report: "Face tracking does nothing." The correct fallback on CENTER_ONLY devices is to (a) zoom centered as always via `CROP_REGION`, and (b) implement the lateral face-tracking **after** the stream as a GPU transformation (crop + translate the preview texture, and crop + translate the JPEG bytes post-capture with Bitmap region decode). This requires keeping the full stream in a buffer for the post-crop, which has memory cost. Alternatively, disable face-tracking UI entirely on CENTER_ONLY devices.
+Mengimplementasikan zoom pelacakan wajah pada perangkat CENTER_ONLY. Pendekatan naif: deteksi wajah di (x=60% bingkai, y=30%), lalu bangun `SCALER_CROP_REGION` yang berpusat pada koordinat tersebut dengan zoom 2,0×. Hasilnya: pada HAL CENTER_ONLY, HAL membuang offset dan memusatkan potongan — wajah muncul di posisi (60%, 30%) yang sama dari gambar yang dipotong alih-alih dibingkai di tengah. Pengguna melaporkan: "Pelacakan wajah tidak melakukan apa-apa." Cadangan yang benar pada perangkat CENTER_ONLY adalah (a) zoom berpusat seperti biasa via `CROP_REGION`, dan (b) implementasikan pelacakan wajah lateral **setelah** stream sebagai transformasi GPU (potong + geser tekstur pratinjau, dan potong + geser byte JPEG pasca-pengambilan dengan Bitmap region decode). Ini memerlukan penyimpanan seluruh stream dalam buffer untuk pasca-potong, yang memiliki biaya memori. Atau, nonaktifkan UI pelacakan wajah sepenuhnya pada perangkat CENTER_ONLY.
 
 ---
 
-## Request Category
+## Kategori Permintaan
 
 ### REQUEST_AVAILABLE_CAPABILITIES
 
-**1. What is it?**
+**1. Apa itu?**
 
-`REQUEST_AVAILABLE_CAPABILITIES` is the single most important metadata key. It is an `IntArray` containing capability flags that describe which advanced features the HAL supports. Every advanced feature in Camera2 has a matching flag. The most important flags:
+`REQUEST_AVAILABLE_CAPABILITIES` adalah kunci metadata tunggal yang paling penting. Ini adalah `IntArray` yang berisi flag kemampuan yang menjelaskan fitur lanjutan mana yang didukung HAL. Flag yang paling penting:
 
-| Flag | Meaning |
+| Flag | Arti |
 |---|---|
-| `BACKWARD_COMPATIBLE` | Default baseline; always present. |
-| `MANUAL_SENSOR` | Manual ISO, exposure time, frame duration, lens focus distance. |
-| `MANUAL_POST_PROCESSING` | Manual color correction gains/transform, tonemap curve, lens shading, edge mode, noise reduction mode. |
-| `RAW` | `ImageReader` with `ImageFormat.RAW_SENSOR` (RAW10/12/16) output. |
-| `PRIVATE_REPROCESSING` | Feed a `PRIVATE`-format Image back into the session as input for zero-shutter-lag reprocessing. |
-| `YUV_REPROCESSING` | Feed a `YUV_420_888` Image back into the session as input. |
-| `DEPTH_OUTPUT` | Output `DEPTH16` or `DEPTH_POINT_CLOUD` buffers via dedicated depth stream. |
-| `LOGICAL_MULTI_CAMERA` | This camera ID is backed by multiple physical sensors; the HAL can switch between them transparently during zoom. |
-| `BURST_CAPTURE` | The HAL can process a full-size burst of ≥20 full-size frames per second without dropping. |
-| `CONSTRAINED_HIGH_SPEED_VIDEO` | High-speed recording ≥120 fps via constrained high-speed session. |
-| `MOTION_TRACKING` | Camera can produce motion tracking frames for AR-style stabilized output. |
+| `BACKWARD_COMPATIBLE` | Garis dasar default; selalu ada. |
+| `MANUAL_SENSOR` | ISO manual, waktu eksposur, durasi bingkai, jarak fokus lensa. |
+| `MANUAL_POST_PROCESSING` | Gain/transformasi koreksi warna manual, kurva tonemap, bayangan lensa, mode tepi, mode pengurangan noise. |
+| `RAW` | Output `ImageReader` dengan format `ImageFormat.RAW_SENSOR` (RAW10/12/16). |
+| `PRIVATE_REPROCESSING` | Masukkan kembali Gambar format `PRIVATE` ke dalam sesi sebagai input untuk pemrosesan ulang zero-shutter-lag. |
+| `YUV_REPROCESSING` | Masukkan kembali Gambar `YUV_420_888` ke dalam sesi sebagai input. |
+| `DEPTH_OUTPUT` | Output buffer `DEPTH16` atau `DEPTH_POINT_CLOUD` melalui aliran kedalaman khusus. |
+| `LOGICAL_MULTI_CAMERA` | ID kamera ini didukung oleh beberapa sensor fisik; HAL dapat beralih di antara mereka secara transparan selama zoom. |
+| `BURST_CAPTURE` | HAL dapat memproses burst resolusi penuh ≥20 bingkai per detik tanpa terputus. |
+| `CONSTRAINED_HIGH_SPEED_VIDEO` | Perekaman kecepatan tinggi ≥120 fps melalui sesi kecepatan tinggi terbatas. |
+| `MOTION_TRACKING` | Kamera dapat menghasilkan bingkai pelacakan gerakan untuk output stabil gaya AR. |
 
-Every feature-gate in your app should check this array. The combination `MANUAL_SENSOR + MANUAL_POST_PROCESSING` is what defines a "pro mode" capable device.
+Setiap fitur-gate di aplikasi Anda harus memeriksa array ini. Kombinasi `MANUAL_SENSOR + MANUAL_POST_PROCESSING` adalah apa yang mendefinisikan perangkat berkemampuan "mode pro".
 
-**2. Why does it exist?**
+**2. Mengapa itu ada?**
 
-`INFO_SUPPORTED_HARDWARE_LEVEL` buckets devices into coarse tiers (LEGACY / LIMITED / FULL / LEVEL_3 / EXTERNAL). But hardware level is *cumulative* and non-granular: FULL implies MANUAL_SENSOR, RAW, and BURST_CAPTURE — but LIMITED devices can have MANUAL_SENSOR *without* RAW, or RAW without BURST_CAPTURE. Samsung's mid-range A-series 2023 devices are LIMITED + MANUAL_SENSOR + RAW (partial FULL feature set without BURST_CAPTURE or full tonemap control). Without per-capability flags, developers would have to check hardware level and lose access to these partial LIMITED features. The capability array is the fine-grained switch.
+`INFO_SUPPORTED_HARDWARE_LEVEL` mengelompokkan perangkat ke dalam tingkatan kasar (LEGACY / LIMITED / FULL / LEVEL_3 / EXTERNAL). Tetapi tingkat perangkat keras bersifat *kumulatif* dan tidak granular: FULL menyiratkan MANUAL_SENSOR, RAW, dan BURST_CAPTURE — tetapi perangkat LIMITED dapat memiliki MANUAL_SENSOR *tanpa* RAW, atau RAW tanpa BURST_CAPTURE. Perangkat Samsung seri A kelas menengah 2023 adalah LIMITED + MANUAL_SENSOR + RAW (set fitur FULL parsial tanpa BURST_CAPTURE atau kontrol tonemap penuh). Tanpa flag per-kemampuan, pengembang harus memeriksa tingkat perangkat keras dan kehilangan akses ke fitur LIMITED parsial ini. Array kemampuan adalah saklar yang halus.
 
-**3. Which devices support it?**
+**3. Perangkat mana yang mendukungnya?**
 
-Every camera ID on every hardware level. `BACKWARD_COMPATIBLE` is always included; it is impossible for the array to be empty. The full list of flags grows with each Android release: Android 11 added ULTRA_HIGH_RESOLUTION_SENSOR capability, Android 12 added DYNAMIC_RANGE_TEN_BIT, etc. New flags on older devices are not present — so always check `.contains()` with null safety.
+Setiap ID kamera di setiap tingkat perangkat keras. `BACKWARD_COMPATIBLE` selalu disertakan; tidak mungkin array tersebut kosong. Daftar lengkap flag tumbuh dengan setiap rilis Android: Android 11 menambahkan kemampuan ULTRA_HIGH_RESOLUTION_SENSOR, Android 12 menambahkan DYNAMIC_RANGE_TEN_BIT, dll. Flag baru pada perangkat lama tidak ada — jadi selalu periksa `.contains()` dengan keamanan null.
 
-**4. How do I query it?**
+**4. Bagaimana cara menanyakannya?**
 
 ```kotlin
 val capabilities: IntArray? = characteristics.get(
@@ -1563,7 +1563,7 @@ capabilities?.let { caps ->
             .REQUEST_AVAILABLE_CAPABILITIES_MOTION_TRACKING
     )
     
-    Log.d(TAG, "REQUEST_AVAILABLE_CAPABILITIES (${caps.size} flags):")
+    Log.d(TAG, "REQUEST_AVAILABLE_CAPABILITIES (${caps.size} flag):")
     flagMap.entries.forEach { (name, id) ->
         val present = has(id)
         Log.d(TAG, "  ${if (present) "✓" else "✗"} $name")
@@ -1572,26 +1572,26 @@ capabilities?.let { caps ->
     val hwLevel = characteristics.get(
         CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL
     )
-    Log.d(TAG, "  Hardware level relationship:")
-    Log.d(TAG, "    Hardware level reported: ${hwLevelToString(hwLevel)}")
+    Log.d(TAG, "  Hubungan tingkat perangkat keras:")
+    Log.d(TAG, "    Tingkat perangkat keras dilaporkan: ${hwLevelToString(hwLevel)}")
     
     val impliedFull = has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR)
             && has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_POST_PROCESSING)
             && has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW)
             && has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_BURST_CAPTURE)
-    Log.d(TAG, "    Implied FULL-level from caps: $impliedFull")
+    Log.d(TAG, "    Tersirat tingkat FULL dari flag: $impliedFull")
     
-    // UI gating: show/hide entire screens based on caps
-    Log.d(TAG, "  UI feature gating recommendations:")
-    Log.d(TAG, "    Manual ISO/SS button: ${has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR)}")
-    Log.d(TAG, "    Manual WB/tonemap:   ${has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_POST_PROCESSING)}")
-    Log.d(TAG, "    RAW photo format:    ${has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW)}")
-    Log.d(TAG, "    Portrait (depth):    ${has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_DEPTH_OUTPUT)}")
-    Log.d(TAG, "    Burst mode:          ${has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_BURST_CAPTURE)}")
+    // UI gating: tunjukkan/sembunyikan seluruh layar berdasarkan flag
+    Log.d(TAG, "  Rekomendasi fitur UI gating:")
+    Log.d(TAG, "    Tombol ISO/SS Manual: ${has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR)}")
+    Log.d(TAG, "    WB/tonemap Manual:   ${has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_POST_PROCESSING)}")
+    Log.d(TAG, "    Format foto RAW:    ${has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW)}")
+    Log.d(TAG, "    Potret (depth):    ${has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_DEPTH_OUTPUT)}")
+    Log.d(TAG, "    Mode Burst:          ${has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_BURST_CAPTURE)}")
     Log.d(TAG, "    Slow-mo 120+ fps:    ${has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_CONSTRAINED_HIGH_SPEED_VIDEO)}")
-    Log.d(TAG, "    Multi-camera zoom:   ${has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_LOGICAL_MULTI_CAMERA)}")
+    Log.d(TAG, "    Zoom multi-kamera:   ${has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_LOGICAL_MULTI_CAMERA)}")
 } ?: run {
-    Log.e(TAG, "Capability list missing — FATAL. Cannot gate features.")
+    Log.e(TAG, "Daftar kemampuan hilang — FATAL. Tidak dapat membatasi fitur.")
 }
 
 private fun hwLevelToString(level: Int?): String = when (level) {
@@ -1600,37 +1600,37 @@ private fun hwLevelToString(level: Int?): String = when (level) {
     CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL -> "FULL"
     CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_3 -> "LEVEL_3"
     CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL -> "EXTERNAL"
-    else -> "UNKNOWN($level)"
+    else -> "TIDAK DIKETAHUI($level)"
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Bagaimana cara memeriksanya dengan Android Camera Parameters?**
 
-Navigate to **Overview / Hardware Level**. The capability list is the second card on this screen, rendered as a grid of on/off switches (green = supported, gray = unsupported) with a short name and the integer flag value in parentheses. Tapping any capability opens an info dialog explaining exactly which UI screens in the app are gated on that flag, with screenshots of those screens appearing/disappearing. This is the canonical screen in the companion app because every other screen's visibility flows from this card. The hardware-level card sits directly above it, showing the relationship: the "Full implies" checklist shows which flags are expected for each hardware bucket, highlighting any mismatches (e.g., a LIMITED device that happens to have FULL-level capabilities flagged).
+Navigasi ke **Overview / Hardware Level**. Daftar kemampuan adalah kartu kedua di layar ini, dirender sebagai kisi saklar nyala/mati (hijau = didukung, abu-abu = tidak didukung) dengan nama pendek dan nilai flag integer dalam tanda kurung. Mengetuk kemampuan mana pun akan membuka dialog info yang menjelaskan dengan tepat layar UI mana dalam aplikasi yang dibatasi pada flag tersebut, dengan cuplikan layar dari layar-layar tersebut yang muncul/menghilang. Ini adalah layar kanonik dalam aplikasi pendamping karena visibilitas setiap layar lainnya mengalir dari kartu ini. Kartu tingkat perangkat keras berada tepat di atasnya, menunjukkan hubungannya: daftar centang "Full implies" menunjukkan flag mana yang diharapkan untuk setiap bucket perangkat keras, menyoroti ketidaksesuaian apa pun (misalnya, perangkat LIMITED yang kebetulan memiliki flag kemampuan tingkat FULL).
 
 **6. Common pitfalls**
 
-Checking hardware level instead of capabilities. The anti-pattern: `if (hwLevel == FULL) { showManualControls() }`. Problem: roughly 25% of 2021–2024 LIMITED devices (e.g. Samsung A53, A54, Xiaomi Redmi Note 12 Pro, Motorola Edge 30 Neo) ship with MANUAL_SENSOR even though their hardware level is LIMITED. The anti-pattern hides manual ISO on those devices for no reason — users with capable mid-range phones get gimped features. Correct gating is *always* capability-based: `if (caps.contains(MANUAL_SENSOR)) { showManualControls() }`. Hardware level is useful for logging only, not for feature gating.
+Memeriksa tingkat perangkat keras alih-alih kemampuan. Anti-pola: `if (hwLevel == FULL) { showManualControls() }`. Masalah: sekitar 25% perangkat LIMITED 2021–2024 (misalnya Samsung A53, A54, Xiaomi Redmi Note 12 Pro, Motorola Edge 30 Neo) dikirimkan dengan MANUAL_SENSOR meskipun tingkat perangkat kerasnya LIMITED. Anti-pola tersebut menyembunyikan ISO manual pada perangkat tersebut tanpa alasan — pengguna dengan ponsel kelas menengah yang mampu mendapatkan fitur yang dipangkas. Gating yang benar *selalu* berbasis kemampuan: `if (caps.contains(MANUAL_SENSOR)) { showManualControls() }`. Tingkat perangkat keras hanya berguna untuk analitik, bukan untuk gating fitur.
 
-A second pitfall: capabilities array grows with Android version. On Android 13 a new flag `ULTRA_HIGH_RESOLUTION_SENSOR` was added. If your app is compiled with targetSdk=33 and you check `caps.contains(ULTRA_HIGH_RESOLUTION_SENSOR)` on a device running Android 11, the flag simply isn't in the array (it was not defined yet). The `.contains()` call correctly returns false — no crash. But if you use a `when` statement with a full enumeration without an `else` branch, the compiler does not warn you. Always include an else branch for unknown future capability flags.
+Jebakan kedua: array kemampuan tumbuh dengan versi Android. Pada Android 13 flag baru `ULTRA_HIGH_RESOLUTION_SENSOR` ditambahkan. Jika aplikasi Anda dikompilasi dengan targetSdk=33 dan Anda memeriksa `caps.contains(ULTRA_HIGH_RESOLUTION_SENSOR)` pada perangkat yang menjalankan Android 11, flag tersebut tidak ada dalam array (belum ditentukan). Panggilan `.contains()` mengembalikan false dengan benar — tidak ada crash. Tetapi jika Anda menggunakan pernyataan `when` dengan enumerasi penuh tanpa cabang `else`, compiler tidak memperingatkan Anda. Selalu sertakan cabang else untuk flag kemampuan masa depan yang tidak diketahui.
 
 ---
 
 ### REQUEST_PARTIAL_RESULT_COUNT
 
-**1. What is it?**
+**1. Apa itu?**
 
-`REQUEST_PARTIAL_RESULT_COUNT` is a single `Int` describing how many *partial* `CaptureResult` callbacks the HAL fires per frame, in addition to the final `TotalCaptureResult` at frame-end. A value of `1` means no partials — only the final total result is delivered. A value greater than 1 (typical values: 4, 5, 6, or 8 on FULL devices) means `onCaptureProgressed()` is fired N-1 times with progressively more fields populated as the ISP hardware completes each pipeline stage. The fields arrive in a fixed order matching the HAL3 pipeline: AE state + sensitivity land in partial 1 (read from sensor timing registers early), AF state + focus distances land in partial 3–4 (after lens converges), AWB state + color correction gains land last in partial 5, and everything else arrives together in the TotalCaptureResult.
+`REQUEST_PARTIAL_RESULT_COUNT` adalah `Int` tunggal yang menjelaskan berapa banyak callback `CaptureResult` *parsial* yang ditembakkan HAL per bingkai, selain `TotalCaptureResult` final di akhir bingkai. Nilai `1` berarti tidak ada parsial — hanya hasil total final yang dikirimkan. Nilai yang lebih besar dari 1 (nilai tipikal: 4, 5, 6, atau 8 pada perangkat FULL) berarti `onCaptureProgressed()` ditembakkan N-1 kali dengan semakin banyak bidang yang diisi saat perangkat keras ISP menyelesaikan setiap tahap pipeline. Bidang-bidang tersebut tiba dalam urutan tetap yang sesuai dengan pipeline HAL3: status AE + sensitivitas mendarat di parsial 1 (dibaca dari register timing sensor lebih awal), status AF + jarak fokus mendarat di parsial 3–4 (setelah lensa memusat), status AWB + gain koreksi warna mendarat terakhir di parsial 5, dan segala hal lainnya tiba bersamaan dalam TotalCaptureResult.
 
-**2. Why does it exist?**
+**2. Mengapa itu ada?**
 
-Low-latency responsiveness. A full-resolution still capture frame on a 50MP sensor takes 40–80 ms end-to-end. If the AE algorithm decides it needs to increase ISO by +2 stops to maintain exposure target, that decision is known after 10 ms (partial 1) but applications without partials only learn it 30–70 ms later when the full result arrives. That 60 ms lag makes manual UI sliders feel "sticky." Partials allow UI-heavy applications (manual camera, cinematography monitor viewfinder) to update AE status indicators, focus peaking overlays, and AWB temperature readouts much earlier than the frame-final callback.
+Responsivitas latensi rendah. Bingkai pengambilan foto diam resolusi penuh pada sensor 50MP memakan waktu 40–80 ms dari ujung ke ujung. Jika algoritma AE memutuskan perlu menambah ISO sebesar +2 stop untuk menjaga target eksposur, keputusan itu sudah diketahui setelah 10 ms (parsial 1) tetapi aplikasi tanpa parsial baru mengetahuinya 30–70 ms kemudian saat hasil penuh tiba. Jeda 60 ms itu membuat slider UI manual terasa "lengket". Parsial memungkinkan aplikasi yang berat UI (kamera manual, monitor sinematografi viewfinder) untuk memperbarui indikator status AE, overlay fokus peaking, dan pembacaan suhu AWB jauh lebih awal daripada callback akhir bingkai.
 
-**3. Which devices support it?**
+**3. Perangkat mana yang mendukungnya?**
 
-The key exists on all devices. Values of 1 (no partials) are typical on LEGACY and ~50% of LIMITED devices. FULL hardware level requires at least N ≥ 4 per CDD. LEVEL_3 devices typically offer N = 8 or more with more granular stage reporting. The CDD guarantees that the number of partial results returned per frame is *exactly* N-1, followed by one TotalCaptureResult — never a different count.
+Kunci ini ada di semua perangkat. Nilai 1 (tanpa parsial) adalah tipikal pada perangkat LEGACY dan ~50% perangkat LIMITED. Tingkat perangkat keras FULL memerlukan setidaknya N ≥ 4 per CDD. Perangkat LEVEL_3 biasanya menawarkan N = 8 atau lebih dengan pelaporan tahap yang lebih granular. CDD menjamin bahwa jumlah hasil parsial yang dikembalikan per bingkai adalah *tepat* N-1, diikuti oleh satu TotalCaptureResult — tidak pernah jumlah yang berbeda.
 
-**4. How do I query it?**
+**4. Bagaimana cara menanyakannya?**
 
 ```kotlin
 val partialCount: Int? = characteristics.get(
@@ -1642,66 +1642,66 @@ partialCount?.let { count ->
     val numPartialCallbacks = count - 1
     when {
         count <= 1 -> {
-            Log.w(TAG, "  No partial results available.")
-            Log.w(TAG, "  All metadata available ONLY in TotalCaptureResult.")
-            Log.w(TAG, "  UI implications:")
-            Log.w(TAG, "    - AE state indicator lags by full frame latency (40-80ms)")
-            Log.w(TAG, "    - Focus peaking overlay updates only after frame done")
-            Log.w(TAG, "    - ISO/SS readout cannot be faster than capture pipeline")
+            Log.w(TAG, "  Hasil parsial tidak tersedia.")
+            Log.w(TAG, "  Semua metadata tersedia HANYA dalam TotalCaptureResult.")
+            Log.w(TAG, "  Implikasi UI:")
+            Log.w(TAG, "    - Indikator status AE tertunda sepanjang latensi bingkai penuh (40-80ms)")
+            Log.w(TAG, "    - Overlay fokus peaking diperbarui hanya setelah bingkai selesai")
+            Log.w(TAG, "    - Pembacaan ISO/SS tidak bisa lebih cepat dari pipeline pengambilan")
         }
         count <= 3 -> {
-            Log.d(TAG, "  Minimal partials: $numPartialCallbacks partial callbacks per frame")
-            Log.d(TAG, "  AE state typically available mid-pipeline (partial 1-2)")
+            Log.d(TAG, "  Parsial minimal: $numPartialCallbacks callback parsial per bingkai")
+            Log.d(TAG, "  Status AE biasanya tersedia di tengah pipeline (parsial 1-2)")
         }
         else -> {
-            Log.d(TAG, "  Rich partials: $numPartialCallbacks partial callbacks per frame")
-            Log.d(TAG, "  Typical arrival order (device-specific):")
-            Log.d(TAG, "    Partial 1: SENSOR_SENSITIVITY, SENSOR_EXPOSURE_TIME, CONTROL_AE_STATE")
-            Log.d(TAG, "    Partial 2: LENS_FOCUS_DISTANCE (pre-convergence estimate)")
-            Log.d(TAG, "    Partial 3: CONTROL_AF_STATE, LENS_FOCUS_DISTANCE (final)")
-            Log.d(TAG, "    Partial 4: STATISTICS_FACE_DETECT_MODE, face rectangles")
-            Log.d(TAG, "    Partial 5: CONTROL_AWB_STATE, COLOR_CORRECTION_GAINS")
-            Log.d(TAG, "    TotalCaptureResult: ALL FIELDS + JPEG/YUV bytes")
+            Log.d(TAG, "  Parsial kaya: $numPartialCallbacks callback parsial per bingkai")
+            Log.d(TAG, "  Urutan kedatangan tipikal (khusus perangkat):")
+            Log.d(TAG, "    Parsial 1: SENSOR_SENSITIVITY, SENSOR_EXPOSURE_TIME, CONTROL_AE_STATE")
+            Log.d(TAG, "    Parsial 2: LENS_FOCUS_DISTANCE (estimasi pra-pemusatan)")
+            Log.d(TAG, "    Parsial 3: CONTROL_AF_STATE, LENS_FOCUS_DISTANCE (final)")
+            Log.d(TAG, "    Parsial 4: STATISTICS_FACE_DETECT_MODE, persegi panjang wajah")
+            Log.d(TAG, "    Parsial 5: CONTROL_AWB_STATE, COLOR_CORRECTION_GAINS")
+            Log.d(TAG, "    TotalCaptureResult: SEMUA BIDANG + byte JPEG/YUV")
         }
     }
 } ?: run {
-    Log.w(TAG, "Partial result count unavailable — assume = 1 (no partials)")
+    Log.w(TAG, "Jumlah hasil parsial tidak tersedia — asumsikan = 1 (tanpa parsial)")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Bagaimana cara memeriksanya dengan Android Camera Parameters?**
 
-Go to **Request / Results**. The first card is "Partial Results" with the integer count prominently displayed. A live "per-frame timing" diagram below plots a horizontal timeline for each of the last 8 frames: the left end is capture start, the right end is TotalCaptureResult arrival, and dots in between show each partial callback arrival with its key populated. If count = 1 you see one dot per frame at the far right; if count = 5 you see 4 evenly-spaced dots plus a final total dot. Tapping each dot opens a flyout listing which keys were present in that partial for the selected frame.
+Buka **Request / Results**. Kartu pertama adalah "Partial Results" dengan jumlah integer yang ditampilkan secara menonjol. Diagram "pengaturan waktu per-bingkai" langsung di bawahnya memplot garis waktu horizontal untuk masing-masing dari 8 bingkai terakhir: ujung kiri adalah awal pengambilan, ujung kanan adalah kedatangan TotalCaptureResult, dan titik-titik di antaranya menunjukkan setiap kedatangan callback parsial dengan kuncinya yang terisi. Jika count = 1 Anda melihat satu titik per bingkai di ujung kanan; jika count = 5 Anda melihat 4 titik yang berjarak sama ditambah titik total akhir. Mengetuk setiap titik membuka flyout yang mencantumkan kunci mana yang ada dalam parsial tersebut untuk bingkai yang dipilih.
 
 **6. Common pitfalls**
 
-Assuming every key is populated in every partial. On a FULL device with count = 5, partial 1 contains AE-related keys only. If you read `CONTROL_AF_STATE` from partial 1, the value will be `null` (the key is not present yet). The correct pattern is always null-safe access per key with fallback: in each `onCaptureProgressed()`, check the keys you need individually and update UI only if they are non-null. The TotalCaptureResult at frame-end always contains every available key, so update UI fields for which you only received partials *again* from the total result. If you only read from partials and never read the total result, some UI fields never populate.
+Mengasumsikan setiap kunci terisi di setiap parsial. Pada perangkat FULL dengan count = 5, parsial 1 hanya berisi kunci terkait AE. Jika Anda membaca `CONTROL_AF_STATE` dari parsial 1, nilainya akan `null` (kunci belum ada). Pola yang benar selalu akses aman null per kunci dengan cadangan: di setiap `onCaptureProgressed()`, periksa kunci yang Anda butuhkan satu per satu dan perbarui UI hanya jika mereka non-null. TotalCaptureResult di akhir bingkai selalu berisi setiap kunci yang tersedia, jadi perbarui bidang UI yang hanya Anda terima parsialnya *sekali lagi* dari hasil total. Jika Anda hanya membaca dari parsial dan tidak pernah membaca hasil total, beberapa bidang UI tidak pernah terisi.
 
-Second pitfall: assuming the partial N has the same keys across devices. A Pixel 8 populates AF state in partial 3, but a Samsung S24 populates it in partial 2. The CDD only guarantees "progressively more fields per partial" — not a fixed ordering. Code that switches on partial index `if (partial == 3) updateAfIndicator()` will fail on devices with a different schedule. Correct code is key-based, not index-based: `result[CaptureResult.CONTROL_AF_STATE]?.let { updateAfIndicator(it) }`.
+Jebakan kedua: mengasumsikan parsial N memiliki kunci yang sama di berbagai perangkat. Pixel 8 mengisi status AF di parsial 3, tetapi Samsung S24 mengisinya di parsial 2. CDD hanya menjamin "semakin banyak bidang per parsial" — bukan urutan tetap. Kode yang beralih pada indeks parsial `if (partial == 3) updateAfIndicator()` akan gagal pada perangkat dengan jadwal yang berbeda. Kode yang benar adalah berbasis kunci, bukan berbasis indeks: `result[CaptureResult.CONTROL_AF_STATE]?.let { updateAfIndicator(it) }`.
 
 ---
 
 ### REQUEST_MAX_NUM_OUTPUT_STREAMS
 
-**1. What is it?**
+**1. Apa itu?**
 
-`REQUEST_MAX_NUM_OUTPUT_STREAMS` is an `IntArray` with exactly **3 elements** describing the maximum number of output streams (surfaces/ImageReaders) of each *stall class* that can be created simultaneously in one `CameraCaptureSession`. Stall classes are:
+`REQUEST_MAX_NUM_OUTPUT_STREAMS` adalah `IntArray` dengan tepat **3 elemen** yang menjelaskan jumlah maksimum aliran output (surface/ImageReader) dari setiap *kelas stall* yang dapat dibuat secara bersamaan dalam satu `CameraCaptureSession`. Kelas stall adalah:
 
-- **Index 0 (RAW)** — maximum number of RAW-SENSOR-format output streams (RAW10/12/16 ImageReaders). These consume extreme ISP/CPHY bus bandwidth; the limit is typically 1 on RAW-capable devices, 0 on devices without RAW capability.
-- **Index 1 (Non-stalling processables)** — maximum number of non-stalling, processable streams (YUV_420_888 ImageReader, PRIVATE-format surfaces like SurfaceTexture/MediaRecorder/MediaCodec, RenderScript Allocations). These are typically limited to 3–5 concurrent surfaces.
-- **Index 2 (Stalling processables)** — maximum number of *stalling* processable streams (JPEG ImageReader, HEIC/JPEG_R output). Stalling formats are encoded in hardware and require a dedicated encoder pipeline block; the limit is typically 1 for JPEG alone, or 2 if you share encoder capacity across JPEG + YUV.
+- **Indeks 0 (RAW)** — jumlah maksimum aliran output format RAW-SENSOR (ImageReader RAW10/12/16). Ini mengonsumsi bandwidth bus ISP/CPHY yang ekstrem; batasnya biasanya 1 pada perangkat yang mampu RAW, 0 pada perangkat tanpa kemampuan RAW.
+- **Indeks 1 (Non-stalling processables)** — jumlah maksimum aliran non-stalling yang dapat diproses (ImageReader YUV_420_888, surface format PRIVATE seperti SurfaceTexture/MediaRecorder/MediaCodec, Alokasi RenderScript). Ini biasanya dibatasi pada 3–5 surface bersamaan.
+- **Indeks 2 (Stalling processables)** — jumlah maksimum aliran *stalling* yang dapat diproses (ImageReader JPEG, output HEIC/JPEG_R). Format stalling dikodekan dalam perangkat keras dan memerlukan blok pipeline encoder khusus; batasnya biasanya 1 untuk JPEG saja, atau 2 jika Anda berbagi kapasitas encoder di seluruh JPEG + YUV.
 
-If you create more surfaces than the per-index limit, the `createCaptureSession()` call returns a failure via `onConfigureFailed()`.
+Jika Anda membuat lebih banyak surface daripada batas per indeks, panggilan `createCaptureSession()` mengembalikan kegagalan melalui `onConfigureFailed()`.
 
-**2. Why does it exist?**
+**2. Mengapa itu ada?**
 
-Each output stream in a camera session consumes hardware resources: MIPI-DPHY bandwidth, ISP writeback pipeline ports, JPEG encoder queue slots, and DRAM. A single camera session trying to output RAW + 1080p preview + 4K video + 4K JPEG + face-analysis YUV + machine-learning-pipeline YUV simultaneously exceeds the physical bandwidth of the camera bus on all but LEVEL_3 devices. Rather than have each device fail in a different way (sometimes silent corruption, sometimes session failure after 2 minutes), the CDD requires devices to publish explicit per-stall-class limits upfront.
+Setiap aliran output dalam sesi kamera mengonsumsi sumber daya perangkat keras: bandwidth MIPI-DPHY, port pipeline ISP writeback, slot antrean encoder JPEG, dan DRAM. Satu sesi kamera yang mencoba mengeluarkan RAW + pratinjau 1080p + video 4K + JPEG 4K + analisis wajah YUV + pipeline machine learning YUV secara bersamaan akan melebihi bandwidth fisik bus kamera pada semua kecuali perangkat LEVEL_3. Alih-alih membiarkan setiap perangkat gagal dengan cara yang berbeda (terkadang korupsi diam-diam, terkadang kegagalan sesi setelah 2 menit), CDD mengharuskan perangkat untuk mempublikasikan batas per kelas stall secara eksplisit di muka.
 
-**3. Which devices support it?**
+**3. Perangkat mana yang mendukungnya?**
 
-All valid Camera2 devices. The 3-element-array contract is part of the base Camera2 specification. LEGACY-level devices have tight limits: often `[0, 2, 1]` meaning no RAW, maximum 2 non-stall (preview + YUV analysis), maximum 1 JPEG. FULL devices are typically `[1, 4, 2]` or `[1, 5, 2]`. LEVEL_3 cinema-grade chips go as high as `[2, 10, 3]`.
+Semua perangkat Camera2 yang valid. Kontrak array 3-elemen adalah bagian dari spesifikasi dasar Camera2. Perangkat tingkat LEGACY memiliki batas yang ketat: sering kali `[0, 2, 1]` yang berarti tidak ada RAW, maksimum 2 non-stall (pratinjau + analisis YUV), maksimum 1 JPEG. Perangkat FULL biasanya `[1, 4, 2]` atau `[1, 5, 2]`. Chip tingkat bioskop LEVEL_3 bisa mencapai `[2, 10, 3]`.
 
-**4. How do I query it?**
+**4. Bagaimana cara menanyakannya?**
 
 ```kotlin
 val maxStreams: IntArray? = characteristics.get(
@@ -1709,24 +1709,24 @@ val maxStreams: IntArray? = characteristics.get(
 )
 
 maxStreams?.let { max ->
-    check(max.size == 3) { "Malformed max streams array: size=${max.size}" }
+    check(max.size == 3) { "Array max streams salah format: size=${max.size}" }
     
     val (maxRaw, maxProcessNoStall, maxProcessStall) = Triple(max[0], max[1], max[2])
     
     Log.d(TAG, "REQUEST_MAX_NUM_OUTPUT_STREAMS = [RAW=${max[0]}, PROC=${max[1]}, STALL=${max[2]}]")
-    Log.d(TAG, "  RAW streams (RAW_SENSOR ImageReader):      $maxRaw simultaneous max")
-    Log.d(TAG, "  Non-stalling (YUV_420/SurfaceTexture/etc): $maxProcessNoStall simultaneous max")
-    Log.d(TAG, "  Stalling (JPEG/HEIC ImageReader):          $maxProcessStall simultaneous max")
+    Log.d(TAG, "  Aliran RAW (ImageReader RAW_SENSOR):       maks $maxRaw simultan")
+    Log.d(TAG, "  Non-stalling (YUV_420/SurfaceTexture/dll): maks $maxProcessNoStall simultan")
+    Log.d(TAG, "  Stalling (ImageReader JPEG/HEIC):          maks $maxProcessStall simultan")
     
     data class StreamPlan(
         val label: String, val format: Int, val stallClass: Int
     )
     
     val plannedStreams = mutableListOf(
-        StreamPlan("Preview SurfaceTexture", -1, 1),
-        StreamPlan("4K video MediaCodec", -1, 1),
-        StreamPlan("Full-res JPEG ImageReader", ImageFormat.JPEG, 2),
-        StreamPlan("ML analysis YUV ImageReader", ImageFormat.YUV_420_888, 1)
+        StreamPlan("SurfaceTexture Pratinjau", -1, 1),
+        StreamPlan("MediaCodec video 4K", -1, 1),
+        StreamPlan("ImageReader JPEG resolusi penuh", ImageFormat.JPEG, 2),
+        StreamPlan("ImageReader YUV analisis ML", ImageFormat.YUV_420_888, 1)
     )
     
     val counts = plannedStreams.groupingBy { it.stallClass }.eachCount()
@@ -1734,53 +1734,53 @@ maxStreams?.let { max ->
     val procNeeded = counts[1] ?: 0
     val stallNeeded = counts[2] ?: 0
     
-    Log.d(TAG, "  Proposed session stream count:")
-    Log.d(TAG, "    RAW: needed=$rawNeeded / max=$maxRaw → ${if (rawNeeded <= maxRaw) "✓ OK" else "✗ OVER LIMIT"}")
-    Log.d(TAG, "    PROC: needed=$procNeeded / max=$maxProcessNoStall → ${if (procNeeded <= maxProcessNoStall) "✓ OK" else "✗ OVER LIMIT"}")
-    Log.d(TAG, "    STALL: needed=$stallNeeded / max=$maxProcessStall → ${if (stallNeeded <= maxProcessStall) "✓ OK" else "✗ OVER LIMIT"}")
+    Log.d(TAG, "  Usulan jumlah aliran sesi:")
+    Log.d(TAG, "    RAW: butuh=$rawNeeded / maks=$maxRaw → ${if (rawNeeded <= maxRaw) "✓ OK" else "✗ MELEBIHI BATAS"}")
+    Log.d(TAG, "    PROC: butuh=$procNeeded / maks=$maxProcessNoStall → ${if (procNeeded <= maxProcessNoStall) "✓ OK" else "✗ MELEBIHI BATAS"}")
+    Log.d(TAG, "    STALL: butuh=$stallNeeded / maks=$maxProcessStall → ${if (stallNeeded <= maxProcessStall) "✓ OK" else "✗ MELEBIHI BATAS"}")
     
     val sessionValid = rawNeeded <= maxRaw
             && procNeeded <= maxProcessNoStall
             && stallNeeded <= maxProcessStall
     
     if (!sessionValid) {
-        Log.w(TAG, "  SESSION WOULD FAIL CONFIGURATION. Reduce stream count.")
-        Log.w(TAG, "  Common fix: combine ML analysis + preview single YUV + GPU readback.")
+        Log.w(TAG, "  SESI AKAN GAGAL DIKONFIGURASI. Kurangi jumlah aliran.")
+        Log.w(TAG, "  Perbaikan umum: gabungkan analisis ML + pratinjau dalam satu YUV + readback GPU.")
     }
 } ?: run {
-    Log.w(TAG, "Max streams array unavailable — assume tight limits [0,2,1] (LEGACY baseline)")
+    Log.w(TAG, "Array max streams tidak tersedia — asumsikan batas ketat [0,2,1] (garis dasar LEGACY)")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Bagaimana cara memeriksanya dengan Android Camera Parameters?**
 
-Navigate to **Streams / Limits**. The first card renders the three-element array as three large number tiles: RAW (red), NON-STALL (green), STALL (blue). Below the tiles, the app shows a "Session Builder" sandbox where you can tap add buttons to add surfaces to a hypothetical session (preview, video, JPEG, YUV analysis, RAW, face detection) and see in real time whether each stall class count exceeds the limit. A session that exceeds the limit gets a red banner and the OK/FAIL status is displayed at the bottom. This is the quickest way to prototype a multi-surface session configuration.
+Navigasi ke **Streams / Limits**. Kartu pertama merender array tiga elemen sebagai tiga ubin angka besar: RAW (merah), NON-STALL (hijau), STALL (biru). Di bawah ubin tersebut, aplikasi menunjukkan kotak pasir "Session Builder" di mana Anda dapat mengetuk tombol tambah untuk menambahkan surface ke sesi hipotetis (pratinjau, video, JPEG, analisis YUV, RAW, deteksi wajah) dan melihat secara real time apakah setiap jumlah kelas stall melebihi batas. Sesi yang melebihi batas mendapatkan lencana merah dan status OK/GAGAL ditampilkan di bagian bawah. Ini adalah cara tercepat untuk membuat prototipe konfigurasi sesi multi-surface.
 
 **6. Common pitfalls**
 
-Adding a second JPEG `ImageReader`. Many developers add one JPEG reader for thumbnails at 1080p and a second JPEG reader for full-res at 48MP. But `JPEG` is a stalling format with a typical limit of 1. Session creation fails on 60% of devices. Correct pattern: use a *single* full-res JPEG `ImageReader` and generate thumbnails post-capture by decoding the full JPEG to a 1080×1080 thumbnail via `BitmapFactory` with `inSampleSize`. The disk/CPU cost of re-encoding a thumbnail is negligible compared to the cost of a second encoder pipeline.
+Menambahkan `ImageReader` JPEG kedua. Banyak pengembang menambahkan satu reader JPEG untuk thumbnail pada 1080p dan reader JPEG kedua untuk resolusi penuh pada 48MP. Tetapi `JPEG` adalah format stalling dengan batas tipikal 1. Pembuatan sesi gagal pada 60% perangkat. Pola yang benar: gunakan satu `ImageReader` JPEG resolusi penuh dan buat thumbnail pasca-pengambilan dengan mendecode JPEG penuh menjadi thumbnail 1080×1080 melalui `BitmapFactory` dengan `inSampleSize`. Biaya disk/CPU untuk mengodekan ulang thumbnail dapat diabaikan dibandingkan dengan biaya pipeline encoder kedua.
 
-Second pitfall: confusing stall classes. A `MediaRecorder` surface is non-stalling (index 1), even though `MediaRecorder` internally produces a stalling H.264/H.265 output. The stall-class taxonomy counts the *camera-facing* side of the surface, not the downstream consumer. Camera-facing `MediaRecorder` is PRIVATE-format and non-stalling; only `JPEG`/`HEIC` `ImageReaders` consume the stalling encoder slot. When building your stream-plan accounting, treat `MediaRecorder`, `MediaCodec`, `SurfaceTexture`, and `SurfaceHolder` all as class 1. Treat only `ImageFormat.JPEG`, `JPEG_R`, `HEIC` ImageReaders as class 2.
+Jebakan kedua: membingungkan kelas stall. Surface `MediaRecorder` bersifat non-stalling (indeks 1), meskipun `MediaRecorder` secara internal menghasilkan output H.264/H.265 yang stalling. Taksonomi kelas stall menghitung sisi surface yang *menghadap kamera*, bukan konsumen hilir. `MediaRecorder` yang menghadap kamera adalah format PRIVATE dan non-stalling; hanya `ImageReader` `JPEG`/`HEIC` yang memakan slot encoder stalling. Saat membangun perhitungan rencana-aliran Anda, perlakukan `MediaRecorder`, `MediaCodec`, `SurfaceTexture`, dan `SurfaceHolder` semuanya sebagai kelas 1. Perlakukan hanya ImageReader `ImageFormat.JPEG`, `JPEG_R`, `HEIC` sebagai kelas 2.
 
 ---
 
-## Flash Category
+## Kategori Lampu Kilat
 
 ### FLASH_INFO_AVAILABLE
 
-**1. What is it?**
+**1. Apa itu?**
 
-`FLASH_INFO_AVAILABLE` is a single `Boolean` indicating whether the camera module has a flash LED (torch/strobe) physically soldered to it. `true` = flash hardware exists; `false` = no flash hardware. This is the canonical boolean for whether the app may try to use torch mode, flash fire, or any flash-related CaptureRequest keys. On multi-camera logical devices, each physical camera can independently have or lack a flash: the ultra-wide rear camera often has no flash, the main wide-angle does have one, and the telephoto sometimes shares the wide-angle's flash via a light-guide.
+`FLASH_INFO_AVAILABLE` adalah `Boolean` tunggal yang menunjukkan apakah modul kamera memiliki LED lampu kilat (senter/strobo) yang dipasang secara fisik padanya. `true` = perangkat keras lampu kilat ada; `false` = tidak ada perangkat keras lampu kilat. Ini adalah boolean kanonik untuk mengetahui apakah aplikasi boleh mencoba menggunakan mode senter, penembakan lampu kilat, atau kunci CaptureRequest terkait lampu kilat apa pun. Pada perangkat logis multi-kamera, setiap kamera fisik dapat memiliki atau tidak memiliki lampu kilat secara independen: kamera belakang ultra-lebar seringkali tidak memiliki lampu kilat, kamera sudut lebar utama memilikinya, dan kamera telefoto terkadang berbagi lampu kilat milik sudut lebar melalui pemandu cahaya.
 
-**2. Why does it exist?**
+**2. Mengapa itu ada?**
 
-Without this boolean, every call to `CaptureRequest.FLASH_MODE = TORCH` or `FLASH_MODE = SINGLE` would need to be wrapped in a try/catch for `CameraAccessException`. Since flash is absent on approximately 25% of camera IDs (selfie cameras, ultra-wide rear cameras, USB webcams, foldable under-display cameras), a static boolean is vastly cheaper and safer than a dynamic exception on every attempted call.
+Tanpa boolean ini, setiap panggilan ke `CaptureRequest.FLASH_MODE = TORCH` atau `FLASH_MODE = SINGLE` perlu dibungkus dalam try/catch untuk `CameraAccessException`. Karena lampu kilat tidak ada pada sekitar 25% ID kamera (kamera selfie, kamera belakang ultra-lebar, webcam USB, kamera di bawah layar yang dapat dilipat), sebuah boolean statis jauh lebih murah dan lebih aman daripada pengecualian dinamis pada setiap panggilan yang dicoba.
 
-**3. Which devices support it?**
+**3. Perangkat mana yang mendukungnya?**
 
-All camera IDs on every device report this boolean. No capability flags required. LEGACY, LIMITED, FULL, LEVEL_3, and EXTERNAL devices all have the key. USB cameras typically return `false` unless the camera module includes a built-in LED ring.
+Setiap ID kamera di setiap perangkat melaporkan boolean ini. Tidak diperlukan flag kemampuan. Perangkat LEGACY, LIMITED, FULL, LEVEL_3, dan EXTERNAL semuanya memiliki kunci ini. Kamera USB biasanya mengembalikan `false` kecuali modul kamera menyertakan cincin LED bawaan.
 
-**4. How do I query it?**
+**4. Bagaimana cara menanyakannya?**
 
 ```kotlin
 val flashAvailable: Boolean? = characteristics.get(
@@ -1796,55 +1796,55 @@ if (hasFlash) {
     ) ?: intArrayOf()
     val modeNames = availableModes.map { m ->
         when (m) {
-            CameraCharacteristics.FLASH_MODE_OFF -> "OFF"
+            CameraCharacteristics.FLASH_MODE_OFF -> "MATI"
             CameraCharacteristics.FLASH_MODE_SINGLE -> "SINGLE"
             CameraCharacteristics.FLASH_MODE_TORCH -> "TORCH"
-            else -> "UNKNOWN($m)"
+            else -> "TIDAK DIKETAHUI($m)"
         }
     }
-    Log.d(TAG, "  Flash modes available: [${modeNames.joinToString(", ")}]")
-    Log.d(TAG, "  UI: Show flash-mode icon + torch toggle.")
+    Log.d(TAG, "  Mode lampu kilat tersedia: [${modeNames.joinToString(", ")}]")
+    Log.d(TAG, "  UI: Tunjukkan ikon mode-kilat + toggle senter.")
     
     val maxLevel = characteristics.get(
         CameraCharacteristics.FLASH_INFO_STRENGTH_MAXIMUM_LEVEL
     ) ?: 0
-    Log.d(TAG, "  Variable torch strength levels (0=ON/OFF only): $maxLevel")
+    Log.d(TAG, "  Tingkat kekuatan senter variabel (0=HIDUP/MATI saja): $maxLevel")
 } else {
-    Log.w(TAG, "  No flash hardware on this camera ID.")
-    Log.w(TAG, "  UI: HIDE flash-mode selector, HIDE torch button entirely.")
-    Log.w(TAG, "  Any call to set FLASH_MODE will throw CameraAccessException.")
+    Log.w(TAG, "  Tidak ada perangkat keras lampu kilat pada ID kamera ini.")
+    Log.w(TAG, "  UI: SEMBUNYIKAN pemilih mode-kilat, SEMBUNYIKAN tombol senter sepenuhnya.")
+    Log.w(TAG, "  Setiap panggilan untuk menyetel FLASH_MODE akan melemparkan CameraAccessException.")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Bagaimana cara memeriksanya dengan Android Camera Parameters?**
 
-Navigate to **Flash / Info**. The top card is "Flash Available" with a simple boolean badge: green "PRESENT" when true, red "ABSENT" when false. Below, the **Flash / Control** tab is enabled only when the boolean is true, showing a live TORCH toggle button and flash mode selector buttons. If `FLASH_INFO_AVAILABLE = false`, the Control tab shows a disabled state and an explanation card: "No flash LED — torch is not available on this camera."
+Navigasi ke **Flash / Info**. Kartu atas adalah "Flash Available" dengan lencana boolean sederhana: hijau "PRESENT" ketika true, merah "ABSENT" ketika false. Di bawahnya, tab **Flash / Control** hanya diaktifkan jika boolean tersebut true, menunjukkan tombol toggle TORCH langsung dan tombol pemilih mode lampu kilat. Jika `FLASH_INFO_AVAILABLE = false`, tab Control menunjukkan status dinonaktifkan dan kartu penjelasan: "Tidak ada LED lampu kilat — senter tidak tersedia pada kamera ini."
 
 **6. Common pitfalls**
 
-Number one: null check + global true assumption. Developers write `val hasFlash = characteristics.get(FLASH_INFO_AVAILABLE)` and forget ` ?: false`, so the variable is `Boolean?` instead of `Boolean`. Passing this nullable to `if (hasFlash)` works in Kotlin (auto-cast), but `if (!hasFlash)` is a compile error or, worse, on a `null` value the Elvis operator fallback in your UI code is skipped and the torch button is shown. Always `val hasFlash = characteristics.get(...) == true` or `val hasFlash = characteristics.get(...) ?: false`. The first pattern (exact `== true`) is safer because it rejects both null and false uniformly.
+Nomor satu: pemeriksaan null + asumsi true global. Pengembang menulis `val hasFlash = characteristics.get(FLASH_INFO_AVAILABLE)` dan melupakan ` ?: false`, sehingga variabelnya adalah `Boolean?` bukan `Boolean`. Melewatkan nullable ini ke `if (hasFlash)` berfungsi di Kotlin (auto-cast), tetapi `if (!hasFlash)` adalah kesalahan kompilasi atau, lebih buruk lagi, pada nilai `null` cadangan operator Elvis dalam kode UI Anda terlewati dan tombol senter ditampilkan. Selalu gunakan `val hasFlash = characteristics.get(...) == true` atau `val hasFlash = characteristics.get(...) ?: false`. Pola pertama (tepat `== true`) lebih aman karena menolak baik null maupun false secara seragam.
 
-Second pitfall: selfie camera + torch toggle. The user switches to the front camera and the app still shows the torch button. Tapping it throws `CameraAccessException: setTorchMode failed: The camera device has no flash unit`. Always re-query `FLASH_INFO_AVAILABLE` every time the user switches cameras — do not cache the value from the previous back-facing camera. Every camera ID has its own independent flash hardware. The correct lifecycle callback is: inside `openCamera(cameraId)` → query characteristics → set flash button visibility based on the new camera's boolean, before the user can interact with the viewfinder.
+Jebakan kedua: kamera selfie + toggle senter. Pengguna beralih ke kamera depan dan aplikasi masih menunjukkan tombol senter. Mengetuknya melemparkan `CameraAccessException: setTorchMode failed: The camera device has no flash unit`. Selalu tanyakan ulang `FLASH_INFO_AVAILABLE` setiap kali pengguna beralih kamera — jangan simpan nilai dari kamera belakang sebelumnya. Setiap ID kamera memiliki perangkat keras lampu kilat independennya sendiri. Callback siklus hidup yang benar adalah: di dalam `openCamera(cameraId)` → kueri karakteristik → setel visibilitas tombol lampu kilat berdasarkan boolean kamera baru, sebelum pengguna dapat berinteraksi dengan viewfinder.
 
 ---
 
 ### FLASH_INFO_STRENGTH_MAXIMUM_LEVEL
 
-**1. What is it?**
+**1. Apa itu?**
 
-`FLASH_INFO_STRENGTH_MAXIMUM_LEVEL` is a single `Int` describing the maximum brightness level for linear torch and flash control, introduced in Android 13 (API level 33). A value of `0` means only ON/OFF control is supported (binary torch via `FLASH_MODE_TORCH` / `FLASH_MODE_OFF`). A value of `10` means 10 linear brightness steps (0 = off, 1 = 10% brightness, …, 10 = 100% brightness). A value of `100` means 100 linear steps (1% per step). The corresponding request key in CaptureRequest is `FLASH_STRENGTH_DEFAULT_LEVEL` which accepts any integer from 0 to MAX.
+`FLASH_INFO_STRENGTH_MAXIMUM_LEVEL` adalah `Int` tunggal yang menjelaskan tingkat kecerahan maksimum untuk kontrol senter dan lampu kilat linear, yang diperkenalkan di Android 13 (tingkat API 33). Nilai `0` berarti hanya kontrol HIDUP/MATI yang didukung (senter biner melalui `FLASH_MODE_TORCH` / `FLASH_MODE_OFF`). Nilai `10` berarti 10 langkah kecerahan linear (0 = mati, 1 = 10% kecerahan, …, 10 = 100% kecerahan). Nilai `100` berarti 100 langkah linear (1% per langkah). Kunci permintaan yang sesuai di CaptureRequest adalah `FLASH_STRENGTH_DEFAULT_LEVEL` yang menerima integer apa pun dari 0 hingga MAX.
 
-The corresponding request key in CaptureResult is `FLASH_STATE` combined with `FLASH_STRENGTH_LEVEL` per frame for monitoring.
+Kunci hasil yang sesuai di CaptureResult adalah `FLASH_STATE` yang dikombinasikan dengan `FLASH_STRENGTH_LEVEL` per bingkai untuk pemantauan.
 
-**2. Why does it exist?**
+**2. Mengapa itu ada?**
 
-Previous Android versions offered only binary flash control. Users wanted a torch dimmer for close-up photography (overexposed at 100% power) and for video recording (adjustable fill light). OEMs had implemented variable-torch functionality in their stock camera apps via vendor-private metadata keys for years. Android 13 standardized the API so the same slider works across Pixel, Samsung, Xiaomi, and OnePlus.
+Versi Android sebelumnya hanya menawarkan kontrol lampu kilat biner. Pengguna menginginkan dimmer senter untuk fotografi jarak dekat (terlalu terang pada daya 100%) dan untuk perekaman video (lampu pengisi yang dapat disesuaikan). OEM telah mengimplementasikan fungsionalitas senter-variabel dalam aplikasi kamera stok mereka melalui kunci metadata privat vendor selama bertahun-tahun. Android 13 menstandarisasi API sehingga slider yang sama berfungsi di Pixel, Samsung, Xiaomi, dan OnePlus.
 
-**3. Which devices support it?**
+**3. Perangkat mana yang mendukungnya?**
 
-All devices running Android 13 or later that have `FLASH_INFO_AVAILABLE = true`. Devices *with* flash but running Android 12 or earlier report the key but the value is 0 (no dimmer, only ON/OFF). Not all Android 13 flash-equipped devices have a linear dimmer in hardware: approximately 60% of 2023 devices ship with MAX_LEVEL ≥ 1, the remaining 40% (budget devices) have MAX_LEVEL = 0.
+Semua perangkat yang menjalankan Android 13 atau lebih baru yang memiliki `FLASH_INFO_AVAILABLE = true`. Perangkat *dengan* lampu kilat tetapi menjalankan Android 12 atau sebelumnya melaporkan kunci tersebut tetapi nilainya adalah 0 (tanpa dimmer, hanya HIDUP/MATI). Tidak semua perangkat Android 13 yang dilengkapi lampu kilat memiliki dimmer linear di perangkat keras: sekitar 60% perangkat 2023 dikirimkan dengan MAX_LEVEL ≥ 1, sisanya 40% (perangkat anggaran) memiliki MAX_LEVEL = 0.
 
-**4. How do I query it?**
+**4. Bagaimana cara menanyakannya?**
 
 ```kotlin
 val flashAvailable = characteristics.get(
@@ -1856,7 +1856,7 @@ val maxStrengthLevel: Int? = if (Build.VERSION.SDK_INT >= 33) {
         CameraCharacteristics.FLASH_INFO_STRENGTH_MAXIMUM_LEVEL
     )
 } else {
-    Log.w(TAG, "Device is Android 12 or earlier — variable strength unsupported.")
+    Log.w(TAG, "Perangkat Android 12 atau sebelumnya — kekuatan variabel tidak didukung.")
     0
 }
 
@@ -1864,59 +1864,59 @@ Log.d(TAG, "FLASH_INFO_STRENGTH_MAXIMUM_LEVEL = $maxStrengthLevel")
 
 when {
     !flashAvailable -> {
-        Log.w(TAG, "  No flash hardware. Strength irrelevant.")
+        Log.w(TAG, "  Tidak ada perangkat keras lampu kilat. Kekuatan tidak relevan.")
     }
     maxStrengthLevel == null || maxStrengthLevel <= 0 -> {
-        Log.d(TAG, "  Binary torch only: ON/OFF, no dimmer.")
-        Log.d(TAG, "  Use FLASH_MODE_TORCH / FLASH_MODE_OFF for control.")
-        Log.d(TAG, "  UI: Show torch ToggleButton, hide strength slider.")
+        Log.d(TAG, "  Hanya senter biner: HIDUP/MATI, tanpa dimmer.")
+        Log.d(TAG, "  Gunakan FLASH_MODE_TORCH / FLASH_MODE_OFF untuk kontrol.")
+        Log.d(TAG, "  UI: Tampilkan ToggleButton senter, sembunyikan slider kekuatan.")
     }
     else -> {
-        Log.d(TAG, "  Linear torch dimmer: 0 (off) .. $maxStrengthLevel (max)")
+        Log.d(TAG, "  Dimmer senter linear: 0 (mati) .. $maxStrengthLevel (maks)")
         val pctPerStep = 100.0 / maxStrengthLevel
-        Log.d(TAG, "  Step granularity: ${"%.1f".format(pctPerStep)}% per step")
-        Log.d(TAG, "  Use CaptureRequest.FLASH_STRENGTH_DEFAULT_LEVEL = 0..$maxStrengthLevel")
-        Log.d(TAG, "  UI: Show torch toggle + SeekBar with ${maxStrengthLevel + 1} notches.")
+        Log.d(TAG, "  Granularitas langkah: ${"%.1f".format(pctPerStep)}% per langkah")
+        Log.d(TAG, "  Gunakan CaptureRequest.FLASH_STRENGTH_DEFAULT_LEVEL = 0..$maxStrengthLevel")
+        Log.d(TAG, "  UI: Tampilkan toggle senter + SeekBar dengan ${maxStrengthLevel + 1} titik.")
         
         val commonLevels = (0..100 step 25).mapNotNull { pct ->
             val level = (maxStrengthLevel * pct / 100.0).roundToInt()
             if (level in 0..maxStrengthLevel) level to pct else null
         }
-        Log.d(TAG, "  Common preset levels: " +
+        Log.d(TAG, "  Tingkat preset umum: " +
                    commonLevels.joinToString { (l, p) -> "$l=${p}%" })
     }
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Bagaimana cara memeriksanya dengan Android Camera Parameters?**
 
-Open **Flash / Control**. The strength level appears as "Max Level" tile at the top of the control card. When the level is > 0, a live `SeekBar` appears below the torch toggle, with labels "0% / 25% / 50% / 75% / 100%" mapped to integer values 0, max/4, max/2, 3max/4, max. Dragging the slider instantly changes torch brightness in the real world, so you can verify the dimming is actually linear (non-linear drivers produce jumps in brightness rather than a smooth ramp). If level is 0 the slider is hidden and only the ON/OFF toggle is shown.
+Buka **Flash / Control**. Tingkat kekuatan muncul sebagai ubin "Max Level" di bagian atas kartu kontrol. Ketika level > 0, sebuah `SeekBar` langsung muncul di bawah toggle senter, dengan label "0% / 25% / 50% / 75% / 100%" yang dipetakan ke nilai integer 0, max/4, max/2, 3max/4, max. Menggeser slider akan langsung mengubah kecerahan senter di dunia nyata, sehingga Anda dapat memverifikasi bahwa peredupan tersebut benar-benar linear (driver non-linear menghasilkan lompatan kecerahan daripada transisi halus). Jika level adalah 0, slider disembunyikan dan hanya toggle HIDUP/MATI yang ditampilkan.
 
 **6. Common pitfalls**
 
-Using `FLASH_STRENGTH_DEFAULT_LEVEL` on older Android versions. The key is `@RequiresApi(33)`. If your `minSdk` is 28 or 30, calling `builder.set(FLASH_STRENGTH_DEFAULT_LEVEL, 5)` on Android 12 throws `NoSuchFieldError` at runtime because the key doesn't exist in that SDK's CameraMetadata class. Correct code is guarded with `if (Build.VERSION.SDK_INT >= 33 && maxStrengthLevel > 0) { builder.set(...) }` *and* `characteristics.get(...)` for the key returns non-null. Never assume because you set `targetSdk=34` that all devices support the key.
+Menggunakan `FLASH_STRENGTH_DEFAULT_LEVEL` pada versi Android yang lebih lama. Kunci ini adalah `@RequiresApi(33)`. Jika `minSdk` Anda adalah 28 atau 30, memanggil `builder.set(FLASH_STRENGTH_DEFAULT_LEVEL, 5)` di Android 12 akan melemparkan `NoSuchFieldError` saat runtime karena kunci tersebut tidak ada di kelas CameraMetadata SDK tersebut. Kode yang benar dijaga dengan `if (Build.VERSION.SDK_INT >= 33 && maxStrengthLevel > 0) { builder.set(...) }` *and* `characteristics.get(...)` untuk kunci tersebut mengembalikan non-null. Jangan pernah berasumsi karena Anda menyetel `targetSdk=34` maka semua perangkat mendukung kunci tersebut.
 
-Second pitfall: non-linear dimming. The CDD describes the levels as "linear perceived brightness" but some budget devices map MAX_LEVEL = 10 onto PWM duty cycles logarithmically: step 1 = 0.1% brightness, step 2 = 0.5%, step 10 = 100%. The user perceives the bottom half of the slider as "no change" and the top half as "sudden jump to full." There is no metadata key describing the brightness curve; the only reliable way to get linear-perceived output is to measure with a light meter on a per-device basis and ship a per-OEM correction curve for known-bad devices, or accept that some OEMs cheat on the linearity contract.
+Jebakan kedua: peredupan non-linear. CDD menjelaskan tingkat tersebut sebagai "kecerahan yang dirasakan linear" tetapi beberapa perangkat anggaran memetakan MAX_LEVEL = 10 ke siklus kerja PWM secara logaritmik: langkah 1 = kecerahan 0,1%, langkah 2 = 0,5%, langkah 10 = 100%. Pengguna merasakan separuh bawah slider sebagai "tidak ada perubahan" dan separuh atas sebagai "lompatan tiba-tiba ke penuh." Tidak ada kunci metadata yang menjelaskan kurva kecerahan; satu-satunya cara andal untuk mendapatkan output yang dirasakan linear adalah dengan mengukur menggunakan lux meter secara per-perangkat dan mengirimkan kurva koreksi per-OEM untuk perangkat yang diketahui buruk, atau menerima bahwa beberapa OEM melanggar kontrak linearitas.
 
 ---
 
-## JPEG Category
+## Kategori JPEG
 
 ### JPEG_AVAILABLE_THUMBNAIL_SIZES
 
-**1. What is it?**
+**1. Apa itu?**
 
-`JPEG_AVAILABLE_THUMBNAIL_SIZES` is an array of `android.util.Size` objects, each representing a valid `(width, height)` resolution for the embedded EXIF thumbnail that the JPEG encoder writes alongside the full-size main image. A special sentinel value `Size(0, 0)` is present when the encoder supports writing *no* thumbnail (zero bytes, saving ~30–50 KB per JPEG file). Standard sizes on modern devices are typically `[0×0, 96×96, 160×120, 176×144, 256×144]`. The corresponding request key is `CaptureRequest.JPEG_THUMBNAIL_SIZE` which you must set to one of the sizes from this list; any other size is undefined behavior per CDD.
+`JPEG_AVAILABLE_THUMBNAIL_SIZES` adalah array objek `android.util.Size`, masing-masing mewakili resolusi `(lebar, tinggi)` yang valid untuk thumbnail EXIF tersemat yang ditulis oleh encoder JPEG bersama dengan gambar utama ukuran penuh. Nilai sentinel khusus `Size(0, 0)` ada ketika encoder mendukung penulisan *tanpa* thumbnail (nol byte, menghemat ~30–50 KB per file JPEG). Ukuran standar pada perangkat modern biasanya `[0×0, 96×96, 160×120, 176×144, 256×144]`. Kunci permintaan yang sesuai adalah `CaptureRequest.JPEG_THUMBNAIL_SIZE` yang harus Anda setel ke salah satu ukuran dari daftar ini; ukuran lain apa pun adalah perilaku yang tidak ditentukan menurut CDD.
 
-**2. Why does it exist?**
+**2. Mengapa itu ada?**
 
-Gallery apps and image file managers use EXIF thumbnails to render grid views of thousands of photos without decoding the 12–48 MB full-size JPEG. Decoding 5000×5000 JPEGs for a 48×48 grid cell is prohibitively expensive (decoding time ~200 ms per photo vs. 0.1 ms per thumbnail). Hardware JPEG encoders on modern SoCs can embed thumbnails in hardware at zero CPU cost, but the encoder's thumbnail scaler only supports a small set of fixed sizes — typically powers of 2 or 3GPP MMS standard sizes.
+Aplikasi galeri dan pengelola file gambar menggunakan thumbnail EXIF untuk merender tampilan kisi dari ribuan foto tanpa mendecode JPEG penuh berukuran 12–48 MB. Mendecode JPEG 5000×5000 untuk sel kisi 48×48 adalah biaya yang sangat mahal (waktu decode ~200 ms per foto vs 0,1 ms per thumbnail). Encoder JPEG perangkat keras pada SoC modern dapat menyematkan thumbnail di perangkat keras dengan biaya CPU nol, tetapi scaler thumbnail encoder hanya mendukung sekumpulan kecil ukuran tetap — biasanya pangkat 2 atau ukuran standar 3GPP MMS.
 
-**3. Which devices support it?**
+**3. Perangkat mana yang mendukungnya?**
 
-All devices that support the JPEG format (effectively every camera ID in existence). The array always contains at least two elements: the `0×0` sentinel plus at least one real thumbnail size. FULL-level devices guarantee every size in the list actually works. LEGACY wrappers sometimes list sizes that the encoder silently rejects — verifying with one test capture on LEGACY devices is recommended.
+Semua perangkat yang mendukung format JPEG (secara efektif setiap ID kamera yang ada). Array tersebut selalu berisi setidaknya dua elemen: sentinel `0×0` ditambah setidaknya satu ukuran thumbnail nyata. Perangkat tingkat FULL menjamin setiap ukuran dalam daftar benar-benar berfungsi. Pembungkus LEGACY terkadang mencantumkan ukuran yang secara diam-diam ditolak oleh encoder — disarankan memverifikasi dengan satu pengambilan gambar uji pada perangkat LEGACY.
 
-**4. How do I query it?**
+**4. Bagaimana cara menanyakannya?**
 
 ```kotlin
 val thumbnailSizes: Array<Size>? = characteristics.get(
@@ -1924,10 +1924,10 @@ val thumbnailSizes: Array<Size>? = characteristics.get(
 )
 
 thumbnailSizes?.let { sizes ->
-    Log.d(TAG, "JPEG_AVAILABLE_THUMBNAIL_SIZES (${sizes.size} options):")
+    Log.d(TAG, "JPEG_AVAILABLE_THUMBNAIL_SIZES (${sizes.size} opsi):")
     
     val noThumbnail = sizes.firstOrNull { it.width == 0 && it.height == 0 } != null
-    Log.d(TAG, "  Disable thumbnail (0×0) supported? $noThumbnail")
+    Log.d(TAG, "  Dukungan nonaktifkan thumbnail (0×0)? $noThumbnail")
     
     val realSizes = sizes.filter { it.width > 0 && it.height > 0 }
         .sortedByDescending { it.width * it.height }
@@ -1941,10 +1941,10 @@ thumbnailSizes?.let { sizes ->
             abs(ar - 1.0) < 0.05 -> "1:1"
             else -> "%.2f".format(ar)
         }
-        Log.d(TAG, "    ${size.width}×${size.height}px ($mp KB estimate, $arLabel)")
+        Log.d(TAG, "    ${size.width}×${size.height}px (estimasi $mp KB, $arLabel)")
     }
     
-    Log.d(TAG, "  Selection strategy:")
+    Log.d(TAG, "  Strategi pemilihan:")
     val recommended = when {
         realSizes.isEmpty() -> Size(0, 0)
         else -> {
@@ -1953,43 +1953,43 @@ thumbnailSizes?.let { sizes ->
             realSizes.firstOrNull { it.width <= wLimit } ?: largest
         }
     }
-    Log.d(TAG, "  Recommended: ${recommended} (best balance of clarity vs. storage)")
+    Log.d(TAG, "  Direkomendasikan: ${recommended} (keseimbangan terbaik antara kejelasan vs penyimpanan)")
     
     if (noThumbnail) {
-        Log.d(TAG, "  Alternative: 0×0 if gallery thumbnails are not required (saves space)")
+        Log.d(TAG, "  Alternatif: 0×0 jika thumbnail galeri tidak diperlukan (hemat ruang)")
     }
 } ?: run {
-    Log.w(TAG, "Thumbnail sizes array unavailable — fallback to 160×120 or omit thumbnail")
+    Log.w(TAG, "Array ukuran thumbnail tidak tersedia — cadangan ke 160×120 atau abaikan thumbnail")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Bagaimana cara memeriksanya dengan Android Camera Parameters?**
 
-Navigate to **JPEG / Thumbnails**. The entire card renders each supported size as a small rectangular preview box scaled to the actual aspect ratio, with the pixel dimensions printed inside. Tapping any size performs a real still capture with that thumbnail size selected, then displays the extracted EXIF thumbnail next to the full-size image so you can visually compare thumbnail quality across sizes. A 0×0 option appears as a disabled-looking "No thumbnail" row at the bottom; tapping it performs a capture and verifies that the EXIF contains no 0x0002-IFD0 thumbnail tag.
+Navigasi ke **JPEG / Thumbnails**. Seluruh kartu merender setiap ukuran yang didukung sebagai kotak pratinjau persegi panjang kecil yang diskalakan ke rasio aspek aktual, dengan dimensi piksel tercetak di dalamnya. Mengetuk ukuran mana pun akan melakukan pengambilan gambar diam nyata dengan ukuran thumbnail tersebut dipilih, lalu menampilkan thumbnail EXIF yang diekstrak di samping gambar ukuran penuh sehingga Anda dapat secara visual membandingkan kualitas thumbnail di berbagai ukuran. Opsi 0×0 muncul sebagai baris "No thumbnail" yang tampak dinonaktifkan di bagian bawah; mengetuknya akan melakukan pengambilan gambar dan memverifikasi bahwa EXIF tidak berisi tag thumbnail 0x0002-IFD0.
 
 **6. Common pitfalls**
 
-Setting a thumbnail size that is not in the available list. Developers naively request a 256×256 square thumbnail because it fits their gallery grid nicely. On a LEGACY device the encoder silently drops the thumbnail (no error, EXIF thumbnail tag empty). On certain Snapdragon 845/855 HALs setting a non-list size for thumbnail causes the *full JPEG* output to be corrupted: the image has a 16-pixel black stripe down the left edge or the bottom 10% of the scan lines are pure black. The fix is simple: always pick a Size from the `JPEG_AVAILABLE_THUMBNAIL_SIZES` array. If you really need a 256×256 thumbnail for your server upload, set `JPEG_THUMBNAIL_SIZE` to the closest supported size (say, `0×0` for no embedded thumbnail) then post-process the saved JPEG bytes with `ExifInterface` to write your custom thumbnail via `setThumbnail()` before file close.
+Menyetel ukuran thumbnail yang tidak ada dalam daftar tersedia. Pengembang secara naif meminta thumbnail persegi 256×256 karena cocok dengan kisi galeri mereka. Pada perangkat LEGACY, encoder secara diam-diam membuang thumbnail tersebut (tidak ada kesalahan, tag thumbnail EXIF kosong). Pada HAL Snapdragon 845/855 tertentu, menyetel ukuran non-daftar untuk thumbnail menyebabkan output *JPEG penuh* menjadi rusak: gambar memiliki garis hitam 16-piksel di tepi kiri atau 10% baris pindai bagian bawah murni hitam. Perbaikannya sederhana: selalu pilih Size dari array `JPEG_AVAILABLE_THUMBNAIL_SIZES`. Jika Anda benar-benar memerlukan thumbnail 256×256 untuk unggahan server Anda, setel `JPEG_THUMBNAIL_SIZE` ke ukuran terdekat yang didukung (misalnya `0×0` untuk tidak ada thumbnail tersemat) lalu proses byte JPEG yang disimpan dengan `ExifInterface` untuk menulis thumbnail kustom Anda via `setThumbnail()` sebelum penutupan file.
 
-Second pitfall: aspect ratio mismatch. The thumbnail size must match the main image aspect ratio closely, or the hardware scaler letterboxes the thumbnail with black borders. If your main image is 4:3 (4000×3000) and your thumbnail is 16:9 (256×144), the result is a 256×144 thumbnail with 24-pixel black top/bottom bars and the actual image data squashed into the middle 96 pixels. Users report "thumbnails look squashed in my gallery." The fix is to select the thumbnail size whose aspect ratio most closely matches the main JPEG resolution's aspect ratio *for each capture*, not a one-time app default.
+Jebakan kedua: rasio aspek tidak cocok. Ukuran thumbnail harus cocok dengan rasio aspek gambar utama secara dekat, atau scaler perangkat keras akan memberi letterbox pada thumbnail dengan batas hitam. Jika gambar utama Anda 4:3 (4000×3000) and thumbnail Anda 16:9 (256×144), hasilnya adalah thumbnail 256×144 dengan batang hitam atas/bawab 24-piksel dan data gambar aktual terhimpit di 96 piksel bagian tengah. Pengguna melaporkan "thumbnail terlihat gepeng di galeri saya." Perbaikannya adalah memilih ukuran thumbnail yang rasio aspeknya paling dekat dengan rasio aspek resolusi JPEG utama *untuk setiap pengambilan gambar*, bukan sekali untuk default aplikasi.
 
 ---
 
 ### JPEG_MAX_SIZE
 
-**1. What is it?**
+**1. Apa itu?**
 
-`JPEG_MAX_SIZE` is a single `Int` representing the maximum number of *bytes* that a single JPEG output buffer from this camera will ever occupy. Typical values for 2024 flagships: ~30–50 MB for 50–208 MP Bayer sensors. 12 MP mid-range sensors typically report ~12–16 MB. RAW-SENSOR output does not use this key; RAW buffer size is computed from `pixelArray × bytesPerPixel` directly. The JPEG encoder guarantees that the maximum-complexity image (grainy, high-detail, worst-case entropy) encoded at `JPEG_QUALITY = 100` produces no more bytes than `JPEG_MAX_SIZE`.
+`JPEG_MAX_SIZE` adalah `Int` tunggal yang mewakili jumlah maksimum *byte* yang akan ditempati oleh satu buffer output JPEG dari kamera ini. Nilai tipikal untuk ponsel unggulan 2024: ~30–50 MB untuk sensor Bayer 50–208 MP. Sensor kelas menengah 12 MP biasanya melaporkan ~12–16 MB. Output RAW-SENSOR tidak menggunakan kunci ini; ukuran buffer RAW dihitung dari `pixelArray × bytesPerPixel` secara langsung. Encoder JPEG menjamin bahwa gambar dengan kompleksitas maksimum (berbutir, detail tinggi, entropi kasus terburuk) yang dikodekan pada `JPEG_QUALITY = 100` tidak menghasilkan byte lebih banyak dari `JPEG_MAX_SIZE`.
 
-**2. Why does it exist?**
+**2. Mengapa itu ada?**
 
-Direct `ByteBuffer` allocation for JPEG capture: some advanced applications pre-allocate a pool of ByteBuffers and hand them to the camera via `ImageReader.attachBuffer()` rather than having the framework allocate per-capture. This eliminates GC pauses during burst capture. Without knowing the maximum buffer size, the developer would have to guess and either waste memory (allocate 128 MB per buffer) or corrupt data (allocate 8 MB and get a 14 MB high-quality JPEG that overruns the buffer).
+Alokasi `ByteBuffer` langsung untuk pengambilan gambar JPEG: beberapa aplikasi lanjutan mengalokasikan pool ByteBuffers sebelumnya dan menyerahkannya ke kamera melalui `ImageReader.attachBuffer()` daripada membiarkan framework mengalokasikan per-pengambilan. Ini menghilangkan jeda GC selama pengambilan burst. Tanpa mengetahui ukuran buffer maksimum, pengembang harus menebak dan bisa membuang-buang memori (alokasikan 128 MB per buffer) atau merusak data (alokasikan 8 MB dan mendapatkan JPEG kualitas tinggi 14 MB yang melampaui buffer).
 
-**3. Which devices support it?**
+**3. Perangkat mana yang mendukungnya?**
 
-All hardware levels. FULL-level CDD requires the value to be within 10% of the actual worst-case max. LEGACY devices sometimes under-report `JPEG_MAX_SIZE` (reporting 8 MB when a 100%-quality 12 MP JPEG reaches 10 MB); buffer pools on LEGACY should use 125% of the reported value with a 2 MB safety margin.
+Semua tingkat perangkat keras. CDD tingkat FULL mengharuskan nilainya berada dalam kisaran 10% dari nilai maksimum kasus terburuk yang sebenarnya. Perangkat LEGACY terkadang melaporkan `JPEG_MAX_SIZE` yang terlalu rendah (melaporkan 8 MB padahal JPEG 12 MP kualitas 100% mencapai 10 MB); pool buffer pada LEGACY harus menggunakan 125% dari nilai yang dilaporkan dengan margin keamanan 2 MB.
 
-**4. How do I query it?**
+**4. Bagaimana cara menanyakannya?**
 
 ```kotlin
 val jpegMaxBytes: Int? = characteristics.get(
@@ -1998,7 +1998,7 @@ val jpegMaxBytes: Int? = characteristics.get(
 
 jpegMaxBytes?.let { maxBytes ->
     val maxMB = maxBytes / (1024.0 * 1024.0)
-    Log.d(TAG, "JPEG_MAX_SIZE = $maxBytes bytes (${"%.1f".format(maxMB)} MB)")
+    Log.d(TAG, "JPEG_MAX_SIZE = $maxBytes byte (${"%.1f".format(maxMB)} MB)")
     
     val largestJpegSize = characteristics.get(
         CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP
@@ -2007,79 +2007,79 @@ jpegMaxBytes?.let { maxBytes ->
     largestJpegSize?.let { size ->
         val pixels = size.width * size.height
         val bppMax = maxBytes.toDouble() / pixels.toDouble()
-        Log.d(TAG, "  Largest JPEG size: ${size.width}×${size.height} = $pixels pixels")
-        Log.d(TAG, "  Worst-case bytes per pixel: ${"%.3f".format(bppMax)} Bpp")
-        Log.d(TAG, "  Rule of thumb: JPEG at quality 100 = ~1.5–3 Bpp, " +
-                   "so max ${pixels * 2 / 1_000_000}–${pixels * 3 / 1_000_000} MB expected")
+        Log.d(TAG, "  Ukuran JPEG terbesar: ${size.width}×${size.height} = $pixels piksel")
+        Log.d(TAG, "  Byte per piksel kasus terburuk: ${"%.3f".format(bppMax)} Bpp")
+        Log.d(TAG, "  Aturan praktis: JPEG pada kualitas 100 = ~1,5–3 Bpp, " +
+                   "sehingga diharapkan maks ${pixels * 2 / 1_000_000}–${pixels * 3 / 1_000_000} MB")
         
         when {
             bppMax < 1.0 -> {
-                Log.w(TAG, "  WARNING: JPEG_MAX_SIZE < 1 Bpp. Encoder enforces " +
-                           "low quality ceiling OR metadata is under-reported.")
+                Log.w(TAG, "  PERINGATAN: JPEG_MAX_SIZE < 1 Bpp. Encoder memaksakan " +
+                           "batas kualitas rendah ATAU metadata kurang dilaporkan.")
             }
             bppMax > 5.0 -> {
-                Log.w(TAG, "  WARNING: JPEG_MAX_SIZE > 5 Bpp. Buffer pool will " +
-                           "over-allocate (HAL is being conservative).")
+                Log.w(TAG, "  PERINGATAN: JPEG_MAX_SIZE > 5 Bpp. Pool buffer akan " +
+                           "mengalokasikan berlebihan (HAL bersikap konservatif).")
             }
         }
     }
     
-    Log.d(TAG, "  Buffer pool sizing recommendation:")
+    Log.d(TAG, "  Rekomendasi ukuran pool buffer:")
     val burstCapacity = 20
-    val poolBytesPerBuffer = (maxBytes * 1.10).toLong()  // 10% safety margin
-    Log.d(TAG, "    Per buffer: $poolBytesPerBuffer bytes")
-    Log.d(TAG, "    $burstCapacity-buffer burst pool total: " +
+    val poolBytesPerBuffer = (maxBytes * 1.10).toLong()  // margin keamanan 10%
+    Log.d(TAG, "    Per buffer: $poolBytesPerBuffer byte")
+    Log.d(TAG, "    Total pool burst $burstCapacity-buffer: " +
                "${poolBytesPerBuffer * burstCapacity / (1024.0 * 1024.0)} MB")
     
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
-        Log.w(TAG, "  Legacy Android < 9: manual ByteBuffer pool via attachBuffer() " +
-                   "is the only way to avoid GC during burst.")
+        Log.w(TAG, "  Android lama < 9: pool ByteBuffer manual via attachBuffer() " +
+                   "adalah satu-satunya cara menghindari GC selama burst.")
     } else {
-        Log.d(TAG, "  Android 9+: ImageReader allocates internally; use max size " +
-                   "to calculate in-memory footprint.")
+        Log.d(TAG, "  Android 9+: ImageReader mengalokasikan secara internal; gunakan ukuran maks " +
+                   "untuk menghitung jejak memori.")
     }
 } ?: run {
-    Log.w(TAG, "JPEG_MAX_SIZE not available. Default to 32 MB safety.")
+    Log.w(TAG, "JPEG_MAX_SIZE tidak tersedia. Default ke keamanan 32 MB.")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Bagaimana cara memeriksanya dengan Android Camera Parameters?**
 
-Navigate to **JPEG / Encoder**. The maximum size is displayed as "Max JPEG size" both in bytes and megabytes. The companion app performs a live benchmark: captures 3 JPEGs at quality = 100, captures 3 at quality = 50, captures 3 at quality = 25, and renders a bar chart with each JPEG's actual byte count, plus a red dashed line at `JPEG_MAX_SIZE`. This lets you visually verify that all captured sizes are below the HAL-reported ceiling, and gives you a rough estimate of actual average JPEG size (typically 40–60% of max for most real-world scenes).
+Navigasi ke **JPEG / Encoder**. Ukuran maksimum ditampilkan sebagai "Max JPEG size" dalam byte dan megabyte. Aplikasi pendamping melakukan benchmark langsung: menangkap 3 JPEG pada kualitas = 100, menangkap 3 pada kualitas = 50, menangkap 3 pada kualitas = 25, dan merender grafik batang dengan jumlah byte aktual setiap JPEG, ditambah garis putus-putus merah pada `JPEG_MAX_SIZE`. Ini memungkinkan Anda memverifikasi secara visual bahwa semua ukuran yang ditangkap berada di bawah batas yang dilaporkan HAL, dan memberi Anda perkiraan kasar ukuran JPEG rata-rata aktual (biasanya 40–60% dari maks untuk sebagian besar adegan dunia nyata).
 
 **6. Common pitfalls**
 
-Using `JPEG_MAX_SIZE` as the default `ImageReader` max size parameter. The `ImageReader.newInstance(width, height, format, maxImages)` constructor takes the number of images, not the buffer byte size. Developers read `JPEG_MAX_SIZE = 16_000_000` and mistakenly call `ImageReader.newInstance(w, h, JPEG, 16_000_000)` — requesting 16 million JPEG buffers. The result is either OOM on `newInstance` or a framework-side limit clamp. Correct: `ImageReader.newInstance(w, h, ImageFormat.JPEG, 5)` reserves 5 image slots. `JPEG_MAX_SIZE` is used for pre-calculating total expected memory *if* you pre-allocate `ByteBuffer` objects yourself.
+Menggunakan `JPEG_MAX_SIZE` sebagai parameter ukuran maks `ImageReader` default. Konstruktor `ImageReader.newInstance(width, height, format, maxImages)` menerima jumlah gambar, bukan ukuran byte buffer. Pengembang membaca `JPEG_MAX_SIZE = 16_000_000` dan secara keliru memanggil `ImageReader.newInstance(w, h, JPEG, 16_000_000)` — meminta 16 juta buffer JPEG. Hasilnya adalah OOM pada `newInstance` atau pembatasan batas di sisi framework. Benar: `ImageReader.newInstance(w, h, ImageFormat.JPEG, 5)` mencadangkan 5 slot gambar. `JPEG_MAX_SIZE` digunakan untuk menghitung total ekspektasi memori *jika* Anda mengalokasikan sendiri objek `ByteBuffer`.
 
-Second pitfall: HEIC format uses a different key. On Android 10+ devices with `ImageFormat.HEIC` support (Pixel 4+, Samsung One UI 2.0+), HEIC output is often 20–40% the size of JPEG for the same quality. `JPEG_MAX_SIZE` describes JPEG only; for HEIC you must allocate a `JPEG_R` or `HEIC` ImageReader and use the `SCALER_STREAM_CONFIGURATION_MAP.getOutputSizes(ImageFormat.HEIC)` sizes combined with a HEIC-specific worst-case Bpp estimate (~1.0 bytes per pixel). No metadata key currently reports HEIC maximum byte size per frame — measure with a complex test scene manually.
+Jebakan kedua: format HEIC menggunakan kunci yang berbeda. Pada perangkat Android 10+ dengan dukungan `ImageFormat.HEIC` (Pixel 4+, Samsung One UI 2.0+), HEIC output adalah seringkali berukuran 20–40% dari JPEG untuk kualitas yang sama. `JPEG_MAX_SIZE` hanya menjelaskan JPEG; untuk HEIC Anda harus mengalokasikan ImageReader `JPEG_R` atau `HEIC` dan menggunakan ukuran `SCALER_STREAM_CONFIGURATION_MAP.getOutputSizes(ImageFormat.HEIC)` dikombinasikan dengan estimasi Bpp kasus terburuk khusus HEIC (~1,0 byte per piksel). Tidak ada kunci metadata yang saat ini melaporkan ukuran byte maksimum HEIC per bingkai — ukur dengan adegan uji kompleks secara manual.
 
 ---
 
-## Info Category
+## Kategori Info
 
 ### INFO_SUPPORTED_HARDWARE_LEVEL
 
-**1. What is it?**
+**1. Apa itu?**
 
-`INFO_SUPPORTED_HARDWARE_LEVEL` is the coarse-tier bucketing enum. Five standard values:
+`INFO_SUPPORTED_HARDWARE_LEVEL` adalah enum pengelompokan tingkatan kasar. Lima nilai standar:
 
-- `INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY` (2) — Camera2 API is a *wrapper* around the old Camera1 HAL. No per-frame control, limited to Camera1-era functionality. ~5% of 2020+ active devices, most pre-2017 phones.
-- `INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED` (0) — Native Camera2 HAL implementing the base feature set plus *some* advanced features (e.g., MANUAL_SENSOR without MANUAL_POST_PROCESSING). Most mid-range phones 2017–present.
-- `INFO_SUPPORTED_HARDWARE_LEVEL_FULL` (1) — Supports all mandatory standard Camera2 features: MANUAL_SENSOR, MANUAL_POST_PROCESSING, RAW output, BURST_CAPTURE ≥ 20 fps. Flagship devices typically.
-- `INFO_SUPPORTED_HARDWARE_LEVEL_3` (3) — Adds reprocessing input streams (YUV/PRIVATE → → ISP → output), depth-focused enhancements, custom tonemap curves ≥ 64 control points. Cinema-grade / Pixel Visual Core devices.
-- `INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL` (4) — External USB / HDMI camera. Feature set is variable and negotiated dynamically; some keys change when the camera is hot-plugged.
+- `INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY` (2) — API Camera2 adalah *pembungkus* (wrapper) di sekitar HAL Camera1 yang lama. Tidak ada kontrol per-bingkai, terbatas pada fungsionalitas era Camera1. ~5% perangkat aktif 2020+, sebagian besar ponsel pra-2017.
+- `INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED` (0) — HAL Camera2 asli yang mengimplementasikan set fitur dasar plus *beberapa* fitur lanjutan (misalnya, MANUAL_SENSOR tanpa MANUAL_POST_PROCESSING). Sebagian besar ponsel kelas menengah 2017–sekarang.
+- `INFO_SUPPORTED_HARDWARE_LEVEL_FULL` (1) — Mendukung semua fitur Camera2 standar yang wajib: MANUAL_SENSOR, MANUAL_POST_PROCESSING, output RAW, BURST_CAPTURE ≥ 20 fps. Biasanya perangkat unggulan.
+- `INFO_SUPPORTED_HARDWARE_LEVEL_3` (3) — Menambahkan aliran input pemrosesan ulang (YUV/PRIVATE → → ISP → output), peningkatan yang berfokus pada kedalaman, kurva tonemap kustom ≥ 64 titik kontrol. Perangkat tingkat bioskop / Pixel Visual Core.
+- `INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL` (4) — Kamera USB / HDMI eksternal. Set fitur bervariasi dan dinegosiasikan secara dinamis; beberapa kunci berubah saat kamera dicabut-pasang.
 
-The tier is *cumulative*: LEVEL_3 ⊇ FULL ⊇ LIMITED ⊇ LEGACY in features.
+Tingkatan ini bersifat *kumulatif*: LEVEL_3 ⊇ FULL ⊇ LIMITED ⊇ LEGACY dalam hal fitur.
 
-**2. Why does it exist?**
+**2. Mengapa itu ada?**
 
-Before `INFO_SUPPORTED_HARDWARE_LEVEL` was finalized in Lollipop MR1, developers had to check 10+ individual capabilities to get a rough tier for device analytics. The hardware level provides a one-number bucket that app analytics dashboards can use ("X% of our DAUs are LIMITED"). Note the earlier caution: *feature gating must still check individual capabilities*, not just this bucket.
+Sebelum `INFO_SUPPORTED_HARDWARE_LEVEL` difinalisasi dalam Lollipop MR1, pengembang harus memeriksa 10+ kemampuan individu untuk mendapatkan perkiraan tingkatan untuk analitik perangkat. Tingkat perangkat keras memberikan satu angka pengelompokan yang dapat digunakan oleh dashboard analitik aplikasi ("X% dari DAU kita adalah LIMITED"). Perhatikan peringatan sebelumnya: *gating fitur tetap harus memeriksa kemampuan individu*, bukan hanya bucket ini.
 
-**3. Which devices support it?**
+**3. Perangkat mana yang mendukungnya?**
 
-Every camera ID. LEGACY is never returned for post-2019 devices. LIMITED is the median hardware level for 2020–2024 phones (roughly 65% of active devices). FULL accounts for ~25%, LEVEL_3 ~5%, EXTERNAL ~5%.
+Setiap ID kamera. LEGACY tidak pernah dikembalikan untuk perangkat pasca-2019. LIMITED adalah tingkat perangkat keras median untuk ponsel 2020–2024 (sekitar 65% perangkat aktif). FULL menyumbang ~25%, LEVEL_3 ~5%, EXTERNAL ~5%.
 
-**4. How do I query it?**
+**4. Bagaimana cara menanyakannya?**
 
 ```kotlin
 val hwLevel: Int? = characteristics.get(
@@ -2093,7 +2093,7 @@ hwLevel?.let { level ->
         CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL -> "FULL"
         CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_3 -> "LEVEL_3"
         CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL -> "EXTERNAL"
-        else -> "UNKNOWN($level)"
+        else -> "TIDAK DIKETAHUI($level)"
     }
     Log.d(TAG, "INFO_SUPPORTED_HARDWARE_LEVEL = $name")
     
@@ -2102,66 +2102,66 @@ hwLevel?.let { level ->
     ) ?: intArrayOf()
     fun has(c: Int) = caps.contains(c)
     
-    Log.d(TAG, "  Feature tier summary:")
+    Log.d(TAG, "  Ringkasan tingkatan fitur:")
     when (level) {
         CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY -> {
-            Log.w(TAG, "    LEGACY: Camera1 wrapper. Avoid per-frame requests.")
-            Log.w(TAG, "    Repeating requests may be batched. No manual controls.")
+            Log.w(TAG, "    LEGACY: Pembungkus Camera1. Hindari permintaan per-bingkai.")
+            Log.w(TAG, "    Permintaan berulang mungkin dibatch. Tidak ada kontrol manual.")
         }
         CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED -> {
-            Log.d(TAG, "    LIMITED: Native HAL. Check per-feature capabilities:")
+            Log.d(TAG, "    LIMITED: HAL asli. Periksa kemampuan per-fitur:")
             Log.d(TAG, "      MANUAL_SENSOR:        ${has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR)}")
             Log.d(TAG, "      MANUAL_POST_PROC:     ${has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_POST_PROCESSING)}")
             Log.d(TAG, "      RAW:                  ${has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW)}")
             Log.d(TAG, "      BURST:                ${has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_BURST_CAPTURE)}")
         }
         CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL -> {
-            Log.i(TAG, "    FULL: All standard features guaranteed.")
-            Log.i(TAG, "      Manual sensor + post-processing + RAW + burst all REQUIRED.")
+            Log.i(TAG, "    FULL: Semua fitur standar dijamin.")
+            Log.i(TAG, "      Sensor manual + pasca-pemrosesan + RAW + burst semuanya WAJIB.")
         }
         CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_3 -> {
-            Log.i(TAG, "    LEVEL_3: FULL + YUV/PRIVATE reprocessing + depth + advanced tonemap.")
-            Log.i(TAG, "      Zero-shutter-lag via reprocessing possible.")
+            Log.i(TAG, "    LEVEL_3: FULL + pemrosesan ulang YUV/PRIVATE + depth + tonemap lanjutan.")
+            Log.i(TAG, "      Zero-shutter-lag via pemrosesan ulang dimungkinkan.")
         }
         CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL -> {
-            Log.w(TAG, "    EXTERNAL: USB/HDMI camera. Feature set is DYNAMIC.")
-            Log.w(TAG, "      Re-query on hotplug. Some keys may change between connections.")
+            Log.w(TAG, "    EXTERNAL: Kamera USB/HDMI. Set fitur bersifat DINAMIS.")
+            Log.w(TAG, "      Kueri ulang saat dicabut-pasang. Beberapa kunci mungkin berubah antar koneksi.")
         }
     }
 } ?: run {
-    Log.e(TAG, "Hardware level missing — impossible on valid Camera2 device")
+    Log.e(TAG, "Tingkat perangkat keras hilang — tidak mungkin pada perangkat Camera2 yang valid")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Bagaimana cara memeriksanya dengan Android Camera Parameters?**
 
-Navigate to **Overview / Hardware Level**. The hardware level is rendered as a large tier badge at the top with a color code: LEGACY = gray, LIMITED = amber, FULL = green, LEVEL_3 = blue, EXTERNAL = purple. Below the badge is a tier-capability checklist that compares which capabilities are *required* by CDD for that tier vs. which capabilities are *actually present* on the device, highlighting any discrepancies (e.g., a LIMITED device that happens to have RAW capability is marked as "LIMITED+").
+Navigasi ke **Overview / Hardware Level**. Tingkat perangkat keras dirender sebagai lencana tingkatan besar di bagian atas dengan kode warna: LEGACY = abu-abu, LIMITED = kuning, FULL = hijau, LEVEL_3 = biru, EXTERNAL = ungu. Di bawah lencana tersebut ada daftar periksa tingkatan-kemampuan yang membandingkan kemampuan mana yang *diwajibkan* oleh CDD untuk tingkatan tersebut vs kemampuan mana yang *benar-benar ada* pada perangkat, menyoroti ketidaksesuaian apa pun (misalnya, perangkat LIMITED yang kebetulan memiliki kemampuan RAW ditandai sebagai "LIMITED+").
 
 **6. Common pitfalls**
 
-Writing code that requires FULL hardware level to function. This excludes ~70% of active mid-range LIMITED devices that have MANUAL_SENSOR and RAW capability but no BURST_CAPTURE or full tonemap control. The correct architecture is: each feature (manual ISO, RAW, manual WB) has its own individual capability check in the capability array. The hardware level is for analytics only: log it, display it, but never `if (hwLevel != FULL) return`.
+Menulis kode yang memerlukan tingkat perangkat keras FULL agar berfungsi. Ini mengecualikan ~70% perangkat LIMITED kelas menengah aktif yang memiliki kemampuan MANUAL_SENSOR dan RAW tetapi tidak memiliki BURST_CAPTURE atau kontrol tonemap penuh. Arsitektur yang benar adalah: setiap fitur (ISO manual, RAW, WB manual) memiliki pemeriksaan kemampuan individunya sendiri dalam array kemampuan. Tingkat perangkat keras adalah untuk analitik saja: catat, tampilkan, tetapi jangan pernah `if (hwLevel != FULL) return`.
 
-LEGACY devices are the second pitfall. On LEGACY the entire Camera2 API is an emulation wrapper around Camera1. Per-frame CaptureRequests are batched 3–10 at a time; setting a different AE compensation value for each frame in a burst applies them all in a batch, not per frame. Any burst or per-frame animation (smooth focus-pull) must have a LEGACY fallback path: post-process the frames instead of relying on per-frame CaptureRequest values.
+Perangkat LEGACY adalah jebakan kedua. Pada LEGACY, seluruh API Camera2 adalah pembungkus emulasi di sekitar Camera1. CaptureRequests per-bingkai dibatch 3–10 sekaligus; menyetel nilai kompensasi AE yang berbeda untuk setiap bingkai dalam sebuah burst akan menerapkan semuanya dalam satu batch, bukan per bingkai. Burst atau animasi per-bingkai apa pun (perpindahan fokus yang halus) harus memiliki jalur cadangan LEGACY: proses bingkai-bingkai tersebut daripada mengandalkan nilai CaptureRequest per-bingkai.
 
 ---
 
 ### INFO_DEVICE_STATE_ORIENTATIONS
 
-**1. What is it?**
+**1. Apa itu?**
 
-`INFO_DEVICE_STATE_ORIENTATIONS` is an `IntArray` (introduced in Android 12, API level 31) listing all the *sensor orientation values* this camera ID can report when the device is folded, unfolded, or otherwise reconfigured. Standard values are `0`, `90`, `180`, `270` — the same degrees used in `SENSOR_ORIENTATION`. For a typical non-foldable phone, the array contains exactly one element `[90]` for back cameras and `[270]` for front cameras (fixed orientation). For a foldable like the Pixel Fold or Galaxy Z Fold, the array is `[90, 270]` for the rear-display selfie mode: when the user closes the fold and uses the rear screen as a viewfinder, the camera's effective sensor orientation *flips* to match the new viewing direction.
+`INFO_DEVICE_STATE_ORIENTATIONS` adalah `IntArray` (diperkenalkan di Android 12, tingkat API 31) yang mencantumkan semua *nilai orientasi sensor* yang dapat dilaporkan oleh ID kamera ini saat perangkat dilipat, dibuka, atau dikonfigurasi ulang. Nilai standarnya adalah `0`, `90`, `180`, `270` — derajat yang sama yang digunakan dalam `SENSOR_ORIENTATION`. Untuk ponsel non-lipat biasa, array tersebut berisi tepat satu elemen `[90]` untuk kamera belakang dan `[270]` untuk kamera depan (orientasi tetap). Untuk perangkat lipat seperti Pixel Fold atau Galaxy Z Fold, array-nya adalah `[90, 270]` untuk mode selfie layar belakang: saat pengguna menutup lipatan dan menggunakan layar belakang sebagai viewfinder, orientasi sensor efektif kamera *berbalik* agar sesuai dengan arah tampilan baru.
 
-The companion `SENSOR_ORIENTATION` key still reports the current orientation for the current device fold state. This key advertises the *full set* of possible values across all device states so you can pre-allocate UI rotation code paths.
+Kunci pendamping `SENSOR_ORIENTATION` tetap melaporkan orientasi saat ini untuk status lipatan perangkat saat ini. Kunci ini mengiklankan *set lengkap* nilai yang mungkin di semua status perangkat sehingga Anda dapat mengalokasikan jalur kode rotasi UI sebelumnya.
 
-**2. Why does it exist?**
+**2. Mengapa itu ada?**
 
-Before foldables, `SENSOR_ORIENTATION` was guaranteed to be a static constant for the device lifetime. You queried it once in `onCreate()` and cached the value. On foldables the same physical camera sensor can face two different logical directions (rear = away from the big inner screen, front-facing when the user activates "rear screen selfies"), so `SENSOR_ORIENTATION` changes dynamically between 90° and 270°. If your app caches the old rotation value and never re-queries, the preview is rotated 180° when the user folds the device. The `INFO_DEVICE_STATE_ORIENTATIONS` key gives you advance warning: "this camera's orientation can change, here are the possible values."
+Sebelum perangkat lipat, `SENSOR_ORIENTATION` dijamin menjadi konstanta statis selama masa pakai perangkat. Anda menanyakannya sekali di `onCreate()` dan menyimpan nilainya. Pada perangkat lipat, sensor kamera fisik yang sama dapat menghadap ke dua arah logis yang berbeda (belakang = menjauhi layar dalam yang besar, menghadap ke depan saat pengguna mengaktifkan "selfie layar belakang"), sehingga `SENSOR_ORIENTATION` berubah secara dinamis antara 90° dan 270°. Jika aplikasi Anda menyimpan nilai rotasi lama dan tidak pernah menanyakan ulang, pratinjau akan berputar 180° saat pengguna melipat perangkat. Kunci `INFO_DEVICE_STATE_ORIENTATIONS` memberi Anda peringatan sebelumnya: "orientasi kamera ini dapat berubah, inilah nilai-nilai yang mungkin."
 
-**3. Which devices support it?**
+**3. Perangkat mana yang mendukungnya?**
 
-All foldable/flip devices running Android 12 and later. Non-foldable devices running Android 12+ still report this key, but with a single-element array (the same value as `SENSOR_ORIENTATION`). On pre-Android 12 devices the key is absent (null), indicating only one static orientation ever. No capability flag prerequisite.
+Seuma perangkat lipat/flip yang menjalankan Android 12 dan yang lebih baru. Perangkat non-lipat yang menjalankan Android 12+ tetap melaporkan kunci ini, tetapi dengan array satu elemen (nilai yang sama dengan `SENSOR_ORIENTATION`). Pada perangkat pra-Android 12, kunci tersebut absen (null), menunjukkan hanya satu orientasi statis selamanya. Tidak ada prasyarat flag kemampuan.
 
-**4. How do I query it?**
+**4. Bagaimana cara menanyakannya?**
 
 ```kotlin
 val currentOrientation: Int = characteristics.get(
@@ -2173,21 +2173,21 @@ val possibleOrientations: IntArray? = if (Build.VERSION.SDK_INT >= 31) {
         CameraCharacteristics.INFO_DEVICE_STATE_ORIENTATIONS
     )
 } else {
-    Log.d(TAG, "Android < 12. Static orientation only.")
+    Log.d(TAG, "Android < 12. Hanya orientasi statis.")
     intArrayOf(currentOrientation)
 }
 
-Log.d(TAG, "Current SENSOR_ORIENTATION = ${currentOrientation}°")
+Log.d(TAG, "SENSOR_ORIENTATION saat ini = ${currentOrientation}°")
 possibleOrientations?.let { orients ->
     Log.d(TAG, "INFO_DEVICE_STATE_ORIENTATIONS = [${orients.joinToString("°, ")}°]")
     
     val isFoldableCamera = orients.size > 1
-    Log.d(TAG, "  Dynamic orientation (foldable/reconfigurable)? $isFoldableCamera")
+    Log.d(TAG, "  Orientasi dinamis (lipat/dapat dikonfigurasi ulang)? $isFoldableCamera")
     
     if (isFoldableCamera) {
-        Log.w(TAG, "  WARNING: SENSOR_ORIENTATION is NOT STATIC.")
-        Log.w(TAG, "  Register DeviceStateManager callback to re-query on fold.")
-        Log.w(TAG, "  Never cache SENSOR_ORIENTATION as a val/const.")
+        Log.w(TAG, "  PERINGATAN: SENSOR_ORIENTATION TIDAK STATIS.")
+        Log.w(TAG, "  Daftarkan callback DeviceStateManager untuk kueri ulang saat lipat.")
+        Log.w(TAG, "  Jangan pernah simpan SENSOR_ORIENTATION sebagai val/const.")
     }
     
     orients.forEach { deg ->
@@ -2196,47 +2196,47 @@ possibleOrientations?.let { orients ->
                 (360 - ((deg + displayRotation) % 360)) % 360
             else -> (deg + displayRotation) % 360
         }
-        Log.d(TAG, "    If sensor= ${deg}° → display rotation= ${displayRot}°")
+        Log.d(TAG, "    Jika sensor= ${deg}° → rotasi tampilan= ${displayRot}°")
     }
 } ?: run {
-    Log.d(TAG, "  Static orientation. Never changes. Cache value: ${currentOrientation}°")
+    Log.d(TAG, "  Orientasi statis. Tidak pernah berubah. Simpan nilai: ${currentOrientation}°")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Bagaimana cara memeriksanya dengan Android Camera Parameters?**
 
-Open **Info / Device State**. The card "Supported Orientations" shows the array as multiple orientation compass graphics (each showing a small phone silhouette rotated to match the degree value). On a foldable device, physically folding the device while the app is open causes the `SENSOR_ORIENTATION` value on the **Overview / Cameras** card to flip, and the Info card highlights which possible orientation is currently active with a green border. A small "fold state" indicator at the top-right of the screen also updates in real time (FOLDED / UNFOLDED / HALF-FOLDED / TENT).
+Buka **Info / Device State**. Kartu "Supported Orientations" menunjukkan array sebagai beberapa grafik kompas orientasi (masing-masing menunjukkan siluet ponsel kecil yang diputar sesuai dengan nilai derajat). Pada perangkat lipat, melipat perangkat secara fisik saat aplikasi terbuka menyebabkan nilai `SENSOR_ORIENTATION` pada kartu **Overview / Cameras** berbalik, dan kartu Info menyoroti orientasi mana yang saat ini aktif dengan bingkai hijau. Indikator "fold state" kecil di kanan atas layar juga diperbarui secara real time (FOLDED / UNFOLDED / HALF-FOLDED / TENT).
 
 **6. Common pitfalls**
 
-Caching `SENSOR_ORIENTATION` as a top-level `val`. Classic code pattern:
+Menyimpan `SENSOR_ORIENTATION` sebagai `val` tingkat atas. Pola kode klasik:
 ```kotlin
 private val sensorRotation = cameraManager
     .getCameraCharacteristics(camId)[SENSOR_ORIENTATION] ?: 90
 ```
-This works on non-foldables and breaks on foldables. After unfolding a Pixel Fold the rotation flips but your `val` holds the stale 90° value. The preview is then upside down until the process is killed. The fix: use a `var` that gets updated in a `DeviceStateManager.DeviceStateCallback` (added in Android 12) or simply re-query `characteristics[SENSOR_ORIENTATION]` inside every `onSurfaceTextureChanged()` callback.
+Ini berfungsi pada non-lipat dan rusak pada perangkat lipat. Setelah membuka Pixel Fold, rotasinya berbalik tetapi `val` Anda memegang nilai 90° yang sudah usang. Pratinjau kemudian menjadi terbalik sampai proses dimatikan. Perbaikannya: gunakan `var` yang diperbarui dalam `DeviceStateManager.DeviceStateCallback` (ditambahkan di Android 12) atau cukup tanyakan kembali `characteristics[SENSOR_ORIENTATION]` di dalam setiap callback `onSurfaceTextureChanged()`.
 
-A second pitfall: saving JPEGs with a stale EXIF orientation tag. The EXIF orientation tag must match the current orientation at capture time. If you compute the EXIF tag once at session-open time and fold the device mid-session, the next JPEG has the wrong EXIF orientation and displays rotated. Re-compute the EXIF tag from `SENSOR_ORIENTATION` + `display.rotation` for every single capture, not once per session.
+Jebakan kedua: menyimpan JPEG dengan tag orientasi EXIF yang usang. Tag orientasi EXIF harus sesuai dengan orientasi saat ini pada waktu pengambilan gambar. Jika Anda menghitung tag EXIF sekali saat pembukaan sesi dan melipat perangkat di tengah sesi, JPEG berikutnya akan memiliki orientasi EXIF yang salah dan ditampilkan terputar. Hitung ulang tag EXIF dari `SENSOR_ORIENTATION` + `display.rotation` untuk setiap pengambilan gambar tunggal, bukan sekali per sesi.
 
 ---
 
 ### INFO_VERSION
 
-**1. What is it?**
+**1. Apa itu?**
 
-`INFO_VERSION` is an `IntArray` with exactly 2 elements reporting the Camera HAL implementation version as `[MAJOR, MINOR]`. Values like `[3, 2]` mean HAL 3.2. `[3, 5]` means HAL 3.5. The Camera HAL specification versions roughly correlate with Android releases: HAL 3.2 appeared with Android 9, HAL 3.4 with Android 11, HAL 3.5 with Android 12, HAL 3.6 with Android 13, and HAL 3.8+ with Android 14.
+`INFO_VERSION` adalah `IntArray` dengan tepat 2 elemen yang melaporkan versi implementasi HAL Kamera sebagai `[MAJOR, MINOR]`. Nilai seperti `[3, 2]` berarti HAL 3.2. `[3, 5]` berarti HAL 3.5. Versi spesifikasi HAL Kamera kira-kira berkorelasi dengan rilis Android: HAL 3.2 muncul dengan Android 9, HAL 3.4 dengan Android 11, HAL 3.5 dengan Android 12, HAL 3.6 dengan Android 13, dan HAL 3.8+ dengan Android 14.
 
-Each subsequent HAL 3.x revision adds additional mandatory metadata keys and tightens behavior guarantees. For example, HAL 3.2 requires correct `SCALER_CROP_REGION` with aspect-ratio preservation behavior that was previously optional. HAL 3.5 requires accurate `SENSOR_DYNAMIC_WHITE_LEVEL` for staggered-HDR sensors, and HAL 3.8 adds mandatory UHRS (Ultra-High Resolution Sensor) bayer-pattern exposure controls.
+Setiap revisi HAL 3.x berikutnya menambahkan kunci metadata wajib tambahan dan memperketat jaminan perilaku. Misalnya, HAL 3.2 memerlukan `SCALER_CROP_REGION` yang benar dengan perilaku pelestarian rasio aspek yang sebelumnya opsional. HAL 3.5 memerlukan `SENSOR_DYNAMIC_WHITE_LEVEL` yang akurat untuk sensor HDR bertahap, dan HAL 3.8 menambahkan kontrol eksposur pola bayer UHRS (Ultra-High Resolution Sensor) wajib.
 
-**2. Why does it exist?**
+**2. Mengapa itu ada?**
 
-Workaround routing for known HAL bugs. For example: all devices running HAL 3.1 shipped with a specific bug where submitting more than one JPEG surface in a session caused `onConfigFailed` regardless of `REQUEST_MAX_NUM_OUTPUT_STREAMS`. Rather than shipping a giant `Build.MODEL` blocklist of affected phones, you check `INFO_VERSION < [3, 2]` and apply the workaround globally.
+Perutean solusi (workaround) untuk bug HAL yang diketahui. Misalnya: semua perangkat yang menjalankan HAL 3.1 dikirimkan dengan bug tertentu di mana pengiriman lebih dari satu surface JPEG dalam sebuah sesi menyebabkan `onConfigFailed` terlepas dari `REQUEST_MAX_NUM_OUTPUT_STREAMS`. Alih-alih mengirimkan daftar blokir `Build.MODEL` raksasa untuk ponsel yang terpengaruh, Anda cukup memeriksa `INFO_VERSION < [3, 2]` dan menerapkan solusi secara global.
 
-**3. Which devices support it?**
+**3. Perangkat mana yang mendukungnya?**
 
-All Camera2 devices running HAL 3.0 and later (i.e., every LEGACY/LIMITED/FULL/LEVEL_3 device from Android 5.0 forward). External USB cameras sometimes report `[1, 0]` for UVC 1.0, `[1, 5]` for UVC 1.5.
+Semua perangkat Camera2 yang menjalankan HAL 3.0 dan yang lebih baru (yaitu, setiap perangkat LEGACY/LIMITED/FULL/LEVEL_3 dari Android 5.0 ke atas). Kamera USB eksternal terkadang melaporkan `[1, 0]` untuk UVC 1.0, `[1, 5]` untuk UVC 1.5.
 
-**4. How do I query it?**
+**4. Bagaimana cara menanyakannya?**
 
 ```kotlin
 val version: IntArray? = characteristics.get(
@@ -2244,81 +2244,82 @@ val version: IntArray? = characteristics.get(
 )
 
 version?.let { v ->
-    check(v.size == 2) { "Malformed INFO_VERSION array size=${v.size}" }
+    check(v.size == 2) { "Ukuran array INFO_VERSION salah size=${v.size}" }
     val (major, minor) = v[0] to v[1]
     Log.d(TAG, "INFO_VERSION = HAL $major.$minor")
     
     val androidEquivalent = when {
-        major == 3 && minor >= 8 -> "Android 14+ behavior"
-        major == 3 && minor >= 6 -> "Android 13+ behavior"
-        major == 3 && minor >= 5 -> "Android 12+ behavior"
-        major == 3 && minor >= 4 -> "Android 11+ behavior"
-        major == 3 && minor >= 2 -> "Android 9+ behavior"
-        major == 3 && minor >= 0 -> "Android 5.0–8 behavior"
-        else -> "UVC/other HAL spec"
+        major == 3 && minor >= 8 -> "Perilaku Android 14+"
+        major == 3 && minor >= 6 -> "Perilaku Android 13+"
+        major == 3 && minor >= 5 -> "Perilaku Android 12+"
+        major == 3 && minor >= 4 -> "Perilaku Android 11+"
+        major == 3 && minor >= 2 -> "Perilaku Android 9+"
+        major == 3 && minor >= 0 -> "Perilaku Android 5.0–8"
+        else -> "Spesifikasi UVC/HAL lainnya"
     }
-    Log.d(TAG, "  Corresponding Android guarantees: ~$androidEquivalent")
+    Log.d(TAG, "  Jaminan Android yang sesuai: ~$androidEquivalent")
     
     data class Workaround(val halMin: Pair<Int, Int>, val label: String, val action: () -> Unit)
     
     val workarounds = listOfNotNull(
         if (major == 3 && minor < 2)
-            Workaround(3 to 2, "HAL 3.1: multi-output JPEG bug") {
-                Log.w(TAG, "  ENABLE workaround: single JPEG surface only")
+            Workaround(3 to 2, "HAL 3.1: bug multi-output JPEG") {
+                Log.w(TAG, "  AKTIFKAN solusi: surface JPEG tunggal saja")
             }
         else null,
         if (major == 3 && minor < 4)
-            Workaround(3 to 4, "HAL 3.3: partial results not populated reliably") {
-                Log.w(TAG, "  ENABLE workaround: ignore partials, use TotalCaptureResult only")
+            Workaround(3 to 4, "HAL 3.3: hasil parsial tidak terisi secara andal") {
+                Log.w(TAG, "  AKTIFKAN solusi: abaikan parsial, gunakan TotalCaptureResult saja")
             }
         else null,
         if (major == 3 && minor < 5)
-            Workaround(3 to 5, "HAL 3.4: dynamic white-level missing on HDR sensors") {
-                Log.w(TAG, "  ENABLE workaround: use static SENSOR_WHITE_LEVEL always")
+            Workaround(3 to 5, "HAL 3.4: tingkat putih dinamis hilang pada sensor HDR") {
+                Log.w(TAG, "  AKTIFKAN solusi: gunakan SENSOR_WHITE_LEVEL statis selalu")
             }
         else null
     )
     
     if (workarounds.isNotEmpty()) {
-        Log.w(TAG, "  Applying HAL workarounds (${workarounds.size} total):")
+        Log.w(TAG, "  Menerapkan solusi HAL (${workarounds.size} total):")
         workarounds.forEach { wa ->
             Log.w(TAG, "    ✓ < HAL ${wa.halMin.first}.${wa.halMin.second}: ${wa.label}")
             wa.action()
         }
     } else {
-        Log.d(TAG, "  No HAL-version-specific workarounds needed.")
+        Log.d(TAG, "  Tidak diperlukan solusi khusus versi HAL.")
     }
 } ?: run {
-    Log.w(TAG, "INFO_VERSION not reported. Assume HAL 3.0 (oldest) — enable all workarounds.")
+    Log.w(TAG, "INFO_VERSION tidak dilaporkan. Asumsikan HAL 3.0 (tertua) — aktifkan semua solusi.")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Bagaimana cara memeriksanya dengan Android Camera Parameters?**
 
-Navigate to **Info / Version**. The HAL version appears as a large "HAL 3.5" pill at the top. Below the version is a "Android Release Compatibility" card showing which Android version's guarantees roughly match the HAL version. Further below is a table of all known HAL workarounds with their HAL minimum version, a description of the bug, and a toggle switch showing whether the workaround is currently enabled. Tapping a HAL row shows the CDD change summary for that minor revision (e.g., HAL 3.4 changelog: "Added mandatory LOGICAL_MULTI_CAMERA fused focal-length reporting").
+Navigasi ke **Info / Version**. Versi HAL muncul sebagai pil besar "HAL 3.5" di bagian atas. Di bawah versi tersebut ada kartu "Android Release Compatibility" yang menunjukkan versi Android mana yang jaminannya kira-kira cocok dengan versi HAL tersebut. Lebih jauh di bawah ada tabel semua solusi HAL yang diketahui dengan versi minimum HAL-nya, deskripsi bug, dan saklar yang menunjukkan apakah solusi tersebut saat ini diaktifkan. Mengetuk baris HAL menunjukkan ringkasan perubahan CDD untuk revisi minor tersebut (misalnya, log perubahan HAL 3.4: "Menambahkan pelaporan fused focal-length wajib untuk LOGICAL_MULTI_CAMERA").
 
 **6. Common pitfalls**
 
-Equating HAL version with Android SDK version. A Samsung A54 launched on Android 13 *can* ship with HAL 3.4 (Android 11-era guarantees) because the CDD does not force new HAL versions on all devices that launch on newer Android. Conversely, a Pixel 4a originally launched on Android 10 (HAL 3.5) and was updated through Android 14; after the update the HAL version remains 3.5 even though the SDK version is 34. Always check the HAL key, never `Build.VERSION.SDK_INT`, for HAL-specific behavior.
+Menyamakan versi HAL dengan versi SDK Android. Samsung A54 yang diluncurkan di Android 13 *dapat* dikirimkan dengan HAL 3.4 (jaminan era Android 11) karena CDD tidak memaksa versi HAL baru pada semua perangkat yang diluncurkan di Android yang lebih baru. Sebaliknya, Pixel 4a yang awalnya diluncurkan di Android 10 (HAL 3.5) dan diperbarui hingga Android 14; setelah pembaruan, versi HAL tetap 3.5 meskipun versi SDK-nya adalah 34. Selalu periksa kunci HAL, jangan pernah `Build.VERSION.SDK_INT`, untuk perilaku khusus HAL.
 
-Second pitfall: assuming the same major.minor value means identical behavior across vendors. HAL 3.4 on Snapdragon means slightly different guarantee compliance than HAL 3.4 on Exynos — the CDD has "SHOULD" items in addition to "MUST" items, and vendors pick and choose which "SHOULD" items to implement. When debugging a per-vendor issue, combine HAL version + `Build.BRAND` + hardware level + capabilities to narrow down the workaround activation.
+Jebakan kedua: mengasumsikan nilai major.minor yang sama berarti perilaku identik di berbagai vendor. HAL 3.4 pada Snapdragon berarti kepatuhan jaminan yang sedikit berbeda dari HAL 3.4 pada Exynos — CDD memiliki item "SHOULD" selain item "MUST", dan vendor memilih item "SHOULD" mana yang akan diimplementasikan. Saat men-debug masalah per-vendor, gabungkan versi HAL + `Build.BRAND` + tingkat perangkat keras + kemampuan untuk mempersempit aktivasi solusi.
 
 ---
 
-## Extending This Reference
+## Memperluas Referensi Ini
 
-This encyclopedia covers the ~30 most essential metadata keys for everyday Camera2 application development. The complete `CameraCharacteristics` class contains over 120 keys in the `Characteristics.*` family alone, plus another 200+ in CaptureRequest and CaptureResult. If you would like to add entries to this encyclopedia, follow these steps:
+Ensiklopedia ini mencakup ~30 kunci metadata paling penting untuk pengembangan aplikasi Camera2 sehari-hari. Kelas `CameraCharacteristics` lengkap berisi lebih dari 120 kunci di keluarga `Characteristics.*` saja, ditambah 200+ lainnya di CaptureRequest dan CaptureResult. Jika Anda ingin menambahkan entri ke ensiklopedia ini, ikuti langkah-langkah berikut:
 
-1. **Pick a key from a missing category.** Popular candidates for future expansion include:
-   - **Statistics category:** `STATISTICS_INFO_AVAILABLE_FACE_DETECT_MODES`, `STATISTICS_INFO_MAX_FACE_COUNT`, `STATISTICS_INFO_HISTOGRAM_BUCKET_COUNT`, `STATISTICS_INFO_MAX_LENS_SHADING_MAP_SIZE`.
-   - **Sync category:** `SYNC_MAX_LATENCY` (per-frame vs. multi-frame sync for multi-camera), `SYNC_INFO_TYPE` (APPROXIMATE vs. CALIBRATED).
-   - **Depth category:** `DEPTH_DEPTH_IS_EXCLUSIVE`, `DEPTH_AVAILABLE_DEPTH_STREAM_CONFIGURATIONS`, `DEPTH_AVAILABLE_DEPTH_MIN_FRAME_DURATIONS`.
-   - **Disting category (Android 14+):** `DISTORTION_CORRECTION_AVAILABLE_MODES` (for geometric calibration on ultrawide lenses).
+1. **Pilih kunci dari kategori yang hilang.** Kandidat populer untuk perluasan di masa depan meliputi:
+   - **Kategori statistik:** `STATISTICS_INFO_AVAILABLE_FACE_DETECT_MODES`, `STATISTICS_INFO_MAX_FACE_COUNT`, `STATISTICS_INFO_HISTOGRAM_BUCKET_COUNT`, `STATISTICS_INFO_MAX_LENS_SHADING_MAP_SIZE`.
+   - **Kategori sinkronisasi:** `SYNC_MAX_LATENCY` (sinkronisasi per-bingkai vs multi-bingkai untuk multi-kamera), `SYNC_INFO_TYPE` (APPROXIMATE vs CALIBRATED).
+   - **Kategori kedalaman (depth):** `DEPTH_DEPTH_IS_EXCLUSIVE`, `DEPTH_AVAILABLE_DEPTH_STREAM_CONFIGURATIONS`, `DEPTH_AVAILABLE_DEPTH_MIN_FRAME_DURATIONS`.
+   - **Kategori Distorsi (Android 14+):** `DISTORTION_CORRECTION_AVAILABLE_MODES` (untuk kalibrasi geometris pada lensa ultra-lebar).
 
-2. **Follow the 6-point structure exactly.** Even if sections seem redundant (e.g., "Which devices support it" for a key that requires a capability flag), keep all six sections so every entry has the same lookup cadence.
+2. **Ikuti struktur 6-poin dengan tepat.** Meskipun bagian-bagian tertentu tampak berulang (misalnya, "Perangkat mana yang mendukungnya" untuk kunci yang memerlukan flag kemampuan), tetap simpan keenam bagian tersebut agar setiap entri memiliki irama pencarian yang sama.
 
-3. **Submit a PR to the Android Camera Parameters repository.** The companion app at [github.com/zoozooll/AndroidCameraParameters](https://github.com/zoozooll/AndroidCameraParameters) implements an inspector for every key added to this encyclopedia. Each new metadata entry must include a matching app-inspection tab (or update to an existing tab) so that the "How can I inspect it" section remains accurate for all users.
+3. **Kirimkan PR ke repositori Android Camera Parameters.** Aplikasi pendamping di [github.com/zoozooll/AndroidCameraParameters](https://github.com/zoozooll/AndroidCameraParameters) mengimplementasikan inspektur untuk setiap kunci yang ditambahkan ke ensiklopedia ini. Setiap entri metadata baru harus menyertakan tab inspeksi aplikasi yang cocok (atau memperbarui tab yang ada) sehingga bagian "Bagaimana cara memeriksanya" tetap akurat bagi semua pengguna.
 
-4. **Include device-tested pitfall data.** The "Common pitfalls" section is the highest value part of each entry. Capture screenshots from at least two different OEMs (e.g. Pixel + Samsung, Samsung + Xiaomi) demonstrating the pitfall, then describe the behavior difference. Pitfalls based purely on CDD reading (without actual device failure reports) are of limited use.
+4. **Sertakan data jebakan yang telah diuji di perangkat.** Bagian "Jebakan umum" adalah bagian paling bernilai dari setiap entri. Tangkap cuplikan layar dari setidaknya dua OEM yang berbeda (misalnya Pixel + Samsung, Samsung + Xiaomi) yang mendemonstrasikan jebakan tersebut, lalu jelaskan perbedaan perilakunya. Jebakan berdasarkan pembacaan CDD murni (tanpa laporan kegagalan perangkat nyata) memiliki kegunaan yang terbatas.
 
-5. **Keep Kotlin snippets null-safe.** Every `characteristics.get()` call must be followed by either a `?.let { ... } ?: run { ... }` block or an explicit fallback. Snippets must compile against `compileSdk = 34` and target a minSdk of 21. Snippets using newer keys (Android 12+) require a surrounding `Build.VERSION.SDK_INT` guard block.
+5. **Jaga agar cuplikan Kotlin tetap aman null.** Setiap panggilan `characteristics.get()` harus diikuti oleh blok `?.let { ... } ?: run { ... }` atau cadangan eksplisit. Cuplikan harus dikompilasi terhadap `compileSdk = 34` dan menargetkan minSdk 21. Cuplikan yang menggunakan kunci baru (Android 12+) memerlukan blok penjaga `Build.VERSION.SDK_INT` di sekitarnya.
+

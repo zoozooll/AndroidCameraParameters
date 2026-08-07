@@ -1,161 +1,161 @@
 ---
 sidebar_position: 17
-title: "Chapter 17: The 3A Pipeline"
-description: Orchestrate Auto Exposure (AE), Auto Focus (AF), and Auto White Balance (AWB) into a reliable still-photography capture sequence. Learn the precapture trigger, flash modes, AE/AF state machines, and build production-quality Kotlin code that coordinates all three A's before every shot.
-keywords: [android camera2 3a pipeline, precapture trigger, CONTROL_AE_PRECAPTURE_TRIGGER, AE_STATE_PRECAPTURE, CONTROL_AF_TRIGGER_START, flash modes camera2, auto focus auto exposure auto white balance]
+title: "第 17 章：3A 管線"
+description: 將自動曝光 (AE)、自動對焦 (AF) 和自動白平衡 (AWB) 編排成可靠的靜態攝影擷取序列。學習預擷取觸發、閃光燈模式、AE/AF 狀態機，並建構在每次拍攝前協調所有三個 A 的生產級 Kotlin 程式碼。
+keywords: [android camera2 3a 管線, 預擷取觸發, CONTROL_AE_PRECAPTURE_TRIGGER, AE_STATE_PRECAPTURE, CONTROL_AF_TRIGGER_START, 閃光燈模式 camera2, 自動對焦自動曝光自動白平衡]
 ---
 
-# Chapter 17: The 3A Pipeline
+# 第 17 章：3A 管線
 
-We've studied **AE** (Auto Exposure, Chapter 13–14), **AF** (Auto Focus, Chapter 15), and **AWB** (Auto White Balance, Chapter 16) as independent systems. Real photography apps must coordinate all three before each shutter press — and the *order and timing* matter deeply.
+我們已經將 **AE**（自動曝光，第 13-14 章）、**AF**（自動對焦，第 15 章）和 **AWB**（自動白平衡，第 16 章）作為獨立的系統進行了研究。真實的攝影應用必須在每次按下快門之前協調這三者——而且*順序和時機*至關重要。
 
-A naive implementation that fires `capture()` immediately when the user taps the shutter button produces inconsistent results: sometimes focus, sometimes not; sometimes flash fires, sometimes not; sometimes mid-sweep AWB gives a green-tinted photo. A reliable 3A pipeline eliminates all of that.
+如果只是在用戶點擊快門按鈕時簡單地觸發 `capture()`，產生的結果會很不穩定：有時對焦準，有時不准；有時閃光燈亮，有時不亮；有時在 AWB 掃描途中拍攝會導致照片發綠。一個可靠的 3A 管線可以消除所有這些問題。
 
-The 3A pipeline implementation in this chapter is identical to the flow used internally in the [Android Camera Parameters app](https://github.com/zoozooll/AndroidCameraParameters) and the sequence described in the Android Camera architecture research documents and CSDN articles on professional Camera2 development.
+本章中的 3A 管線實現與 **Android Camera Parameters** 應用內部使用的流程以及 Android 相機架構研究文件中描述的專業 Camera2 開發序列完全一致。
 
 ---
 
-## The Full 3A Orchestration Sequence (Overview)
+## 3A 全程編排序列（概覽）
 
-Before diving into each subsystem, let's visualize the complete state flow. This is a real production sequence — not a simplification.
+在深入研究每個子系統之前，讓我們先直觀地了解完整的狀態流。這是一個真實的生產環境序列，而非簡化版。
 
 ```mermaid
 sequenceDiagram
-    actor User
+    actor User as 用戶
     participant App as CaptureController
     participant HAL as Camera2 HAL
-    participant AE as AE Engine
-    participant AF as AF Engine
-    participant AWB as AWB Engine
+    participant AE as AE 引擎
+    participant AF as AF 引擎
+    participant AWB as AWB 引擎
 
-    User->>App: Taps "Capture" button
-    App->>HAL: Set AF_MODE = AUTO (or MACRO)
+    User->>App: 點擊「拍攝」按鈕
+    App->>HAL: 設定 AF_MODE = AUTO (或 MACRO)
     App->>HAL: CONTROL_AF_TRIGGER = START
-    Note over HAL,AF: Focus scan starts
+    Note over HAL,AF: 對焦掃描開始
 
-    loop Every preview frame
+    loop 每一幀預覽
         HAL-->>App: CaptureResult
-        App->>App: Check AF_STATE
+        App->>App: 檢查 AF_STATE
     end
 
-    AF-->>HAL: AF lock achieved
+    AF-->>HAL: 達到對焦鎖定
     HAL-->>App: AF_STATE = FOCUSED_LOCKED ✓
-    Note over App,AE: Focus stable → proceed to AE precapture
+    Note over App,AE: 對焦穩定 → 進入 AE 預擷取
 
     App->>HAL: CONTROL_AE_PRECAPTURE_TRIGGER = START
-    Note over HAL,AE: Precapture metering sweep<br/>(if flash mode requires, fires<br/>a preflash for metering)
+    Note over HAL,AE: 預擷取測光掃描<br/>(如果閃光燈模式需要，<br/>會發射預閃進行測光)
 
-    loop Every preview frame
+    loop 每一幀預覽
         HAL-->>App: CaptureResult
-        App->>App: Check AE_STATE &amp; FLASH_STATE
+        App->>App: 檢查 AE_STATE 和 FLASH_STATE
     end
 
-    AE-->>HAL: AE converged; final exposure decided
-    HAL-->>App: AE_STATE = CONVERGED (+ FLASH_STATE = READY if needed) ✓
-    AWB-->>HAL: AWB_STATE = CONVERGED (usually already done)
-    Note over App: All 3A converged! SAFE TO CAPTURE
+    AE-->>HAL: AE 已收斂；最終曝光已確定
+    HAL-->>App: AE_STATE = CONVERGED (+ 必要時 FLASH_STATE = READY) ✓
+    AWB-->>HAL: AWB_STATE = CONVERGED (通常已完成)
+    Note over App: 所有 3A 已收斂！可以安全拍攝
 
-    App->>HAL: Still Capture request (TEMPLATE_STILL_CAPTURE)
-    HAL->>HAL: Fire main flash if needed
-    HAL->>HAL: Expose sensor, read out frame
-    HAL-->>App: JPEG / RAW frame delivered via ImageReader
+    App->>HAL: 靜態拍攝請求 (TEMPLATE_STILL_CAPTURE)
+    HAL->>HAL: 必要時發射主閃光燈
+    HAL->>HAL: 感光元件曝光，讀取畫面
+    HAL-->>App: 透過 ImageReader 交付 JPEG / RAW 幀
 
     App->>HAL: CONTROL_AF_TRIGGER = CANCEL
     App->>HAL: CONTROL_AE_PRECAPTURE_TRIGGER = IDLE
-    App->>HAL: Restore AF_MODE = CONTINUOUS_PICTURE
-    Note over App,HAL: Cleanup: preview resumes normal auto
+    App->>HAL: 恢復 AF_MODE = CONTINUOUS_PICTURE
+    Note over App,HAL: 清理：預覽恢復正常自動模式
 ```
 
-**Each step is blocking.** You do not move to step N+1 until the HAL confirms the state required at step N. Never skip steps — that's how you ship an app with intermittent soft focus, bad flash exposures, or blue-tinted photos.
+**每一步都是阻塞的。** 在 HAL 確認第 N 步所需的狀態之前，你不會移動到第 N+1 步。切勿跳過步驟——否則你發佈的應用會出現間歇性的對焦不實、錯誤的閃光曝光或帶藍/綠調的照片。
 
 ---
 
-## AE (Auto Exposure) Deep-Dive
+## AE（自動曝光）深度挖掘
 
-AE is the most complex of the three A's because it encompasses not just shutter+ISO but **flash metering** and the **precapture trigger**.
+AE 是三個 A 中最複雜的，因為它不僅包含快門+ISO，還包含**閃光燈測光**和**預擷取觸發**。
 
-### AE Modes: CONTROL_AE_MODE
+### AE 模式：CONTROL_AE_MODE
 
-| Mode | Behavior | Flash Support |
+| 模式 | 行為 | 閃光燈支援 |
 |------|----------|--------------|
-| `OFF` | Fully manual (covered in Ch. 14) | None |
-| `ON` | Auto exposure, **flash disabled** (permanent off) | No |
-| `ON_AUTO_FLASH` | Auto exposure, **auto-flash decision** — HAL fires flash only in low light | Auto (most common default) |
-| `ON_ALWAYS_FLASH` | Auto exposure, **flash always fires** (fill flash for backlit portraits) | Always |
-| `ON_AUTO_FLASH_REDEYE` | Auto exposure + flash + red-eye reduction (fires a pre-flash sequence to clamp pupils) | Auto + redeye |
-| `ON_EXTERNAL_FLASH` | External camera accessory flash | External only (rare) |
+| `OFF` | 完全手動（第 14 章涵蓋） | 無 |
+| `ON` | 自動曝光，**禁用閃光燈**（永久關閉） | 無 |
+| `ON_AUTO_FLASH` | 自動曝光，**自動閃光決策** — HAL 僅在弱光下閃光 | 自動（最常見的預設值） |
+| `ON_ALWAYS_FLASH` | 自動曝光，**強制閃光**（用於逆光人像的補光） | 始終 |
+| `ON_AUTO_FLASH_REDEYE` | 自動曝光 + 閃光 + 紅眼消除（發射預閃序列以收縮瞳孔） | 自動 + 紅眼消除 |
+| `ON_EXTERNAL_FLASH` | 外部相機配件閃光燈 | 僅限外部（罕見） |
 
-**The default for a normal camera app** is `ON_AUTO_FLASH`. Users expect the phone to "know" when to fire the flash.
+**普通相機應用的預設值**是 `ON_AUTO_FLASH`。用戶期望手機能「知道」何時該閃光。
 
-### AE States & Precapture Trigger
+### AE 狀態與預擷取觸發
 
-Like AF, AE reports its state via `CaptureResult.CONTROL_AE_STATE`:
+與 AF 一樣，AE 透過 `CaptureResult.CONTROL_AE_STATE` 報告其狀態：
 
-| State | Meaning |
+| 狀態 | 含義 |
 |-------|---------|
-| `INACTIVE` (0) | AE disabled or hasn't started |
-| `SEARCHING` (1) | Actively searching for correct exposure |
-| `CONVERGED` (2) | Exposure is stable. In flash modes, this means *ambient* exposure converged, but a preflash sweep hasn't happened yet. |
-| `LOCKED` (3) | Exposure explicitly locked via `CONTROL_AE_LOCK = true` |
-| `FLASH_REQUIRED` (4) | Converged on ambient, and HAL has decided **flash is needed** for correct shot |
-| `PRECAPTURE` (5) | **Key state.** The precapture sweep is running — HAL is metering (firing preflash pulses, if flash is needed) to calculate final capture exposure + flash power. |
+| `INACTIVE` (0) | AE 已禁用或尚未啟動 |
+| `SEARCHING` (1) | 正在積極搜索正確的曝光 |
+| `CONVERGED` (2) | 曝光穩定。在閃光燈模式下，這意味著*環境*曝光已收斂，但預閃掃描尚未進行。 |
+| `LOCKED` (3) | 透過 `CONTROL_AE_LOCK = true` 顯式鎖定曝光 |
+| `FLASH_REQUIRED` (4) | 環境曝光已收斂，且 HAL 已判定**需要閃光**才能拍攝正確照片 |
+| `PRECAPTURE` (5) | **關鍵狀態。** 預擷取掃描正在執行 — HAL 正在測光（如果需要閃光，則發射預閃脈衝）以計算最終拍攝的曝光 + 閃光功率。 |
 
-### Why the Precapture Trigger Matters
+### 為什麼預擷取觸發如此重要
 
-The AE engine running on preview frames is *approximate*. The preview pipeline uses smaller buffers, lower bit-depth processing, and doesn't account for the massive light contribution of a main flash firing at capture time.
+在預覽幀上執行的 AE 引擎是*近似的*。預覽管線使用較小的緩衝區、較低位元的處理，且未考慮拍攝時主閃光燈發射帶來的巨量光線貢獻。
 
-`CONTROL_AE_PRECAPTURE_TRIGGER = START` tells the HAL:
+`CONTROL_AE_PRECAPTURE_TRIGGER = START` 告訴 HAL：
 
-> "I'm about to take a real still photo. Stop approximating. Run the full-precision metering pipeline. If I'm in an auto-flash mode, fire one or more low-power preflashes, measure the reflection, and calculate exact final shutter/ISO/flash-power for the capture."
+> 「我正要拍一張真正的靜態照片。停止近似計算。執行全精度的測光管線。如果我處於自動閃光模式，請發射一個或多個低功率預閃，測量反射，並為拍攝計算精確的最終快門/ISO/閃光功率。」
 
-**Skipping precapture = flash photos are randomly overexposed or underexposed.** The HAL simply didn't have a chance to meter for the flash in real time.
+**跳過預擷取 = 閃光照片會隨機過曝或欠曝。** HAL 根本沒有機會即時針對閃光燈進行測光。
 
-### AE Regions (Spot Metering)
+### AE 區域（點測光）
 
-Just like `CONTROL_AF_REGIONS` for focus, `CONTROL_AE_REGIONS` specifies *where in the scene* to meter. A portrait tap-to-focus should simultaneously apply the same region to AE — the face gets both focus priority AND exposure priority, not metered based on the bright sky background.
+就像針對對焦的 `CONTROL_AF_REGIONS` 一樣，`CONTROL_AE_REGIONS` 指定了*場景中的哪個位置*進行測光。人像點擊對焦應當同時將該區域應用到 AE —— 讓面部獲得對焦優先權的同時也獲得曝光優先權，而不是針對明亮的天空背景進行測光。
 
 ```kotlin
-// Use the SAME MeteringRectangle array for both AF and AE regions
+// 為 AF 和 AE 區域使用相同的 MeteringRectangle 陣列
 val focusWeightedRegions = arrayOf(userTapRegion)
 builder.set(CaptureRequest.CONTROL_AF_REGIONS, focusWeightedRegions)
 builder.set(CaptureRequest.CONTROL_AE_REGIONS, focusWeightedRegions)
 ```
 
-**Weighting:** Each `MeteringRectangle` has a `weight` (0–1000). Regions with higher weight influence metering more. A "spot metering" mode uses one high-weight rectangle (1000). "Matrix / Evaluative" metering uses many low-weight rectangles spread across the frame.
+**權重：** 每個 `MeteringRectangle` 都有一个 `weight` (0–1000)。權重越高的區域對測光的影響越大。「點測光」模式使用一個高權重矩形 (1000)。「矩陣 / 評價」測光使用分佈在畫面中的許多低權重矩形。
 
 ---
 
-## AWB: The Silent Partner of the Trio
+## AWB：三劍客中的沈默夥伴
 
-AWB usually converges early and stays converged in most scenes — which is why it's often treated as an afterthought. But its contribution to color accuracy is critical, and it *can* still be searching when you're ready to capture.
+AWB 通常很早就收斂並保持收斂——這就是為什麼它經常被忽略的原因。但它對色彩準確性的貢獻至關重要，當你準備拍攝時，它*仍可能*在搜尋中。
 
-### AWB States Recap
+### AWB 狀態回顧
 
-| AWB State | Capture Decision |
+| AWB 狀態 | 拍攝決策 |
 |-----------|------------------|
-| `INACTIVE` (AWB_MODE = OFF) | OK to proceed (manual gains) |
-| `SEARCHING` | **Wait.** Colors may still shift. Usually < 500ms after major scene change. |
-| `CONVERGED` | ✅ Perfect — proceed |
-| `LOCKED` | ✅ Also perfect — explicitly locked via `CONTROL_AWB_LOCK = true` |
+| `INACTIVE` (AWB_MODE = OFF) | 可以繼續（手動增益） |
+| `SEARCHING` | **等待。** 色彩可能仍在變動。通常在場景重大變化後 < 500ms 內完成。 |
+| `CONVERGED` | ✅ 完美 — 繼續 |
+| `LOCKED` | ✅ 同樣完美 — 透過 `CONTROL_AWB_LOCK = true` 顯式鎖定 |
 
-### Coupling AWB Lock with AE/AF Locks
+### 將 AWB 鎖定與 AE/AF 鎖定耦合
 
-For critical studio/product photography, lock all three *before* capture:
+對於嚴謹的影棚/產品攝影，請在拍攝*前*鎖定所有三項：
 
 ```kotlin
-// In the still-capture request (not earlier — we want final converged values locked)
+// 在靜態拍攝請求中（不要提前——我們要鎖定最終收斂後的值）
 builder.set(CaptureRequest.CONTROL_AWB_LOCK, true)
 builder.set(CaptureRequest.CONTROL_AE_LOCK, true)
-// AF stays locked because we triggered it earlier and haven't cancelled
+// AF 保持鎖定，因為我們早些時候觸發了它且尚未取消
 ```
 
-This guarantees the main capture reuses *exactly* the same color/wb profile that the final precapture metering frame used.
+這保證了主擷取所用的色彩/白平衡設定檔與最後一次預擷取測光幀所用的*完全一致*。
 
 ---
 
-## Complete Production 3A Capture Controller (Kotlin)
+## 完整的生產級 3A 擷取控制器 (Kotlin)
 
-Now let's assemble it all into a reusable class. This implementation matches the orchestration flow in the Android Camera architecture research documents section on 3A Control Pipeline and the patterns recommended by the Android Camera CSDN series.
+現在讓我們將所有內容組裝成一個可複用的類別。此實現符合 Android 相機架構研究文件中關於 3A 控制管線的部分以及相關專業 Camera2 開發部落格推薦的模式。
 
 ```kotlin
 class ThreeACaptureController(
@@ -165,7 +165,7 @@ class ThreeACaptureController(
     private val jpegReaderSurface: Surface,
     private val mainHandler: Handler
 ) {
-    // ----------- Public API -----------
+    // ----------- 公共 API -----------
     interface CaptureListener {
         fun onCaptureStarted() {}
         fun onCaptureSuccess(jpegBytes: ByteArray)
@@ -173,8 +173,8 @@ class ThreeACaptureController(
     }
 
     /**
-     * Orchestrate the full 3A capture sequence:
-     *   AF Trigger → AF Locked → AE Precapture → AE Converged → Still Capture → Cleanup
+     * 編排完整的 3A 擷取序列：
+     *   AF 觸發 → AF 已鎖定 → AE 預擷取 → AE 已收斂 → 靜態拍攝 → 清理
      */
     fun captureStillPhoto(
         aeMode: Int = CameraMetadata.CONTROL_AE_MODE_ON_AUTO_FLASH,
@@ -185,15 +185,15 @@ class ThreeACaptureController(
         beginPhase1_AfTrigger(aeMode)
     }
 
-    // ----------- Internal state -----------
+    // ----------- 內部狀態 -----------
     private var listener: CaptureListener? = null
     private var timeoutRunnable: Runnable? = null
     private var phase: Int = 0
     private lateinit var currentAeMode: Int
 
-    private val SESSION_TIMEOUT_MS = 3500L  // Budget phones need up to ~3s
+    private val SESSION_TIMEOUT_MS = 3500L  // 入門手機可能需要長達約 3s
 
-    // ---- PHASE 1: Trigger AF, wait for FOCUSED_LOCKED ----
+    // ---- 第 1 階段：觸發 AF，等待 FOCUSED_LOCKED ----
     private fun beginPhase1_AfTrigger(aeMode: Int) {
         currentAeMode = aeMode
         phase = 1
@@ -209,16 +209,16 @@ class ThreeACaptureController(
             set(CaptureRequest.CONTROL_AWB_MODE,
                 CameraMetadata.CONTROL_AWB_MODE_AUTO)
 
-            // Kick off one-shot AF scan
+            // 發起單次 AF 掃描
             set(CaptureRequest.CONTROL_AF_TRIGGER,
                 CameraMetadata.CONTROL_AF_TRIGGER_START)
         }
 
-        startTimeout("AF scan")
+        startTimeout("AF 掃描")
         captureSession.setRepeatingRequest(request.build(), captureCallback, mainHandler)
     }
 
-    // ---- PHASE 2: AF locked. Start AE precapture trigger ----
+    // ---- 第 2 階段：AF 已鎖定。開始 AE 預擷取觸發 ----
     private fun beginPhase2_AePrecapture() {
         phase = 2
         val request = captureSession.device.createCaptureRequest(
@@ -226,14 +226,14 @@ class ThreeACaptureController(
         ).apply {
             addTarget(previewSurface)
 
-            // Keep AF locked — do NOT cancel AF trigger yet!
+            // 保持 AF 鎖定 — 切勿取消 AF 觸發！
             set(CaptureRequest.CONTROL_AF_MODE,
                 CameraMetadata.CONTROL_AF_MODE_AUTO)
-            // AF_TRIGGER remains in START state from Phase 1
+            // AF_TRIGGER 保持在來自第 1 階段的 START 狀態
 
             set(CaptureRequest.CONTROL_AE_MODE, currentAeMode)
 
-            // ---- THE CRITICAL LINE: Run Precapture ----
+            // ---- 關鍵行：執行預擷取 ----
             set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER,
                 CameraMetadata.CONTROL_AE_PRECAPTURE_TRIGGER_START)
 
@@ -241,11 +241,11 @@ class ThreeACaptureController(
                 CameraMetadata.CONTROL_AWB_MODE_AUTO)
         }
 
-        restartTimeout("AE precapture")
+        restartTimeout("AE 預擷取")
         captureSession.setRepeatingRequest(request.build(), captureCallback, mainHandler)
     }
 
-    // ---- PHASE 3: AE converged + AWB converged. Fire actual still capture. ----
+    // ---- 第 3 階段：AE 已收斂 + AWB 已收斂。發起真正的靜態拍攝。 ----
     private fun beginPhase3_StillCapture() {
         phase = 3
         cancelTimeout()
@@ -256,21 +256,21 @@ class ThreeACaptureController(
             addTarget(previewSurface)
             addTarget(jpegReaderSurface)
 
-            // Keep AF locked until AFTER capture completes
+            // 在擷取完成前保持 AF 鎖定
             set(CaptureRequest.CONTROL_AF_MODE,
                 CameraMetadata.CONTROL_AF_MODE_AUTO)
 
             set(CaptureRequest.CONTROL_AE_MODE, currentAeMode)
 
-            // Lock both AE and AWB for the still capture to prevent last-frame drift
+            // 為靜態拍攝鎖定 AE 和 AWB，以防止最後時刻的畫面漂移
             set(CaptureRequest.CONTROL_AE_LOCK, true)
             set(CaptureRequest.CONTROL_AWB_LOCK, true)
 
             set(CaptureRequest.CONTROL_AWB_MODE,
                 CameraMetadata.CONTROL_AWB_MODE_AUTO)
 
-            set(CaptureRequest.JPEG_QUALITY, 95)
-            // JPEG orientation: use Display rotation for correct final orientation
+            set(CaptureRequest.JPEG_QUALITY, 95.toByte())
+            // JPEG 朝向：使用螢幕旋轉以獲得正確的最終朝向
             val jpegOrient = computeJpegOrientation()
             set(CaptureRequest.JPEG_ORIENTATION, jpegOrient)
         }
@@ -282,14 +282,14 @@ class ThreeACaptureController(
                 result: TotalCaptureResult
             ) {
                 super.onCaptureCompleted(session, request, result)
-                // ImageReader OnImageAvailableListener will handle saving bytes to listener
-                // Now clean up: reset back to normal preview mode
+                // ImageReader 的 OnImageAvailableListener 將處理儲存位元組並回呼給監聽器
+                // 現在進行清理：重置回正常的預覽模式
                 resetToContinuousPreview()
             }
         }, mainHandler)
     }
 
-    // ---- Cleanup: Resume normal continuous preview ----
+    // ---- 清理：恢復正常的連續預覽 ----
     private fun resetToContinuousPreview() {
         phase = 0
         val request = captureSession.device.createCaptureRequest(
@@ -302,7 +302,7 @@ class ThreeACaptureController(
             set(CaptureRequest.CONTROL_AWB_MODE,
                 CameraMetadata.CONTROL_AWB_MODE_AUTO)
 
-            // Release all locks & cancel all triggers
+            // 釋放所有鎖定並取消所有觸發器
             set(CaptureRequest.CONTROL_AF_TRIGGER,
                 CameraMetadata.CONTROL_AF_TRIGGER_CANCEL)
             set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER,
@@ -313,7 +313,7 @@ class ThreeACaptureController(
         captureSession.setRepeatingRequest(request.build(), null, mainHandler)
     }
 
-    // ----------- Master Callback: Drives all 3 phases via state inspection -----------
+    // ----------- 主回呼：透過狀態檢查驅動所有 3 個階段 -----------
     private val captureCallback = object : CameraCaptureSession.CaptureCallback() {
         override fun onCaptureCompleted(
             session: CameraCaptureSession,
@@ -326,22 +326,22 @@ class ThreeACaptureController(
 
             when (phase) {
                 1 -> {
-                    // ---- PHASE 1: Wait for AF lock ----
+                    // ---- 第 1 階段：等待 AF 鎖定 ----
                     when (afState) {
                         CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED -> {
-                            Log.d("3A", "✓ AF FOCUSED_LOCKED — moving to AE precapture")
+                            Log.d("3A", "✓ AF FOCUSED_LOCKED — 進入 AE 預擷取")
                             beginPhase2_AePrecapture()
                         }
                         CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED -> {
-                            Log.w("3A", "⚠ AF NOT_FOCUSED_LOCKED — proceeding anyway (may be soft)")
+                            Log.w("3A", "⚠ AF NOT_FOCUSED_LOCKED — 照常繼續 (可能會失焦)")
                             beginPhase2_AePrecapture()
                         }
-                        // ACTIVE_SCAN / PASSIVE_SCAN → keep waiting
+                        // ACTIVE_SCAN / PASSIVE_SCAN → 繼續等待
                     }
                 }
                 2 -> {
-                    // ---- PHASE 2: Wait for AE to converge after precapture ----
-                    // Accept states that mean "AE is done with precapture and ready for capture"
+                    // ---- 第 2 階段：等待預擷取後的 AE 收斂 ----
+                    // 接受代表 「AE 已完成預擷取並準備好拍攝」 的狀態
                     val aeReady = (aeState == CaptureResult.CONTROL_AE_STATE_CONVERGED
                                 || aeState == CaptureResult.CONTROL_AE_STATE_LOCKED
                                 || aeState == CaptureResult.CONTROL_AE_STATE_FLASH_REQUIRED)
@@ -350,7 +350,7 @@ class ThreeACaptureController(
                                  || awbState == CaptureResult.CONTROL_AWB_STATE_INACTIVE)
 
                     if (aeReady && awbReady) {
-                        Log.d("3A", "✓ AE=$aeState, AWB=$awbState — firing capture")
+                        Log.d("3A", "✓ AE=$aeState, AWB=$awbState — 發起拍攝")
                         beginPhase3_StillCapture()
                     }
                 }
@@ -358,14 +358,14 @@ class ThreeACaptureController(
         }
     }
 
-    // ----------- Timeout protection: Never hang if HAL never converges -----------
+    // ----------- 逾時保護：如果 HAL 永遠不收斂，絕不掛起 -----------
     private fun startTimeout(phaseName: String) {
         cancelTimeout()
         timeoutRunnable = Runnable {
-            Log.w("3A", "⏱ Timeout waiting for $phaseName — proceeding with best effort")
+            Log.w("3A", "⏱ 等待 $phaseName 逾時 — 盡力而為繼續進行")
             when (phase) {
-                1 -> beginPhase2_AePrecapture()  // Proceed with best possible focus
-                2 -> beginPhase3_StillCapture()  // Proceed with best possible exposure
+                1 -> beginPhase2_AePrecapture()  // 以可能的最佳對焦繼續
+                2 -> beginPhase3_StillCapture()  // 以可能的最佳曝光繼續
             }
         }
         mainHandler.postDelayed(timeoutRunnable!!, SESSION_TIMEOUT_MS)
@@ -376,22 +376,22 @@ class ThreeACaptureController(
         timeoutRunnable = null
     }
 
-    // ----------- Utility: Correct JPEG orientation based on display rotation -----------
+    // ----------- 實用工具：基於螢幕旋轉糾正 JPEG 朝向 -----------
     private fun computeJpegOrientation(): Int {
         val sensorOrient = characteristics.get(
             CameraCharacteristics.SENSOR_ORIENTATION
         ) ?: 0
-        // Combine with Display.rotation (0, 90, 180, 270) from your Activity
-        // Typical impl: return (sensorOrient + displayRotationDegrees) % 360
-        return sensorOrient  // Simplified; wire to your display's rotation
+        // 與 Activity 中的 Display.rotation (0, 90, 180, 270) 結合
+        // 典型實現：return (sensorOrient + displayRotationDegrees) % 360
+        return sensorOrient  // 簡化的；需連接到你的螢幕旋轉
     }
 }
 ```
 
-### How to Use the Controller
+### 如何使用該控制器
 
 ```kotlin
-// Inside your CameraFragment's capture button click listener
+// 在你的相機 Fragment 的拍攝按鈕點擊監聽器內
 val controller = ThreeACaptureController(
     characteristics = yourCameraCharacteristics,
     captureSession = yourActiveSession,
@@ -408,29 +408,29 @@ controller.captureStillPhoto(
             val file = File(requireContext().filesDir, "photo_${System.currentTimeMillis()}.jpg")
             file.writeBytes(jpegBytes)
             withContext(Dispatchers.Main) {
-                Toast.makeText(requireContext(), "Saved: ${file.name}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "已儲存: ${file.name}", Toast.LENGTH_SHORT).show()
             }
         }
     }
     override fun onCaptureError(reason: String) {
-        Toast.makeText(requireContext(), "Capture failed: $reason", Toast.LENGTH_LONG).show()
+        Toast.makeText(requireContext(), "拍攝失敗: $reason", Toast.LENGTH_LONG).show()
     }
 }
 ```
 
-### Pairing with ImageReader
+### 與 ImageReader 配合使用
 
-Don't forget the `OnImageAvailableListener` on your JPEG `ImageReader` to actually deliver `jpegBytes` to the listener. The controller above assumes you've already wired this:
+不要忘記在你的 JPEG `ImageReader` 上設定 `OnImageAvailableListener`，以便真正地將 `jpegBytes` 交付給監聽器。上述控制器假設你已經連接好了這一步：
 
 ```kotlin
-// Set this up when creating the ImageReader (see Capture Chapter)
+// 在建立 ImageReader 時設定好此項 (參見拍攝章節)
 jpegImageReader.setOnImageAvailableListener({ reader ->
     val image = reader.acquireLatestImage() ?: return@setOnImageAvailableListener
     image.use {
         val buffer = it.planes[0].buffer
         val bytes = ByteArray(buffer.remaining())
         buffer.get(bytes)
-        // Deliver bytes to your UI / file saver
+        // 交付位元組數據給你的 UI / 文件儲存程式
         lastCaptureListener?.onCaptureSuccess(bytes)
     }
 }, mainHandler)
@@ -438,16 +438,16 @@ jpegImageReader.setOnImageAvailableListener({ reader ->
 
 ---
 
-## Flash-Specific Handling Nuances
+## 閃光燈處理的微妙之處
 
-For `ON_AUTO_FLASH` / `ON_ALWAYS_FLASH` / `ON_AUTO_FLASH_REDEYE` modes, the precapture trigger runs preflash pulses. Two important considerations:
+對於 `ON_AUTO_FLASH` / `ON_ALWAYS_FLASH` / `ON_AUTO_FLASH_REDEYE` 模式，預擷取觸發會發射預閃脈衝。兩個重要考慮因素：
 
-1. **Preflash pulse visibility:** Preflashes are *real flashes* — the user sees them as a low-brightness flash pulse before the main flash. Most modern camera UIs hide this with a "shutter button animation" or by darkening the preview.
+1. **預閃脈衝的可視性：** 預閃是*真實的閃光* —— 用戶會在主閃光之前看到一個低亮度的閃光脈衝。大多數現代相機 UI 透過「快門按鈕動畫」或調暗預覽來隱藏這一點。
 
-2. **`FLASH_STATE` must READY:** In addition to `AE_STATE = CONVERGED`, verify `CaptureResult.FLASH_STATE = FLASH_STATE_READY` (or `FIRED`) for flash modes before capture. It's possible for AE to converge but the flash charging capacitor to still be ramping up.
+2. **`FLASH_STATE` 必須為 READY：** 除了 `AE_STATE = CONVERGED` 之外，還要在拍攝前驗證閃光模式下的 `CaptureResult.FLASH_STATE = FLASH_STATE_READY` (或 `FIRED`)。AE 有可能已收斂，但閃光燈充電電容仍在爬升。
 
 ```kotlin
-// Enhanced aeReady check inside Phase 2 callback for flash modes:
+// 在第 2 階段針對閃光燈模式的回呼中增強 aeReady 檢查：
 val aeState = result.get(CaptureResult.CONTROL_AE_STATE)
 val flashState = result.get(CaptureResult.FLASH_STATE)
 
@@ -457,14 +457,14 @@ val flashModeWantsFlash = (currentAeMode == CameraMetadata.CONTROL_AE_MODE_ON_AL
 
 val aeReady = when {
     flashModeWantsFlash -> {
-        // HAL must have both AE converged AND flash ready to fire
+        // HAL 必須同時達到 AE 已收斂且閃光燈準備就緒可以發射
         (aeState == CaptureResult.CONTROL_AE_STATE_CONVERGED
          || aeState == CaptureResult.CONTROL_AE_STATE_FLASH_REQUIRED) &&
         (flashState == CaptureResult.FLASH_STATE_READY
          || flashState == CaptureResult.FLASH_STATE_FIRED)
     }
     else -> {
-        // No-flash mode: plain AE convergence is enough
+        // 無閃光模式：普通的 AE 收斂即可
         (aeState == CaptureResult.CONTROL_AE_STATE_CONVERGED
          || aeState == CaptureResult.CONTROL_AE_STATE_LOCKED)
     }
@@ -473,83 +473,83 @@ val aeReady = when {
 
 ---
 
-## The 3A State Transition Machine (Summary Diagram)
+## 3A 狀態轉換機（總結圖）
 
-For quick reference when debugging, here's the combined state chart of AE, AF, and AWB showing the expected transitions during a successful capture.
+為了在偵錯時快速參考，這裡是 AE、AF 和 AWB 的合併狀態圖，展示了成功拍攝期間的預期轉換。
 
 ```mermaid
 stateDiagram-v2
     direction LR
 
-    state "AF States" as AF {
+    state "AF 狀態" as AF {
         [*] --> ACTIVE_SCAN: AF_TRIGGER = START
-        ACTIVE_SCAN --> FOCUSED_LOCKED: ✓ Focus found
-        ACTIVE_SCAN --> NOT_FOCUSED_LOCKED: ✗ Couldn't lock
-        FOCUSED_LOCKED --> [*]: Proceed to Phase 2
-        NOT_FOCUSED_LOCKED --> [*]: Proceed (best effort)
+        ACTIVE_SCAN --> FOCUSED_LOCKED: ✓ 找到焦點
+        ACTIVE_SCAN --> NOT_FOCUSED_LOCKED: ✗ 無法鎖定
+        FOCUSED_LOCKED --> [*]: 進入第 2 階段
+        NOT_FOCUSED_LOCKED --> [*]: 繼續 (盡力而為)
     }
 
-    state "AE States" as AE {
-        [*] --> SEARCHING: Preview running
-        SEARCHING --> CONVERGED: Ambient stable
+    state "AE 狀態" as AE {
+        [*] --> SEARCHING: 預覽執行中
+        SEARCHING --> CONVERGED: 環境光穩定
         CONVERGED --> PRECAPTURE: PRECAPTURE_TRIGGER = START
-        PRECAPTURE --> CONVERGED: Final exposure+flash computed
-        CONVERGED --> FLASH_REQUIRED: (auto-flash mode only)
-        CONVERGED --> [*]: Capture now
-        FLASH_REQUIRED --> [*]: Capture with flash now
+        PRECAPTURE --> CONVERGED: 最終曝光+閃光計算完畢
+        CONVERGED --> FLASH_REQUIRED: (僅限自動閃光模式)
+        CONVERGED --> [*]: 現在拍攝
+        FLASH_REQUIRED --> [*]: 現在配合閃光拍攝
     }
 
-    state "AWB States" as AWB {
-        [*] --> SEARCHING: Major scene change
-        SEARCHING --> CONVERGED: Illuminant found
+    state "AWB 狀態" as AWB {
+        [*] --> SEARCHING: 場景重大變化
+        SEARCHING --> CONVERGED: 找到光源
         CONVERGED --> LOCKED: AWB_LOCK = true
-        CONVERGED --> [*]: Capture OK
-        LOCKED --> [*]: Capture OK
+        CONVERGED --> [*]: 拍攝 OK
+        LOCKED --> [*]: 拍攝 OK
     }
 ```
 
-The global controller only proceeds to the still capture when the final "capture OK" state is reached simultaneously on all three sub-states.
+全局控制器僅在所有三個子狀態同時達到最終的「拍攝 OK」狀態時，才會發起靜態拍攝。
 
 ---
 
-## Troubleshooting the 3A Pipeline
+## 3A 管線問題排查
 
-| Symptom | Root Cause | Fix |
+| 症狀 | 根本原因 | 解決辦法 |
 |---------|-----------|-----|
-| Flash photos randomly under/over-exposed | Skipped `AE_PRECAPTURE_TRIGGER = START` | Always run precapture before still capture in any flash mode |
-| Every 5th–10th photo is slightly soft | Proceeded to capture before `FOCUSED_LOCKED` | Block on AF state (our controller does this) |
-| Camera hangs for seconds then crashes | No timeout; HAL stuck in SEARCHING forever | Add the 3500ms timeout + best-effort fallback as shown |
-| Flash fires but photo is still dark | Proceeded before `FLASH_STATE = READY` | Capacitor charging; add FLASH_STATE check in AE ready condition |
-| Portrait of backlit person is underexposed | AE metered the sky, not the face | Couple `CONTROL_AE_REGIONS` to same tap rectangle as `CONTROL_AF_REGIONS` |
-| 2° color tint shift between frames in burst | Forgot `AWB_LOCK = true` before capture burst | Lock AWB on the first converged frame; keep locked through burst |
-| Capture sequence is noticeably slow on budget phone | `TEMPLATE_STILL_CAPTURE` starts cold pipeline | Warm up with a dummy `TEMPLATE_PREVIEW` with identical AE/AF settings first |
+| 閃光照片隨機欠曝/過曝 | 跳過了 `AE_PRECAPTURE_TRIGGER = START` | 在任何閃光模式下，靜態拍攝前務必執行預擷取 |
+| 每 5-10 張照片就有一張略微模糊 | 在達到 `FOCUSED_LOCKED` 之前就發起了拍攝 | 阻塞等待 AF 狀態 (我們的控制器已實現此功能) |
+| 相機掛起數秒後崩潰 | 無逾時；HAL 永遠停留在 SEARCHING | 按範例所示添加 3500ms 逾時 + 盡力而為的回退機制 |
+| 閃光燈亮了但照片仍是暗的 | 在 `FLASH_STATE = READY` 之前就發起了拍攝 | 電容正在充電；在 AE 就緒條件中增加 FLASH_STATE 檢查 |
+| 逆光人物肖像欠曝 | AE 針對天空而非人臉進行了測光 | 將 `CONTROL_AE_REGIONS` 與點擊對焦的 `CONTROL_AF_REGIONS` 矩形耦合 |
+| 連拍幀之間有 2° 的色調偏移 | 連拍拍攝前忘記設定 `AWB_LOCK = true` | 在第一個收斂幀上鎖定 AWB；並在整個連拍期間保持鎖定 |
+| 入門手機上的拍攝序列明顯緩慢 | `TEMPLATE_STILL_CAPTURE` 啟動了冷管線 | 先用帶有相同 AE/AF 設定的啞 `TEMPLATE_PREVIEW` 預熱管線 |
 
 ---
 
-## Summary
+## 小結
 
-This chapter tied exposure, focus, and white balance together into a single, reliable **3A capture pipeline** — the exact sequence a professional camera app uses for every shutter press:
+本章將曝光、對焦和白平衡統一到了單個、可靠的 **3A 拍攝管線** 中——這正是專業相機應用在每次按下快門時所用的精確序列：
 
-1. **Phase 1 (AF):** Set `AF_MODE = AUTO` + `AF_TRIGGER = START`. Wait until `AF_STATE = FOCUSED_LOCKED` (or `NOT_FOCUSED_LOCKED` as fallback).
-2. **Phase 2 (AE Precapture):** Set `AE_PRECAPTURE_TRIGGER = START`. Wait for `AE_STATE = CONVERGED` / `FLASH_REQUIRED` AND `FLASH_STATE = READY` (if flash modes). Also require `AWB_STATE = CONVERGED`.
-3. **Phase 3 (Still Capture):** Submit `TEMPLATE_STILL_CAPTURE` with `AE_LOCK = true`, `AWB_LOCK = true`.
-4. **Phase 4 (Cleanup):** Cancel all triggers, release all locks, restore `AF_MODE = CONTINUOUS_PICTURE`.
+1. **階段 1 (AF):** 設定 `AF_MODE = AUTO` + `AF_TRIGGER = START`。等待直到 `AF_STATE = FOCUSED_LOCKED`（或以 `NOT_FOCUSED_LOCKED` 為回退）。
+2. **階段 2 (AE 預擷取):** 設定 `AE_PRECAPTURE_TRIGGER = START`。等待 `AE_STATE = CONVERGED` / `FLASH_REQUIRED` 且 `FLASH_STATE = READY`（若為閃光模式）。同時要求 `AWB_STATE = CONVERGED`。
+3. **階段 3 (靜態拍攝):** 提交帶有 `AE_LOCK = true`, `AWB_LOCK = true` 的 `TEMPLATE_STILL_CAPTURE` 請求。
+4. **階段 4 (清理):** 取消所有觸發器，釋放所有鎖定，恢復 `AF_MODE = CONTINUOUS_PICTURE`。
 
-Critical supporting concepts:
-- **AE modes:** `ON_AUTO_FLASH` is the sensible default for consumer apps
-- **AE regions** = spot metering; always pair with AF regions on tap-to-focus
-- **AWB converges fast** but always block on `CONVERGED` or `LOCKED` for color-critical work
-- **Timeouts are non-negotiable.** Budget phones and low-light can make AF/AE scan forever; always proceed with a best-effort fallback after ~3.5s.
+關鍵的支持概念：
+- **AE 模式：** `ON_AUTO_FLASH` 是面向普通應用最合理的預設值。
+- **AE 區域** = 點測光；在點擊對焦時始終與 AF 區域配對。
+- **AWB 收斂很快**，但對於色彩關鍵的工作，務必阻塞等待 `CONVERGED` 或 `LOCKED`。
+- **逾時是不可商榷的。** 廉價手機和弱光環境可能導致 AF/AE 掃描永不停止；務必在約 3.5s 後以盡力而為的方式回退繼續。
 
-## What's Next
+## 下一章
 
-Congratulations on completing the 3A Manual Photography module. You now understand — at a professional level — how to control:
+恭喜你完成了 3A 手動攝影模組。你現在已經達到了專業級別，了解如何控制：
 
-- **Exposure (Ch. 13–14):** The exposure triangle, ISO + shutter, nanosecond conversions, manual override, long exposure, timelapse lock, bracketing
-- **Focus (Ch. 15):** AF modes, AF state machine, one-shot trigger-and-capture, manual focus diopters, hyperfocal presets, touch-to-focus regions
-- **Color (Ch. 16):** Color temperature, AWB presets, manual COLOR_CORRECTION_GAINS, 3×3 CCM transforms, Kelvin slider implementation
-- **Orchestration (Ch. 17):** The full 3A pipeline with precapture, flash-safe AE convergence, per-phase timeouts, lock/release cleanup
+- **曝光 (第 13-14 章):** 曝光三角、ISO + 快門、納秒轉換、手動覆蓋、長曝光、延時鎖定、包圍曝光
+- **對焦 (第 15 章):** AF 模式、AF 狀態機、單次觸發與拍攝、手動對焦屈光度、超焦距預設、點擊對焦區域
+- **色彩 (第 16 章):** 色溫、AWB 預設、手動 COLOR_CORRECTION_GAINS、3×3 CCM 變換、開爾文滑塊實現
+- **編排 (第 17 章):** 帶有預擷取、防閃光 AE 收斂、逐階段逾時、鎖定/釋放清理的完整 3A 管線
 
-You can now build a complete pro-mode camera app that rivals the capabilities of the [Android Camera Parameters app](https://github.com/zoozooll/AndroidCameraParameters) itself!
+你現在可以建構一個功能足以媲美 **Android Camera Parameters** 應用本身的完整專業模式相機應用了！
 
-In the upcoming chapters, we shift gears from capture **control** to capture **quality** — covering RAW capture, DNG saving, multi-frame processing, HDR, and computational photography techniques that build on the 3A pipeline you now master.
+在接下來的章節中，我們將從擷取**控制**轉向擷取**畫質** —— 涵蓋 RAW 擷取、DNG 儲存、多幀處理、HDR，以及基於你現已掌握的 3A 管線建構的計算攝影技術。

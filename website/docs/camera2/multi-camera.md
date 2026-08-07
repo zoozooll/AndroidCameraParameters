@@ -18,17 +18,17 @@ A logical camera is a virtual HAL device backed by N ≥ 2 physical cameras that
 ```mermaid
 flowchart TB
     subgraph UserSpace["App (Userspace)"]
-        APP[CameraManager.openCamera\ncameraId = \"0\" (Logical ID)]
+        APP["CameraManager.openCamera<br/>cameraId = \"0\" (Logical ID)"]
     end
 
     subgraph HAL["Camera HAL (Kernel / Vendor Partition)"]
-        LOG[Logical Camera Device 0\nVirtual Node]
+        LOG["Logical Camera Device 0<br/>Virtual Node"]
 
         subgraph PhysicalCams["Physical Cameras (Same-Facing Group)"]
-            UW["Physical ID \"8\"\nUltra-Wide 0.5×\n12MP, 13mm eq."]
-            W["Physical ID \"0\"\nWide 1.0×\n50MP, 24mm eq."]
-            T["Physical ID \"5\"\nTelephoto 3.0×\n10MP, 72mm eq."]
-            P["Physical ID \"7\"\nPeriscope 10×\n8MP, 240mm eq."]
+            UW["Physical ID \"8\"<br/>Ultra-Wide 0.5×<br/>12MP, 13mm eq."]
+            W["Physical ID \"0\"<br/>Wide 1.0×<br/>50MP, 24mm eq."]
+            T["Physical ID \"5\"<br/>Telephoto 3.0×<br/>10MP, 72mm eq."]
+            P["Physical ID \"7\"<br/>Periscope 10×<br/>8MP, 240mm eq."]
         end
 
         LOG <--> UW
@@ -69,12 +69,12 @@ The research doc's *Logical Multi-Camera* section found that only **Snapdragon 8
 ```mermaid
 flowchart LR
     subgraph APPROX["APPROXIMATE Sync (±33 ms)"]
-        A1[Wide Sensor Exposure Start\nt=0.000 ms] --> A2[ISP Merge\nDepth OK, Motion NOT OK]
-        A3[Tele Sensor Exposure Start\nt=+27 ms] --> A2
+        A1[Wide Sensor Exposure Start<br/>t=0.000 ms] --> A2[ISP Merge<br/>Depth OK, Motion NOT OK]
+        A3[Tele Sensor Exposure Start<br/>t=+27 ms] --> A2
     end
     subgraph CALIB["CALIBRATED Sync (±1 ms)"]
-        C1[Wide Sensor Exposure Start\nt=0.000 ms] --> C2[ISP / GPU Fusion\nDepth + Motion + AR OK]
-        C3[Tele Sensor Exposure Start\nt=+0.4 ms] --> C2
+        C1[Wide Sensor Exposure Start<br/>t=0.000 ms] --> C2[ISP / GPU Fusion<br/>Depth + Motion + AR OK]
+        C3[Tele Sensor Exposure Start<br/>t=+0.4 ms] --> C2
     end
 
     style APPROX fill:#ffe9e9,stroke:#b91c1c
@@ -302,22 +302,22 @@ The two `Image` objects will have **identical `image.timestamp` values** when `L
 graph TD
     subgraph BackLogical["Logical Rear Camera ID \"0\""]
         direction TB
-        CAPFLAG["CAPABILITIES:\nLOGICAL_MULTI_CAMERA = true\nSENSOR_SYNC_TYPE = CALIBRATED\nMAX_DIGITAL_ZOOM = 100×"]
+        CAPFLAG["CAPABILITIES:<br/>LOGICAL_MULTI_CAMERA = true<br/>SENSOR_SYNC_TYPE = CALIBRATED<br/>MAX_DIGITAL_ZOOM = 100×"]
     end
 
     subgraph PhysChildren["Physical Children (getPhysicalCameraIds)"]
-        UWPHYS["ID \"8\" → Ultra-Wide\nFocal=1.7mm\nf/1.8\nFOV=120°"]
-        WPHYS["ID \"0\" → Wide\nFocal=5.5mm\nf/1.6\nFOV=84°"]
-        TPHYS["ID \"5\" → Telephoto 3×\nFocal=16.5mm\nf/2.0\nFOV=28°"]
-        PPHYS["ID \"7\" → Periscope 10×\nFocal=55mm\nf/3.4\nFOV=8.5°"]
+        UWPHYS["ID \"8\" → Ultra-Wide<br/>Focal=1.7mm<br/>f/1.8<br/>FOV=120°"]
+        WPHYS["ID \"0\" → Wide<br/>Focal=5.5mm<br/>f/1.6<br/>FOV=84°"]
+        TPHYS["ID \"5\" → Telephoto 3×<br/>Focal=16.5mm<br/>f/2.0<br/>FOV=28°"]
+        PPHYS["ID \"7\" → Periscope 10×<br/>Focal=55mm<br/>f/3.4<br/>FOV=8.5°"]
     end
 
     subgraph ReplaceRule["Session Outputs (Rule MR-1 Applied)"]
         direction TB
-        PREV["1x Logical Preview\nSurfaceView 1080p\n(No physical ID set)"]
-        PHYS1["1x Physical YUV 12MP\n→ OutputConfiguration\n.setPhysicalCameraId(ID \"0\")\n← Targets WIDE lens"]
-        PHYS2["1x Physical YUV 12MP\n→ OutputConfiguration\n.setPhysicalCameraId(ID \"5\")\n← Targets TELE lens"]
-        NOTE["✓ VALID per MR-1:\nFormat YUV × Size Match × 2 Replacements"]
+        PREV["1x Logical Preview<br/>SurfaceView 1080p<br/>(No physical ID set)"]
+        PHYS1["1x Physical YUV 12MP<br/>→ OutputConfiguration<br/>.setPhysicalCameraId(ID \"0\")<br/>← Targets WIDE lens"]
+        PHYS2["1x Physical YUV 12MP<br/>→ OutputConfiguration<br/>.setPhysicalCameraId(ID \"5\")<br/>← Targets TELE lens"]
+        NOTE["✓ VALID per MR-1:<br/>Format YUV × Size Match × 2 Replacements"]
     end
 
     BackLogical --> PhysChildren

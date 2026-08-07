@@ -1,4 +1,4 @@
----
+﻿---
 sidebar_position: 21
 title: "Chapter 21: HDR & Ultra HDR"
 description: "Implement HDR10 and HLG video via DynamicRangeProfiles, and Android 14 JPEG_R (Ultra HDR ISO 21496-1) still captures with SDR-primary + gain-map architecture for backward-compatible high dynamic range photos"
@@ -33,17 +33,17 @@ The gamma curve used by SDR was engineered to match 1990s CRT electron-gun nonli
 ```mermaid
 flowchart TD
     subgraph SDRpath["SDR 8-bit Capture → Display Pipeline"]
-        S1["Sensor Linear\n14-bit RAW"] --> S2["Gamma 2.2 Curve\n(Destroys Shadow Detail)"]
-        S2 --> S3["8-bit Quantization\n(Only 22 codes for\n0–10% luminance)"]
-        S3 --> S4["sRGB Gamut Clipping\n(25% of colors lost)"]
-        S4 --> S5["Peak 100 nits\n(Sky/Sun Clip to White)"]
+        S1["Sensor Linear<br/>14-bit RAW"] --> S2["Gamma 2.2 Curve<br/>(Destroys Shadow Detail)"]
+        S2 --> S3["8-bit Quantization<br/>(Only 22 codes for<br/>0–10% luminance)"]
+        S3 --> S4["sRGB Gamut Clipping<br/>(25% of colors lost)"]
+        S4 --> S5["Peak 100 nits<br/>(Sky/Sun Clip to White)"]
     end
 
     subgraph HDRpath["HDR10 10-bit Capture → Display Pipeline"]
-        H1["Sensor Linear\n14-bit RAW"] --> H2["ST.2084 PQ Curve\n(Fits JND model)"]
-        H2 --> H3["10-bit Quantization\n(140 codes for\n0–10% luminance)"]
-        H3 --> H4["Rec.2020 Gamut\n(75% of visible colors)"]
-        H4 --> H5["Peak 1000+ nits\n(Sky Detail Preserved)"]
+        H1["Sensor Linear<br/>14-bit RAW"] --> H2["ST.2084 PQ Curve<br/>(Fits JND model)"]
+        H2 --> H3["10-bit Quantization<br/>(140 codes for<br/>0–10% luminance)"]
+        H3 --> H4["Rec.2020 Gamut<br/>(75% of visible colors)"]
+        H4 --> H5["Peak 1000+ nits<br/>(Sky Detail Preserved)"]
     end
 
     style SDRpath fill:#ffeded,stroke:#b91c1c
@@ -199,14 +199,14 @@ The *Ultra HDR / JPEG_R* section of the research doc contains a full byte-level 
 flowchart LR
     subgraph FILE["JPEG_R (Ultra HDR) File Structure"]
         direction TB
-        SOI["Start of Image (SOI) Marker"] --> PRIMARY["8-bit SDR JPEG Primary Image\n(sRGB, Gamma 2.2)\nFully Backward-Compatible!\nLegacy readers render this ONLY"]
+        SOI["Start of Image (SOI) Marker"] --> PRIMARY["8-bit SDR JPEG Primary Image<br/>(sRGB, Gamma 2.2)<br/>Fully Backward-Compatible!<br/>Legacy readers render this ONLY"]
         PRIMARY --> APP0["APP0 JFIF Marker"]
         APP0 --> APP11["APP11 Marker (ISO 21496-1 Container)"]
         subgraph GAINMAP["APP11 Payload = Ultra HDR Metadata + Gain Map"]
             GM1["HDR Version Tag (4 bytes)"]
-            GM2["Gain Map Headroom Factor\n(1 = 1 stop boost, 8 = 8 stops boost)"]
-            GM3["Gain Map JPEG (Embedded)\n¼ Resolution Typical\nPer-pixel HDR boost amount"]
-            GM4["Alternate Color Profile Optional\n(ICC Rec.2020)"]
+            GM2["Gain Map Headroom Factor<br/>(1 = 1 stop boost, 8 = 8 stops boost)"]
+            GM3["Gain Map JPEG (Embedded)<br/>¼ Resolution Typical<br/>Per-pixel HDR boost amount"]
+            GM4["Alternate Color Profile Optional<br/>(ICC Rec.2020)"]
         end
         APP11 --> GAINMAP
         GAINMAP --> EOI["End of Image (EOI) Marker"]
@@ -214,11 +214,11 @@ flowchart LR
 
     subgraph RENDER["At Display Time (HDR-Aware Reader)"]
         R1["Decode Primary JPEG (SDR)"] --> R2["Decode Gain Map JPEG"]
-        R2 --> R3["Display Engine:\nPer-Pixel Multiplication\nPrimary × exp2(gain × headroom)\n→ Linear HDR Radiance"]
-        R3 --> R4["HDR Panel Output:\nLocal Highlights up to\n1000 nits peak"]
+        R2 --> R3["Display Engine:<br/>Per-Pixel Multiplication<br/>Primary × exp2(gain × headroom)<br/>→ Linear HDR Radiance"]
+        R3 --> R4["HDR Panel Output:<br/>Local Highlights up to<br/>1000 nits peak"]
     end
 
-    FILE -->|"HDR-Aware Decoder\nsees APP11"| RENDER
+    FILE -->|"HDR-Aware Decoder<br/>sees APP11"| RENDER
 ```
 
 The critical detail in the Mermaid diagram: the PRIMARY JPEG is a fully valid 8-bit SDR photo, so even a 2010s-era JPEG library can render a correct-looking image. The HDR data is *additive*, not replacing the primary file — this is why JPEG_R files work seamlessly with every existing photo-sharing platform (Instagram, Google Photos, Messages) that doesn't yet have Ultra HDR decoders.

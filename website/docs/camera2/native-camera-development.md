@@ -1,4 +1,4 @@
----
+﻿---
 sidebar_position: 25
 title: "Chapter 25: Native Camera Development"
 description: "Go native with the Android NDK camera stack. Use ACameraManager to open cameras from C++, bind AHardwareBuffer memory directly as Vulkan textures for zero-copy AR, and understand OpenGL/Vulkan interop for 60fps pipelines. Includes automotive EVS migration context."
@@ -176,7 +176,7 @@ This is the real reason to go native. `AHardwareBuffer` (defined in `<android/ha
 
 ```mermaid
 graph TB
-    A[Camera Sensor<br/>MIPI CSI-2 pixel stream] --> B[ISP / CAMSS Hardware<br/>writes directly to gralloc]
+    A["Camera Sensor<br/>MIPI CSI-2 pixel stream"] --> B["ISP / CAMSS Hardware<br/>writes directly to gralloc"]
     B --> C[AHardwareBuffer<br/>gralloc-backed physical pages<br/>shared across processes via handle]
     C --> D1[Vulkan<br/>vkCreateImage + AHardwareBuffer import<br/>VK_FORMAT_R8G8B8A8_UNORM]
     C --> D2[OpenGL ES<br/>eglCreateImageKHR + AHardwareBuffer<br/>glEGLImageTargetTexture2DOES]

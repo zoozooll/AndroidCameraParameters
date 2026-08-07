@@ -1,22 +1,22 @@
 ---
 sidebar_position: 13
-title: "Chapter 13: Exposure"
-description: Master the fundamentals of photographic exposure—the Exposure Triangle of ISO, shutter speed, and aperture. Understand EV stops, the Sunny 16 rule, and how different combinations create the same exposure with creative tradeoffs.
-keywords: [android camera2, exposure triangle, ISO, shutter speed, aperture, exposure value, sunny 16 rule, photography basics]
+title: "第 13 章：曝光"
+description: 掌握攝影曝光的基礎知識——由 ISO、快門速度和光圈組成的曝光三角。理解 EV 檔位、陽光 16 法則，以及不同組合如何透過創意權衡創造相同的曝光。
+keywords: [android camera2, 曝光三角, ISO, 快門速度, 光圈, 曝光值, 陽光 16 法則, 攝影基礎]
 ---
 
-# Chapter 13: Exposure
+# 第 13 章：曝光
 
-## The Exposure Triangle: Three Knobs, One Goal
+## 曝光三角：三個旋鈕，一個目標
 
-When you take a photo with a smartphone camera, you're capturing light. The *amount* of light that reaches the sensor determines whether your photo is too dark (underexposed), too bright (overexposed), or just right (correctly exposed). Three fundamental controls govern this — together they form the **Exposure Triangle**.
+當你用智慧型手機拍照時，你實際上是在捕捉光線。到達感光元件的光線**量**決定了你的照片是太暗（欠曝）、太亮（過曝）還是恰到好處（曝光正確）。三個基本控制項管理著這一點——它們共同構成了**曝光三角**。
 
 ```mermaid
 graph TD
-    A[Exposure<br/>Light Reaching Sensor] --> B[Shutter Speed<br/>Time Light Enters]
-    A --> C[ISO<br/>Sensor Sensitivity]
-    A --> D[Aperture<br/>Size of Opening]
-    B <--> C[Equivalent Exposure<br/>Tradeoffs]
+    A["曝光<br/>到達感光元件的光線"] --> B["快門速度<br/>光線進入的時間"]
+    A --> C[ISO<br/>感光元件靈敏度]
+    A --> D[光圈<br/>開口的大小]
+    B <--> C[等效曝光<br/>權衡]
     C <--> D
     B <--> D
     style A fill:#e74c3c,color:#fff
@@ -25,82 +25,82 @@ graph TD
     style D fill:#f39c12,color:#fff
 ```
 
-**The core idea:** Each corner of the triangle controls light, but each also introduces a *creative tradeoff*. You can achieve the *same* total exposure with different combinations of the three settings — but each combination yields a different *look* to your photograph.
+**核心思想：** 三角形的每個角都控制光線，但每個角也都會引入一種*創意權衡*。你可以透過三個設定的不同組合實現*相同* 的總曝光量——但每種組合都會為你的照片帶來不同的*觀感*。
 
-Before we dive into Android Camera2 API specifics in the next chapter, let's build a solid intuitive foundation for each element.
+在我們在下一章深入探討 Android Camera2 API 的細節之前，讓我們先為每個元素建立穩固的直觀基礎。
 
 ---
 
-## ISO: Sensor Sensitivity (Gain Control)
+## ISO：感光元件靈敏度（增益控制）
 
-In the days of film, **ISO** described the *film stock's sensitivity to light* — ISO 100 film was "slow" and needed bright light, while ISO 800 film was "fast" and could shoot indoors.
+在底片時代，**ISO** 描述的是*底片對光線的敏感度*——ISO 100 底片較「慢」，需要明亮的光線，而 ISO 800 底片較「快」，可以在室內拍攝。
 
-**In digital photography (including smartphone cameras), ISO is sensor gain / electronic amplification.** When you double the ISO value, you're effectively doubling the amplification applied to the sensor's analog signal before it's digitized.
+**在數位攝影（包括智慧型手機相機）中，ISO 是感光元件增益 / 電子放大。** 當你將 ISO 值加倍時，你實際上是將應用於感光元件類比訊號的放大倍數加倍，然後再將其數位化。
 
-### How ISO Works
+### ISO 的工作原理
 
-Imagine the sensor's pixel wells collecting photons (light particles). After the exposure period ends:
+想像感光元件的像素井正在收集光子（光粒子）。在曝光期結束後：
 
-1. Each pixel converts accumulated photons into a tiny electrical charge
-2. An **analog gain amplifier** multiplies this signal by a factor corresponding to your ISO setting
-3. The amplified signal is converted from analog to digital (ADC)
-4. Digital processing then applies further processing (noise reduction, tone-mapping)
+1. 每個像素將累積的光子轉換為微小的電荷
+2. **類比增益放大器**將該訊號乘以與你的 ISO 設定相對應的係數
+3. 放大後的訊號被轉換為數位訊號 (ADC)
+4. 數位處理隨後進行進一步處理（降噪、色調映射）
 
-**ISO 100 = base / lowest gain.** The signal is amplified least, so:
-- Photos are *clean* with minimal digital noise (grain)
-- Dynamic range (difference between brightest and darkest recordable tones) is highest
-- Colors are most accurate
+**ISO 100 = 基礎 / 最低增益。** 訊號放大倍數最低，因此：
+- 照片*乾淨*，數位噪聲（噪點）最少
+- 動態範圍（可記錄的最亮和最暗色調之間的差異）最高
+- 色彩最準確
 
-**ISO 3200 = high gain.** The signal is amplified 32×:
-- You can shoot in dimmer scenes without increasing shutter time
-- But you get *visible noise* (color speckle, luminance grain)
-- Dynamic range and color accuracy degrade significantly
+**ISO 3200 = 高增益。** 訊號被放大 32 倍：
+- 你可以在更暗的場景中拍攝，而無需增加快門時間
+- 但你會得到*可見的噪聲*（彩色斑點、亮度噪點）
+- 動態範圍和色彩準確度顯著下降
 
-### Typical Smartphone ISO Range
+### 典型智慧型手機 ISO 範圍
 
-| ISO Range | Characteristic | Use Case |
+| ISO 範圍 | 特徵 | 用例 |
 |-----------|---------------|----------|
-| 50–200 | Base ISO, cleanest image | Bright daylight, studio lighting |
-| 200–800 | Moderate gain, minor noise | Overcast day, shaded areas |
-| 800–3200 | Visible noise, still usable | Indoor lighting, dusk |
-| 3200–12800+ | Heavy noise / heavy NR applied | Night scenes, low-light events |
+| 50–200 | 基礎 ISO，影像最乾淨 | 明亮的日光，影棚照明 |
+| 200–800 | 中等增益，輕微噪聲 | 陰天，背陰處 |
+| 800–3200 | 可見噪聲，仍可用 | 室內照明，黃昏 |
+| 3200–12800+ | 重度噪聲 / 應用重度降噪 | 夜景，暗光活動 |
 
-> **Smartphone Reality Note:** Flagship phones often apply heavy computational noise reduction at high ISO values (vendor-specific "night mode" processing). When you later disable the auto pipeline in Camera2, you *lose* many of these OEM optimizations — a critical caveat we'll return to in Chapter 14.
+> **智慧型手機現實註記：** 旗艦手機通常在較高的 ISO 值下應用重度計算降噪（供應商特定的「夜間模式」處理）。當你稍後在 Camera2 中禁用自動管線時，你將*失去*許多這些 OEM 優化——這是我們將在第 14 章回歸的一個關鍵警告。
 
 ---
 
-## Shutter Speed (Exposure Time)
+## 快門速度（曝光時間）
 
-**Shutter speed** is simply *how long the sensor is exposed to light*. In traditional cameras, a mechanical shutter physically opens and closes. In smartphones, it's almost always an **electronic shutter** — the sensor is reset, allowed to collect photons for a precise duration, then read out.
+**快門速度**簡單來說就是*感光元件暴露在光線下的時間長短*。在傳統相機中，機械快門會物理性地開啟和關閉。在智慧型手機中，它幾乎總是**電子快門**——感光元件被重置，允許收集光線一段時間（精確時長），然後讀取數據。
 
-Shutter speed is measured in **seconds**, typically expressed as fractions:
+快門速度以**秒**為單位，通常表示為分數：
 
-| Shutter Speed | What It Does | Typical Use |
+| 快門速度 | 它的作用 | 典型用途 |
 |--------------|-------------|-------------|
-| 1/2000s – 1/1000s | Very short exposure, freezes all motion | Sports, birds, fast-moving vehicles |
-| 1/500s – 1/250s | Freezes typical human motion | Walking people, children playing |
-| 1/125s – 1/60s | "Safe" handheld speed with stabilization | General photography on stable hands |
-| 1/30s – 1/15s | Slight motion blur visible, needs tripod | Creative motion, low light |
-| 1s – 30s | Long exposure, heavy motion blur | Waterfalls, star trails, smooth water |
-| 30s+ | Ultra-long exposure (specialized) | Astrophotography, light painting |
+| 1/2000s – 1/1000s | 極短曝光，凍結所有動作 | 運動、鳥類、快速行駛的車輛 |
+| 1/500s – 1/250s | 凍結典型的人類動作 | 走動的人、玩耍的孩子 |
+| 1/125s – 1/60s | 配合防手震的「安全」手持速度 | 穩健手持拍攝的一般攝影 |
+| 1/30s – 1/15s | 可見輕微運動模糊，需要三腳架 | 創意動態，弱光 |
+| 1s – 30s | 長曝光，重度運動模糊 | 瀑布、星軌、滑順的水面 |
+| 30s+ | 超長曝光（專業） | 天文攝影、光繪 |
 
-### The Motion Blur Effect
+### 運動模糊效果
 
-There are **two** reasons to deliberately choose a specific shutter speed beyond "enough light":
+除了「獲得足夠光線」之外，有兩個理由讓你刻意選擇特定的快門速度：
 
-1. **Freeze action:** A bird in flight at 1/1000s shows every feather crisply because the bird moved almost zero distance during the exposure.
+1. **凍結動作：** 以 1/1000s 拍攝飛行中的鳥，每一根羽毛都清晰可見，因為鳥在曝光期間移動的距離幾乎為零。
 
-2. **Create motion blur:** A waterfall at 2 seconds renders the moving water as smooth, silky white trails — because each water droplet traveled across many pixels on the sensor while it was exposed.
+2. **創造運動模糊：** 以 2 秒拍攝瀑布，移動的水流會呈現出平滑、滑順的白色痕跡——因為在感光元件曝光期間，每一滴水都經過了感光元件上的許多像素。
 
-Think of it like a long-exposure painting: *anything that moves while the shutter is open becomes a streak.*
+把它想像成一種長曝光繪畫：*任何在快門開啟期間移動的東西都會變成條紋。*
 
-**Important for video:** When shooting 30fps video, each frame is exposed for ~1/30s *maximum*. Cinematographers follow the **180° shutter rule**: set shutter speed to double the frame rate → 1/60s for 30fps video. This gives natural, "film-like" motion blur without being too choppy or too smeary.
+**對於影片很重要：** 拍攝 30fps 影片時，每一幀的曝光時間*最多*約為 1/30s。電影製作人遵循 **180° 快門法則**：將快門速度設定為幀率的兩倍 → 對於 30fps 影片，設定為 1/60s。這能提供自然的、「電影感」的運動模糊，既不會太生硬也不會太模糊。
 
 ---
 
-## Aperture
+## 光圈
 
-**Aperture** is the size of the opening in the lens through which light passes. It's measured in **f-stops** (f/1.4, f/2.0, f/2.8, f/4.0, f/5.6, f/8.0, etc.) — a *counterintuitive scale where smaller numbers = wider opening*.
+**光圈**是鏡頭內部光線通過的開口大小。它以 **f 值** (f-stops) 來衡量 (f/1.4, f/2.0, f/2.8, f/4.0, f/5.6, f/8.0 等) —— 這是一個*反直覺的刻度，數字越小 = 開口越寬*。
 
 ```
   f/1.4     f/2.0     f/2.8     f/4.0     f/5.6     f/8.0
@@ -112,152 +112,152 @@ Think of it like a long-exposure painting: *anything that moves while the shutte
 ███████████                                      ██████
 ```
 
-**Halving the light each stop:** Moving from f/1.4 → f/2.0 → f/2.8 → f/4.0 each *halves* the area of the opening, so half the total light gets through. This is one "stop" darker per step.
+**每檔光線減半：** 從 f/1.4 → f/2.0 → f/2.8 → f/4.0 移動，每一步都會使開口面積*減半*，因此通過的總光線減少一半。這就是每步減暗一「檔」。
 
-### Aperture Tradeoffs (Creative & Practical)
+### 光圈權衡（創意與實踐）
 
-1. **Depth of Field (DoF):** Wide aperture (f/1.8) = *shallow* DoF — only a narrow plane is in focus; everything in front/behind blurs out (bokeh). Narrow aperture (f/8) = *deep* DoF — everything from foreground to background is sharp.
+1. **景深 (DoF)：** 大光圈 (f/1.8) = *淺*景深 —— 只有窄窄的一層平面在焦點內；之前/之後的任何東西都會模糊（虛化/焦外）。小光圈 (f/8) = *深*景深 —— 從前景到背景的一切都是清晰的。
 
-2. **Light gathering:** f/1.4 gathers 4× more light than f/2.8. This is why "fast lenses" (wide maximum aperture) are prized for low-light shooting.
+2. **集光能力：** f/1.4 比 f/2.8 多收集 4 倍的光線。這就是為什麼「大光圈鏡頭」（寬最大光圈）在弱光拍攝中備受青睞的原因。
 
-3. **Diffraction:** At very narrow apertures (f/11+), light waves bend around the aperture blades, slightly softening the image. This is usually irrelevant on smartphones.
+3. **繞射：** 在極小的光圈 (f/11+) 下，光波會繞過光圈葉片彎曲，使影像略微變軟。這在智慧型手機上通常無關緊要。
 
-### Smartphone Reality Check
+### 智慧型手機現狀檢查
 
-Most smartphones have **fixed aperture lenses** — you cannot change the f-stop. Budget phones might have f/2.4–f/2.8; flagships often reach f/1.4–f/1.8. The [Android Camera Parameters app](https://play.google.com/store/apps/details?id=com.minininja.cameraparams) lets you check your lens' fixed aperture in `CameraCharacteristics`.
+大多數智慧型手機擁有**固定光圈鏡頭** —— 你無法更改 f 值。廉價手機可能是 f/2.4–f/2.8；旗艦機通常達到 f/1.4–f/1.8。[Android Camera Parameters 應用](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)讓你可以在 `CameraCharacteristics` 中檢查鏡頭的固定光圈。
 
-A few premium phones (e.g., Samsung Galaxy S23 Ultra, Xperia series) offer a *dual aperture* mechanism that mechanically switches between two stops (e.g., f/1.5 and f/2.4). In Camera2, query `LENS_INFO_AVAILABLE_APERTURES` to see if your device supports multiple apertures.
+少數高階手機（例如三星 Galaxy S23 Ultra、索尼 Xperia 系列）提供*雙光圈*機制，可以在兩個檔位（例如 f/1.5 和 f/2.4）之間機械切換。在 Camera2 中，查詢 `LENS_INFO_AVAILABLE_APERTURES` 看看你的設備是否支援多種光圈。
 
-**The practical takeaway:** For most Android Camera2 development, aperture is *fixed*, so you control exposure via **ISO + shutter speed only**. Two knobs instead of three — which actually simplifies things!
+**實踐啟示：** 對於大多數 Android Camera2 開發，光圈是*固定的*，因此你僅透過 **ISO + 快門速度**控制曝光。兩個旋鈕而不是三個 —— 這實際上簡化了事情！
 
 ---
 
-## EV: Exposure Value (The Logarithmic Scale)
+## EV：曝光值（對數刻度）
 
-When photographers say "adjust by one stop," they mean **double or halve the total light**. To make stop-based thinking precise, the industry standardized on **Exposure Value (EV)**.
+當攝影師說「調整一檔」時，他們的意思是**將總光量加倍或減半**。為了使基於「檔」的思維更加精確，行業標準化了**曝光值 (EV)**。
 
-**EV 0** is defined as the exposure combination that produces a standard reference brightness: **1 second exposure, f/1.0 aperture, ISO 100**.
+**EV 0** 被定義為產生標準參考亮度的曝光組合：**1 秒曝光，f/1.0 光圈，ISO 100**。
 
-Every **+1 EV doubles the light** (brighter). Every **−1 EV halves the light** (darker):
+每 **+1 EV 將光量加倍**（更亮）。每 **−1 EV 將光量減半**（更暗）：
 
-| EV Change | Meaning |
+| EV 變化 | 含義 |
 |-----------|---------|
-| +3 EV | 8× more light (2³) |
-| +2 EV | 4× more light |
-| +1 EV | 2× more light |
-| 0 EV | Reference: 1s @ f/1.0 ISO 100 |
-| −1 EV | ½ the light |
-| −2 EV | ¼ the light |
-| −3 EV | ⅛ the light |
+| +3 EV | 8 倍光量 (2³) |
+| +2 EV | 4 倍光量 |
+| +1 EV | 2 倍光量 |
+| 0 EV | 參考：1s @ f/1.0 ISO 100 |
+| −1 EV | ½ 光量 |
+| −2 EV | ¼ 光量 |
+| −3 EV | ⅛ 光量 |
 
-The beautiful thing: **any combination of ISO + shutter + aperture that sums to the same EV value produces the same total exposure**. This is the *equivalent exposure* principle connecting the three triangle corners.
+美妙之處在於：**任何總和為相同 EV 值的 ISO + 快門 + 光圈組合，都會產生相同的總曝光量**。這就是連接三角形三個角的*等效曝光*原則。
 
-### EV and ISO/Shutter Combinations
+### EV 與 ISO/快門組合
 
-With fixed aperture, the EV equation simplifies dramatically. For a smartphone at f/1.8:
+在固定光圈的情況下，EV 方程式大大簡化。對於光圈為 f/1.8 的智慧型手機：
 
-| Scene | Typical EV | ISO 100 Shutter | ISO 400 Shutter | ISO 1600 Shutter |
+| 場景 | 典型 EV | ISO 100 快門 | ISO 400 快門 | ISO 1600 快門 |
 |-------|-----------|----------------|-----------------|------------------|
-| Bright sunny beach | 15 | 1/4000s | 1/1000s | 1/250s |
-| Hazy / overcast day | 12 | 1/500s | 1/125s | 1/30s |
-| Indoor bright office | 8 | 1/30s | 1/8s | 1/2s |
-| Living room at night | 4 | 2s | 0.5s | 1/8s |
-| Starry night scene | −2 | 30s | 8s | 2s |
+| 明亮的陽光沙灘 | 15 | 1/4000s | 1/1000s | 1/250s |
+| 陰天 / 多雲 | 12 | 1/500s | 1/125s | 1/30s |
+| 明亮的室內辦公室 | 8 | 1/30s | 1/8s | 1/2s |
+| 夜間的起居室 | 4 | 2s | 0.5s | 1/8s |
+| 星空夜景 | −2 | 30s | 8s | 2s |
 
-### The Famous Sunny 16 Rule
+### 著名的陽光 16 法則
 
-Before matrix metering and sophisticated autoexposure algorithms, photographers relied on a rule of thumb to nail daylight exposure without a meter:
+在矩陣測光和複雜的自動曝光演算法出現之前，攝影師依靠一種經驗法則，在沒有測光錶的情況下鎖定日光下的曝光：
 
-> **On a sunny day, set aperture to f/16, shutter speed to 1/ISO seconds.**
+> **在晴天，將光圈設定為 f/16，快門速度設定為 1/ISO 秒。**
 
-| Sunny 16 (f/16) | Equivalent at f/1.8 (Smartphone) |
+| 陽光 16 (f/16) | f/1.8 等效 (智慧型手機) |
 |-----------------|----------------------------------|
 | ISO 100, 1/100s, f/16 → EV 15 | ISO 100, 1/4000s, f/1.8 → EV 15 ✓ |
 | ISO 200, 1/200s, f/16 → EV 15 | ISO 200, 1/8000s, f/1.8 → EV 15 ✓ |
 
-The math checks out: f/1.8 is about **6⅓ stops wider** than f/16. Each stop quadruples? No — each stop *doubles* the light area. 2^(6.33) ≈ 80× more light. So the shutter must be 80× faster to compensate: 1/100s ÷ 80 ≈ 1/8000s (at ISO 200). Close enough for field work.
+計算結果吻合：f/1.8 比 f/16 寬約 **6⅓ 檔**。每一檔加倍？不 —— 每一檔*光線面積*加倍。2^(6.33) ≈ 80 倍光量。因此快門速度必須快 80 倍來補償：1/100s ÷ 80 ≈ 1/8000s (在 ISO 200 下)。對於實地拍攝來說足夠接近了。
 
 ---
 
-## The Look of Underexposed / Correct / Overexposed
+## 欠曝 / 正確 / 過曝的觀感
 
-Let's mentally compare three shots of the same scene (e.g., a person outdoors with sky behind them):
+讓我們心理對比一下同一場景（例如，一個人在戶外，身後是天空）的三種拍攝效果：
 
-**Underexposed (−2 EV):** The subject is too dark. Shadows are *crushed* to pure black with no detail. In a histogram, all data piles up on the left (dark) side. The sky might look good, but the person appears as a silhouette. You *can* try to "push" underexposed raw data in post-processing, but the shadows will reveal heavy noise because you're amplifying a weak signal.
+**欠曝 (−2 EV)：** 主體太暗。陰影被*壓死*成純黑，沒有細節。在直方圖中，所有數據都堆積在左側（暗部）。天空看起來可能不錯，但人看起來像個剪影。你*可以*嘗試在後期處理中「提亮」欠曝的原始數據，但陰影會露出嚴重的噪聲，因為你在放大一個微弱的訊號。
 
-**Correct Exposure (0 EV):** Mid-tones show proper texture. The person's face has visible skin detail, shirt wrinkles, eye catchlights. Histogram has data spread across the full range without hard clipping at either end. On phones with limited dynamic range, this may mean *some* bright sky highlights clip to white (no blue detail) — that's a classic tradeoff vs. underexposing the subject.
+**曝光正確 (0 EV)：** 中間調顯示出正常的質感。人的臉上有可見的皮膚細節、衣服褶皺、眼睛高光。直方圖數據分佈在整個範圍內，兩端沒有硬剪裁。在動態範圍有限的手機上，這可能意味著*一些*明亮的天空高光會剪裁成白色（沒有藍色細節） —— 這是一個相對於讓主體欠曝的經典權衡。
 
-**Overexposed (+2 EV):** Highlights are *blown out* to pure white with no recovery. Sky is a uniform white flat field; bright shirt buttons and specular reflections are clipped. The person's face might look flattering (bright skin), but you've permanently lost all highlight detail. Unlike underexposed shadows (which you can often partially recover with noise), *blown highlights are gone forever* — there's simply no data in those pixels.
+**過曝 (+2 EV)：** 高光*溢出*成純白，無法恢復。天空是一個均勻的白色平面；明亮的襯衫鈕扣和鏡面反射被剪裁。人的皮膚看起來可能很討喜（很亮），但你永久失去了所有高光細節。不像欠曝的陰影（你通常可以用噪聲來部分恢復），*溢出的高光永遠消失了* —— 那些像素中根本沒有數據。
 
-**The Photographer's Mantra:** *Expose for the highlights, recover the shadows.* In RAW capture (which we'll cover later), this is especially powerful because 14-bit RAW stores enough shadow detail to pull +2 EV or more without catastrophic noise.
+**攝影師的信條：** *寧欠勿過 (Expose for the highlights, recover the shadows)。* 在 RAW 拍攝中（我們稍後會介紹），這一點尤為強大，因為 14 位 RAW 儲存了足夠的陰影細節，可以拉升 +2 EV 或更多而不會產生毀滅性的噪聲。
 
 ---
 
-## Real-World EV Reference Table
+## 現實世界 EV 參考表
 
-Memorizing a few landmark EV values lets you estimate exposure anywhere:
+記住幾個里程碑式的 EV 值可以讓你在任何地方估算曝光：
 
-| Scene | Typical EV (at ISO 100) | Rough Shutter @ f/1.8, ISO 400 |
+| 場景 | 典型 EV (在 ISO 100 下) | 大致快門 @ f/1.8, ISO 400 |
 |-------|------------------------|--------------------------------|
-| Snow landscape in direct sun | 16 | 1/4000s |
-| Sunny beach, bright day | 15 | 1/2000s |
-| Typical sunny day | 14 | 1/1000s |
-| Overcast / cloudy day | 12 | 1/250s |
-| Very cloudy / rain | 11 | 1/125s |
-| Open shade (person in shadow, sunlit background) | 9 | 1/30s |
-| Sunset / golden hour | 7 | 1/8s |
-| Bright indoor office | 8 | 1/15s |
-| Home living room, lamps only | 4 | 1/2s |
-| Dark restaurant interior | 2 | 2s |
-| City street at night (neon signs) | 1 | 4s |
-| Night landscape, distant city lights | −2 | 30s |
-| Moonlit landscape (full moon) | −3 | 1 minute |
-| Starry sky, no moon | −6 | 8 minutes |
+| 直射陽光下的雪景 | 16 | 1/4000s |
+| 陽光沙灘，晴朗的一天 | 15 | 1/2000s |
+| 典型的晴天 | 14 | 1/1000s |
+| 陰天 / 多雲 | 12 | 1/250s |
+| 濃雲 / 下雨 | 11 | 1/125s |
+| 開闊陰影處（人在陰影中，背景被日光照亮） | 9 | 1/30s |
+| 日落 / 黃金時段 | 7 | 1/8s |
+| 明亮的室內辦公室 | 8 | 1/15s |
+| 家中起居室，僅靠燈光 | 4 | 1/2s |
+| 昏暗的餐廳內部 | 2 | 2s |
+| 夜間的城市街道（霓虹燈） | 1 | 4s |
+| 夜間風景，遠處的城市燈光 | −2 | 30s |
+| 月光下的風景（滿月） | −3 | 1 分鐘 |
+| 星空，無月亮 | −6 | 8 分鐘 |
 
-You can verify these approximations against what your phone's auto-exposure actually chooses. Launch the [Android Camera Parameters app](https://github.com/zoozooll/AndroidCameraParameters), go into Live Preview, and observe `SENSOR_EXPOSURE_TIME` and `SENSOR_SENSITIVITY` as you walk from bright sun to a dark room — you'll see real values that map roughly to this table.
+你可以針對你手機自動曝光實際選擇的數值來驗證這些近似值。啟動 [Android Camera Parameters 應用](https://github.com/zoozooll/AndroidCameraParameters)，進入即時預覽，並觀察當你從陽光明媚處走到暗室時 `SENSOR_EXPOSURE_TIME` 和 `SENSOR_SENSITIVITY` 的變化 —— 你會看到映射到此表的真實數值。
 
 ---
 
-## Putting It All Together: Equivalent Exposures
+## 綜合：等效曝光
 
-Let's say you want the *same total exposure* (EV 12 = overcast day, f/1.8 smartphone). Here are three valid combinations producing identical sensor brightness:
+假設你想要*相同的總曝光量* (EV 12 = 陰天，f/1.8 智慧型手機)。以下是產生相同感光元件亮度的三個有效組合：
 
-| Combination | ISO | Shutter Speed | Look & Feel |
+| 組合 | ISO | 快門速度 | 觀感與質感 |
 |-------------|-----|---------------|-------------|
-| Clean & Sharp | 100 | 1/500s | Cleanest noise, sharpest freeze of motion |
-| Middle Ground | 400 | 1/125s | Minor noise, good balance |
-| Smooth Motion | 1600 | 1/30s | Visible noise; slight blur on moving subjects |
+| 乾淨且銳利 | 100 | 1/500s | 噪聲最少，對動作的凍結最清晰 |
+| 折衷方案 | 400 | 1/125s | 輕微噪聲，良好的平衡 |
+| 平滑運動 | 1600 | 1/30s | 可見噪聲；移動主體會有輕微模糊 |
 
-All three land at the same EV. All three *look equally bright*. But the *texture* (noise grain) and *motion portrayal* are completely different. **That's the art of exposure.**
+三者都落在相同的 EV。三者*看起來同樣亮*。但*質感*（噪聲噪點）和*運動刻畫*是完全不同的。**這就是曝光的藝術。**
 
-### What If You Need Both?
+### 如果我兩者都需要呢？
 
-This is where computational photography shines. A phone in "night mode" doesn't take *one* 2-second shot — it captures *dozens* of 1/60s frames (freezing motion in each), then aligns and averages them computationally. The result approximates the light gathering of a long exposure without the motion blur penalty.
+這就是計算攝影大放異彩的地方。手機處於「夜間模式」時不是拍攝*一張* 2 秒的照片 —— 它擷取了*幾十張* 1/60s 的幀（在每一張中凍結動作），然後透過計算進行對齊和平均。結果在大約獲得長曝光集光能力的同時，沒有運動模糊的懲罰。
 
-Once you understand manual exposure at the Camera2 level, you can implement techniques like this yourself.
+一旦你理解了 Camera2 層級的手動曝光，你就可以自己實現類似的技术。
 
 ---
 
-## Summary
+## 小結
 
-In this chapter, we covered the *photography fundamentals* without touching a line of Android code:
+在本章中，我們涵蓋了*攝影基礎知識*，而沒有觸及任何一行 Android 程式碼：
 
-- **Exposure Triangle:** Shutter Speed (time), ISO (sensor gain), and Aperture (opening size) combine to control total light. Each has a creative tradeoff.
-- **ISO** in digital photography = analog sensor gain. Low ISO = clean, high ISO = noisy. Smartphones commonly support ISO 100–6400+ with OEM noise reduction.
-- **Shutter Speed** is exposure time in seconds. Fast shutters (1/1000s) freeze action; slow shutters (1s+) create motion blur. The 180° shutter rule applies to video.
-- **Aperture** is f-stop-controlled lens opening. Most smartphones have fixed aperture, so we rely on ISO + shutter only.
-- **EV (Exposure Value)** is the logarithmic stop scale where each ±1 step doubles/halves light. EV 0 = 1s @ f/1.0 ISO 100.
-- **Sunny 16 Rule** and the EV reference table let you ballpark exposures without metering.
-- **Correct exposure** balances mid-tone detail, avoiding crushed shadows and blown highlights. RAW preserves recovery headroom.
+- **曝光三角：** 快門速度（時間）、ISO（感光元件增益）和光圈（開口大小）結合起來控制總光量。每一個都有創意權衡。
+- **數位攝影中的 ISO** = 類比感光元件增益。低 ISO = 乾淨，高 ISO = 噪點。智慧型手機通常支援帶有 OEM 降噪的 ISO 100–6400+。
+- **快門速度** 是曝光時間（秒）。快速快門 (1/1000s) 凍結動作；慢速快門 (1s+) 創造運動模糊。180° 快門法則適用於影片。
+- **光圈** 是由 f 值控制的鏡頭開口。大多數智慧型手機光圈固定，因此我們僅依靠 ISO + 快門。
+- **EV (曝光值)** 是對數檔位刻度，每個 ±1 步長使光量加倍/減半。EV 0 = 1s @ f/1.0 ISO 100。
+- **陽光 16 法則** 和 EV 參考表讓你無需測光即可估算曝光。
+- **正確曝光** 平衡了中間調細節，避免壓死陰影和溢出高光。RAW 保留了恢復空間。
 
-## What's Next
+## 下一章
 
-In **Chapter 14: Manual Exposure in Camera2**, we translate this entire conceptual model into concrete Camera2 API calls. You'll learn:
+在**第 14 章：Camera2 中的手動曝光**中，我們將把這套概念模型轉換為具體的 Camera2 API 呼叫。你將學習：
 
-- How to disable the auto-exposure pipeline (`CONTROL_MODE = OFF`, `CONTROL_AE_MODE = OFF`)
-- How to translate ISO values to `SENSOR_SENSITIVITY`
-- How to convert human-readable seconds ↔ nanoseconds for `SENSOR_EXPOSURE_TIME`
-- Complete working Kotlin code for fixed timelapse exposure, long night exposure, and a 3-shot exposure bracketing series
-- The critical caveat about OEM noise reduction being disabled when you turn off 3A
+- 如何禁用自動曝光管線 (`CONTROL_MODE = OFF`, `CONTROL_AE_MODE = OFF`)
+- 如何將 ISO 值映射到 `SENSOR_SENSITIVITY`
+- 如何在人類可讀的秒 ↔ 納秒之間轉換 `SENSOR_EXPOSURE_TIME`
+- 完整的 Kotlin 程式碼，用於固定間隔拍攝曝光、夜間長曝光和 3 張連拍的曝光包圍序列
+- 關於關閉 3A 時 OEM 降噪會被禁用的關鍵警告
 
-Grab your thinking cap — the code starts next.
+準備好你的思考帽 —— 程式碼部分馬上開始。

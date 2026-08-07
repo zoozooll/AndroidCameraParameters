@@ -1,230 +1,230 @@
 ---
 sidebar_position: 3
-title: "Chapter 3: Modern Smartphone Photography"
-description: "A tour of the computational and optical features on modern phones: HDR, portrait bokeh, night mode, slow-motion, ultra-wide, telephoto, macro, and how computational photography fuses hardware and software."
-keywords: [HDR photography, portrait mode, night mode, slow motion video, ultra wide camera, telephoto, computational photography]
+title: "第 3 章：現代智慧型手機攝影"
+description: "巡覽現代手機的運算與光學功能：HDR、人像散景、夜景模式、慢動作、超廣角、望遠、微距，以及運算攝影如何融合硬體與軟體。"
+keywords: [HDR 攝影, 人像模式, 夜景模式, 慢動作影片, 超廣角相機, 望遠, 運算攝影]
 ---
 
-# Chapter 3: Modern Smartphone Photography
+# 第 3 章：現代智慧型手機攝影
 
-Chapter 2 gave you the hardware foundations: lenses, sensors, ISP pipelines, and multi-camera modules. This chapter answers the natural follow-up question: **How do modern camera apps actually use that hardware to produce the photos I see on Instagram?**
+第 2 章為您奠定了硬體基礎：鏡頭、感光元件、ISP 管線與多相機模組。本章回答了自然的後續問題：**現代相機應用程式實際上如何使用這些硬體，產出我在 Instagram 上看到的那種照片？**
 
-A 2010 smartphone took a single exposure, ran it through a basic ISP, and wrote a JPEG. A 2026 smartphone routinely captures 5 to 15 separate frames for a single still photo, aligns them to sub-pixel precision using gyroscope data, fuses them using multi-frame signal processing, runs the result through a neural network for semantic segmentation or depth estimation, and finally tone-maps it into a single shareable image — all within the span of a single shutter button press.
+2010 年的智慧型手機拍攝單一曝光、透過基本 ISP 處理，然後寫入一張 JPEG。2026 年的智慧型手機會為一張靜態照片例行拍攝 5 到 15 個獨立畫面、利用陀螺儀資料將它們對齊到子像素精度、使用多訊框訊號處理進行融合、將結果送入神經網路進行語意分割或深度估測，最後色調映射成一張可分享的影像——全部都在一次按下快門按鈕的時間內完成。
 
-This chapter is a feature-by-feature tour of modern smartphone photography. We will explain how each feature works at the hardware + software level, without any Camera2 API code. The goal is to build a vocabulary of what modern camera systems can do, so that when you later write code to control these features, you know what is happening under the hood.
+本章是現代智慧型手機攝影功能的逐一巡覽。我們將在硬體 + 軟體層級解釋每個功能的運作方式，不涉及任何 Camera2 API 程式碼。目標是建立一套詞彙，描述現代相機系統能做什麼，這樣當您日後撰寫程式碼控制這些功能時，您會知道背後發生了什麼事。
 
-## HDR: High Dynamic Range Multi-Frame Fusion
+## HDR：高動態範圍多訊框融合
 
-**Dynamic range** is the ratio between the brightest and darkest parts of a scene that the imaging system can record simultaneously without clipping. The human eye can perceive roughly 20 stops of dynamic range (a 1,000,000:1 contrast ratio) in a single glance, thanks to saccadic adaptation. A single smartphone sensor exposure can capture roughly 10 to 12 stops at base ISO. The gap between those two numbers is the reason HDR exists.
+**動態範圍**是成像系統在同一次記錄中、不發生截斷的情況下，能同時捕捉場景中最亮與最暗部分的比值。人眼得益於掃視適應，在單次凝視中可感知約 20 檔的動態範圍（1,000,000:1 對比度）。單一智慧型手機感光元件曝光在基礎 ISO 下大約可捕捉 10 到 12 檔。這兩個數字之間的差距就是 HDR 存在的原因。
 
-Imagine you are taking a photo indoors with a bright window behind your subject. If you expose for the person's face (let's say 1/30s, ISO 400), the window blows out to pure clipped white — no sky, no clouds, no detail. If you expose for the window (1/2000s, ISO 50), the person's face becomes a silhouetted black blob. Neither single exposure works.
+想像您在室內拍攝一張主體背後有明亮窗戶的照片。如果您為人物臉部曝光（假設 1/30s、ISO 400），窗戶會過曝成純白截斷——沒有天空、沒有雲、沒有細節。如果您為窗戶曝光（1/2000s、ISO 50），人物臉部會變成一片剪影般的黑色斑塊。任何單一曝光都無法勝任。
 
-### How Smartphone HDR Works
+### 智慧型手機 HDR 的運作方式
 
-Every HDR system on modern phones uses **multi-frame bracketing** followed by computational fusion. The algorithm works like this:
+現代手機上的每個 HDR 系統都使用**多訊框包圍曝光**之後進行運算融合。演算法的運作方式如下：
 
-1. **Bracketed capture**: The camera captures a rapid burst of 3 to 10 consecutive frames at different exposure values (EV). A typical set might be frames at -3 EV (very short, preserves highlights), -1 EV, +1 EV, and +3 EV (very long, captures shadows). The sensor and VCM are held perfectly still during the burst; only the electronic shutter timing changes.
-2. **Reference frame selection**: The algorithm picks the sharpest mid-exposure frame as the geometric reference.
-3. **Image registration / alignment**: Each non-reference frame is computationally aligned to the reference. The algorithm finds distinctive keypoint features (corners, edges) using algorithms like FAST or SIFT, computes an affine or homography transform that maps each frame's features onto the reference frame, and warps the pixels accordingly. Any frames that are too blurred (from micro-shake during the burst) are discarded entirely.
-4. **Fusion**: For each pixel location in the final image, the algorithm combines information from the aligned frames. Underexposed pixels contribute their clean, unclipped highlight data. Overexposed pixels contribute their low-noise shadow data. Mid-tone pixels are averaged across all frames to reduce shot noise.
-5. **Tone mapping**: The fused linear image — which may now contain 14 to 18 stops of usable dynamic range — is compressed through a sophisticated local tone mapping operator into an 8-bit or 10-bit output image that looks good on a standard sRGB display.
+1. **包圍曝光捕捉**：相機以不同的曝光值（EV）連續快速捕捉 3 到 10 個畫面。一組典型的組合可能是 -3 EV（極短，保留亮部）、-1 EV、+1 EV、+3 EV（極長，捕捉暗部）的畫面。在連拍期間感光元件與 VCM 保持完全不動；只有電子快門時間改變。
+2. **參考畫面選取**：演算法挑選最清晰的中間曝光畫面作為幾何參考。
+3. **影像配準 / 對齊**：每個非參考畫面會以運算方式對齊到參考畫面。演算法使用 FAST 或 SIFT 等演算法尋找獨特的關鍵點特徵（角點、邊緣），計算仿射或單應性變換，將每個畫面的特徵映射到參考畫面上，並相應地扭曲像素。任何過於模糊（因連拍期間的微抖動）的畫面會被完全捨棄。
+4. **融合**：對最終影像中的每個像素位置，演算法結合來自對齊畫面的資訊。曝光不足的像素貢獻其乾淨、未截斷的亮部資料。過曝的像素貢獻其低雜訊的暗部資料。中間調像素在所有畫面間取平均以降低散粒雜訊。
+5. **色調映射**：融合後的線性影像——此時可能包含 14 到 18 檔可用動態範圍——透過精密的局部色調映射運算子壓縮成 8 位元或 10 位元輸出影像，使其在標準 sRGB 顯示器上看起來良好。
 
 ```mermaid
 flowchart LR
-    A[Scene: Bright Window + Dark Room] --> B[Burst Capture]
-    B --> C1[-3 EV Frame\nDark, Preserves Highlights]
-    B --> C2[0 EV Frame\nMid-Exposure Reference]
-    B --> C3[+3 EV Frame\nBright, Preserves Shadows]
-    C1 --> D[Registration / Alignment\nFeature Matching + Warp]
+    A["場景：明亮窗戶 + 陰暗房間"] --> B["連拍捕捉"]
+    B --> C1["-3 EV 畫面<br/>暗，保留亮部"]
+    B --> C2["0 EV 畫面<br/>中間曝光參考"]
+    B --> C3["+3 EV 畫面<br/>亮，保留暗部"]
+    C1 --> D["配準 / 對齊<br/>特徵比對 + 扭曲"]
     C2 --> D
     C3 --> D
-    D --> E[Merge / Fuse\nPer-Pixel Exposure Blend]
-    E --> F[Local Tone Mapping\n16 Stops → 8-Bit Displayable]
-    F --> G[Final HDR Output\nFace Visible + Sky Detailed]
+    D --> E["合併 / 融合<br/>每像素曝光混合"]
+    E --> F["局部色調映射<br/>16 檔到 8 位元可顯示"]
+    F --> G["最終 HDR 輸出<br/>臉部可見 + 天空有細節"]
 ```
 
-Real-world example: a Galaxy S26 Ultra in the default "Scene Optimizer HDR" mode internally fires 7 bracketed frames totaling approximately 0.2 seconds of capture time. The built-in hand-motion detection discards 2 blurred frames. The remaining 5 frames are aligned, fused, and tone-mapped. The output is written as a **JPEG_R Ultra HDR file** on Android 14+ devices: a standard JPEG primary image (8-bit SDR) with an embedded gain map that HDR-capable viewers (Android 14 Gallery, Chrome 120+, Adobe Lightroom) can use to reconstruct the full 10-bit HDR luminance range on an HDR10 or Dolby Vision display.
+真實世界範例：Galaxy S26 Ultra 在預設的「場景最佳化 HDR」模式下，內部會觸發 7 個包圍曝光畫面，總計約 0.2 秒的捕捉時間。內建的手部移動偵測會捨棄 2 個模糊畫面。剩餘的 5 個畫面會被對齊、融合並進行色調映射。輸出在 Android 14+ 裝置上寫入為 **JPEG_R Ultra HDR 檔案**：一張標準 JPEG 主影像（8 位元 SDR），內嵌一張增益圖，支援 HDR 的檢視器（Android 14 圖庫、Chrome 120+、Adobe Lightroom）可利用它在 HDR10 或 Dolby Vision 顯示器上重建完整的 10 位元 HDR 亮度範圍。
 
-### When HDR Works and When It Doesn't
+### HDR 適用與不適用的時機
 
-HDR excels at static scenes with both bright highlights and deep shadows: landscapes, backlit portraits, rooms with windows, sunsets over water. It actively fails — producing ghosting artifacts — when objects in the scene move during the bracketed burst: a flying bird, a waving flag, a person blinking, a child running. Modern AI-powered HDR algorithms detect and segment moving objects, blending only the reference frame for those pixels to avoid the classic HDR "ghost."
+HDR 在同時具有明亮亮部與深沉暗部的靜態場景中表現卓越：風景、逆光人像、有窗戶的房間、水面上的日落。當場景中的物體在包圍曝光連拍期間移動時，它會主動失敗——產生鬼影瑕疵：飛鳥、飄揚的旗幟、眨眼的人、奔跑的孩子。現代 AI 驅動的 HDR 演算法會偵測並分割移動物體，僅針對這些像素混合參考畫面，以避免經典的 HDR「鬼影」。
 
-## Portrait Mode: Bokeh via Depth Estimation
+## 人像模式：透過深度估測產生散景
 
-Portrait mode produces the aesthetic where the subject's face is perfectly sharp and the background dissolves into a creamy, out-of-focus blur called **bokeh**. Traditional cameras achieve this optically with large sensors, wide apertures, and long focal lengths. Smartphones achieve it computationally, because a 1/1.3-inch sensor at f/1.6 does not naturally produce enough shallow depth of field for the effect.
+人像模式產生一種美學效果：主體的臉部完美銳利，而背景溶化成柔滑、失焦的模糊，稱為**散景**。傳統相機以光學方式達成此效果，使用大型感光元件、寬光圈與長焦距。智慧型手機則以運算方式達成，因為 1/1.3 英吋感光元件在 f/1.6 下無法自然產生足夠淺的景深來呈現此效果。
 
-### Three Methods of Smartphone Depth Estimation
+### 智慧型手機深度估測的三種方法
 
-There are three independent techniques used by modern portrait systems; many phones use a combination of all three.
+現代人像系統使用三種獨立技術；許多手機會組合使用三者。
 
-**Method 1: Stereo Disparity from Dual Cameras.** This is the oldest and most geometrically sound method. The phone fires both the wide camera and the telephoto camera simultaneously at the same subject. Because the two cameras are physically separated by 10 to 15 millimeters (the "baseline"), they see the subject from slightly different horizontal positions. A foreground object's position shifts more between the two viewpoints than a distant background object's position does. This shift is called **disparity**. The algorithm runs a block-matching or semi-global matching (SGM) algorithm over the two rectified images to compute a disparity value for every pixel. Disparity is inversely proportional to depth, so the disparity map is converted directly into a per-pixel depth map.
+**方法 1：雙相機立體視差。** 這是最古老且幾何上最可靠的方法。手機同時對同一主體觸發廣角相機與望遠相機。由於兩個相機在實體上相隔 10 到 15 公釐（「基線」），它們從略微不同的水平位置觀看主體。前景物體在兩個視點之間的位置偏移量大於遠處背景物體的位置偏移量。這個偏移量稱為**視差**。演算法在兩張校正後的影像上執行區塊比對或半全域比對（SGM）演算法，為每個像素計算視差值。視差與深度成反比，因此視差圖可直接轉換為每像素深度圖。
 
-**Method 2: ToF / LiDAR Active Depth Sensing.** A ToF (Time-of-Flight) or LiDAR depth sensor projects a structured pattern of 30,000+ near-infrared laser dots onto the scene, then measures the round-trip time (for direct ToF) or phase shift (for indirect ToF) of the reflected light to compute a true metric depth in meters for each pixel. ToF produces accurate, dense depth maps even in complete darkness and on textureless surfaces (plain walls, sky) where stereo matching fails. Modern portrait systems typically use ToF as the ground-truth depth cue and stereo disparity as a refinement signal.
+**方法 2：ToF / LiDAR 主動深度感測。** ToF（飛時測距）或 LiDAR 深度感測器將 30,000 個以上的近紅外雷射點結構化圖案投射到場景上，然後測量反射光的往返時間（直接 ToF）或相位偏移（間接 ToF），為每個像素計算出以公尺為單位的真實度量深度。即使在完全黑暗中以及立體比對會失敗的無紋理表面（素色牆面、天空）上，ToF 也能產生精確、密集的深度圖。現代人像系統通常將 ToF 作為真實深度線索，將立體視差作為精修訊號。
 
-**Method 3: Monocular ML Depth Estimation.** For single-camera phones (or for the front-facing selfie camera, which has no stereo partner), a neural network estimates depth from a single RGB image. The model, trained on millions of images with ground-truth depth labels, learns the statistical cues humans use to judge depth: relative size, occlusion, linear perspective, texture gradient, defocus blur, and atmospheric perspective. Google's PortraitNet and Meta's DeepLabV3+ are representative architectures. Monocular depth is less metrically accurate than stereo or ToF, but it is sufficient for plausible-looking portrait bokeh.
+**方法 3：單眼 ML 深度估測。** 對於單相機手機（或對於沒有立體夥伴的前置自拍相機），神經網路會從單張 RGB 影像估測深度。這個以數百萬張帶有真實深度標籤影像訓練的模型，學習了人類用來判斷深度的統計線索：相對大小、遮蔽、線性透視、紋理梯度、失焦模糊與大氣透視。Google 的 PortraitNet 與 Meta 的 DeepLabV3+ 是具代表性的架構。單眼深度在度量精度上不如立體或 ToF，但對看起來合理的人像散景已經足夠。
 
-### The Portrait Rendering Pipeline
+### 人像渲染管線
 
-Once a depth map is obtained, the remaining steps are the same regardless of which depth estimation method was used:
+一旦取得深度圖，無論使用哪種深度估測方法，剩餘步驟都相同：
 
-1. **Subject Segmentation**: A separate semantic segmentation neural network (usually a U-Net variant) runs on the main RGB camera image and produces a soft alpha mask identifying which pixels belong to "person" vs "background." The mask is feathered at the edges — especially around hair, glasses, and fine foreground detail — to avoid the cutout "paper doll" look of early 2010s portrait mode.
-2. **Depth Refinement**: The raw depth map from Method 1/2/3 is multiplied with the segmentation mask. Background pixels keep their depth value; subject pixels are clamped to a single focus plane depth.
-3. **Per-Pixel Variable Blur**: Each background pixel is blurred by a Gaussian (or, for premium "optical simulation" modes, a physically rendered lens-kernel convolution) whose radius scales linearly with the pixel's distance from the focus plane. A background object at 5 meters gets a heavy blur; a background object at 1.5 meters gets a mild blur. The subject pixels are copied untouched.
-4. **Faux Optical Glare**: A premium touch: bright specular highlights in the blurred background (streetlights, reflections, the sun) are rendered as characteristic lens-shaped bokeh hexagons or circles rather than simple Gaussian blobs. This sells the illusion that the blur came from a real lens diaphragm.
+1. **主體分割**：一個獨立的語意分割神經網路（通常是 U-Net 變體）在主 RGB 相機影像上執行，產生一個柔邊 alpha 遮罩，識別哪些像素屬於「人物」、哪些屬於「背景」。遮罩在邊緣處進行羽化——特別是在頭髮、眼鏡與細微前景細節周圍——以避免早期 2010 年代人像模式的剪紙「紙娃娃」外觀。
+2. **深度精修**：來自方法 1/2/3 的原始深度圖與分割遮罩相乘。背景像素保留其深度值；主體像素被鉗制到單一對焦平面深度。
+3. **每像素可變模糊**：每個背景像素以高斯模糊（或在高階「光學模擬」模式下，以實體渲染的鏡頭核心卷積）模糊，其半徑與該像素到對焦平面的距離呈線性比例。5 公尺處的背景物體獲得重度模糊；1.5 公尺處的背景物體獲得輕微模糊。主體像素則原封不動地複製。
+4. **仿光學耀光**：高階的點綴：模糊背景中的明亮鏡面高光（路燈、反光、太陽）被渲染為具特色的鏡頭形狀散景六邊形或圓形，而非簡單的高斯斑塊。這營造出模糊來自真實鏡頭光圈的錯覺。
 
 ```mermaid
 flowchart TD
-    A[Wide Camera Frame + Tele Camera Frame / ToF Data] --> B[Depth Estimation\nStereo / ToF / Mono ML]
-    B --> C[Depth Map\n0.5m → Infinity]
-    A --> D[Subject Segmentation\nU-Net Neural Network]
-    D --> E[Person Alpha Mask\nSoft-Edged Feathering]
-    C --> F[Per-Pixel Blur Radius\nScales with Depth]
+    A["廣角相機畫面 + 望遠相機畫面 / ToF 資料"] --> B["深度估測<br/>立體 / ToF / 單眼 ML"]
+    B --> C["深度圖<br/>0.5m 到無限遠"]
+    A --> D["主體分割<br/>U-Net 神經網路"]
+    D --> E["人物 alpha 遮罩<br/>柔邊羽化"]
+    C --> F["每像素模糊半徑<br/>隨深度縮放"]
     E --> F
-    F --> G[Apply Variable Blur\nSubject = Sharp, Background = Bokeh]
-    G --> H[Add Bokeh Speculars\nHexagonal / Circular Highlights]
-    H --> I[Final Portrait Photo\nCreamy Background Blur]
+    F --> G["套用可變模糊<br/>主體 = 銳利，背景 = 散景"]
+    G --> H["加入散景鏡面高光<br/>六邊形 / 圓形高光"]
+    H --> I["最終人像照片<br/>柔滑背景模糊"]
 ```
 
-## Night Mode: Multi-Frame Temporal Merging
+## 夜景模式：多訊框時域合併
 
-Before 2018, low-light smartphone photography was essentially unusable without flash. A dimly lit bar or a city street at night produced a noisy, grainy, blurry mess. Then Google released **Night Sight** on the Pixel 3, and everything changed. The core insight was counterintuitive: instead of taking one long 1-second exposure (which would be hopelessly blurred from hand shake), take 15 very short 1/15-second exposures (each individually sharp because OIS is active), then algorithmically align and average them. The total integrated exposure time is still 1 second, but the per-frame exposure is short enough that handshake blur never accumulates.
+在 2018 年之前，沒有閃光燈的低光智慧型手機攝影基本上無法使用。昏暗的酒吧或夜間的城市街道會產生雜訊多、顆粒粗、模糊的一團混亂。然後 Google 在 Pixel 3 上推出 **Night Sight**，一切都改變了。核心洞見違反直覺：與其拍攝一張長達 1 秒的曝光（會因手部晃動而徹底模糊），不如拍攝 15 張非常短的 1/15 秒曝光（每張各自銳利，因為 OIS 處於作用中），然後以演算法對齊並取平均。總整合曝光時間仍是 1 秒，但每畫面曝光足夠短，手震模糊永遠不會累積。
 
-### The Night Mode Algorithm Step-by-Step
+### 夜景模式演算法逐步解析
 
-1. **Burst Capture**: The camera captures 8 to 15 raw frames. Each frame uses a moderate exposure time (1/15s to 1/8s is typical) and moderate ISO (800 to 3200). Individual frames are noisy but not blurred. The burst totals 0.5 to 2 seconds of wall-clock time.
-2. **Gyro-Aided EIS Alignment**: The phone's main IMU gyroscope records angular velocity at 8,000 Hz throughout the burst. For each frame, the cumulative rotation and translation from the reference frame is computed. Each raw frame is then digitally shifted, rotated, and slightly scaled (Electronic Image Stabilization, EIS) on the NPU to sub-pixel precision, perfectly registering it to the reference frame even if the user's hands moved by several full pixels of blur during the burst.
-3. **Temporal Pixel Merging**: For each pixel location across the 12 aligned frames, the algorithm gathers 12 candidate pixel values. It then performs robust statistical merging rather than a simple average: outlier values (caused by hot pixels, cosmic ray hits, or a car's headlights transiting that spot) are identified and discarded. The remaining consistent values are averaged, reducing Gaussian shot noise by a factor equal to the square root of the number of frames kept. A 12-frame merge reduces noise by 3.5×.
-4. **Spatial Denoising**: A CNN-based denoiser (trained specifically on raw night imagery) removes any remaining high-frequency noise while preserving real edges and texture.
-5. **Local Tone Mapping**: The merged raw image has very high dynamic range. A spatially-varying tone mapping operator (based on bilateral filtering or a learned CNN tone map) lifts shadows without blowing out city lights, boosts color saturation in dark regions (which would otherwise look desaturated), and produces a final 8-bit image that feels bright and clean rather than dim and murky.
+1. **連拍捕捉**：相機捕捉 8 到 15 張 RAW 畫面。每張畫面使用中等曝光時間（典型為 1/15s 到 1/8s）與中等 ISO（800 到 3200）。個別畫面雜訊多但不模糊。連拍總計 0.5 到 2 秒的實際時間。
+2. **陀螺儀輔助 EIS 對齊**：手機的主要 IMU 陀螺儀在整個連拍期間以 8,000 Hz 記錄角速度。對每個畫面，計算從參考畫面起算的累積旋轉與平移。然後在 NPU 上對每張 RAW 畫面進行數位移動、旋轉與輕微縮放（電子影像穩定，EIS）至子像素精度，即使使用者雙手在連拍期間移動了數個完整像素的模糊量，也能完美地將其配準到參考畫面。
+3. **時域像素合併**：對跨 12 張對齊畫面的每個像素位置，演算法收集 12 個候選像素值。然後執行穩健統計合併而非簡單平均：離群值（由熱像素、宇宙射線撞擊或汽車頭燈經過該點所造成）會被識別並捨棄。剩餘的一致值取平均，將高斯散粒雜訊降低一個等於保留畫面數量平方根的倍數。12 畫面合併可降低雜訊 3.5 倍。
+4. **空間除噪**：基於 CNN 的除噪器（特別針對 RAW 夜間影像訓練）移除任何剩餘的高頻雜訊，同時保留真實邊緣與紋理。
+5. **局部色調映射**：合併後的 RAW 影像具有非常高的動態範圍。空間變化色調映射運算子（基於雙邊濾波或學習式 CNN 色調映射）提升暗部而不過曝城市燈光、增強暗區的色彩飽和度（否則會看起來去飽和），並產生一張感覺明亮乾淨而非昏暗混濁的最終 8 位元影像。
 
 ```mermaid
 flowchart LR
-    A[Dark Scene: City Street at Night] --> B[Capture 12 RAW Frames\n1/15s each = 0.66s total]
-    B --> C[Gyro EIS Alignment\nSub-Pixel Shift + Rotate]
-    C --> D[Temporal Merge\nRobust Mean / Outlier Reject\nNoise −3.5×]
-    D --> E[CNN Spatial Denoiser\nPreserve Edges / Texture]
-    E --> F[Local Tone Mapping\nBoost Shadows / Preserve Lights]
-    F --> G[Bright Clear Night Photo\nLow Noise, No Blur]
+    A["昏暗場景：夜間城市街道"] --> B["捕捉 12 張 RAW 畫面<br/>每張 1/15s = 總計 0.66s"]
+    B --> C["陀螺儀 EIS 對齊<br/>子像素位移 + 旋轉"]
+    C --> D["時域合併<br/>穩健平均 / 離群值拒絕<br/>雜訊 -3.5x"]
+    D --> E["CNN 空間除噪器<br/>保留邊緣 / 紋理"]
+    E --> F["局部色調映射<br/>提升暗部 / 保留亮部"]
+    F --> G["明亮清晰的夜景照片<br/>低雜訊，無模糊"]
 ```
 
-Samsung's "Nightography," Apple's "Night Mode," Xiaomi's "Night Mode 2.0," and OPPO's "Ultra Dark Mode" all use substantially the same algorithm architecture. Variations exist in the exact number of frames, the choice of robust merging statistic, the denoiser architecture, and the tone map look, but the core gyro-aligned multi-frame temporal averaging is universal across the industry.
+Samsung 的「Nightography」、Apple 的「Night Mode」、Xiaomi 的「Night Mode 2.0」與 OPPO 的「Ultra Dark Mode」都使用大體相同的演算法架構。差異存在於確切畫面數量、穩健合併統計量的選擇、除噪器架構與色調映射的外觀，但核心的陀螺儀對齊多訊框時域平均在整個產業中是通用的。
 
-## Slow Motion: High-Frame-Rate Cropped Capture
+## 慢動作：高幀率裁剪捕捉
 
-Slow-motion video stretches time by capturing video frames faster than the standard 30 fps playback rate, then playing them back at the normal 30 fps speed. The common multipliers:
+慢動作影片透過以高於標準 30 fps 播放速率的速度捕捉影片畫面，然後以正常 30 fps 速度播放，藉此拉伸時間。常見的倍數：
 
-- **120 fps capture → 30 fps playback = 4× slow motion.** A 1-second real-world event becomes 4 seconds of video.
-- **240 fps → 30 fps = 8× slow motion.**
-- **960 fps → 30 fps = 32× ultra-slow motion.** A water drop splash, a balloon pop, or a hummingbird wingbeat becomes visible.
+- **120 fps 捕捉 → 30 fps 播放 = 4 倍慢動作。** 1 秒的真實事件變成 4 秒的影片。
+- **240 fps → 30 fps = 8 倍慢動作。**
+- **960 fps → 30 fps = 32 倍超慢動作。** 水滴飛濺、氣球爆破或蜂鳥拍翅都變得可見。
 
-### Why 960 fps Requires a Sensor Crop
+### 為什麼 960 fps 需要感光元件裁剪
 
-The bottleneck for high-frame-rate capture is **sensor readout bandwidth**. The image sensor has a finite number of MIPI CSI-2 lanes running at a fixed maximum data rate (typically 2.5 Gbps per lane, 4 lanes = 10 Gbps total). The sensor can only output so many pixels per second.
+高幀率捕捉的瓶頸是**感光元件讀出頻寬**。影像感光元件有有限數量的 MIPI CSI-2 通道，以固定的最大資料速率運作（通常每通道 2.5 Gbps，4 通道 = 總計 10 Gbps）。感光元件每秒只能輸出這麼多像素。
 
-- A full 48MP (8000×6000) frame readout at 960 fps would require 48,000,000 × 960 = 46.08 billion pixels per second. That is 30× the actual readout bandwidth of any 2026 smartphone sensor.
-- Therefore, to hit 960 fps the sensor must read out only a small central crop of its pixel array. A 960 fps mode is typically a 1280×720 (720p HD) or sometimes a 1920×1080 (1080p FHD) crop. The total pixel bandwidth becomes manageable: 1280×720×960 fps = 884 megapixels per second, which fits comfortably in 10 Gbps even with 10-bit per pixel encoding.
+- 在 960 fps 下讀出完整 48MP（8000×6000）畫面需要 48,000,000 × 960 = 每秒 46.08 億像素。這是任何 2026 年智慧型手機感光元件實際讀出頻寬的 30 倍。
+- 因此，要達到 960 fps，感光元件只能讀出其像素陣列的一小塊中央裁剪區。960 fps 模式通常是 1280×720（720p HD）或有時是 1920×1080（1080p FHD）裁剪。總像素頻寬變得可管理：1280×720×960 fps = 每秒 8.84 億像素，即使在每像素 10 位元編碼下也能輕鬆容納於 10 Gbps 內。
 
-The numbers in practice: 960 fps capture × 0.3 seconds of real time = 288 individual frames. Played back at 30 fps = 9.6 seconds of buttery slow-motion video. Some Sony Xperia and Samsung Galaxy flagship phones support a brief burst of 960 fps at 1080p resolution by reading the sensor through a limited analog-to-digital converter (ADC) bank only in the central crop region.
+實際的數字：960 fps 捕捉 × 0.3 秒真實時間 = 288 張個別畫面。以 30 fps 播放 = 9.6 秒如絲般順滑的慢動作影片。部分 Sony Xperia 與 Samsung Galaxy 旗艦手機支援 1080p 解析度下短暫的 960 fps 連拍，方法是僅在中央裁剪區域透過有限的類比數位轉換器（ADC）銀行讀取感光元件。
 
 ```mermaid
 flowchart TD
-    subgraph "Bandwidth Bottleneck: Sensor Readout"
+    subgraph "頻寬瓶頸：感光元件讀出"
         direction TB
-        A[Full Sensor Mode:\n48MP (8000×6000) @ 30fps\n= 1.44 GPix/s\n→ Photo / Standard Video]
-        B[Slow-Motion Crop Mode:\n1280×720 @ 960fps\n= 0.88 GPix/s\n→ 32× Ultra Slow-Mo]
+        A["完整感光元件模式<br/>48MP (8000x6000) @ 30fps<br/>= 1.44 GPix/s<br/>照片 / 標準影片"]
+        B["慢動作裁剪模式<br/>1280x720 @ 960fps<br/>= 0.88 GPix/s<br/>32 倍超慢動作"]
     end
-    A --> C{MIPI CSI-2 Bus\n4 Lanes × 2.5 Gbps\n= 10 Gbps Total}
+    A --> C{"MIPI CSI-2 匯流排<br/>4 通道 x 2.5 Gbps<br/>= 總計 10 Gbps"}
     B --> C
-    C --> D[ISP Video Pipeline\nScales to Output Resolution]
-    D --> E[HEVC / AV1 Encoder\nWrites Slow-Motion MP4]
+    C --> D["ISP 影片管線<br/>縮放至輸出解析度"]
+    D --> E["HEVC / AV1 編碼器<br/>寫入慢動作 MP4"]
 ```
 
-Slow-motion modes also often use a staggered HDR technique where alternate rows of the sensor are exposed for different durations to maintain high dynamic range even at 240 fps or 960 fps.
+慢動作模式也常使用交錯式 HDR 技術，其中感光元件的交替列以不同持續時間曝光，以在 240 fps 或 960 fps 下維持高動態範圍。
 
-## Ultra-Wide: Distortion Correction and Edge Quality
+## 超廣角：畸變校正與邊緣品質
 
-The ultra-wide camera on a modern flagship offers a 10–18mm full-frame equivalent focal length and a 100° to 130° diagonal field of view. It opens up compositional possibilities that the standard wide camera cannot: sweeping landscapes, towering architecture shots where the entire building fits without stepping into traffic, group selfies that actually include everyone, and a playful "close-up proximity distortion" effect where objects held near the lens appear massively oversized relative to the background.
+現代旗艦手機上的超廣角相機提供 10–18mm 全片幅等效焦距與 100° 到 130° 的對角視野。它開啟了標準廣角相機無法達成的構圖可能性：遼闊的風景、整棟建築不用走入車流就能完整入鏡的宏偉建築照、真正能容納所有人的團體自拍，以及一種俏皮的「近距離誇張變形」效果，靠近鏡頭的物體相對於背景顯得巨大。
 
-However, the ultra-wide focal length comes with three characteristic optical flaws that the ISP must correct before the photo is usable:
+然而，超廣角焦距伴隨三個特有的光學瑕疵，ISP 必須在照片可用之前加以校正：
 
-1. **Geometric (Barrel) Distortion**: Straight lines bow outward like the edges of a fisheye lens. A photo of a rectangular door frame will look pincushioned or barreled. The ISP's Geometric Distortion Correction stage (see Chapter 2) applies a per-pixel coordinate remap using a 4th-order or 6th-order polynomial lens model calibrated for that specific module. The correction necessarily crops the outer 5–10% of the sensor array because the remapping pushes those outer pixels off-canvas.
-2. **Lateral Chromatic Aberration (LCA)**: The lens bends different wavelengths of light by slightly different amounts, so red, green, and blue images of the same off-axis point land at slightly different pixel coordinates. The result is visible color fringing (purple/green edges) on high-contrast objects near the corners. The ISP corrects LCA by applying a slightly different magnification factor to the red and blue color planes relative to green.
-3. **Vignetting / Corner Softness**: Corner pixels receive significantly less light than center pixels (due to the lens's cos⁴θ natural falloff plus mechanical vignetting from the lens barrel), and the lens's optical MTF (Modulation Transfer Function) is lower at extreme angles so corners look soft. The Lens Shading Correction stage applies a radially symmetric gain boost to flatten the illumination, and an edge-aware sharpening filter is applied more aggressively at the corners than in the center.
+1. **幾何（桶形）畸變**：直線像魚眼鏡頭邊緣般向外彎曲。矩形門框的照片看起來會是枕形或桶形。ISP 的幾何畸變校正階段（見第 2 章）使用為該特定模組校準的 4 階或 6 階多項式鏡頭模型，執行每像素座標重新映射。此校正必然會裁剪感光元件陣列外圍 5–10%，因為重新映射會將這些外圍像素推離畫布。
+2. **橫向色差（LCA）**：鏡頭對不同波長的光線產生略微不同的彎折量，因此同一個離軸點的紅、綠、藍影像落在略微不同的像素座標上。結果是在角落附近高對比物體上可見的色彩 fringe（紫/綠邊緣）。ISP 透過對紅色與藍色色彩平面相對於綠色套用略微不同的放大因子來校正 LCA。
+3. **暗角 / 角落偏軟**：角落像素接收到的光量明顯少於中心像素（因為鏡頭的 cos⁴θ 自然衰減加上鏡筒的機械暗角），且鏡頭的光學 MTF（調制轉移函數）在極端角度下較低，因此角落看起來偏軟。鏡頭明暗校正階段套用徑向對稱的增益提升以展平照明，並在角落比中心更積極地套用邊緣感知銳化濾波器。
 
 ```mermaid
 flowchart LR
-    A[Raw Ultra-Wide Capture\n120° Fisheye\nBarrel Distorted] --> B[ISP Geometric Correction\n6th-Order Polynomial Remap]
-    B --> C[Cropped Rectilinear Output\nStraight Lines Actually Straight]
-    C --> D[Lateral CA Correction\nRed/Blue Plane Rescaling]
-    D --> E[Lens Shading + Corner Sharpening]
-    E --> F[Final Corrected Ultra-Wide Photo]
+    A["原始超廣角捕捉<br/>120 度魚眼<br/>桶形畸變"] --> B["ISP 幾何校正<br/>6 階多項式重新映射"]
+    B --> C["裁剪後直線輸出<br/>直線真正筆直"]
+    C --> D["橫向色差校正<br/>紅/藍平面重新縮放"]
+    D --> E["鏡頭明暗 + 角落銳化"]
+    E --> F["最終校正後超廣角照片"]
 ```
 
-## Telephoto: Standard vs Periscope
+## 望遠：標準 vs 潛望式
 
-The telephoto camera captures distant subjects that the wide camera cannot resolve. Modern phones ship two distinct telephoto designs.
+望遠相機捕捉廣角相機無法解析的遠處主體。現代手機配備兩種不同的望遠設計。
 
-**Standard Telephoto (2× to 3× optical):** This is a conventional camera module: the lens barrel sits perpendicular to the phone's back cover, directly above the image sensor, exactly like the wide camera but with a longer focal length lens. A 3× telephoto has an ~72mm full-frame equivalent focal length. The physical stack-up is limited by the phone's thickness (7–9mm), so the lens cannot be longer than that. Hence the 3× practical ceiling for conventional telephoto modules.
+**標準望遠（2 倍到 3 倍光學）：** 這是傳統相機模組：鏡筒垂直於手機背蓋，直接位於影像感光元件上方，與廣角相機完全相同，只是焦距較長。3 倍望遠的全片幅等效焦距約為 72mm。實體堆疊受限於手機厚度（7–9mm），因此鏡頭不能超過這個長度。這就是傳統望遠模組 3 倍實際上限的原因。
 
-**Periscope Telephoto (5× to 10× optical):** To get longer focal lengths without making the phone thicker, engineers folded the optical path 90° using a prism. Light enters through a window in the phone's edge or rear glass, hits a 45° right-angle prism, bounces 90° sideways, and then travels horizontally through a multi-element lens barrel 10–14mm long that runs parallel to the phone's mainboard, finally landing on an image sensor mounted sideways on the PCB. The prism itself is mounted on a 2-axis OIS gimbal, and the sensor is sometimes mounted on a separate sensor-shift OIS, giving 4-axis or 5-axis total stabilization — enough to get sharp handheld 10× photos of text on a distant building sign.
+**潛望式望遠（5 倍到 10 倍光學）：** 為了在不增加手機厚度的情況下獲得更長焦距，工程師使用稜鏡將光路摺疊 90°。光線從手機邊緣或背蓋玻璃的窗口進入，撞擊 45° 直角稜鏡，側向反射 90°，然後水平穿過 10–14mm 長的多元素鏡筒（與手機主機板平行），最後落在側向安裝於 PCB 上的影像感光元件上。稜鏡本身安裝在 2 軸 OIS 雲台上，感光元件有時安裝在獨立的感光元件位移 OIS 上，總計 4 軸或 5 軸穩定——足以在手持下拍攝遠處建築招牌上文字的清晰 10 倍照片。
 
 ```mermaid
 graph LR
-    subgraph "Periscope Telephoto (Side View Inside Phone)"
+    subgraph "潛望式望遠（手機內部側視圖）"
         direction LR
-        A[Light In\nRear Glass Window] --> B[45° Prism\n90° Reflection]
-        B --> C[Lens Element 1]
-        C --> D[Lens Element 2]
-        D --> E[Lens Element 3]
-        E --> F[Lens Element 4]
-        F --> G[Lens Element 5]
-        G --> H[IR Cut Filter]
-        H --> I[Image Sensor\nMounted Horizontally]
+        A["光線進入<br/>背蓋玻璃窗口"] --> B["45 度稜鏡<br/>90 度反射"]
+        B --> C["鏡片 1"]
+        C --> D["鏡片 2"]
+        D --> E["鏡片 3"]
+        E --> F["鏡片 4"]
+        F --> G["鏡片 5"]
+        G --> H["IR 截止濾鏡"]
+        H --> I["影像感光元件<br/>水平安裝"]
     end
-    J[Phone Thickness: 8.5mm Total] --> B
+    J["手機厚度：總計 8.5mm"] --> B
 ```
 
-At zoom boundaries between physical cameras (for example, 2.9× still digitally cropped from the wide camera vs 3.1× using the 3× periscope telephoto), the HAL performs a multi-camera fusion trick: for roughly ±0.2× around the switchover point, it captures both cameras simultaneously and performs a cross-fade weighted by zoom ratio, so the user never sees a visible "jump" when the active physical camera changes.
+在實體相機之間的變焦邊界（例如，2.9 倍仍從廣角相機數位裁剪 vs 3.1 倍使用 3 倍潛望式望遠），HAL 會執行一個多相機融合技巧：在切換點周圍約 ±0.2 倍範圍內，它同時捕捉兩個相機並執行以變焦比加權的交叉淡入淡出，因此當作用中的實體相機改變時，使用者永遠看不到可見的「跳動」。
 
-## Macro: Extreme Close-Up Photography
+## 微距：極限近拍攝影
 
-Macro photography captures extreme close-ups of small subjects: the texture of flower petals, the compound eyes of insects, the fibers of a piece of fabric, the individual sugar crystals on a cookie.
+微距攝影捕捉小主體的極限特寫：花瓣的紋理、昆蟲的複眼、一塊布料的纖維、餅乾上個別的糖晶體。
 
-Two macro strategies exist in modern phones:
+現代手機存在兩種微距策略：
 
-**Dedicated Macro Camera:** Budget and mid-range phones often ship a small, low-resolution (2MP to 5MP) dedicated macro module with a fixed-focus short-focal-length lens. The module is tuned for a specific minimum focus distance (typically 2–4 cm) and produces surprisingly sharp macro images despite its low resolution. The main drawback is that the sensor is tiny, so image quality degrades sharply in anything less than bright daylight.
+**專用微距相機：** 平價與中階手機通常配備小型、低解析度（2MP 到 5MP）的專用微距模組，配備定焦短焦距鏡頭。該模組針對特定的最小對焦距離（通常 2–4 公分）進行調校，儘管解析度低，卻能產生令人驚訝的銳利微距影像。主要缺點是感光元件極小，因此在任何低於明亮日光的條件下，影像品質會急劇下降。
 
-**Ultra-Wide Re-purposed as Macro:** Flagship phones (Google Pixel, Samsung S-series Ultra, iPhone Pro) do not ship a dedicated macro camera. Instead, they re-task the ultra-wide camera. The ultra-wide's short focal length (13mm eq) gives it a very short minimum focus distance — often 1 to 2 centimeters from the subject. When the user taps "Macro" mode or the camera app detects a close subject via the ToF sensor or phase-detect AF rangefinder, the app switches to the ultra-wide, drives its VCM to the minimum-focus position, applies extra geometric distortion correction (because the subject is now at a field-curvature extreme where the polynomial remap differs significantly from the infinity calibration), and crops the center of the ultra-wide sensor to produce the final macro frame. The large 12MP–50MP ultra-wide sensor gives dramatically better macro image quality than a 5MP dedicated module.
+**超廣角兼作微距：** 旗艦手機（Google Pixel、Samsung S 系列 Ultra、iPhone Pro）不配備專用微距相機。相反地，它們將超廣角相機重新任務化。超廣角的短焦距（13mm 等效）使其具有非常短的最小對焦距離——通常距主體 1 到 2 公分。當使用者輕觸「微距」模式或相機應用程式透過 ToF 感測器或相位偵測 AF 測距儀偵測到近距主體時，應用程式會切換到超廣角、將其 VCM 驅動到最小對焦位置、套用額外的幾何畸變校正（因為主體現在處於場曲極端，多項式重新映射與無限遠校準顯著不同），並裁剪超廣角感光元件的中心以產生最終微距畫面。大型 12MP–50MP 超廣角感光元件提供的微距影像品質遠優於 5MP 專用模組。
 
-## Computational Photography: The Unifying Philosophy
+## 運算攝影：統一哲學
 
-The features above — HDR, Portrait, Night Mode, Slow Motion, Ultra-Wide correction, Periscope zoom fusion, Macro — share a single unifying idea. **Computational photography** is the philosophy that the camera sensor, the ISP, the gyroscope/IMU, the NPU (Neural Processing Unit), and multi-frame signal processing algorithms can work together to produce imagery that no single lens/sensor combination, no matter how expensive the glass, could ever produce on its own.
+上述功能——HDR、人像、夜景模式、慢動作、超廣角校正、潛望式變焦融合、微距——共享一個統一理念。**運算攝影**的理念是：相機感光元件、ISP、陀螺儀/IMU、NPU（神經處理單元）與多訊框訊號處理演算法可以協同運作，產出任何單一鏡頭/感光元件組合——無論玻璃多麼昂貴——都無法獨自產出的影像。
 
-The classic DSLR model is: light → lens → sensor → storage. The smartphone model is: light → multiple lenses → multiple sensors → gyro/IMU → multi-frame burst capture → NPU neural inference → per-pixel decision fusion → sophisticated tone mapping → storage. Both start and end at the same place, but the smartphone inserts dozens of additional computational steps in the middle, each of which improves the final result in ways optics alone cannot.
+經典的 DSLR 模型是：光線 → 鏡頭 → 感光元件 → 儲存。智慧型手機模型是：光線 → 多個鏡頭 → 多個感光元件 → 陀螺儀/IMU → 多訊框連拍捕捉 → NPU 神經推論 → 每像素決策融合 → 精密色調映射 → 儲存。兩者起始與結束於相同位置，但智慧型手機在中間插入了數十個額外的運算步驟，每個步驟都以前述光學單獨無法達成的方式改善最終結果。
 
-Zooming seamlessly across 0.5× to 10× on a Galaxy S26 Ultra is computational: the HAL blends three different cameras with three different focal lengths across five zoom switch points. Rescuing a backlit portrait where the window behind the subject no longer blows out is computational: 7-frame HDR fusion. A handheld night photo of the Milky Way that would require a tripod and a 30-second exposure on a DSLR is computational: 12-frame gyro-aligned temporal merge. Every feature described in this chapter is computational photography.
+在 Galaxy S26 Ultra 上從 0.5 倍到 10 倍無縫變焦是運算式的：HAL 跨越五個變焦切換點融合三個不同焦距的不同相機。挽救一張主體背後窗戶不再過曝的逆光人像是運算式的：7 畫面 HDR 融合。一張在 DSLR 上需要三腳架與 30 秒曝光的手持銀河夜拍是運算式的：12 畫面陀螺儀對齊時域合併。本章描述的每個功能都是運算攝影。
 
 ```mermaid
 graph TD
-    subgraph "Computational Photography Venn Diagram"
-        A[Optics\nLenses, Aperture, OIS]
-        B[Sensors\nCMOS, Bayer, Rolling Shutter]
-        C[Machine Learning\nSegmentation, Denoise, Depth]
-        D[Multi-Frame Signal Processing\nHDR Merge, Night Merge, EIS]
+    subgraph "運算攝影文氏圖"
+        A["光學<br/>鏡頭、光圈、OIS"]
+        B["感光元件<br/>CMOS、Bayer、Rolling Shutter"]
+        C["機器學習<br/>分割、除噪、深度"]
+        D["多訊框訊號處理<br/>HDR 合併、夜景合併、EIS"]
     end
-    A -- Overlap --> E[Portrait Bokeh]
-    B -- Overlap --> F[HDR Bracketed Capture]
-    C -- Overlap --> G[ML Portrait Segmentation]
-    D -- Overlap --> H[Night Sight Temporal Merge]
-    A & B & C & D --> I[Seamless Multi-Camera Zoom]
+    A -- 重疊 --> E["人像散景"]
+    B -- 重疊 --> F["HDR 包圍曝光捕捉"]
+    C -- 重疊 --> G["ML 人像分割"]
+    D -- 重疊 --> H["Night Sight 時域合併"]
+    A & B & C & D --> I["無縫多相機變焦"]
 ```
 
-This is the most important idea to carry into the Camera2 API chapters that follow. The Camera2 API is not just a tool to "take a picture." It is a low-level control interface that lets your app fire precise multi-frame bursts, read gyro metadata per frame, select which physical camera fires at which zoom ratio, and stream frames through on-device neural networks — the building blocks for implementing your own computational photography features.
+這是帶入後續 Camera2 API 章節時最重要的觀念。Camera2 API 不只是「拍照」的工具。它是一個低階控制介面，讓您的應用程式能夠觸發精確的多訊框連拍、每畫面讀取陀螺儀詮釋資料、選擇哪個實體相機以哪個變焦比觸發，並將畫面串流經過裝置端神經網路——這些都是實作您自己運算攝影功能的建構區塊。
 
-## Summary
+## 摘要
 
-In this chapter you learned the real-world algorithms behind modern smartphone photography features. HDR uses 3–10 frame exposure bracketing, per-frame feature-based alignment, and tone mapping to capture dynamic range the sensor cannot see in a single exposure. Portrait mode computes a per-pixel depth map via stereo camera disparity, ToF laser ranging, or monocular ML depth estimation, then runs a U-Net subject segmentation and applies a variable per-pixel Gaussian blur scaled by depth. Night mode captures 8–15 short exposures, aligns them using gyro-aided EIS, applies robust temporal pixel merging to reduce noise by 3.5×, and locally tone-maps the result. Slow-motion video at 960 fps must crop the sensor because the MIPI readout bandwidth is the hard bottleneck. Ultra-wide photos undergo geometric distortion correction, chromatic aberration correction, and corner shading correction in the ISP before they become viewable. Periscope telephoto cameras use a 45° prism to fold the light path 90° and fit a 10× optical lens inside an 8.5mm-thick phone. You learned the definition of computational photography: the fusion of Optics, Sensors, Machine Learning, and Multi-Frame Signal Processing to create images beyond the reach of any single lens/sensor system.
+在本章中，您學到了現代智慧型手機攝影功能背後的真實世界演算法。HDR 使用 3–10 畫面包圍曝光、每畫面基於特徵的對齊以及色調映射，以捕捉感光元件在單次曝光中無法看見的動態範圍。人像模式透過立體相機視差、ToF 雷射測距或單眼 ML 深度估測計算每像素深度圖，然後執行 U-Net 主體分割並套用以深度縮放的可變每像素高斯模糊。夜景模式捕捉 8–15 張短曝光、使用陀螺儀輔助 EIS 對齊它們、套用穩健時域像素合併以降低雜訊 3.5 倍，並對結果進行局部色調映射。960 fps 的慢動作影片必須裁剪感光元件，因為 MIPI 讀出頻寬是硬性瓶頸。超廣角照片在變得可觀看之前，會在 ISP 中經歷幾何畸變校正、色差校正與角落明暗校正。潛望式望遠相機使用 45° 稜鏡將光路摺疊 90°，在 8.5mm 厚的手機中容納 10 倍光學鏡頭。您學到了運算攝影的定義：光學、感光元件、機器學習與多訊框訊號處理的融合，以創造超越任何單一鏡頭/感光元件系統所能及的影像。
 
-## What's Next
+## 接下來
 
-Chapter 4 is the hands-on practical chapter. You will install the **Android Camera Parameters** companion app from source or Google Play, launch it on your own phone, and inspect exactly what your own hardware is capable of. You will learn to read Camera IDs and facing directions, check the Hardware Level of each camera (LEGACY / LIMITED / FULL / LEVEL_3), enumerate supported output formats (JPEG, YUV_420_888, PRIVATE, RAW_SENSOR, JPEG_R Ultra HDR), find maximum slow-motion FPS ranges, explore zoom ratios and switch points between your phone's physical cameras, and check whether your primary sensor supports RAW capture — writing down the answers for your specific device, because those answers determine what is and is not possible for your own Camera2 API app to do on that phone.
+第 4 章是動手實作的章節。您將從原始碼或 Google Play 安裝 **Android Camera Parameters** 配套應用程式、在自己的手機上啟動它，並檢查您自己的硬體究竟能做什麼。您將學會讀取相機 ID 與面向方向、檢查每個相機的硬體等級（LEGACY / LIMITED / FULL / LEVEL_3）、列舉支援的輸出格式（JPEG、YUV_420_888、PRIVATE、RAW_SENSOR、JPEG_R Ultra HDR）、尋找最大慢動作 FPS 範圍、探索變焦比與手機實體相機之間的切換點，並檢查您的主感光元件是否支援 RAW 捕捉——為您的特定裝置寫下答案，因為這些答案決定了您自己的 Camera2 API 應用程式在該手機上能做與不能做什麼。

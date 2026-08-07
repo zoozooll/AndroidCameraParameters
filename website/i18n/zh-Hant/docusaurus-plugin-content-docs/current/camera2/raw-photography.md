@@ -1,136 +1,136 @@
 ---     
 sidebar_position: 18
-title: "Chapter 18: RA W Photography"
-description: "Master RAW_SENSOR format, DNG file creation with DngCreator, Bayer patterns, and simultaneous RAW+JPEG capture in Android Camera2 API"
-keywords: [Android Camera2, RAW photography, RAW_SENSOR, DngCreator, DNG, Bayer pattern, RGGB, JPEG_R, camera metadata]
+title: "第 18 章：RAW 攝影"
+description: "在 Android Camera2 API 中掌握 RAW_SENSOR 格式、使用 DngCreator 建立 DNG 文件、拜耳模式以及同時進行的 RAW+JPEG 擷取"
+keywords: [Android Camera2, RAW 攝影, RAW_SENSOR, DngCreator, DNG, 拜耳模式, RGGB, JPEG_R, 相機元數據]
 ---
 
-# Chapter 18: RAW Photography
+# 第 18 章：RAW 攝影
 
-Professional mobile photography demands more than the processed JPEGs that Android's ISP (Image Signal Processor) produces by default. When you capture a JPEG, the sensor's raw data has already been filtered, interpolated, color-corrected, noise-reduced, and tone-mapped — destroying most of the editing headroom that photographers rely on. The Camera2 API gives you direct access to the **RAW_SENSOR** format: 16-bit unprocessed Bayer-pattern data straight from the sensor, with zero ISP interference. Combined with **DngCreator**, the Android framework provides everything you need to produce standards-compliant Adobe DNG (Digital Negative) files that open directly in Lightroom, Capture One, Photoshop, and every professional RAW editor.
+專業的行動攝影要求的不僅僅是 Android 的 ISP（影像訊號處理器）預設產生的處理後的 JPEG。當你擷取 JPEG 時，感光元件的原始數據已經過過濾、插值、色彩校正、降噪和色調映射——這破壞了攝影師賴以生存的大部分後期空間。Camera2 API 讓你能夠直接存取 **RAW_SENSOR** 格式：來自感光元件的、未經 ISP 干擾的 16 位元原始拜耳模式數據。結合 **DngCreator**，Android 框架提供了產生符合標準的 Adobe DNG（數位負片）文件所需的一切，這些文件可以直接在 Lightroom、Capture One、Photoshop 及所有專業 RAW 編輯器中打開。
 
-This chapter builds on the research documented in the *RAW / DngCreator* section of the project's internal reference, and extends it with practical code you can plug into your own app. You can see these capabilities enumerated for every supported device in the [Android Camera Parameters](https://github.com/zoozooll/AndroidCameraParameters) app — also available on the [Google Play Store](https://play.google.com/store/apps/details?id=com.zoozooll.cameraparameters) — which reports the maximum RAW size, available RAW variants (RAW10, RAW12, RAW14), and whether DngCreator metadata is fully populated for each camera ID.
+本章建立在專案內部參考文件 *RAW / DngCreator* 章節的研究基礎之上，並擴充了你可以直接插入到自己應用中的實際程式碼。你可以在 **Android Camera Parameters** 應用中查看每台受支援設備的這些性能枚舉——該應用也可在 [Google Play 商店](https://play.google.com/store/apps/details?id=com.zoozooll.cameraparameters) 下載——它會報告最大的 RAW 尺寸、可用的 RAW 變體（RAW10, RAW12, RAW14）以及每個相機 ID 的 DngCreator 元數據是否填充完整。
 
-## Why RAW? The Cost of ISP Processing
+## 為什麼選擇 RAW？ISP 處理的代價
 
-Before diving into API details, it is critical to understand exactly what the ISP does when it produces a JPEG, and why bypassing it matters. A typical smartphone ISP pipeline applies the following stages in order:
+在深入 API 細節之前，準確理解 ISP 在產生 JPEG 時到底做了什麼，以及為什麼要繞過它，是至關重要的。一個典型的智慧型手機 ISP 管線會按順序執行以下階段：
 
-1. **Black level clamping** — subtracts the sensor's dark-current baseline
-2. **Lens shading correction** — removes vignetting using per-pixel gain maps
-3. **Demosaicing** — interpolates the 1-color-per-pixel Bayer grid into a full RGB image
-4. **Noise reduction** — applies spatial/temporal filtering that erases fine detail along with noise
-5. **Color correction** — applies a 3×3 matrix to map sensor color space to sRGB
-6. **Gamma / tone mapping** — compresses the scene's linear 14 stops into a non-linear 8-bit curve
-7. **Edge enhancement** — sharpens to compensate for the optical low-pass filter
-8. **JPEG compression** — applies lossy chroma subsampling (typically 4:2:0) and quantization
+1. **黑電平鉗位 (Black level clamping)** — 減去感光元件的暗電流基準
+2. **鏡頭遮蔽校正 (Lens shading correction)** — 使用逐像素增益圖消除暗角
+3. **去馬賽克 (Demosaicing)** — 將每像素只有一種顏色的拜耳網格插值為完整的 RGB 影像
+4. **降噪 (Noise reduction)** — 應用空間/時域濾波，這會在擦除噪聲的同時抹去精細細節
+5. **色彩校正 (Color correction)** — 應用 3×3 矩陣將感光元件色彩空間映射到 sRGB
+6. **伽馬 / 色調映射 (Gamma / tone mapping)** — 將場景線性的 14 檔動態範圍壓縮成非線性的 8 位元曲線
+7. **邊緣增強 (Edge enhancement)** — 進行銳化以補償光學低通濾波器
+8. **JPEG 壓縮** — 應用有損色度抽樣（通常是 4:2:0）和量化
 
-The problem with this pipeline is that every stage is **irreversible** and tuned for consumer *previews*, not professional *post-processing*. A JPEG clamps highlights to 100:1 contrast ratios and wraps 14 bits of sensor DR into 8 bits — so when you pull up shadows 2 stops in post, you get banding instead of detail. RAW preserves the entire linear sensor output, enabling 4–6 stops of shadow/highlight recovery and custom white-balance shifts that don't introduce color artifacts.
+這種管線的問題在於每個階段都是**不可逆的**，且是針對消費者*預覽*而非專業*後期*而調優的。JPEG 將高光限制在 100:1 的對比度，並將感光元件的 14 位元動態範圍包裹進 8 位元中——因此當你在後期拉升 2 檔陰影時，你得到的是斷層而非細節。RAW 保留了完整的線性感光元件輸出，支援 4–6 檔的陰影/高光恢復，以及不會引入色彩偽影的自定義白平衡偏移。
 
 ```mermaid
 flowchart TD
-    subgraph ISP["ISP Processing Pipeline (JPEG Path)"]
-        S1[Sensor RAW Data] --> S2[Black Level Clamp]
-        S2 --> S3[Lens Shading Correction]
-        S3 --> S4[Demosaic]
-        S4 --> S5[Noise Reduction]
-        S5 --> S6[Color Correction]
-        S6 --> S7[Gamma / Tone Mapping]
-        S7 --> S8[Edge Enhancement]
-        S8 --> S9[JPEG Compression]
-        S9 --> S10["8-bit sRGB JPEG\n(≈6 stops usable DR)"]
+    subgraph ISP["ISP 處理管線 (JPEG 路徑)"]
+        S1[感光元件 RAW 數據] --> S2[黑電平鉗位]
+        S2 --> S3[鏡頭遮蔽校正]
+        S3 --> S4[去馬賽克]
+        S4 --> S5[降噪]
+        S5 --> S6[色彩校正]
+        S6 --> S7[伽馬 / 色調映射]
+        S7 --> S8[邊緣增強]
+        S8 --> S9[JPEG 壓縮]
+        S9 --> S10["8 位元 sRGB JPEG<br/>(≈6 檔可用動態範圍)"]
     end
 
-    subgraph RAW["RAW Path (No ISP Processing)"]
-        R1[Sensor RAW Data] --> R2["16-bit Linear Bayer Pattern\n(10–14 stops usable DR)"]
-        R2 --> R3["DngCreator Writes\nMetadata + Pixel Data"]
-        R3 --> R4[".dng File\nEditable in Lightroom/PS"]
+    subgraph RAW["RAW 路徑 (無 ISP 處理)"]
+        R1[感光元件 RAW 數據] --> R2["16 位元線性拜耳模式<br/>(10–14 檔可用動態範圍)"]
+        R2 --> R3["DngCreator 寫入<br/>元數據 + 像素數據"]
+        R3 --> R4[".dng 文件<br/>可在 Lightroom/PS 中編輯"]
     end
 ```
 
-Compare the two paths visually above: the JPEG path strips data at every step, while the RAW path preserves the full sensor payload. The tradeoff is that RAW files are **not directly displayable** — they require a separate rendering pass (the "develop" step in Lightroom) to interpret the Bayer grid and convert to a colorspace like sRGB or Rec.2020.
+透過上圖視覺化對比兩條路徑：JPEG 路徑在每一步都會剔除數據，而 RAW 路徑保留了完整的感光元件載荷。代價是 RAW 文件**無法直接顯示**——它們需要單獨的渲染傳遞（Lightroom 中的「顯影」步驟）來解釋拜耳網格並轉換為 sRGB 或 Rec.2020 等色彩空間。
 
-## The Bayer Color Filter Array
+## 拜耳色彩濾波器陣列 (CFA)
 
-RAW data is not RGB. Each photosite on the sensor records only **one color** — red, green, or blue — because a silicon photodiode itself is color-blind and can only measure photon count (luminance). To reconstruct color, manufacturers deposit a **Color Filter Array (CFA)** over the sensor, and the resulting single-channel grid is named after its inventor: the Bayer pattern.
+RAW 數據不是 RGB。感光元件上的每個光敏點僅記錄**一種顏色**——紅、綠或藍——因為矽光電二極體本身是色盲的，只能測量光子計數（亮度）。為了重構顏色，製造商在感光元件上沉積了**色彩濾波器陣列 (CFA)**，由此產生的單通道網格以其發明者命名：拜耳模式 (Bayer pattern)。
 
-Four common CFA layouts exist in Android devices, identified by the order of the top-left 2×2 tile:
+Android 設備中存在四種常見的 CFA 佈局，由左上角 2×2 瓦片的順序標識：
 
-| Pattern | Tile Layout | Typical Use Case |
+| 模式 | 瓦片佈局 | 典型用例 |
 |---------|-------------|------------------|
-| **RGGB** | `R G / G B` | Most smartphones (Samsung, Sony Exmor RS default) |
-| **BGGR** | `B G / G R` | Sony IMX sensors in some Xiaomi/OnePlus devices |
-| **GRBG** | `G R / B G` | Certain OmniVision sensors |
-| **GBRG** | `G B / R G` | Rare; found in some Motorola mid-range devices |
+| **RGGB** | `R G / G B` | 多數智慧型手機 (三星, 索尼 Exmor RS 預設) |
+| **BGGR** | `B G / G R` | 某些小米/一加設備中的索尼 IMX 感光元件 |
+| **GRBG** | `G R / B G` | 某些豪威 (OmniVision) 感光元件 |
+| **GBRG** | `G B / R G` | 罕見；見於某些摩托羅拉中階設備 |
 
-The most striking feature of the Bayer grid is that **50% of pixels are green**, while red and blue each get 25%. This is not an arbitrary choice — the human eye's photopic luminance response peaks in the green wavelengths (around 555 nm), so devoting twice the samples to green maximizes perceived sharpness and noise performance. The luminance channel in any resulting JPEG is derived ~60% from green photosites, so green sampling density directly translates to resolved detail.
+拜耳網格最顯著的特徵是 **50% 的像素是綠色**，而紅色和藍色各佔 25%。這不是任意的選擇——人眼的視覺亮度響應在綠色波長（約 555 nm）處達到峰值，因此將兩倍的樣本分配給綠色可以最大限度地提高感知銳度和噪聲性能。任何產生的 JPEG 中的亮度通道約有 60% 衍生自綠色光敏點，因此綠色採樣密度直接轉換為解析出的細節。
 
 ```mermaid
 graph LR
-    subgraph CFA["Bayer RGGB 4x4 Grid"]
+    subgraph CFA["拜耳 RGGB 4x4 網格"]
         direction TB
         R11["R"] --- G12["G"] --- R13["R"] --- G14["G"]
         G21["G"] --- B22["B"] --- G23["G"] --- B24["B"]
         R31["R"] --- G32["G"] --- R33["R"] --- G34["G"]
         G41["G"] --- B42["B"] --- G43["G"] --- B44["B"]
     end
-    subgraph DEMO["After Demosaicing (Interpolated)"]
+    subgraph DEMO["去馬賽克之後 (經插值)"]
         direction TB
         P11["R,G,B"] --- P12["R,G,B"] --- P13["R,G,B"] --- P14["R,G,B"]
         P21["R,G,B"] --- P22["R,G,B"] --- P23["R,G,B"] --- P24["R,G,B"]
         P31["R,G,B"] --- P32["R,G,B"] --- P33["R,G,B"] --- P34["R,G,B"]
         P41["R,G,B"] --- P42["R,G,B"] --- P43["R,G,B"] --- P44["R,G,B"]
     end
-    CFA -->|"Demosaic Algorithm\n(bilinear, AHD, LMMSE, or ML-based)"| DEMO
+    CFA -->|"去馬賽克演算法<br/>(雙線性、AHD、LMMSE 或基於 ML)"| DEMO
 ```
 
-The demosaic block above (P11–P44) shows how each pixel is reconstructed: an `R` photosite uses its neighbor `G` and `B` values via interpolation, and vice versa. This interpolation is the single biggest source of image softening in the JPEG pipeline — and exactly why you want to do it yourself in post-production, where modern AI demosaicing (Lightroom's AI Enhance, Topaz DeNoise AI, etc.) can deliver sharper results than the smartphone's real-time hardware ISP.
+上面的去馬賽克圖塊 (P11–P44) 展示了每個像素是如何重建的：一個 `R` 光敏點透過插值使用其鄰居的 `G` 和 `B` 值，反之亦然。這種插值是 JPEG 管線中導致影像變軟的最大來源——也正是為什麼你想在後期製作中自己完成這一步的原因。現代 AI 去馬賽克（如 Lightroom 的 AI 增強、Topaz DeNoise AI 等）可以提供比智慧型手機即時硬體 ISP 更銳利的結果。
 
-## RAW_SENSOR Format and Packed Variants (RAW10 / RAW12 / RAW14)
+## RAW_SENSOR 格式及其壓縮變體 (RAW10 / RAW12 / RAW14)
 
-Android's canonical RAW format identifier is `ImageFormat.RAW_SENSOR`, which enumerates as a 16-bit-per-pixel buffer stored in the `Plane` returned by `Image.getPlanes()`. However, the *effective* bit depth is device-dependent and reported via `CameraCharacteristics.SENSOR_INFO_BIT_DEPTH` — the upper bits beyond the sensor's actual ADC resolution are zero-padded.
+Android 規範的 RAW 格式識別碼是 `ImageFormat.RAW_SENSOR`，它在 `Image.getPlanes()` 返回的 `Plane` 中枚舉為每像素 16 位元的緩衝區。然而，*有效*位元深度是設備相關的，並透過 `CameraCharacteristics.SENSOR_INFO_BIT_DEPTH` 報告——超出感光元件實際 ADC 解析度的高位會被補零。
 
-Most contemporary smartphones use one of three packed raw variants, which are exposed through `StreamConfigurationMap.getOutputSizes()` with dedicated format constants:
+大多數當今的智慧型手機使用三種壓縮 RAW 變體之一，它們透過 `StreamConfigurationMap.getOutputSizes()` 暴露，並帶有專門的格式常量：
 
-| Format Constant | Bits/sample | Storage Layout | Typical Sensor Generation |
+| 格式常量 | 位元/樣本 | 儲存佈局 | 典型感光元件世代 |
 |-----------------|-------------|----------------|---------------------------|
-| `RAW10`         | 10          | Packed: 4 samples per 5 bytes (MSB-aligned) | Mid-range 2019–2022 sensors (e.g. IMX586, IMX682) |
-| `RAW12`         | 12          | Packed: 2 samples per 3 bytes | Flagship 2021–2024 (e.g. IMX800, IMX989 1-inch type) |
-| `RAW14`         | 14          | 16-bit padded (MSB-aligned) | Professional-tier / 1-inch+ sensors (IMX989 with DOL-HDR) |
+| `RAW10`         | 10          | 壓縮：每 5 個位元組儲存 4 個樣本 (MSB 對齊) | 中階 2019–2022 感光元件 (如 IMX586, IMX682) |
+| `RAW12`         | 12          | 壓縮：每 3 個位元組儲存 2 個樣本 | 旗艦 2021–2024 (如 IMX800, IMX989 一英吋級) |
+| `RAW14`         | 14          | 16 位元補齊 (MSB 對齊) | 專業級 / 一英吋以上感光元件 (帶 DOL-HDR 的 IMX989) |
 
-The packed formats are the reason you **must use `Buffer.getByte()` / `Buffer.getShort()` with pixel-stride awareness**, rather than treating the RAW buffer as a flat short[] array — RAW10 and RAW12 samples cross byte boundaries and require bit-shifting to extract. `DngCreator` handles all of this packing/unpacking transparently if you pass the `Image` object directly, which is the recommended approach.
+壓縮格式是**你必須使用具有像素步長意識的 `Buffer.getByte()` / `Buffer.getShort()`**，而不是將 RAW 緩衝區視為扁平的 short[] 陣列的原因——RAW10 和 RAW12 的樣本會跨越位元組邊界，需要位元偏移才能提取。如果你直接傳遞 `Image` 對象，`DngCreator` 會透明地處理所有這些壓縮/解壓，這也是推薦的方法。
 
-## DNG: Adobe Digital Negative Standard 1.4
+## DNG：Adobe 數位負片標準 1.4
 
-Why write `.dng` files instead of a proprietary format like `.arw` (Sony) or `.cr3` (Canon)? Because **DNG is the only universal RAW format**, published as ISO 12234-2 and accepted by every professional photo toolchain. DNG v1.4 (the version Android targets) specifies:
+為什麼要編寫 `.dng` 文件而不是像 `.arw` (索尼) 或 `.cr3` (佳能) 這樣的專有格式？因為 **DNG 是唯一的通用 RAW 格式**，由 ISO 12234-2 發佈，並被所有專業照片工具鏈接受。DNG v1.4（Android 針對的版本）規定了：
 
-- A TIFF/EP-compatible container (little-endian IFD structure)
-- Mandatory TIFF tags for CFA pattern, black levels, and color matrices
-- Optional `ColorMatrix2` / `CalibrationIlluminant2` for dual-illuminant profiles
-- Optional lens shading map (tag 0xC618) for per-pixel flat-field correction
-- Optional "makernotes" IFD for OEM-specific calibration data
+- 相容 TIFF/EP 的容器（小端序 IFD 結構）
+- 用於拜耳模式 (CFA)、黑電平和色彩矩陣的強制性 TIFF 標籤
+- 用於雙光源設定檔的可選 `ColorMatrix2` / `CalibrationIlluminant2`
+- 用於逐像素平場校正的可選鏡頭遮蔽圖 (標籤 0xC618)
+- 用於 OEM 特定校準數據的可選 「makernotes」 IFD
 
-Without this metadata, a RAW buffer is just an unlabeled grid of numbers — no RAW editor could correctly render it. The `DngCreator` class in Android's `android.hardware.camera2` package is purpose-built to populate **all required DNG 1.4 metadata automatically** from `CameraCharacteristics` and `CaptureResult`, which means your app does not need to ship sensor calibration data for every device.
+沒有這些元數據，RAW 緩衝區只是一個無標籤的數位網格——沒有 RAW 編輯器能正確渲染它。Android 的 `android.hardware.camera2` 包中的 `DngCreator` 類別專門用於從 `CameraCharacteristics` 和 `CaptureResult` 中**自動填充所有必需的 DNG 1.4 元數據**，這意味著你的應用不需要為每台設備附帶感光元件校準數據。
 
-The specific metadata fields `DngCreator` writes include:
+`DngCreator` 寫入具體的元數據欄位包括：
 
-| DNG Tag | Source | Purpose |
+| DNG 標籤 | 來源 | 用途 |
 |---------|--------|---------|
-| **BlackLevel** (SENSOR_BLACK_LEVEL_PATTERN) | `CameraCharacteristics` | 4-element per-channel dark-current baseline |
-| **ColorMatrix1 / ColorMatrix2** (SENSOR_COLOR_TRANSFORM1 / 2) | `CameraCharacteristics` | 3×3 matrices mapping sensor RGB → XYZ at Illuminant A (D65) |
-| **CalibrationIlluminant1 / 2** | `CameraCharacteristics` | Standard illuminant enum (17 = Standard A, 21 = D65) |
-| **ForwardMatrix1 / ForwardMatrix2** (SENSOR_FORWARD_MATRIX1 / 2) | `CameraCharacteristics` | XYZ → sensor RGB inverse transform |
-| **NeutralColorPoint** (SENSOR_NEUTRAL_COLOR_POINT) | `CameraCharacteristics` | Native white-balance (r/g, b/g ratios) |
-| **LensShadingMap** (STATISTICS_LENS_SHADING_MAP) | `CaptureResult` | 4-channel per-channel gain grid for vignetting removal |
-| **CFA Pattern 2** | `CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT` | Bayer tile encoding |
-| **BaselineExposure** | `SENSOR_REFERENCE_ILLUMINANT1` | Default exposure offset to apply during rendering |
+| **BlackLevel** (SENSOR_BLACK_LEVEL_PATTERN) | `CameraCharacteristics` | 4 元素的逐通道暗電流基準 |
+| **ColorMatrix1 / ColorMatrix2** (SENSOR_COLOR_TRANSFORM1 / 2) | `CameraCharacteristics` | 在光源 A (D65) 下將感光元件 RGB → XYZ 的 3×3 矩陣映射 |
+| **CalibrationIlluminant1 / 2** | `CameraCharacteristics` | 標準光源枚舉 (17 = 標準 A, 21 = D65) |
+| **ForwardMatrix1 / ForwardMatrix2** (SENSOR_FORWARD_MATRIX1 / 2) | `CameraCharacteristics` | XYZ → 感光元件 RGB 的逆變換 |
+| **NeutralColorPoint** (SENSOR_NEUTRAL_COLOR_POINT) | `CameraCharacteristics` | 原生白平衡 (r/g, b/g 比率) |
+| **LensShadingMap** (STATISTICS_LENS_SHADING_MAP) | `CaptureResult` | 用於消除暗角的 4 通道逐通道增益網格 |
+| **CFA Pattern 2** | `CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT` | 拜耳切片編碼 |
+| **BaselineExposure** | `SENSOR_REFERENCE_ILLUMINANT1` | 渲染時應用的預設曝光偏移 |
 
-This list is taken directly from the *RAW / DngCreator* specification in the project research doc. If any of these fields are reported as `null` by the Camera2 API, `DngCreator` will still produce a valid DNG but the resulting file may require manual calibration in post. You can check which fields are populated for each camera ID using the Android Camera Parameters app.
+此列表直接摘自專案研究文件中的 *RAW / DngCreator* 規範。如果 Camera2 API 將其中任何欄位報告為 `null`，`DngCreator` 仍將產生有效的 DNG，但產生的文件在後期可能需要手動校準。你可以使用 **Android Camera Parameters** 應用檢查每個相機 ID 填充了哪些欄位。
 
-## Setting Up Simultaneous RAW + JPEG Capture
+## 設定同時進行的 RAW + JPEG 擷取
 
-The correct workflow for RAW capture uses **multiple output targets in a single `CaptureRequest`** — this guarantees the RAW buffer and the JPEG come from the *exact same frame* (identical timestamp, identical sensor exposure), which is essential for RAW+JPEG backup workflows that most photographers expect. Attempting two sequential captures introduces frame-to-frame variability in exposure, AF, and AWB.
+RAW 擷取的正確工作流程是**在單個 `CaptureRequest` 中使用多個輸出目標**——這保證了 RAW 緩衝區和 JPEG 來自*完全相同的幀*（相同的時間戳，相同的感光元件曝光），這對於大多數攝影師期望的 RAW+JPEG 備份工作流至關重要。嘗試兩次連續擷取會在曝光、AF 和 AWB 方面引入幀間差異。
 
-### Step 1: Query Capabilities and Maximum RAW Size
+### 第 1 步：查詢性能和最大 RAW 尺寸
 
 ```kotlin
 import android.hardware.camera2.CameraCharacteristics
@@ -159,9 +159,9 @@ fun getRawCapabilities(cameraId: String,
 }
 ```
 
-`REQUEST_AVAILABLE_CAPABILITIES_RAW` is the mandatory gate — if it is not set, the HAL will refuse any RAW_SENSOR output, and attempting to create an `ImageReader` with that format will throw `IllegalArgumentException`. The Android Camera Parameters app lists this capability per camera ID on its main dashboard.
+`REQUEST_AVAILABLE_CAPABILITIES_RAW` 是強制性的門檻——如果未設定，HAL 將拒絕任何 RAW_SENSOR 輸出，且嘗試建立具有該格式的 `ImageReader` 將拋出 `IllegalArgumentException`。**Android Camera Parameters** 應用在其主儀表板上按相機 ID 列出了此項性能。
 
-### Step 2: Create Dual ImageReaders (RAW + JPEG)
+### 第 2 步：建立雙 ImageReader (RAW + JPEG)
 
 ```kotlin
 import android.media.ImageReader
@@ -175,7 +175,7 @@ fun setupDualImageReaders(rawSize: Size, jpegSize: Size) {
         rawSize.width,
         rawSize.height,
         ImageFormat.RAW_SENSOR,
-        5 // Acquire buffer depth: >= 2, 5 allows headroom for burst capture
+        5 // 獲取緩衝區深度：>= 2, 5 為連拍預留空間
     ).apply {
         setOnImageAvailableListener(
             OnRawImageAvailableListener(),
@@ -197,9 +197,9 @@ fun setupDualImageReaders(rawSize: Size, jpegSize: Size) {
 }
 ```
 
-The RAW `maxImages` buffer depth should be larger (5) because RAW buffers are 2–4× the bandwidth of JPEG, and the HAL may deliver 2–3 frames before the disk writer catches up. Running out of RAW buffer space causes silent frame drops with no error callback.
+RAW 的 `maxImages` 緩衝區深度應該更大 (5)，因為 RAW 緩衝區是 JPEG 頻寬的 2–4 倍，且 HAL 可能在磁碟寫入器趕上之前交付 2–3 幀。RAW 緩衝區空間耗盡會導致靜默掉幀且沒有錯誤回呼。
 
-### Step 3: Create a CaptureSession with Both Surfaces and Issue a Multi-Target Capture
+### 第 3 步：建立包含兩個 Surface 的 CaptureSession 並發出多目標擷取
 
 ```kotlin
 import android.hardware.camera2.CameraDevice
@@ -231,7 +231,7 @@ fun createCaptureSessionAndCapture(
                     set(CaptureRequest.CONTROL_AE_MODE,
                         CaptureRequest.CONTROL_AE_MODE_ON)
                     set(CaptureRequest.CONTROL_AWB_MODE,
-                        CaptureRequest.CONTROL_AWB_MODE_OFF) // Lock WB in RAW!
+                        CaptureRequest.CONTROL_AWB_MODE_OFF) // 在 RAW 模式下鎖面白平衡！
                 }
 
                 session.capture(
@@ -247,17 +247,17 @@ fun createCaptureSessionAndCapture(
 }
 ```
 
-Three details here are non-negotiable:
+這裡有三個細節是不可逾越的：
 
-1. **AWB must be locked (`CONTROL_AWB_MODE_OFF`) for RAW captures.** If AWB is left on, the HAL will apply an RGB gain ramp mid-burst, meaning every RAW frame has a different native white balance — which breaks RAW editors' ability to apply a uniform profile. Use `CaptureResult.SENSOR_NEUTRAL_COLOR_POINT` to derive the correct WB in post instead.
+1. **RAW 擷取必須鎖定 AWB (`CONTROL_AWB_MODE_OFF`)。** 如果開啟 AWB，HAL 會在連拍中途應用 RGB 增益漸變，這意味著每個 RAW 幀都有不同的原生白平衡——這破壞了 RAW 編輯器應用統一設定檔的能力。請改用 `CaptureResult.SENSOR_NEUTRAL_COLOR_POINT` 在後期推導正確的白平衡。
 
-2. **Use `TEMPLATE_STILL_CAPTURE`** as the base template. It configures the sensor for the highest-quality readout mode and disables preview-specific noise reduction that the HAL might otherwise inject.
+2. **使用 `TEMPLATE_STILL_CAPTURE`** 作為基礎模板。它將感光元件配置為最高質量的讀取模式，並禁用了 HAL 可能會注入的針對預覽的降噪。
 
-3. **All three targets (preview, RAW, JPEG) are in one `CaptureRequest`.** The HAL guarantees time-coincident delivery.
+3. **所有三個目標（預覽、RAW、JPEG）都在一個 `CaptureRequest` 中。** HAL 保證了時間上的一致交付。
 
-### Step 4: Use DngCreator to Write the DNG File
+### 第 4 步：使用 DngCreator 寫入 DNG 文件
 
-The `OnImageAvailableListener` callback receives `Image` objects from which the RAW pixel data is already accessible. Pass the `Image` *and* the matching `CaptureResult` to `DngCreator`, along with the original `CameraCharacteristics` used to open the camera — this combination is required to populate all DNG 1.4 metadata correctly.
+`OnImageAvailableListener` 回呼接收 `Image` 對象，從中可以直接存取 RAW 像素數據。將 `Image` **和**匹配的 `CaptureResult` 連同用於打開相機的原始 `CameraCharacteristics` 一起傳遞給 `DngCreator` —— 為了正確填充所有 DNG 1.4 元數據，這一組合是必需的。
 
 ```kotlin
 import android.hardware.camera2.CameraCharacteristics
@@ -270,7 +270,7 @@ import java.io.IOException
 
 inner class OnRawImageAvailableListener : ImageReader.OnImageAvailableListener {
     private val pendingDngWrites =
-        HashMap<Long, CaptureResult>() // timestamp → CaptureResult
+        HashMap<Long, CaptureResult>() // 時間戳 → CaptureResult
 
     fun registerCaptureResult(timestamp: Long, result: CaptureResult) {
         pendingDngWrites[timestamp] = result
@@ -297,77 +297,77 @@ inner class OnRawImageAvailableListener : ImageReader.OnImageAvailableListener {
                     image.width,
                     image.height,
                     image.planes[0].buffer,
-                    0 // padding, always 0 for RAW_SENSOR
+                    0 // 填充，對於 RAW_SENSOR 始終為 0
                 )
             }
 
         } catch (e: IOException) {
-            Log.e(TAG, "Failed to write DNG file", e)
+            Log.e(TAG, "寫入 DNG 文件失敗", e)
         } catch (e: IllegalStateException) {
-            Log.e(TAG, "DngCreator rejected metadata (missing required field)", e)
+            Log.e(TAG, "DngCreator 拒絕元數據 (缺少必填欄位)", e)
         } finally {
-            image?.close() // CRITICAL: NEVER leak Image references
+            image?.close() // 關鍵：絕對不要洩漏 Image 引用
         }
     }
 }
 ```
 
-The `DngCreator` constructor takes exactly two arguments:
-- **`CameraCharacteristics`** — static, per-camera fields (black levels, color matrices, CFA pattern, neutral color point, illuminants 1&2)
-- **`CaptureResult`** — per-frame dynamic fields (sensor exposure, ISO, lens shading map, AF lens position)
+`DngCreator` 構造函數恰好接收兩個參數：
+- **`CameraCharacteristics`** — 靜態、逐相機的欄位（黑電平、色彩矩陣、CFA 模式、中性色點、光源 1 和 2）
+- **`CaptureResult`** — 逐幀、動態的欄位（感光元件曝光、ISO、鏡頭遮蔽圖、AF 鏡頭位置）
 
-If either is `null` or if a required metadata field is missing (e.g. some budget devices report `null` for `SENSOR_COLOR_TRANSFORM1`), the constructor will throw `IllegalArgumentException` at construction time (not at `writeByteBuffer`). This is why the Android Camera Parameters app explicitly reports every DNG-relevant field: developers can pre-filter devices to avoid crashes on devices with incomplete HAL implementations.
+如果其中任何一個為 `null`，或者缺少必填的元數據欄位（例如某些廉價設備對 `SENSOR_COLOR_TRANSFORM1` 報告 `null`），構造函數將在構造時（而非 `writeByteBuffer` 時）拋出 `IllegalArgumentException`。這就是為什麼 **Android Camera Parameters** 應用顯式報告每個 DNG 相關欄位的原因：開發者可以預先過濾設備，以避免在 HAL 實現不完整的設備上發生崩潰。
 
-The `pendingDngWrites` timestamp map solves a real concurrency problem: `CaptureResult.CaptureCallback.onCaptureCompleted()` fires **before or after** `OnImageAvailableListener.onImageAvailable()` (HAL-dependent). Matching by `image.timestamp` == `CaptureResult.SENSOR_TIMESTAMP` guarantees the right metadata pairs with the right pixel buffer.
+`pendingDngWrites` 時間戳映射解決了一個真實的並行問題：`CaptureResult.CaptureCallback.onCaptureCompleted()` 的觸發時機可能**早於或晚於** `OnImageAvailableListener.onImageAvailable()` (取決於 HAL)。透過 `image.timestamp` == `CaptureResult.SENSOR_TIMESTAMP` 進行比對，可以保證正確的元數據與正確的像素緩衝區配對。
 
-## Processing Pipeline Comparison (Detailed Mermaid)
+## 處理管線對比 (詳細 Mermaid 圖)
 
 ```mermaid
 flowchart LR
-    subgraph Standard["Standard JPEG Capture Pipeline (TAP → JPEG on Disk)"]
-        A[Sensor Exposure + Analog Gain] --> B[ISP Demosaic + Noise Reduction]
-        B --> C[ISP Color Correction + Tone Mapping]
-        C --> D[Hardware JPEG Encoder]
-        D --> E["8-bit sRGB JPEG\n(~3 MB for 12 MP)"]
+    subgraph Standard["標準 JPEG 擷取管線 (點擊 → 磁碟上的 JPEG)"]
+        A["感光元件曝光 + 類比增益"] --> B["ISP 去馬賽克 + 降噪"]
+        B --> C[ISP 色彩校正 + 色調映射]
+        C --> D[硬體 JPEG 編碼器]
+        D --> E["8 位元 sRGB JPEG<br/>(12 MP 約 3 MB)"]
     end
 
-    subgraph RawCapture["RAW + JPEG Simultaneous Capture Pipeline"]
-        F[Sensor Exposure + Analog Gain] --> G{Frame Buffer\nDuplicated in HAL}
-        G --> H["Path 1 → RAW_SENSOR\n16-bit Bayer\n(~48 MB for 12 MP)"]
-        G --> I["Path 2 → ISP Pipeline\n(demosaic, NR, color, tone)"]
-        I --> J[Hardware JPEG Encoder]
-        H --> K["ImageReader RAW Plane\n→ DngCreator"]
-        J --> L["ImageReader JPEG Plane"]
-        K --> M["RAW .dng File\n(Editable, 14-bit DR)"]
-        L --> N["JPEG .jpg File\n(Instant preview)"]
+    subgraph RawCapture["RAW + JPEG 同時擷取管線"]
+        F["感光元件曝光 + 類比增益"] --> G{幀緩衝區<br/>在 HAL 中複製}
+        G --> H["路徑 1 → RAW_SENSOR<br/>16 位元拜耳<br/>(12 MP 約 48 MB)"]
+        G --> I["路徑 2 → ISP 管線<br/>(去馬賽克, NR, 色彩, 色調)"]
+        I --> J[硬體 JPEG 編碼器]
+        H --> K["ImageReader RAW 平面<br/>→ DngCreator"]
+        J --> L["ImageReader JPEG 平面"]
+        K --> M["RAW .dng 文件<br/>(可編輯, 14 位元動態範圍)"]
+        L --> N["JPEG .jpg 文件<br/>(即時預覽)"]
     end
 ```
 
-The key insight from this diagram is the frame **duplication node G**: the HAL reads one frame from the sensor, then routes an unmodified copy to the RAW output while feeding the *same* copy into the ISP for JPEG encoding. This guarantees frame parity without doubling sensor readout bandwidth.
+此圖的關鍵啟示在於**幀複製節點 G**：HAL 從感光元件讀取一幀，然後將未經修改的副本路由到 RAW 輸出，同時將*同一*副本饋入 ISP 進行 JPEG 編碼。這保證了幀的一致性，且無需使感光元件讀取頻寬翻倍。
 
-## Performance Considerations and Practical Limits
+## 性能考量與實踐限制
 
-Writing 12–48 MB DNG files to flash storage takes measurable time:
-- UFS 3.1 storage: ~250 MB/s sequential write → 12 MP DNG (~48 MB) takes ~190 ms
-- eMMC 5.1 storage: ~120 MB/s sequential write → same file takes ~400 ms
+將 12–48 MB 的 DNG 文件寫入快閃記憶體需要可測量的時間：
+- UFS 3.1 儲存：~250 MB/s 順序寫入 → 12 MP DNG (~48 MB) 耗時約 190 ms
+- eMMC 5.1 儲存：~120 MB/s 順序寫入 → 同一文件耗時約 400 ms
 
-This means you **cannot block the UI thread on DNG writes** — always run `writeByteBuffer` on a background thread/Handler, and always close the `Image` in a `finally` block to avoid HAL buffer starvation.
+這意味著你**不能在 UI 執行緒上阻塞 DNG 寫入** — 務必在背景執行緒/Handler 上執行 `writeByteBuffer`，並務必在 `finally` 塊中關閉 `Image` 以避免 HAL 緩衝區匱乏。
 
-Another important constraint: not all devices support RAW + JPEG in the same session even if `CAPABILITIES_RAW` is set. The correct way to verify is `StreamConfigurationMap.isOutputSupportedFor(surfaceList)` with both surfaces in the list. If this returns `false`, fall back to RAW-only sessions.
+另一个重要限制：並不是所有設備都支援在同一工作階段中同時使用 RAW + JPEG，即使設定了 `CAPABILITIES_RAW` 也是如此。正確的驗證方法是使用包含兩個 Surface 的列表呼叫 `StreamConfigurationMap.isOutputSupportedFor(surfaceList)`。如果返回 `false`，則回退到僅 RAW 的工作階段。
 
-## Summary
+## 小結
 
-This chapter covered the full end-to-end RAW photography workflow in Android Camera2:
+本章涵蓋了 Android Camera2 中完整的端到端 RAW 攝影工作流程：
 
-- **RAW_SENSOR format** delivers the unprocessed 16-bit Bayer grid from the sensor, bypassing every ISP processing stage.
-- **Bayer patterns** (RGGB, BGGR, GRBG, GBRG) allocate 50% of photosites to green for human-vision-optimized luminance sampling.
-- **Packed variants** — RAW10, RAW12, RAW14 — store samples at native ADC bit depth; DngCreator unpacks them transparently.
-- **DNG v1.4** is the universal RAW container. `DngCreator(characteristics, result).writeByteBuffer(...)` populates all required metadata: black levels, color matrices, lens shading map, neutral color point, and calibration illuminants 1 & 2.
-- **Multi-target CaptureRequests** route the same frame to both RAW and JPEG ImageReaders, guaranteeing frame parity for RAW+JPEG workflows.
-- **Timestamp matching** between `CaptureResult` and `Image` is required because callbacks fire in HAL-dependent order.
+- **RAW_SENSOR 格式**提供來自感光元件的未經處理的 16 位元拜耳網格，繞過了每一個 ISP 處理階段。
+- **拜耳模式** (RGGB, BGGR, GRBG, GBRG) 為綠色分配了 50% 的光敏點，用於針對人眼視覺優化的亮度採樣。
+- **壓縮變體** — RAW10, RAW12, RAW14 — 以原生 ADC 位元深度儲存樣本；DngCreator 會透明地解壓它們。
+- **DNG v1.4** 是通用的 RAW 容器。`DngCreator(characteristics, result).writeByteBuffer(...)` 填充了所有必需的元數據：黑電平、色彩矩陣、鏡頭遮蔽圖、中性色點以及校準光源 1 和 2。
+- **多目標 CaptureRequest** 將同一幀路由到 RAW 和 JPEG ImageReader，保證了 RAW+JPEG 工作流中的幀一致性。
+- 由於回呼觸發順序取決於 HAL，因此需要在 `CaptureResult` 和 `Image` 之間進行**時間戳比對**。
 
-## What's Next
+## 下一章
 
-In the next chapter, we shift from still photography to video with **Chapter 19: High-Speed Video**, where we use `CameraConstrainedHighSpeedCaptureSession` to achieve 120 fps (4× slow-motion) and 240 fps (8× slow-motion) capture. You will learn why high-speed sessions require `createHighSpeedRequestList` instead of individual CaptureRequests, and how the HAL's dedicated high-speed pipeline bypasses the normal preview path to deliver frame rates that would otherwise be CPU-prohibitive.
+在下一章中，我們將從靜態攝影轉向影片：**第 19 章：高速影片**，我們將使用 `CameraConstrainedHighSpeedCaptureSession` 實現 120 fps（4 倍慢動作）和 240 fps（8 倍慢動作）拍攝。你將了解為什麼高速工作階段需要 `createHighSpeedRequestList` 而非單獨的 CaptureRequest，以及 HAL 的專用高速管線如何繞過正常預覽路徑，交付原本會令 CPU 不堪重負的幀率。
 
-You can validate your device's RAW capabilities, maximum RAW size, and DngCreator metadata completeness by installing the [Android Camera Parameters app](https://play.google.com/store/apps/details?id=com.zoozooll.cameraparameters) — and contribute device reports to the open-source [GitHub repository](https://github.com/zoozooll/AndroidCameraParameters) to help other developers know which devices support professional RAW workflows.
+你可以透過安裝 **Android Camera Parameters** 應用來驗證你設備的 RAW 性能、最大 RAW 尺寸以及 DngCreator 元數據的完整性 —— 並向開源 [GitHub 倉庫](https://github.com/zoozooll/AndroidCameraParameters) 提交設備報告，幫助其他開發者了解哪些設備支援專業的 RAW 工作流。

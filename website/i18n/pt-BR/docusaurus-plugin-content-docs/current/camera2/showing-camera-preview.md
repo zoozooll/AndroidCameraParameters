@@ -1,114 +1,114 @@
 ---
 sidebar_position: 8
-title: "Chapter 8: Showing Camera Preview"
-description: Render live camera frames on the screen using TextureView, SurfaceTexture, Surface, and CameraCaptureSession. Implement SurfaceTextureListener, correct aspect ratio with Matrix transforms in configureTransform, build a TEMPLATE_PREVIEW CaptureRequest, and start the preview stream with setRepeatingRequest.
-keywords: [TextureView preview, SurfaceTexture, CameraCaptureSession, setRepeatingRequest, configureTransform Matrix]
+title: "Capítulo 8: Mostrando a Pré-visualização da Câmera"
+description: Renderize quadros da câmera ao vivo na tela usando TextureView, SurfaceTexture, Surface e CameraCaptureSession. Implemente o SurfaceTextureListener, corrija a proporção de aspecto com transformações de Matrix no configureTransform, construa uma CaptureRequest TEMPLATE_PREVIEW e inicie o fluxo de pré-visualização com setRepeatingRequest.
+keywords: [pré-visualização TextureView, SurfaceTexture, CameraCaptureSession, setRepeatingRequest, Matrix configureTransform]
 ---
 
-This is the chapter you've been waiting for. After three chapters of building scaffolding (permissions, threading, CameraManager, enumeration, open/close lifecycle), you will finally **see the camera output rendered live on the Android device screen**. Preview is the soul of a camera app — it's what the user looks at to frame a shot, check focus, and verify exposure before tapping the shutter. Getting it right makes the difference between a janky, unusable app and a polished, responsive camera experience.
+Este é o capítulo que você estava esperando. Após três capítulos construindo a estrutura (permissões, threads, CameraManager, enumeração, ciclo de vida de abertura/fechamento), você finalmente **verá a saída da câmera renderizada ao vivo na tela do dispositivo Android**. A pré-visualização é a alma de um aplicativo de câmera — é o que o usuário olha para enquadrar uma foto, verificar o foco e validar a exposição antes de tocar no obturador. Acertar nesse ponto faz a diferença entre um aplicativo instável e inutilizável e uma experiência de câmera polida e responsiva.
 
-For a reference preview implementation that handles edge cases across hundreds of devices, see the preview screen in the **Android Camera Parameters** app ([GitHub](https://github.com/zoozooll/AndroidCameraParameters) / [Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)). Its preview pipeline includes orientation-aware transforms, multi-resolution output surfaces, and smooth frame-rate throttling — all built on the same fundamental components we cover here.
+Para uma implementação de referência de pré-visualização que lida com casos extremos em centenas de dispositivos, veja a tela de pré-visualização no aplicativo **Android Camera Parameters** ([GitHub](https://github.com/zoozooll/AndroidCameraParameters) / [Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)). Seu pipeline de pré-visualização inclui transformações cientes da orientação, superfícies de saída multi-resolução e limitação suave da taxa de quadros — tudo construído sobre os mesmos componentes fundamentais que cobrimos aqui.
 
-## The Preview Pipeline: Components Overview
+## O Pipeline de Pré-visualização: Visão Geral dos Componentes
 
-Before we dive into code, let's map the conceptual journey of a single preview frame from the camera sensor to the phone's display. Every frame passes through five layers:
+Antes de mergulharmos no código, vamos mapear a jornada conceitual de um único quadro de pré-visualização, do sensor da câmera até a tela do celular. Cada quadro passa por cinco camadas:
 
 ```
-Camera Sensor → CameraDevice Pipeline → Surface (BufferQueue) → SurfaceTexture → TextureView → Display
+Sensor da Câmera → Pipeline do CameraDevice → Surface (BufferQueue) → SurfaceTexture → TextureView → Tela
 ```
 
-Each layer plays a specific, non-interchangeable role. Skipping or shortcutting any of them produces black screens, distorted aspect ratios, or tearing. Let's define each component:
+Cada camada desempenha um papel específico e não intercambiável. Pular ou atalhar qualquer uma delas produz telas pretas, proporções de aspecto distorcidas ou rasgos na imagem. Vamos definir cada componente:
 
-### 1. Surface — The Image Destination Buffer
+### 1. Surface — O Buffer de Destino da Imagem
 
-A `Surface` is the Camera2 API's generic concept of **a destination for processed image frames**. Under the hood, a Surface wraps an Android `BufferQueue`: a ring buffer of graphic buffers (typically 3–5 buffers deep) managed by the system compositor (SurfaceFlinger). When Camera2 "renders a frame" to a Surface, it dequeues an empty buffer from the queue, fills it with pixel data, and enqueues it back for the consumer to use.
+Uma `Surface` é o conceito genérico da API Camera2 para **um destino para quadros de imagem processados**. Sob o capô, uma Surface envolve uma `BufferQueue` do Android: um buffer circular de buffers gráficos (normalmente com profundidade de 3 a 5 buffers) gerenciado pelo compositor do sistema (SurfaceFlinger). Quando o Camera2 "renderiza um quadro" em uma Surface, ele retira um buffer vazio da fila, preenche-o com dados de pixels e o coloca de volta na fila para o consumidor usar.
 
-Anything that can consume graphic buffers can expose a `Surface`. The most common consumers are:
-- **SurfaceTexture** → feeds a `TextureView` (for on-screen preview — this chapter)
-- **Surface of a MediaRecorder/MediaCodec** → video encoding (not covered in this series)
-- **ImageReader Surface** → CPU-accessible `Image` objects for JPEG/RAW capture (Chapter 9)
+Qualquer coisa que possa consumir buffers gráficos pode expor uma `Surface`. Os consumidores mais comuns são:
+- **SurfaceTexture** → alimenta um `TextureView` (para pré-visualização na tela — este capítulo)
+- **Surface de um MediaRecorder/MediaCodec** → codificação de vídeo (não coberto nesta série)
+- **Surface do ImageReader** → objetos `Image` acessíveis pela CPU para captura JPEG/RAW (Capítulo 9)
 
-### 2. SurfaceTexture — The GPU-to-GPU Bridge
+### 2. SurfaceTexture — A Ponte GPU para GPU
 
-`SurfaceTexture` is the magic class that turns a raw stream of camera frames into a texture that the GPU can sample and render. It is the consumer end of the Surface's BufferQueue, but instead of handing buffers to the CPU, it converts them into an OpenGL ES `GL_TEXTURE_EXTERNAL_OES` texture. This allows `TextureView` to composite the camera frame onto the view hierarchy using standard GPU rendering — no CPU copy required, so 60+ FPS preview is trivially achievable.
+`SurfaceTexture` é a classe mágica que transforma um fluxo bruto de quadros de câmera em uma textura que a GPU pode amostrar e renderizar. É a extremidade consumidora da BufferQueue da Surface, mas em vez de entregar buffers para a CPU, ela os converte em uma textura OpenGL ES `GL_TEXTURE_EXTERNAL_OES`. Isso permite que o `TextureView` componha o quadro da câmera na hierarquia de visualização usando a renderização padrão da GPU — nenhuma cópia da CPU é necessária, de modo que a pré-visualização de 60+ FPS é facilmente alcançável.
 
-You get a `Surface` for a `SurfaceTexture` with:
+Você obtém uma `Surface` para uma `SurfaceTexture` com:
 ```kotlin
 val surface = Surface(surfaceTexture)
 ```
 
-### 3. TextureView — The On-Screen Window
+### 3. TextureView — A Janela na Tela
 
-`TextureView` is a `View` subclass that can display the contents of a `SurfaceTexture`. It is the modern successor to the older `SurfaceView`, and the recommended choice for Camera2 preview for three reasons:
-- It behaves like a normal View (can be animated, transformed, alpha-blended, placed in scrollable containers).
-- It doesn't force the Activity to use a transparent window (unlike SurfaceView, which punches a "hole" in the view hierarchy).
-- Its `SurfaceTextureListener` gives us precise lifecycle callbacks for when the surface is created, destroyed, or resized.
+`TextureView` é uma subclasse de `View` que pode exibir o conteúdo de uma `SurfaceTexture`. É a sucessora moderna da antiga `SurfaceView` e a escolha recomendada para a pré-visualização do Camera2 por três motivos:
+- Ela se comporta como uma View normal (pode ser animada, transformada, mesclada com alfa, colocada em contêineres roláveis).
+- Ela não força a Activity a usar uma janela transparente (ao contrário da SurfaceView, que faz um "furo" na hierarquia de visualização).
+- Seu `SurfaceTextureListener` nos fornece callbacks precisos de ciclo de vida para quando a superfície é criada, destruída ou redimensionada.
 
-To get callback-driven access to the underlying SurfaceTexture, `TextureView` exposes `setSurfaceTextureListener()` with four callbacks:
-- `onSurfaceTextureAvailable(surfaceTexture, width, height)` — surface is ready to receive frames (fires once when the view is laid out).
-- `onSurfaceTextureSizeChanged(surfaceTexture, width, height)` — the surface size changed (e.g., device rotated).
-- `onSurfaceTextureDestroyed(surfaceTexture)` — about to be destroyed; we must stop the preview before this returns.
-- `onSurfaceTextureUpdated(surfaceTexture)` — fires for **every new frame** (can be used to drive face-tracking overlays, etc.).
+Para obter acesso orientado a callbacks à SurfaceTexture subjacente, o `TextureView` expõe `setSurfaceTextureListener()` com quatro callbacks:
+- `onSurfaceTextureAvailable(surfaceTexture, width, height)` — a superfície está pronta para receber quadros (dispara uma vez quando a visualização é disposta no layout).
+- `onSurfaceTextureSizeChanged(surfaceTexture, width, height)` — o tamanho da superfície mudou (ex: dispositivo rotacionado).
+- `onSurfaceTextureDestroyed(surfaceTexture)` — prestes a ser destruída; devemos parar a pré-visualização antes que este retorne.
+- `onSurfaceTextureUpdated(surfaceTexture)` — dispara para **cada novo quadro** (pode ser usado para conduzir sobreposições de rastreamento facial, etc.).
 
-### 4. CameraCaptureSession — The Configured Pipeline
+### 4. CameraCaptureSession — O Pipeline Configurado
 
-Before a `CameraDevice` can produce any frames, you must create a `CameraCaptureSession`. A session is a **configuration of all the output Surfaces that the camera pipeline will write to**. You can think of it as "plumbing" the camera ISP (Image Signal Processor) to route its output to one or more sinks. For preview-only, the session has one Surface (the TextureView's). When we add photo capture in Chapter 9, the session will have two Surfaces: preview + `ImageReader`.
+Antes que um `CameraDevice` possa produzir qualquer quadro, você deve criar uma `CameraCaptureSession`. Uma sessão é uma **configuração de todas as superfícies de saída nas quais o pipeline da câmera irá gravar**. Você pode pensar nela como o "encanamento" do ISP (Processador de Sinal de Imagem) da câmera para rotear sua saída para um ou mais coletores. Para apenas pré-visualização, a sessão tem uma Surface (a do TextureView). Quando adicionarmos a captura de fotos no Capítulo 9, a sessão terá duas Surfaces: pré-visualização + `ImageReader`.
 
-Key rules:
-- A session is created with `CameraDevice.createCaptureSession(outputSurfaces, stateCallback, handler)`.
-- The session is only usable **after** `StateCallback.onConfigured(session)` fires.
-- A `CameraDevice` can have only **one active session at a time**. Creating a new session closes the previous one.
-- The session owns *all* outputs for its lifetime; adding a new surface (e.g., suddenly deciding to record video) requires tearing down the old session and creating a new one with all surfaces (preview + recorder).
+Regras principais:
+- Uma sessão é criada com `CameraDevice.createCaptureSession(outputSurfaces, stateCallback, handler)`.
+- A sessão só é utilizável **após** o disparo de `StateCallback.onConfigured(session)`.
+- Um `CameraDevice` pode ter apenas **uma sessão ativa por vez**. Criar uma nova sessão fecha a anterior.
+- A sessão possui *todas* as saídas durante sua vida útil; adicionar uma nova superfície (ex: decidir repentinamente gravar vídeo) requer desmontar a sessão antiga e criar uma nova com todas as superfícies (pré-visualização + gravador).
 
-### 5. Repeating Capture Request (TEMPLATE_PREVIEW)
+### 5. Solicitação de Captura Repetida (TEMPLATE_PREVIEW)
 
-Once the session is configured, how does continuous preview happen? Camera2 is a request-driven API — every frame is a `CaptureRequest` submitted to the session. For preview, we submit **one request and mark it as repeating**: the camera hardware will re-run that same request (with the same sensor settings, targets, and 3A state) continuously, producing frames as fast as the pipeline allows (typically 30–120 FPS).
+Uma vez configurada a sessão, como ocorre a pré-visualização contínua? O Camera2 é uma API orientada a solicitações — cada quadro é uma `CaptureRequest` enviada à sessão. Para a pré-visualização, enviamos **uma solicitação e a marcamos como repetida**: o hardware da câmera executará novamente essa mesma solicitação (com as mesmas configurações de sensor, alvos e estado 3A) continuamente, produzindo quadros tão rápido quanto o pipeline permitir (normalmente de 30 a 120 FPS).
 
-A repeating request is submitted with:
+Uma solicitação repetida é enviada com:
 ```kotlin
 session.setRepeatingRequest(previewRequest, captureCallback, backgroundHandler)
 ```
 
-The template for preview is `CameraDevice.TEMPLATE_PREVIEW`. Camera2 provides several pre-built templates that configure hundreds of low-level parameters (exposure, frame rate range, 3A mode, noise reduction, etc.) appropriately for the use case. For preview, `TEMPLATE_PREVIEW` optimizes for **low latency and smooth frame rate**, even if that means slightly reduced sensor dynamic range compared to `TEMPLATE_STILL_CAPTURE` (used in Chapter 9 for photos).
+O modelo para pré-visualização é `CameraDevice.TEMPLATE_PREVIEW`. O Camera2 fornece vários modelos pré-construídos que configuram centenas de parâmetros de baixo nível (exposição, faixa de taxa de quadros, modo 3A, redução de ruído, etc.) apropriadamente para o caso de uso. Para pré-visualização, o `TEMPLATE_PREVIEW` otimiza para **baixa latência e taxa de quadros suave**, mesmo que isso signifique uma faixa dinâmica de sensor ligeiramente reduzida em comparação com o `TEMPLATE_STILL_CAPTURE` (usado no Capítulo 9 para fotos).
 
-## End-to-End Preview Flowchart
+## Fluxograma de Pré-visualização de Ponta a Ponta
 
-The flowchart below shows how all these components connect. Follow it closely when reading the code — every block corresponds to a real function call.
+O fluxograma abaixo mostra como todos esses componentes se conectam. Acompanhe-o de perto ao ler o código — cada bloco corresponde a uma chamada de função real.
 
 ```mermaid
 flowchart TD
-    subgraph ActivityStart["🟦 Activity Startup (onCreate/onResume)"]
+    subgraph ActivityStart["🟦 Inicialização da Activity (onCreate/onResume)"]
         A1[startBackgroundThread]
-        A2[TextureView added to layout]
+        A2[TextureView adicionado ao layout]
         A3[set SurfaceTextureListener]
     end
 
-    subgraph SurfaceReady["🟩 Surface Texture Lifecycle"]
+    subgraph SurfaceReady["🟩 Ciclo de Vida da Surface Texture"]
         B1[onSurfaceTextureAvailable ST,w,h]
         B2[configureTransform Matrix ⚠️]
-        B3[Create Surface from ST]
+        B3[Criar Surface a partir da ST]
     end
 
-    subgraph CameraOpen["🟪 Chapter 7 Camera Opening"]
+    subgraph CameraOpen["🟪 Abertura da Câmera do Capítulo 7"]
         C1[openCamera selectedCameraId]
         C2[StateCallback.onOpened cameraDevice]
     end
 
-    subgraph SessionCreation["🟨 Capture Session Pipeline"]
-        D1[Get TEMPLATE_PREVIEW CaptureRequest.Builder]
+    subgraph SessionCreation["🟨 Pipeline da Sessão de Captura"]
+        D1[Obter Builder de CaptureRequest TEMPLATE_PREVIEW]
         D2[builder.addTarget previewSurface]
-        D3[Build previewRequest]
+        D3[Construir previewRequest]
         D4[createCaptureSession surfaces=previewSurface]
         D5[Session.onConfigured session]
     end
 
-    subgraph PreviewStreaming["🟩 LIVE PREVIEW"]
+    subgraph PreviewStreaming["🟩 PRÉ-VISUALIZAÇÃO AO VIVO"]
         E1[session.setRepeatingRequest previewRequest]
-        E2[Camera produces frames continuously 🎥]
-        E3[Frames flow: Sensor→Surface→ST→TextureView→Screen 📱]
+        E2[Câmera produz quadros continuamente 🎥]
+        E3[Fluxo de quadros: Sensor→Surface→ST→TextureView→Tela 📱]
     end
 
-    subgraph Teardown["🟥 onPause / Surface Destroy"]
+    subgraph Teardown["🟥 onPause / Destruição da Surface"]
         F1[onSurfaceTextureDestroyed]
         F2[session.stopRepeating]
         F3[session.close]
@@ -140,11 +140,11 @@ flowchart TD
     style F1 fill:#d32f2f,color:#fff
 ```
 
-The orange highlighted block (`configureTransform`) and green highlighted block (LIVE PREVIEW) are the two most critical steps. Skip `configureTransform`, and your preview will be stretched, rotated, or squashed. Wire everything else correctly but fail to call `setRepeatingRequest`, and the screen stays black with no errors logged.
+O bloco destacado em laranja (`configureTransform`) e o bloco destacado em verde (PRÉ-VISUALIZAÇÃO AO VIVO) são as duas etapas mais críticas. Pule o `configureTransform` e sua pré-visualização ficará esticada, rotacionada ou achatada. Conecte tudo corretamente, mas falhe ao chamar `setRepeatingRequest`, e a tela permanecerá preta sem nenhum erro logado.
 
-## Step 1: Add TextureView to the Layout XML
+## Passo 1: Adicionar o TextureView ao Layout XML
 
-First, create or update `app/src/main/res/layout/activity_main.xml` to include a full-screen `TextureView`. We'll also add a `TextView` overlay as a status indicator so we can see the preview size.
+Primeiro, crie ou atualize o arquivo `app/src/main/res/layout/activity_main.xml` para incluir um `TextureView` em tela cheia. Também adicionaremos uma sobreposição de `TextView` como indicador de status para que possamos ver o tamanho da pré-visualização.
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
@@ -168,35 +168,35 @@ First, create or update `app/src/main/res/layout/activity_main.xml` to include a
         android:padding="8dp"
         android:textColor="#FFFFFFFF"
         android:textSize="12sp"
-        tools:text="Initializing camera..." />
+        tools:text="Inicializando câmera..." />
 
 </FrameLayout>
 ```
 
-Why `FrameLayout` as the root? Because preview is a full-screen layer, and `FrameLayout` stacks children with Z-ordering (later children draw on top). Later we'll add a shutter button overlay. The `TextureView` uses `match_parent` on both dimensions — but don't worry, we'll use `configureTransform` below to letterbox it correctly, so the pixels themselves are never stretched even though the view fills the screen.
+Por que `FrameLayout` como raiz? Porque a pré-visualização é uma camada em tela cheia e o `FrameLayout` empilha os filhos com ordenação Z (filhos posteriores são desenhados por cima). Mais tarde, adicionaremos uma sobreposição de botão de obturador. O `TextureView` usa `match_parent` em ambas as dimensões — mas não se preocupe, usaremos o `configureTransform` abaixo para fazer o letterbox corretamente, de modo que os próprios pixels nunca fiquem esticados, embora a visualização preencha a tela.
 
-## Step 2: configureTransform — The Secret Sauce of Correct Preview Aspect Ratio
+## Passo 2: configureTransform — O Segredo da Proporção Correta da Pré-visualização
 
-If you do nothing and just pipe frames into a full-screen TextureView, the preview will be **stretched**. Why? Because camera sensors have a fixed aspect ratio (almost always 4:3 for still capture, sometimes 16:9 for video modes), and the phone display has a different aspect ratio (often ~20:9 on modern flagships). If the camera outputs a 4032×3024 (4:3) preview frame and the TextureView stretches it to 1080×2400 (20:9), faces look thin and tall.
+Se você não fizer nada e apenas canalizar quadros para um TextureView em tela cheia, a pré-visualização ficará **esticada**. Por quê? Porque os sensores de câmera têm uma proporção de aspecto fixa (quase sempre 4:3 para captura estática, às vezes 16:9 para modos de vídeo) e a tela do celular tem uma proporção diferente (frequentemente ~20:9 em flagships modernos). Se a câmera emitir um quadro de pré-visualização de 4032×3024 (4:3) e o TextureView esticá-lo para 1080×2400 (20:9), os rostos parecerão finos e altos.
 
-The solution is **`configureTransform(viewWidth: Int, viewHeight: Int)`**: a method that computes a `Matrix` (rotation + center-crop scaling) and applies it to the TextureView. The matrix does three things:
-1. **Rotate** the image by the number of degrees the device is rotated relative to the camera sensor's natural orientation.
-2. **Scale** the image so that it fills the TextureView entirely while maintaining aspect ratio (center-crop style, letterbox with black bars if you prefer).
-3. **Re-center** the scaled/rotated image so it sits in the middle of the view.
+A solução é o **`configureTransform(viewWidth: Int, viewHeight: Int)`**: um método que calcula uma `Matrix` (rotação + escala de corte central) e a aplica ao TextureView. A matriz faz três coisas:
+1. **Rotaciona** a imagem pelo número de graus que o dispositivo está rotacionado em relação à orientação natural do sensor da câmera.
+2. **Escalona** a imagem para que ela preencha totalmente o TextureView, mantendo a proporção de aspecto (estilo center-crop, ou letterbox com barras pretas, se preferir).
+3. **Re-centraliza** a imagem escalonada/rotacionada para que ela fique no meio da visualização.
 
-This is the single most-copied function from the official Android Camera2 samples — every developer needs it, and it's easy to get wrong. Here's the canonical version:
+Esta é a função individual mais copiada das amostras oficiais de Android Camera2 — todo desenvolvedor precisa dela e é fácil errar. Aqui está a versão canônica:
 
 ```kotlin
 /**
- * Configures the necessary Matrix transformation to `textureView`.
- * This method should be called after the camera preview size is determined
- * and also the size of `textureView` is fixed.
+ * Configura a transformação Matrix necessária para o `textureView`.
+ * Este método deve ser chamado após o tamanho da pré-visualização da câmera ser determinado
+ * e também após o tamanho do `textureView` ser fixado.
  *
- * @param viewWidth  The width of `textureView`
- * @param viewHeight The height of `textureView`
- * @param previewSize The camera-selected preview Size (width, height)
- * @param sensorOrientationDegrees The SENSOR_ORIENTATION characteristic of the camera
- * @param deviceDisplayRotationDegrees The display's rotation (0/90/180/270) relative to natural
+ * @param viewWidth  A largura do `textureView`
+ * @param viewHeight A altura do `textureView`
+ * @param previewSize O tamanho de pré-visualização selecionado pela câmera (largura, altura)
+ * @param sensorOrientationDegrees A característica SENSOR_ORIENTATION da câmera
+ * @param deviceDisplayRotationDegrees A rotação da tela (0/90/180/270) em relação à natural
  */
 private fun configureTransform(
     viewWidth: Int,
@@ -224,7 +224,7 @@ private fun configureTransform(
     val centerX = viewRect.centerX()
     val centerY = viewRect.centerY()
 
-    // Step 1: Account for device rotation relative to sensor orientation
+    // Passo 1: Considerar a rotação do dispositivo em relação à orientação do sensor
     if (Surface.ROTATION_90 == rotation || Surface.ROTATION_270 == rotation) {
         bufferRect.offset(centerX - bufferRect.centerX(), centerY - bufferRect.centerY())
         matrix.setRectToRect(viewRect, bufferRect, android.graphics.Matrix.ScaleToFit.FILL)
@@ -242,7 +242,7 @@ private fun configureTransform(
         matrix.postRotate(180f, centerX, centerY)
     }
 
-    // Step 2: Also account for how the sensor is mounted relative to the device
+    // Passo 2: Também considerar como o sensor é montado em relação ao dispositivo
     val relativeRotation = (sensorOrientationDegrees - rotation + 360) % 360
     if (relativeRotation != 0) {
         matrix.postRotate(relativeRotation.toFloat(), centerX, centerY)
@@ -252,15 +252,15 @@ private fun configureTransform(
 }
 ```
 
-A key detail: `previewSize` is the camera's output size, reported as (width, height) in **sensor orientation**. The TextureView's dimensions are in **display orientation**. The RectF trick with swapped width/height (`bufferRect` uses `previewSize.height` for width and vice versa) accounts for this sensor-vs-display coordinate flip.
+Um detalhe importante: `previewSize` é o tamanho de saída da câmera, relatado como (largura, altura) na **orientação do sensor**. As dimensões do TextureView estão na **orientação da tela**. O truque com RectF trocando largura/altura (`bufferRect` usa `previewSize.height` para largura e vice-versa) considera essa inversão de coordenadas sensor-vs-tela.
 
-You'll need two pieces of CameraCharacteristics information to call this:
-- `SENSOR_ORIENTATION` — how many degrees the sensor is rotated relative to the device's natural orientation. For rear cameras, this is almost always 90°. For front cameras, it's typically 270° (so the image is mirrored correctly). Read it once per camera in the discovery phase.
-- Display rotation — from `(getSystemService(Context.WINDOW_SERVICE) as WindowManager).defaultDisplay.rotation` (on newer APIs use `display?.rotation`).
+Você precisará de duas informações de CameraCharacteristics para chamar isso:
+- `SENSOR_ORIENTATION` — quantos graus o sensor está rotacionado em relação à orientação natural do dispositivo. Para câmeras traseiras, isso é quase sempre 90°. Para câmeras frontais, é tipicamente 270° (para que a imagem seja espelhada corretamente). Leia isso uma vez por câmera na fase de descoberta.
+- Rotação da tela — obtida de `(getSystemService(Context.WINDOW_SERVICE) as WindowManager).defaultDisplay.rotation` (em APIs mais novas use `display?.rotation`).
 
-## Step 3: Choose a Preview Size from SCALER_STREAM_CONFIGURATION_MAP
+## Passo 3: Escolher um Tamanho de Pré-visualização de SCALER_STREAM_CONFIGURATION_MAP
 
-Before we can write `configureTransform` or create a session, we need to know what preview size the camera can output. For every camera, `CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP` returns a `StreamConfigurationMap` containing all valid (format, size) pairs the camera can produce. For preview on a `SurfaceTexture`, we query for output sizes against the class `SurfaceTexture::class.java`:
+Antes de podermos escrever o `configureTransform` ou criar uma sessão, precisamos saber qual tamanho de pré-visualização a câmera pode emitir. Para cada câmera, `CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP` retorna um `StreamConfigurationMap` contendo todos os pares (formato, tamanho) válidos que a câmera pode produzir. Para a pré-visualização em uma `SurfaceTexture`, consultamos os tamanhos de saída para a classe `SurfaceTexture::class.java`:
 
 ```kotlin
 private fun chooseOptimalPreviewSize(
@@ -270,13 +270,13 @@ private fun chooseOptimalPreviewSize(
     targetAspectRatio: Double
 ): android.util.Size {
     val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
-        ?: throw IllegalStateException("No stream configuration map available")
+        ?: throw IllegalStateException("Mapa de configuração de fluxo não disponível")
 
-    // All sizes supported for SurfaceTexture output (preview class)
+    // Todos os tamanhos suportados para saída SurfaceTexture (classe de pré-visualização)
     val choices = map.getOutputSizes(SurfaceTexture::class.java).toList()
 
-    // Prefer sizes that match aspect ratio, then ones that fit in max dimensions,
-    // then pick the largest (best quality) among the remaining.
+    // Preferir tamanhos que combinem com a proporção de aspecto, depois os que cabem nas dimensões máximas,
+    // então escolher o maior (melhor qualidade) entre os restantes.
     val acceptable = choices.filter {
         it.width <= maxWidth
             && it.height <= maxHeight
@@ -286,17 +286,17 @@ private fun chooseOptimalPreviewSize(
     val chosen = acceptable.ifEmpty { choices }
         .maxByOrNull { it.width * it.height }!!
 
-    Log.d(TAG, "Selected preview size: ${chosen.width}x${chosen.height} " +
-        "(from ${choices.size} options, maxAllowed=${maxWidth}x${maxHeight})")
+    Log.d(TAG, "Tamanho de pré-visualização selecionado: ${chosen.width}x${chosen.height} " +
+        "(de ${choices.size} opções, máxPermitido=${maxWidth}x${maxHeight})")
     return chosen
 }
 ```
 
-Common sense default parameters: `maxWidth = 1920`, `maxHeight = 1080`, `targetAspectRatio = textureView.width.toDouble() / textureView.height`. The preview surface doesn't need to be 4K — 1080p is enough for framing on a phone screen, uses less power, and keeps the pipeline latency low.
+Parâmetros padrão de bom senso: `maxWidth = 1920`, `maxHeight = 1080`, `targetAspectRatio = textureView.width.toDouble() / textureView.height`. A superfície de pré-visualização não precisa ser 4K — 1080p é o suficiente para o enquadramento na tela de um celular, consome menos energia e mantém baixa a latência do pipeline.
 
-## Step 4: Full Chapter 8 Code — Live Preview
+## Passo 4: Código Completo do Capítulo 8 — Pré-visualização ao Vivo
 
-Here is the complete `MainActivity.kt` integrating every piece from this chapter: the layout-based `TextureView`, `SurfaceTextureListener`, size selection, `configureTransform`, `CameraCaptureSession` creation, and the all-important `setRepeatingRequest(TEMPLATE_PREVIEW)`.
+Aqui está o `MainActivity.kt` completo integrando cada peça deste capítulo: o `TextureView` baseado no layout, `SurfaceTextureListener`, seleção de tamanho, `configureTransform`, criação da `CameraCaptureSession` e o importantíssimo `setRepeatingRequest(TEMPLATE_PREVIEW)`.
 
 ```kotlin
 package com.example.camera2tutorial
@@ -338,11 +338,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var textureView: TextureView
     private lateinit var statusTextView: TextView
 
-    // Threading
+    // Threads
     private lateinit var backgroundThread: HandlerThread
     private lateinit var backgroundHandler: Handler
 
-    // Camera
+    // Câmera
     private lateinit var cameraManager: CameraManager
     private var cameraDevice: CameraDevice? = null
     private var captureSession: CameraCaptureSession? = null
@@ -354,14 +354,14 @@ class MainActivity : AppCompatActivity() {
 
     private val cameraOpenCloseLock = Semaphore(1)
 
-    // ------------------------- Lifecycle -------------------------
+    // ------------------------- Ciclo de Vida -------------------------
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         textureView = findViewById(R.id.textureView)
         statusTextView = findViewById(R.id.statusTextView)
-        statusTextView.text = "Waiting for TextureView layout..."
+        statusTextView.text = "Aguardando layout do TextureView..."
 
         if (allPermissionsGranted()) {
             initializeCameraManager()
@@ -378,7 +378,7 @@ class MainActivity : AppCompatActivity() {
 
         if (allPermissionsGranted()) {
             if (!this::cameraManager.isInitialized) initializeCameraManager()
-            // If texture view is already available, open camera and create session now
+            // Se a visualização de textura já estiver disponível, abra a câmera e crie a sessão agora
             if (textureView.isAvailable) {
                 openCameraAndStartPreview(textureView.width, textureView.height)
             }
@@ -405,7 +405,7 @@ class MainActivity : AppCompatActivity() {
         try { backgroundThread.join(1000) } catch (_: InterruptedException) {}
     }
 
-    // ------------------------- Chapter 6 condensed: Discovery -------------------------
+    // ------------------------- Capítulo 6 condensado: Descoberta -------------------------
     data class CameraInfo(val id: String, val facing: Int?, val hwLevel: Int?, val chars: CameraCharacteristics)
 
     private fun initializeCameraManager() {
@@ -429,13 +429,13 @@ class MainActivity : AppCompatActivity() {
         selectedCameraId = chosen.id
         sensorOrientation = chosen.chars.get(CameraCharacteristics.SENSOR_ORIENTATION) ?: 90
 
-        Log.d(TAG, "Selected camera id=$selectedCameraId, sensorOrientation=$sensorOrientation°")
+        Log.d(TAG, "Câmera selecionada id=$selectedCameraId, sensorOrientation=$sensorOrientation°")
 
-        // Hook up the SurfaceTexture listener — it will trigger the actual preview start
+        // Conectar o listener da SurfaceTexture — ele disparará o início real da pré-visualização
         textureView.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
             override fun onSurfaceTextureAvailable(st: SurfaceTexture, width: Int, height: Int) {
-                Log.d(TAG, "✅ SurfaceTexture available: ${width}x$height")
-                statusTextView.text = "SurfaceTexture ready — opening camera..."
+                Log.d(TAG, "✅ SurfaceTexture disponível: ${width}x$height")
+                statusTextView.text = "SurfaceTexture pronta — abrindo câmera..."
                 openCameraAndStartPreview(width, height)
             }
             override fun onSurfaceTextureSizeChanged(st: SurfaceTexture, w: Int, h: Int) {
@@ -444,79 +444,79 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             override fun onSurfaceTextureDestroyed(st: SurfaceTexture): Boolean {
-                Log.d(TAG, "⛔ SurfaceTexture destroyed")
+                Log.d(TAG, "⛔ SurfaceTexture destruída")
                 return true
             }
             override fun onSurfaceTextureUpdated(st: SurfaceTexture) {
-                // Called on EVERY frame. Keep work here <1ms. Count frames for FPS if desired.
+                // Chamado a CADA quadro. Mantenha o trabalho aqui <1ms. Conte os quadros para FPS, se desejar.
             }
         }
     }
 
-    // ------------------------- Chapter 7 condensed: openCamera -------------------------
+    // ------------------------- Capítulo 7 condensado: openCamera -------------------------
     private val deviceStateCallback = object : CameraDevice.StateCallback() {
         override fun onOpened(camera: CameraDevice) {
             cameraOpenCloseLock.release()
             cameraDevice = camera
-            Log.d(TAG, "✅ Camera ${camera.id} opened → creating capture session")
-            statusTextView.text = "Camera open — creating capture session..."
+            Log.d(TAG, "✅ Câmera ${camera.id} aberta → criando sessão de captura")
+            statusTextView.text = "Câmera aberta — criando sessão de captura..."
 
-            // ⬇️ Chapter 8: With camera open AND SurfaceTexture available,
-            // we now create the capture session
+            // ⬇️ Capítulo 8: Com a câmera aberta E a SurfaceTexture disponível,
+            // agora criamos a sessão de captura
             createCaptureSession()
         }
         override fun onDisconnected(camera: CameraDevice) {
             cameraOpenCloseLock.release()
             cameraDevice?.close()
             cameraDevice = null
-            Log.w(TAG, "Camera ${camera.id} disconnected")
+            Log.w(TAG, "Câmera ${camera.id} desconectada")
         }
         override fun onError(camera: CameraDevice, error: Int) {
             cameraOpenCloseLock.release()
             cameraDevice?.close()
             cameraDevice = null
             val msg = when (error) {
-                ERROR_CAMERA_IN_USE -> "Camera in use by another app"
-                else -> "Camera error $error"
+                ERROR_CAMERA_IN_USE -> "Câmera em uso por outro aplicativo"
+                else -> "Erro na câmera $error"
             }
             Toast.makeText(this@MainActivity, msg, Toast.LENGTH_LONG).show()
         }
     }
 
-    // ------------------------- 🎯 CHAPTER 8: Preview Pipeline -------------------------
+    // ------------------------- 🎯 CAPÍTULO 8: Pipeline de Pré-visualização -------------------------
     private fun openCameraAndStartPreview(viewWidth: Int, viewHeight: Int) {
         val camId = selectedCameraId ?: return
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
             != PackageManager.PERMISSION_GRANTED) return
         if (!cameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
-            Toast.makeText(this, "Camera lock timeout", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Timeout de bloqueio da câmera", Toast.LENGTH_SHORT).show()
             return
         }
 
-        // 1) Decide preview size BEFORE opening the session
+        // 1) Decidir o tamanho da pré-visualização ANTES de abrir a sessão
         val chars = cameraManager.getCameraCharacteristics(camId)
         previewSize = chooseOptimalPreviewSize(chars, viewWidth, viewHeight)
 
-        // 2) Apply aspect-correction transform to TextureView
+        // 2) Aplicar transformação de correção de aspecto ao TextureView
         configureTransform(viewWidth, viewHeight)
 
-        // 3) Configure the SurfaceTexture buffer size to MATCH the chosen preview size
+        // 3) Configurar o tamanho do buffer da SurfaceTexture para CORRESPONDER ao tamanho escolhido
         textureView.surfaceTexture!!.setDefaultBufferSize(previewSize.width, previewSize.height)
 
-        statusTextView.text = "Preview size: ${previewSize.width}×${previewSize.height}"
+        statusTextView.text = "Tamanho da pré-visualização: ${previewSize.width}×${previewSize.height}"
 
-        // 4) Open the camera — session creation continues in onOpened → createCaptureSession()
+        // 4) Abrir a câmera — a criação da sessão continua em onOpened → createCaptureSession()
         try {
             cameraManager.openCamera(camId, deviceStateCallback, backgroundHandler)
         } catch (e: CameraAccessException) {
             cameraOpenCloseLock.release()
-            Toast.makeText(this, "Failed to open camera: ${e.reason}", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Falha ao abrir a câmera: ${e.reason}", Toast.LENGTH_LONG).show()
         }
     }
 
     /**
-     * Create a CameraCaptureSession whose sole output surface is the TextureView preview surface.
-     * Then build a TEMPLATE_PREVIEW request and start repeating.
+     * Cria uma CameraCaptureSession cuja única superfície de saída é a do TextureView.
+     * Em seguida, constrói uma solicitação TEMPLATE_PREVIEW e inicia a repetição.
      */
     private fun createCaptureSession() {
         val camera = cameraDevice ?: return
@@ -526,56 +526,56 @@ class MainActivity : AppCompatActivity() {
         val outputSurfaces = Collections.singletonList(previewSurface)
 
         try {
-            // Build the TEMPLATE_PREVIEW CaptureRequest.Builder once
+            // Construir o Builder de CaptureRequest TEMPLATE_PREVIEW uma vez
             previewRequestBuilder =
                 camera.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW).apply {
                     addTarget(previewSurface)
                 }
 
-            // Create the capture session
+            // Criar a sessão de captura
             camera.createCaptureSession(
                 outputSurfaces,
                 object : CameraCaptureSession.StateCallback() {
                     override fun onConfigured(session: CameraCaptureSession) {
                         captureSession = session
                         previewRequest = previewRequestBuilder!!.build()
-                        Log.d(TAG, "✅ CaptureSession configured → starting repeating preview")
-                        statusTextView.text = "🎥 LIVE PREVIEW: ${previewSize.width}×${previewSize.height}"
+                        Log.d(TAG, "✅ CaptureSession configurada → iniciando pré-visualização repetida")
+                        statusTextView.text = "🎥 PRÉ-VISUALIZAÇÃO AO VIVO: ${previewSize.width}×${previewSize.height}"
 
-                        // ⭐ THIS IS THE MAGIC LINE THAT STARTS THE PREVIEW:
+                        // ⭐ ESTA É A LINHA MÁGICA QUE INICIA A PRÉ-VISUALIZAÇÃO:
                         session.setRepeatingRequest(
                             previewRequest!!,
-                            null,  // CaptureCallback is null for preview — we don't need per-frame metadata
+                            null,  // CaptureCallback é nulo para pré-visualização — não precisamos de metadados por quadro
                             backgroundHandler
                         )
                     }
 
                     override fun onConfigureFailed(session: CameraCaptureSession) {
-                        Log.e(TAG, "❌ CaptureSession configuration FAILED")
+                        Log.e(TAG, "❌ Falha na configuração da CaptureSession")
                         Toast.makeText(
                             this@MainActivity,
-                            "Capture session failed — preview unavailable",
+                            "Falha na sessão de captura — pré-visualização indisponível",
                             Toast.LENGTH_LONG
                         ).show()
                     }
 
                     override fun onClosed(session: CameraCaptureSession) {
-                        // Optional: symmetric cleanup hook
+                        // Opcional: gancho de limpeza simétrica
                         if (captureSession === session) captureSession = null
                     }
                 },
                 backgroundHandler
             )
         } catch (e: CameraAccessException) {
-            Log.e(TAG, "createCaptureSession threw CameraAccessException", e)
+            Log.e(TAG, "createCaptureSession lançou CameraAccessException", e)
         } catch (e: IllegalStateException) {
-            Log.e(TAG, "Camera was closed while creating session", e)
+            Log.e(TAG, "A câmera foi fechada durante a criação da sessão", e)
         }
     }
 
     /**
-     * Choose the largest preview size that matches the view's aspect ratio
-     * and fits in the given max dimensions.
+     * Escolhe o maior tamanho de pré-visualização que corresponda à proporção da visualização
+     * e caiba nas dimensões máximas dadas.
      */
     private fun chooseOptimalPreviewSize(
         characteristics: CameraCharacteristics,
@@ -584,12 +584,12 @@ class MainActivity : AppCompatActivity() {
     ): Size {
         val map: StreamConfigurationMap =
             characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
-                ?: throw IllegalStateException("StreamConfigurationMap unavailable")
+                ?: throw IllegalStateException("StreamConfigurationMap indisponível")
 
         val viewAspect = max(viewWidth, viewHeight).toDouble() / min(viewWidth, viewHeight)
         val choices = map.getOutputSizes(SurfaceTexture::class.java).toList()
 
-        // Reasonable upper bound for preview — no need for a 4K preview stream
+        // Limite superior razoável para a pré-visualização — não há necessidade de fluxo 4K
         val maxPreviewPixels = 1920 * 1080
 
         val aspectMatches = choices.filter {
@@ -602,14 +602,14 @@ class MainActivity : AppCompatActivity() {
             .sortedByDescending { it.width * it.height }
             .first()
 
-        Log.d(TAG, "Preview size choice: ${final.width}×${final.height} " +
-            "(from ${choices.size} options, targetAspect=%.2f)".format(viewAspect))
+        Log.d(TAG, "Escolha do tamanho de pré-visualização: ${final.width}×${final.height} " +
+            "(de ${choices.size} opções, targetAspect=%.2f)".format(viewAspect))
         return final
     }
 
     /**
-     * Applies a Matrix to TextureView so preview pixels render at correct aspect ratio
-     * (no stretch) and correct orientation (no rotation).
+     * Aplica uma Matrix ao TextureView para que os pixels da pré-visualização sejam renderizados
+     * na proporção correta (sem esticar) e orientação correta (sem rotação).
      */
     private fun configureTransform(viewWidth: Int, viewHeight: Int) {
         if (!this::previewSize.isInitialized) return
@@ -640,10 +640,10 @@ class MainActivity : AppCompatActivity() {
         }
         matrix.postRotate(rotationDegrees.toFloat(), cx, cy)
         textureView.setTransform(matrix)
-        Log.d(TAG, "configureTransform applied (rotation=$rotationDegrees°, scale=%.2f)".format(scale))
+        Log.d(TAG, "configureTransform aplicado (rotação=$rotationDegrees°, escala=%.2f)".format(scale))
     }
 
-    // ------------------------- Teardown -------------------------
+    // ------------------------- Desmontagem -------------------------
     private fun closeCameraAndPreview() {
         try {
             cameraOpenCloseLock.acquire()
@@ -660,7 +660,7 @@ class MainActivity : AppCompatActivity() {
             cameraDevice?.close()
             cameraDevice = null
 
-            Log.d(TAG, "🔒 Preview & camera fully torn down")
+            Log.d(TAG, "🔒 Pré-visualização e câmera totalmente desmontadas")
         } catch (_: InterruptedException) {
         } finally {
             cameraOpenCloseLock.release()
@@ -686,95 +686,9 @@ class MainActivity : AppCompatActivity() {
             if (allPermissionsGranted()) {
                 initializeCameraManager()
             } else {
-                Toast.makeText(this, "Camera permission required", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "Permissão de câmera necessária", Toast.LENGTH_LONG).show()
                 finish()
             }
         }
     }
 }
-```
-
-### The 5 Lines That Actually Start Preview
-
-Out of 350+ lines of infrastructure, **just five consecutive statements** in the code above are responsible for actually getting frames onto the screen:
-
-```kotlin
-// Line A: Build a TEMPLATE_PREVIEW request targeting the preview Surface
-previewRequestBuilder = camera.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW).apply {
-    addTarget(previewSurface)
-}
-
-// Line B: Create the capture session with the preview surface as its output
-camera.createCaptureSession(outputSurfaces, object : CameraCaptureSession.StateCallback() {
-    override fun onConfigured(session: CameraCaptureSession) {
-        // Line C: Build the immutable CaptureRequest from the builder
-        previewRequest = previewRequestBuilder!!.build()
-        // Line D: ⭐ Start the continuous repeating stream of preview frames
-        session.setRepeatingRequest(previewRequest!!, null, backgroundHandler)
-    }
-}, backgroundHandler)
-```
-
-Skip `addTarget(previewSurface)` and the session won't know where to send frames, resulting in a black screen. Skip `setRepeatingRequest` and the camera waits for a capture that never comes — also black. Get the builder template wrong (`TEMPLATE_STILL_CAPTURE` instead of `TEMPLATE_PREVIEW`) and preview frames come at 5 FPS. All five lines (plus `configureTransform` for aspect) must be correct.
-
-## Verification: What Success Looks Like
-
-When you run the Chapter 8 app on a physical device, you should observe the following behavior as a series of checkpoints:
-
-1. **Splash (0s)**: Status shows *"Waiting for TextureView layout..."* — the view is being inflated.
-2. **SurfaceTexture ready (~0.1s)**: Status updates to *"SurfaceTexture ready — opening camera..."*. The `onSurfaceTextureAvailable` callback fired.
-3. **Camera opened (~0.5s)**: Status changes to *"Camera open — creating capture session..."*. Logcat shows the `previewSize` selection line and the `configureTransform applied` line.
-4. **Session configured (~0.7s)**: Status changes to **🎥 LIVE PREVIEW: 1920×1080** and **you see the camera image on the screen**! It's smooth (30–60 FPS), correctly oriented, and the aspect ratio looks natural (no stretchy faces).
-5. **Press Home / background the app**: Logcat shows `🔒 Preview & camera fully torn down`. When you return, preview resumes instantaneously.
-6. **Rotate the device to landscape**: `onSurfaceTextureSizeChanged` fires, `configureTransform` re-runs with new dimensions, and the preview re-centers itself correctly in landscape without a glitch.
-
-If you don't see a preview image, systematically check the five starting lines above and verify that `setDefaultBufferSize` was called on the `SurfaceTexture` before creating the session. This step (`textureView.surfaceTexture!!.setDefaultBufferSize(previewSize.width, previewSize.height)`) is a **silent failure point**: miss it, and some devices deliver black frames with zero error messages.
-
-## Troubleshooting Preview Issues
-
-### Black screen, no errors in Logcat
-
-This is the most common and most frustrating Chapter 8 bug. Check in order:
-
-1. **Is `setDefaultBufferSize` called?** It must be called with the SAME `previewSize.width/height` as the session uses BEFORE the session is created.
-2. **Did `addTarget(previewSurface)` run?** Log the list of targets on the `previewRequestBuilder` right before `.build()`.
-3. **Did `setRepeatingRequest` actually fire?** Add a `CaptureCallback` (replace `null` with a callback that logs `onCaptureStarted`) and see if frames are being produced. If `onCaptureStarted` never fires, the session never went active — backtrack to `onConfigured` vs `onConfigureFailed`.
-4. **Is `hardwareAccelerated="true"` set on the Activity?** (Chapter 2 requirement.) If not, TextureView silently doesn't render.
-
-### Preview is upside-down or rotated 90°
-
-Your `configureTransform` function is incorrect. Add debug logging to `rotationDegrees` inside `configureTransform` and compare with `sensorOrientation`. A common bug: applying the sensor rotation and the device rotation in the wrong order. For the Pixel lineup, rear sensors are 90° from natural; on some Samsung devices they are 270°. Always read `SENSOR_ORIENTATION` rather than hardcoding.
-
-### Preview appears stretched (tall thin faces or short wide faces)
-
-This means `configureTransform` ran but didn't scale correctly. Log `viewAspect`, the final chosen `previewSize` aspect, and the `scale` variable. The scale should be >1.0 (center-crop) or &lt;1.0 (letterbox with bars). If scale is exactly 1.0 and aspect ratios mismatch, you're stretching the pixels to fill.
-
-### Preview runs at low frame rate (feels like 5–10 FPS)
-
-Check two things:
-1. **Template used**: `TEMPLATE_STILL_CAPTURE` runs at still-capture frame rates (low). You must use `TEMPLATE_PREVIEW`.
-2. **Preview size**: Did `chooseOptimalPreviewSize` select a 4K (3840×2160) preview? That's ~8× the pixels of 1080p and will kill frame rate on budget devices. Add the `maxPreviewPixels` ceiling seen in the code above.
-
-## Summary
-
-This chapter was the payoff for all the infrastructure work. You now have a working camera preview app. You learned:
-
-1. **The Five Preview Pipeline Components**: `Surface` (buffer queue), `SurfaceTexture` (GPU texture conversion), `TextureView` (on-screen display), `CameraCaptureSession` (plumbing all outputs together), and the repeating `TEMPLATE_PREVIEW` `CaptureRequest` (continuous frame generation).
-2. **TextureView + SurfaceTextureListener**: How to set up the full-screen TextureView via XML layout, hook `onSurfaceTextureAvailable` to know when the GPU surface is ready, and wire up `onSurfaceTextureSizeChanged` for runtime resize/re-orientation.
-3. **Preview Size Selection**: How to read `SCALER_STREAM_CONFIGURATION_MAP`, query `getOutputSizes(SurfaceTexture::class.java)`, and pick the largest size that matches the view's aspect ratio with a 1080p ceiling to keep latency and power low.
-4. **configureTransform**: The canonical aspect-correction matrix that rotates preview frames to match device orientation and center-crop-scales them so no stretching occurs. Why width/height are swapped between buffer Rect and view Rect.
-5. **CameraCaptureSession + setRepeatingRequest**: Building a `TEMPLATE_PREVIEW` request builder, `addTarget(previewSurface)`, creating the session, and in `onConfigured` calling `session.setRepeatingRequest()` — the single line that actually starts the frame stream.
-
-The Android Camera Parameters app on [Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams) uses a direct descendant of this exact preview pipeline. Its overlay system (showing per-frame 3A state, ISO, exposure time, lens position) is built on top of the CaptureCallback parameter you passed as `null` — preview frames keep flowing, and we snoop the metadata without interrupting the stream.
-
-## What's Next
-
-A live preview is a stunning demo, but it's not a camera **app** until you can capture and save a photo. In **Chapter 9: Taking Photos**, we will:
-
-1. Introduce `ImageReader` with JPEG format, the CPU-accessible sink for high-quality still frames.
-2. Learn how to set JPEG compression quality and manage the `maxImages` buffer queue depth.
-3. Walk the precapture AE (auto-exposure) trigger flow: stop repeating → precapture AE trigger start → wait for AE converged → capture still → save bytes → unlock AE → resume repeating.
-4. Implement Scoped Storage–compatible photo saving via `MediaStore` on Android 10+, and direct `FileOutputStream` on older versions, always remembering to `.close()` the `Image` to avoid buffer starvation.
-5. Add a `CaptureCallback` chain with per-capture state tracking so the precapture wait is correct.
-
-By the end of Chapter 9, your tutorial project will be a **usable, real camera application**: tap a button, hear the shutter, and find your JPEG photo in the device's Pictures folder. You can then compare output quality side-by-side with the Android Camera Parameters app ([GitHub](https://github.com/zoozooll/AndroidCameraParameters)) to see the difference manual controls make!

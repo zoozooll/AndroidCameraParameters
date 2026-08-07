@@ -1,4 +1,4 @@
----
+﻿---
 sidebar_position: 16
 title: "Chapter 16: White Balance & Color"
 description: Control color in Android Camera2 with Auto White Balance presets and manual color correction. Learn AWB modes, color temperature (2000K–10000K), 3×3 color transforms, COLOR_CORRECTION_GAINS, and working Kotlin code for warm-tone sunset presets and full manual white balance.
@@ -23,7 +23,7 @@ Light sources are described by their **color temperature** in Kelvin (K). The sc
 
 ```mermaid
 graph LR
-    A[1800K<br/>Candlelight] --> B[2800K<br/>Incandescent Lamp]
+    A["1800K<br/>Candlelight"] --> B["2800K<br/>Incandescent Lamp"]
     B --> C[3500K<br/>Warm Fluorescent]
     C --> D[4500K<br/>Cool Fluorescent]
     D --> E[5500K<br/>Daylight / Flash]

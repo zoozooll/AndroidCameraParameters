@@ -1,34 +1,34 @@
 ---
 sidebar_position: 5
-title: "Chapter 5: Creating Your First Camera2 Project"
-description: Set up a complete Android Camera2 project from scratch. Learn about camera permissions, CameraManager initialization, background threading with HandlerThread, and the project configuration needed for TextureView hardware acceleration.
-keywords: [Camera2 project setup, Android camera permissions, HandlerThread, CameraManager, TextureView hardwareAccelerated]
+title: "第 5 章：建立你的第一個 Camera2 專案"
+description: 從零開始建置一個完整的 Android Camera2 專案。學習相機權限、CameraManager 初始化、使用 HandlerThread 進行背景執行緒處理，以及 TextureView 硬體加速所需的專案設定。
+keywords: [Camera2 專案建置, Android 相機權限, HandlerThread, CameraManager, TextureView hardwareAccelerated]
 ---
 
-Welcome to the hands-on portion of the Camera2 tutorial series. In the previous chapters, you learned about smartphone camera hardware and the theoretical foundations of the Camera2 API. Now it's time to roll up your sleeves and write real code. By the end of this chapter, you'll have a working Android project that successfully initializes the Camera2 API and accesses the CameraManager service — the critical first step before you can enumerate cameras, open devices, or show previews.
+歡迎來到 Camera2 教學系列的實作部分。在前面的章節中，你學習了手機相機硬體以及 Camera2 API 的理論基礎。現在該捲起袖子寫真正的程式碼了。到本章結束時，你將擁有一個可運作的 Android 專案，能夠成功初始化 Camera2 API 並存取 CameraManager 服務——這是你在列舉相機、開啟裝置或顯示預覽之前必須完成的關鍵第一步。
 
-If you want to see a production example of everything we'll build in this series, check out the **Android Camera Parameters** app on [GitHub](https://github.com/zoozooll/AndroidCameraParameters) and [Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams). It demonstrates advanced Camera2 usage including full CameraCharacteristics enumeration, manual capture controls, and multi-camera support.
+如果你想看到本系列中將建置的所有內容的正式範例，可以在 [GitHub](https://github.com/zoozooll/AndroidCameraParameters) 和 [Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams) 上查看 **Android Camera Parameters** 應用程式。它展示了進階 Camera2 用法，包括完整的 CameraCharacteristics 列舉、手動擷取控制以及多相機支援。
 
-## Why Start with Project Setup?
+## 為什麼要從專案建置開始？
 
-Before you can write a single line of Camera2 code, your application must be properly configured. Camera2 is a low-level, performance-sensitive API, and cutting corners on setup will lead to mysterious crashes, ANRs (Application Not Responding), or frames that never arrive. The three pillars of a correct Camera2 project setup are:
+在你撰寫任何一行 Camera2 程式碼之前，應用程式必須正確設定。Camera2 是一個低階層、對效能敏感的 API，在搭建階段偷工減料會導致莫名的崩潰、ANR（Application Not Responding，應用程式無回應）或永遠無法到達的影格。一個正確的 Camera2 專案建置有三大支柱：
 
-1. **Permissions** — The Android framework restricts camera access at both install-time (manifest) and runtime (user consent).
-2. **Threading Architecture** — Camera2 callbacks must never block the main thread; we need a dedicated background thread.
-3. **View Configuration** — If you plan to use TextureView for preview (the recommended approach), hardware acceleration must be enabled.
+1. **權限** — Android 框架在安裝時（資訊清單）和執行時（使用者同意）兩個層面限制相機存取。
+2. **執行緒架構** — Camera2 回呼絕不能阻塞主執行緒；我們需要一個專用的背景執行緒。
+3. **View 設定** — 如果你打算使用 TextureView 進行預覽（推薦做法），必須啟用硬體加速。
 
-Let's tackle each one systematically.
+讓我們系統地逐一處理。
 
-## Step 1: Creating a New Android Studio Project
+## 第 1 步：建立新的 Android Studio 專案
 
-Launch Android Studio and create a new project. For this tutorial series, we recommend:
+啟動 Android Studio 並建立一個新專案。對於本教學系列，我們推薦：
 
-- **Template**: Empty Activity (the simplest starting point)
-- **Language**: Kotlin (the modern standard for Android development; all examples in this series are in Kotlin)
-- **Minimum SDK**: API 21 (Lollipop) — this is the first SDK level that supports Camera2 natively. If you need to support external USB cameras via OTG, target API 23 or higher. If you need scoped storage support for photo saving (Chapter 9), API 29+ is relevant, but we'll handle backward compatibility there.
-- **Build configuration language**: Kotlin DSL or Groovy — either works; our examples will be build-system agnostic.
+- **範本**：Empty Activity（最簡單的起點）
+- **語言**：Kotlin（Android 開發的現代標準；本系列所有範例都使用 Kotlin）
+- **最低 SDK**：API 21（Lollipop）——這是原生支援 Camera2 的第一個 SDK 層級。如果你需要透過 OTG 支援外部 USB 相機，請目標 API 23 或更高。如果你需要為照片儲存提供 Scoped Storage 支援（第 9 章），則需要 API 29+，但我們會在那裡處理回溯相容性。
+- **建置設定語言**：Kotlin DSL 或 Groovy——兩者都可以；我們的範例與建置系統無關。
 
-Once the project is generated, open your module-level `build.gradle` (or `build.gradle.kts`) file. The default Empty Activity template includes most dependencies you need, but verify you have at minimum:
+專案生成後，開啟模組層級的 `build.gradle`（或 `build.gradle.kts`）檔案。預設的 Empty Activity 範本包含了你所需的大部分相依項目，但請確保至少有以下內容：
 
 ```kotlin
 dependencies {
@@ -36,30 +36,30 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.google.android.material:material:1.11.0")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
-    // Camera2 is part of the Android framework, so NO extra dependency is needed
-    // for the basic API. androidx.camera.camera2 is for CameraX interop only.
+    // Camera2 是 Android 框架的一部分，因此基礎 API 不需要任何額外相依項目。
+    // androidx.camera.camera2 僅用於 CameraX 互通。
 }
 ```
 
 :::tip
-You do **not** need to add any external Camera2 dependency. The entire `android.hardware.camera2` package is part of the Android framework. The Jetpack CameraX library is a separate higher-level abstraction built on top of Camera2; we are using the **native Camera2 API directly** in this tutorial.
+你**不需要**加入任何外部 Camera2 相依項目。整個 `android.hardware.camera2` 套件都是 Android 框架的一部分。Jetpack CameraX 程式庫是建置在 Camera2 之上的獨立高階抽象；本教學中我們**直接使用原生 Camera2 API**。
 :::
 
-## Step 2: Declaring Permissions in AndroidManifest.xml
+## 第 2 步：在 AndroidManifest.xml 中宣告權限
 
-Every camera application must declare the `CAMERA` permission in `AndroidManifest.xml`. This tells the Google Play Store that your app uses the camera hardware, and it enables the runtime permission dialog on Android 6.0 (API 23) and above.
+每個相機應用程式都必須在 `AndroidManifest.xml` 中宣告 `CAMERA` 權限。這會告訴 Google Play 商店你的應用程式使用相機硬體，並啟用 Android 6.0（API 23）及以上的執行時權限對話框。
 
-Open `app/src/main/AndroidManifest.xml` and add the following elements **as children of the root `<manifest>` tag** (not inside `<application>`):
+開啟 `app/src/main/AndroidManifest.xml`，將以下元素加入為**根 `<manifest>` 標籤的子元素**（不要放在 `<application>` 內部）：
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- ✅ Camera permission declaration -->
+    <!-- ✅ 相機權限宣告 -->
     <uses-permission android:name="android.permission.CAMERA" />
 
-    <!-- Optional feature declarations (used by Google Play filtering) -->
+    <!-- 可選的功能宣告（用於 Google Play 過濾） -->
     <uses-feature
         android:name="android.hardware.camera"
         android:required="true" />
@@ -80,30 +80,30 @@ Open `app/src/main/AndroidManifest.xml` and add the following elements **as chil
 </manifest>
 ```
 
-Let's break down the important parts:
+讓我們拆解其中重要的部分：
 
 ### `<uses-permission android:name="android.permission.CAMERA" />`
 
-This is the core permission. Without it, any call to the camera service will throw a `SecurityException`. On API 22 and below, users grant this at install time; on API 23+, you must also request it at runtime (covered next).
+這是核心權限。沒有它，任何對相機服務的呼叫都會拋出 `SecurityException`。在 API 22 及以下，使用者在安裝時授予此權限；在 API 23+，你還必須在執行時請求（稍後講解）。
 
 ### `<uses-feature android:name="android.hardware.camera" android:required="true" />`
 
-This declaration tells Google Play to filter your app onto devices that have at least one camera. Set `android:required="false"` if your app can function without a camera (for example, a gallery app with optional capture). If you don't declare this at all, Google Play assumes camera is **not** required, which may install your app on devices without cameras.
+此宣告告訴 Google Play 將你的應用程式過濾到至少有一個相機的裝置上。如果你的應用程式可以在沒有相機的情況下運作（例如，一個可選拍攝功能的相簿應用程式），請將 `android:required="false"`。如果你完全不宣告此項，Google Play 會假設相機**不是**必需的，這可能會把你的應用程式安裝到沒有相機的裝置上。
 
-### `android:hardwareAccelerated="true"` on the `<activity>`
+### `<activity>` 上的 `android:hardwareAccelerated="true"`
 
-This is **critical** for TextureView preview rendering. TextureView uses the GPU composition pipeline to display camera frames efficiently. Without hardware acceleration enabled at the Activity or Application level, TextureView will silently fail to render or display a black screen. The default in modern Android is `true` for the entire application, but it is good practice to declare it explicitly on any Activity that hosts a TextureView.
+這對 TextureView 預覽渲染**至關重要**。TextureView 使用 GPU 合成管線來高效顯示相機影格。如果在 Activity 或 Application 層級未啟用硬體加速，TextureView 會靜默無法渲染或顯示黑屏。現代 Android 中整個應用程式的預設值是 `true`，但在任何承載 TextureView 的 Activity 上明確宣告是一個良好的實踐。
 
-## Step 3: Runtime Permission Request
+## 第 3 步：執行時權限請求
 
-On Android 6.0 (Marshmallow, API 23) and later, declaring the permission in the manifest is only half the story. You must also **explicitly ask the user for permission** at runtime, using the Activity Compat library. The standard pattern is:
+在 Android 6.0（Marshmallow，API 23）及更高版本中，在資訊清單中宣告權限只是事情的一半。你還必須使用 Activity Compat 程式庫在執行時**明確向使用者請求權限**。標準模式是：
 
-1. Check if permission is already granted with `ContextCompat.checkSelfPermission`.
-2. If granted, proceed to camera initialization.
-3. If not granted, call `ActivityCompat.requestPermissions` to show the system dialog.
-4. Handle the result in `onRequestPermissionsResult`.
+1. 用 `ContextCompat.checkSelfPermission` 檢查權限是否已授予。
+2. 如果已授予，繼續相機初始化。
+3. 如果未授予，呼叫 `ActivityCompat.requestPermissions` 顯示系統對話框。
+4. 在 `onRequestPermissionsResult` 中處理結果。
 
-Here's the complete permission flow in `MainActivity.kt`:
+下面是 `MainActivity.kt` 中完整的權限流程：
 
 ```kotlin
 package com.example.camera2tutorial
@@ -149,7 +149,7 @@ class MainActivity : AppCompatActivity() {
             } else {
                 Toast.makeText(
                     this,
-                    "Camera permission is required to use this app.",
+                    "需要相機權限才能使用此應用程式。",
                     Toast.LENGTH_LONG
                 ).show()
                 finish()
@@ -158,9 +158,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initializeCamera() {
-        // TODO: We'll implement this method in the sections below.
-        // This is where CameraManager setup will happen.
-        // For now, just log success.
+        // TODO: 我們將在下面的章節中實作此方法。
+        // CameraManager 的設定將在這裡進行。
+        // 目前，僅記錄成功。
         android.util.Log.d(TAG, "Permissions granted. Ready to initialize camera.")
     }
 
@@ -172,37 +172,37 @@ class MainActivity : AppCompatActivity() {
 }
 ```
 
-### Why `allPermissionsGranted()` Uses an Array Pattern
+### 為什麼 `allPermissionsGranted()` 使用陣列模式
 
-Even though we only need `CAMERA` right now, defining a `REQUIRED_PERMISSIONS` array makes it trivial to add additional permissions later (such as `WRITE_EXTERNAL_STORAGE` for legacy photo saving, or `RECORD_AUDIO` for video). The `all { ... }` function checks that **every** permission in the array is granted before proceeding.
+雖然我們目前只需要 `CAMERA` 權限，但定義一個 `REQUIRED_PERMISSIONS` 陣列使得日後加入額外權限變得輕而易舉（例如用於傳統照片儲存的 `WRITE_EXTERNAL_STORAGE`，或用於影片的 `RECORD_AUDIO`）。`all { ... }` 函式會檢查陣列中的**每一個**權限是否都已授予，然後才繼續。
 
-## Step 4: The Background Thread (HandlerThread)
+## 第 4 步：背景執行緒（HandlerThread）
 
-This is the single most commonly-missed detail in beginner Camera2 code, and it causes **random, hard-to-reproduce bugs**. Let's understand why Camera2 needs a background thread, then implement it correctly.
+這是初學者 Camera2 程式碼中最常被遺漏的細節，它會導致**隨機、難以重現的 bug**。讓我們先理解為什麼 Camera2 需要背景執行緒，然後再正確實作它。
 
-### Why Camera2 MUST NOT Run on the Main Thread
+### 為什麼 Camera2 絕不能在主執行緒上執行
 
-The Android main (UI) thread is responsible for:
-- Drawing the UI at 60-120 FPS
-- Handling user touch events
-- Dispatching lifecycle callbacks
-- Running all Activity/Fragment code by default
+Android 主（UI）執行緒負責：
+- 以 60-120 FPS 繪製 UI
+- 處理使用者觸控事件
+- 分發生命週期回呼
+- 預設執行所有 Activity/Fragment 程式碼
 
-The Camera2 API delivers several critical callbacks synchronously:
-- `CameraDevice.StateCallback` — when a camera opens, disconnects, or errors
-- `CameraCaptureSession.StateCallback` — when a capture session is configured
-- `CameraCaptureSession.CaptureCallback` — for every single frame (up to 60+ times per second!)
+Camera2 API 同步地傳遞幾個關鍵回呼：
+- `CameraDevice.StateCallback` —— 當相機開啟、斷開或出錯時
+- `CameraCaptureSession.StateCallback` —— 當擷取工作階段設定完成時
+- `CameraCaptureSession.CaptureCallback` —— 每一影格（高達每秒 60+ 次！）
 
-If these callbacks run on the main thread, two catastrophic things happen:
+如果這些回呼在主執行緒上執行，會發生兩種災難性的事情：
 
-1. **Jank and dropped frames**: If processing a callback takes even 10ms, a 60FPS frame is skipped, and the user sees stutter.
-2. **Deadlocks and ANRs**: Some Camera2 methods (like `close()`) are synchronous and wait for callbacks. If the callback must run on the same thread that called `close()`, you get a deadlock.
+1. **卡頓和掉影格**：如果處理一個回呼甚至需要 10ms，就會跳過一個 60FPS 的影格，使用者會看到卡頓。
+2. **死結和 ANR**：某些 Camera2 方法（如 `close()`）是同步的並等待回呼。如果回呼必須在呼叫 `close()` 的同一執行緒上執行，就會產生死結。
 
-The solution is a **dedicated background thread** with its own Looper, implemented via `HandlerThread`.
+解決方案是一個**專用的背景執行緒**，擁有自己的 Looper，透過 `HandlerThread` 實作。
 
-### Implementing HandlerThread Correctly
+### 正確實作 HandlerThread
 
-The lifecycle of the background thread must match the lifecycle of the camera operations. We start the thread when the Activity starts/resumes, and we quit the thread when the Activity stops/pauses.
+背景執行緒的生命週期必須與相機操作的生命週期匹配。當 Activity 啟動/恢復時我們啟動執行緒，當 Activity 停止/暫停時我們退出執行緒。
 
 ```kotlin
 package com.example.camera2tutorial
@@ -222,7 +222,7 @@ import androidx.core.content.ContextCompat
 
 class MainActivity : AppCompatActivity() {
 
-    // --- Background threading components ---
+    // --- 背景執行緒元件 ---
     private lateinit var backgroundThread: HandlerThread
     private lateinit var backgroundHandler: Handler
 
@@ -244,9 +244,9 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         startBackgroundThread()
-        // Re-initialize if permissions were granted while app was in background
+        // 如果在應用程式處於背景時授予了權限，則重新初始化
         if (allPermissionsGranted() && this::cameraManager.isInitialized) {
-            // (cameraManager is declared below)
+            // (cameraManager 在下面宣告)
         }
     }
 
@@ -266,14 +266,14 @@ class MainActivity : AppCompatActivity() {
     private fun stopBackgroundThread() {
         backgroundThread.quitSafely()
         try {
-            backgroundThread.join(1000) // Wait up to 1 second for cleanup
+            backgroundThread.join(1000) // 最多等待 1 秒進行清理
             Log.d(TAG, "Background thread stopped cleanly")
         } catch (e: InterruptedException) {
             Log.e(TAG, "Interrupted while joining background thread", e)
         }
     }
 
-    // --- CameraManager initialization ---
+    // --- CameraManager 初始化 ---
     private lateinit var cameraManager: CameraManager
 
     private fun initializeCamera() {
@@ -292,7 +292,7 @@ class MainActivity : AppCompatActivity() {
         ).show()
     }
 
-    // --- Permission handling (same as before) ---
+    // --- 權限處理（同上） ---
     private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
         ContextCompat.checkSelfPermission(baseContext, it) == PackageManager.PERMISSION_GRANTED
     }
@@ -309,7 +309,7 @@ class MainActivity : AppCompatActivity() {
             } else {
                 Toast.makeText(
                     this,
-                    "Camera permission is required to use this app.",
+                    "需要相機權限才能使用此應用程式。",
                     Toast.LENGTH_LONG
                 ).show()
                 finish()
@@ -325,31 +325,31 @@ class MainActivity : AppCompatActivity() {
 }
 ```
 
-### Key Threading Patterns Explained
+### 關鍵執行緒模式解析
 
-1. **`startBackgroundThread()` in `onResume()`**: Every time the Activity comes to the foreground, we create a fresh `HandlerThread`, start it, and create a `Handler` bound to the thread's `Looper`. This Handler will be passed to all Camera2 callback-accepting methods (`openCamera`, `createCaptureSession`, etc.).
+1. **`onResume()` 中的 `startBackgroundThread()`**：每次 Activity 進入前景時，我們都會建立一個全新的 `HandlerThread`，啟動它，並建立一個綁定到該執行緒 `Looper` 的 `Handler`。此 Handler 將傳遞給所有接受 Handler 的 Camera2 回呼方法（`openCamera`、`createCaptureSession` 等）。
 
-2. **`stopBackgroundThread()` in `onPause()`**: Before the Activity goes to the background, we call `quitSafely()` on the thread. This tells the Looper to stop processing new messages after the current one finishes (unlike `quit()`, which discards pending messages). We then call `join(1000)` to block the main thread for at most one second while the background thread finishes its cleanup. This prevents resource leaks.
+2. **`onPause()` 中的 `stopBackgroundThread()`**：在 Activity 進入背景之前，我們在執行緒上呼叫 `quitSafely()`。這告訴 Looper 在當前訊息處理完後停止處理新訊息（與 `quit()` 不同，後者會丟棄待處理的訊息）。然後我們呼叫 `join(1000)` 最多阻塞主執行緒一秒鐘，等待背景執行緒完成清理。這可以防止資源洩漏。
 
-3. **Why `HandlerThread` instead of `CoroutineDispatcher`?** Camera2 predates Kotlin Coroutines by several years, and its callback system is fundamentally Handler/Looper-based. While you can use `Dispatchers.Default.asExecutor()` or wrap callbacks in `suspendCoroutine` for higher-level code, the underlying Camera2 API still needs a Looper thread for callbacks. Using `HandlerThread` directly is the canonical, documented approach in the official Android samples.
+3. **為什麼用 `HandlerThread` 而不是 `CoroutineDispatcher`？** Camera2 比 Kotlin Coroutines 早出現了好幾年，其回呼系統從根本上來說是基於 Handler/Looper 的。雖然你可以在高階程式碼中使用 `Dispatchers.Default.asExecutor()` 或將回呼包裝在 `suspendCoroutine` 中，但底層的 Camera2 API 仍然需要一個 Looper 執行緒來接收回呼。直接使用 `HandlerThread` 是官方 Android 範例中規範的、有文件記錄的方法。
 
-## Step 5: The Complete Initialization Flow (Combined)
+## 第 5 步：完整的初始化流程（綜合）
 
-Let's now look at the full sequence of events that must happen when your application starts. The order is critical: permissions → thread → CameraManager. If you reverse any step, the code will crash or behave inconsistently.
+現在讓我們看看應用程式啟動時必須發生的事件完整序列。順序至關重要：權限 → 執行緒 → CameraManager。如果你顛倒任何步驟，程式碼會崩潰或行為不一致。
 
 ```mermaid
 flowchart TD
-    A[Activity onCreate] --> B{Permissions Granted?}
-    B -->|Yes| C[Start Background Thread]
-    B -->|No| D[Show Runtime Permission Dialog]
-    D --> E{User Grants Permission?}
-    E -->|Yes| C
-    E -->|No| F[Show Error & Finish Activity]
+    A["Activity onCreate"] --> B{權限已授予?}
+    B -->|是| C[啟動背景執行緒]
+    B -->|否| D[顯示執行時權限對話框]
+    D --> E{使用者授予權限?}
+    E -->|是| C
+    E -->|否| F[顯示錯誤並結束 Activity]
     C --> G[getSystemService CAMERA_SERVICE]
-    G --> H[Cast to CameraManager]
-    H --> I[Call cameraIdList]
-    I --> J[Log Camera Count & IDs]
-    J --> K[Ready for Chapter 6 - Discovering Cameras]
+    G --> H[轉換為 CameraManager]
+    H --> I[呼叫 cameraIdList]
+    I --> J[記錄相機數量和 ID]
+    J --> K[準備進入第 6 章 - 探索相機]
     
     style A fill:#e3f2fd
     style B fill:#fff3e0
@@ -363,28 +363,28 @@ flowchart TD
     style F fill:#ffcdd2
 ```
 
-The flowchart above illustrates why each step exists:
+上面的流程圖說明了為什麼每個步驟都存在：
 
-- **Permission Gate**: The entire camera subsystem is protected; we cannot proceed until the user grants consent.
-- **Thread Before CameraManager**: While `getSystemService()` itself is thread-safe, we want the background thread already running before we perform any callback-driven Camera2 operations (which start in the next chapter).
-- **CameraManager → cameraIdList**: Calling `cameraIdList` is the cheapest way to verify that CameraManager is working. If this call succeeds without throwing, your manifest declaration, runtime permission, and service binding are all correct.
+- **權限閘道**：整個相機子系統都受到保護；在使用者授予同意之前我們無法繼續。
+- **執行緒先於 CameraManager**：雖然 `getSystemService()` 本身是執行緒安全的，但我們希望在執行任何回呼驅動的 Camera2 操作（下一章開始）之前，背景執行緒已經執行。
+- **CameraManager → cameraIdList**：呼叫 `cameraIdList` 是驗證 CameraManager 是否運作的最廉價方式。如果此呼叫成功且不拋出例外，那麼你的資訊清單宣告、執行時權限和服務繫結都是正確的。
 
-## Putting It All Together: Run and Verify
+## 綜合起來：執行並驗證
 
-At this point, you have a complete, runnable Camera2 project that:
-1. Creates an Android project with the correct SDK targets.
-2. Declares the CAMERA permission in the manifest.
-3. Requests the permission at runtime, handling both accept and reject paths.
-4. Starts a dedicated HandlerThread in `onResume` and stops it cleanly in `onPause`.
-5. Retrieves the `CAMERA_SERVICE` system service and casts it to `CameraManager`.
-6. Calls `cameraIdList` and logs the number of cameras and their IDs.
+至此，你已經有了一個完整、可運作的 Camera2 專案，它：
+1. 建立一個具有正確 SDK 目標的 Android 專案。
+2. 在資訊清單中宣告 CAMERA 權限。
+3. 在執行時請求權限，處理接受和拒絕兩種路徑。
+4. 在 `onResume` 中啟動專用的 HandlerThread，並在 `onPause` 中乾淨地停止它。
+5. 檢索 `CAMERA_SERVICE` 系統服務並將其轉換為 `CameraManager`。
+6. 呼叫 `cameraIdList` 並記錄相機數量及其 ID。
 
-### What You Should See When You Run It
+### 執行時你應該看到的內容
 
-1. On the first launch, Android shows the permission dialog: *"Allow Camera2Tutorial to take pictures and record video?"*
-2. Tap **Allow**.
-3. A Toast appears: *"CameraManager initialized! Found X camera(s)."*
-4. In Logcat (filter by `Camera2Tutorial`), you should see entries like:
+1. 首次啟動時，Android 顯示權限對話框：*"允許 Camera2Tutorial 拍攝照片和錄製影片？"*
+2. 點擊**允許**。
+3. 出現一個 Toast：*"CameraManager initialized! Found X camera(s)."*
+4. 在 Logcat 中（按 `Camera2Tutorial` 過濾），你應該看到類似以下條目：
    ```
    D/Camera2Tutorial: Background thread started: Camera2Background
    D/Camera2Tutorial: Successfully accessed CameraManager. Found 4 camera(s).
@@ -393,50 +393,50 @@ At this point, you have a complete, runnable Camera2 project that:
    D/Camera2Tutorial: Camera 2: ID = 2
    D/Camera2Tutorial: Camera 3: ID = 3
    ```
-5. When you press the Home button or navigate away, Logcat shows:
+5. 當你按下 Home 鍵或導航離開時，Logcat 顯示：
    ```
    D/Camera2Tutorial: Background thread stopped cleanly
    ```
 
-If you see these logs, **congratulations**! You have successfully set up the foundation of a Camera2 application. There is no camera preview yet — that comes in Chapter 8 — but the plumbing is correct. If you get a `SecurityException`, double-check that you accepted the permission dialog. If `cameraIdList` returns an empty array, the device may have no cameras (unlikely on a phone) or the permission was denied.
+如果你看到這些日誌，**恭喜你**！你已經成功建置了 Camera2 應用程式的基礎。目前還沒有相機預覽——那是在第 8 章——但管線是正確的。如果你收到 `SecurityException`，請仔細檢查你是否接受了權限對話框。如果 `cameraIdList` 傳回空陣列，裝置可能沒有相機（在手機上不太可能）或權限被拒絕。
 
-## Troubleshooting Common Setup Errors
+## 常見建置問題排查
 
 ### `SecurityException: Lacking privileges to access camera service`
 
-This means the runtime permission was not granted. Check that:
-- You added `<uses-permission android:name="android.permission.CAMERA" />` to the manifest.
-- You called `ActivityCompat.requestPermissions` with the correct request code.
-- The user tapped **Allow** on the dialog.
-- If you're testing on a physical device, go to Settings → Apps → Your App → Permissions and ensure Camera is enabled.
+這意味著執行時權限未被授予。檢查以下內容：
+- 你在資訊清單中加入了 `<uses-permission android:name="android.permission.CAMERA" />`。
+- 你使用正確的請求碼呼叫了 `ActivityCompat.requestPermissions`。
+- 使用者在對話框上點擊了**允許**。
+- 如果你在實體裝置上測試，請前往設定 → 應用程式 → 你的應用程式 → 權限，並確保相機已啟用。
 
-### `NullPointerException` on `backgroundHandler`
+### `backgroundHandler` 上的 `NullPointerException`
 
-This happens if you try to use `backgroundHandler` before `startBackgroundThread()` runs. Make sure all Camera2 operations that accept a Handler only execute **after** `onResume` has been called and the thread is running. In our code, `initializeCamera()` is called from `onCreate`, but it only uses CameraManager synchronously; callbacks that need `backgroundHandler` will be added in later chapters and properly gated on `onResume`.
+這發生在你嘗試在 `startBackgroundThread()` 執行之前使用 `backgroundHandler` 時。確保所有接受 Handler 的 Camera2 操作只在 `onResume` 被呼叫且執行緒執行後才執行。在我們的程式碼中，`initializeCamera()` 從 `onCreate` 呼叫，但它只同步使用 CameraManager；需要 `backgroundHandler` 的回呼將在後續章節中加入，並正確地閘控在 `onResume` 上。
 
-### `TextureView` shows a black screen in later chapters
+### `TextureView` 在後續章節中顯示黑屏
 
-If you skip ahead and add a TextureView now, ensure `android:hardwareAccelerated="true"` is set on your Activity in the manifest. Also make sure the TextureView is attached to the view hierarchy and visible in your layout XML.
+如果你跳到前面並立即加入 TextureView，請確保在資訊清單中的 Activity 上設定了 `android:hardwareAccelerated="true"`。還要確保 TextureView 已附加到視圖階層並在你的版面配置 XML 中可見。
 
-## Summary
+## 摘要
 
-In this chapter, you built the complete scaffolding of an Android Camera2 application. You learned:
+在本章中，你建置了 Android Camera2 應用程式的完整鷹架。你學習了：
 
-1. **Project Structure**: How to create a new Android Studio project with Empty Activity template, targeting API 21+, using Kotlin, and verifying that no external Camera2 dependencies are needed.
-2. **Manifest Configuration**: The `CAMERA` permission declaration, `uses-feature` tags for Google Play filtering, and `hardwareAccelerated="true"` on the Activity for TextureView rendering.
-3. **Runtime Permissions**: The full check → request → result cycle using `ContextCompat.checkSelfPermission` and `ActivityCompat.requestPermissions`, with handling for both the accept and deny paths.
-4. **Background Threading**: Why Camera2 callbacks must not run on the main thread, and how to implement a properly lifecycle-managed `HandlerThread` + `Handler` pair with `startBackgroundThread()` in `onResume` and `stopBackgroundThread()` with `quitSafely()` + `join()` in `onPause`.
-5. **CameraManager Initialization**: Retrieving the `CAMERA_SERVICE` system service, casting to `CameraManager`, calling `cameraIdList` to verify the service works, and logging the discovered camera IDs.
+1. **專案結構**：如何使用 Empty Activity 範本建立新的 Android Studio 專案，目標 API 21+，使用 Kotlin，並驗證不需要外部 Camera2 相依項目。
+2. **資訊清單設定**：`CAMERA` 權限宣告、用於 Google Play 過濾的 `uses-feature` 標籤，以及用於 TextureView 渲染的 Activity 上的 `hardwareAccelerated="true"`。
+3. **執行時權限**：使用 `ContextCompat.checkSelfPermission` 和 `ActivityCompat.requestPermissions` 的完整檢查 → 請求 → 結果循環，並處理接受和拒絕兩種路徑。
+4. **背景執行緒**：為什麼 Camera2 回呼不能在主執行緒上執行，以及如何實作一個具有正確生命週期管理的 `HandlerThread` + `Handler` 對，在 `onResume` 中呼叫 `startBackgroundThread()`，在 `onPause` 中呼叫 `stopBackgroundThread()` 配合 `quitSafely()` + `join()`。
+5. **CameraManager 初始化**：檢索 `CAMERA_SERVICE` 系統服務，轉換為 `CameraManager`，呼叫 `cameraIdList` 驗證服務是否運作，並記錄發現的相機 ID。
 
-The code in this chapter is the bedrock for everything that follows. The Android Camera Parameters app ([GitHub](https://github.com/zoozooll/AndroidCameraParameters), [Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)) uses exactly these patterns — multiple `HandlerThread`s for different workloads, careful permission checking, and robust lifecycle management.
+本章中的程式碼是後續所有內容的基礎。Android Camera Parameters 應用程式（[GitHub](https://github.com/zoozooll/AndroidCameraParameters)、[Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)）正是使用了這些模式——針對不同的工作負載使用多個 `HandlerThread`、仔細的權限檢查以及穩健的生命週期管理。
 
-## What's Next
+## 接下來
 
-Now that `CameraManager` is successfully initialized and we have a list of camera IDs, the next step is to **query the capabilities of each camera**. In **Chapter 6: Discovering Cameras**, you will:
+既然 `CameraManager` 已成功初始化並且我們有了相機 ID 清單，下一步就是**查詢每個相機的能力**。在**第 6 章：探索相機**中，你將：
 
-- Learn what camera ID strings represent (and why you should never hardcode assumptions about them).
-- Distinguish front-facing, back-facing, and external (USB OTG) cameras using `LENS_FACING`.
-- Query the hardware level of each camera (`INFO_SUPPORTED_HARDWARE_LEVEL`) to determine if it's LEGACY, LIMITED, FULL, or LEVEL_3.
-- Iterate over every camera on the device and log its properties using `CameraCharacteristics`.
+- 學習相機 ID 字串代表什麼（以及為什麼你絕不應該對它們進行硬編碼假設）。
+- 使用 `LENS_FACING` 區分前置、後置和外部（USB OTG）相機。
+- 查詢每個相機的硬體層級（`INFO_SUPPORTED_HARDWARE_LEVEL`）以確定它是 LEGACY、LIMITED、FULL 還是 LEVEL_3。
+- 使用 `CameraCharacteristics` 遍歷裝置上的每個相機並記錄其屬性。
 
-By the end of Chapter 6, you'll have a working camera enumeration utility that extracts real Camera2 metadata from the device — something you can already use to compare camera hardware across phones!
+到第 6 章結束時，你將擁有一個可運作的相機列舉工具，可以從裝置中提取真實的 Camera2 中繼資料——你已經可以用它來比較不同手機的相機硬體了！

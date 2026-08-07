@@ -26,7 +26,7 @@ Formally, `CameraCharacteristics` is:
 - **Immutable** — Once obtained from `CameraManager.getCameraCharacteristics(id)`, the object never changes (with one documented exception: foldable `SENSOR_ORIENTATION` on API 32+).
 - **Power-free** — Querying it does **not** power on the sensor or ISP. You can call it in `onCreate()` of your first Activity without battery impact.
 - **Per-camera** — Every logical camera ID has its own `CameraCharacteristics` object.
-- **Type-safe and keyed** — Data is accessed via `<Key<T>> get(Key<T> key)` where each key has a documented type (Int, Long, Float, Rect, Array, etc.).
+- **Type-safe and keyed** — Data is accessed via ``<Key<T>> get(Key<T> key)`` where each key has a documented type (Int, Long, Float, Rect, Array, etc.).
 
 You obtain one with a single call:
 

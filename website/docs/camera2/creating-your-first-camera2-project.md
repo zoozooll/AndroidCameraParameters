@@ -1,4 +1,4 @@
----
+﻿---
 sidebar_position: 5
 title: "Chapter 5: Creating Your First Camera2 Project"
 description: Set up a complete Android Camera2 project from scratch. Learn about camera permissions, CameraManager initialization, background threading with HandlerThread, and the project configuration needed for TextureView hardware acceleration.
@@ -339,7 +339,7 @@ Let's now look at the full sequence of events that must happen when your applica
 
 ```mermaid
 flowchart TD
-    A[Activity onCreate] --> B{Permissions Granted?}
+    A["Activity onCreate"] --> B{Permissions Granted?}
     B -->|Yes| C[Start Background Thread]
     B -->|No| D[Show Runtime Permission Dialog]
     D --> E{User Grants Permission?}

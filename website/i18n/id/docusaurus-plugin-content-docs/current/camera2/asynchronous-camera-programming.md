@@ -1,37 +1,37 @@
-﻿---
+---
 sidebar_position: 26
-title: "Chapter 26: Asynchronous Camera Programming"
-description: "Tame Camera2 callback hell using Kotlin coroutines and Flow. Learn suspendCancellableCoroutine for one-shot operations (openCamera, createCaptureSession, capture), callbackFlow for continuous ImageReader and CaptureResult streams, combine operators for reactive UIs, and thread-safety patterns to prevent ANRs and deadlocks."
-keywords: [kotlin coroutines camera2, callback hell, suspendcancellablecoroutine, callbackflow, camera2 flow, thread safety camera2, mutext shared state, pipedoutputstream deadlock, reactive camera ui]
+title: "Bab 26: Pemrograman Kamera Asinkron"
+description: "Jinakkan callback hell Camera2 menggunakan coroutine Kotlin dan Flow. Pelajari suspendCancellableCoroutine untuk operasi satu kali (openCamera, createCaptureSession, capture), callbackFlow untuk aliran ImageReader dan CaptureResult yang berkelanjutan, operator combine untuk UI reaktif, dan pola keamanan thread untuk mencegah ANR dan deadlock."
+keywords: [coroutine kotlin camera2, callback hell, suspendcancellablecoroutine, callbackflow, flow camera2, keamanan thread camera2, shared state mutex, deadlock pipedoutputstream, ui kamera reaktif]
 ---
 
-# Chapter 26: Asynchronous Camera Programming
+# Bab 26: Pemrograman Kamera Asinkron
 
-## Summary
+## Ringkasan
 
-Go back and look at the code you wrote for Chapters 7 through 9. `CameraDevice.StateCallback` nested inside `CameraManager.openCamera`, with `CameraCaptureSession.StateCallback` nested inside `onOpened`, with `CaptureCallback` nested inside `onConfigured`, with `ImageReader.OnImageAvailableListener` firing on a `HandlerThread` you spun up by hand and must tear down in exactly the reverse order on every error path. This is callback hell, camera-flavored. Every indentation level is a new callback class. Every error must propagate through four layers of anonymous objects. Every missed `close()` on the tear-down path leaks the camera until reboot.
+Lihat kembali kode yang Anda tulis untuk Bab 7 hingga 9. `CameraDevice.StateCallback` bersarang di dalam `CameraManager.openCamera`, dengan `CameraCaptureSession.StateCallback` bersarang di dalam `onOpened`, dengan `CaptureCallback` bersarang di dalam `onConfigured`, dengan `ImageReader.OnImageAvailableListener` dipicu pada `HandlerThread` yang Anda buat secara manual dan harus dibongkar dalam urutan yang tepat di setiap jalur kesalahan. Ini adalah callback hell, gaya kamera. Setiap tingkat indentasi adalah kelas callback baru. Setiap kesalahan harus merambat melalui empat lapisan objek anonim. Setiap `close()` yang terlewatkan pada jalur pembongkaran membocorkan kamera hingga mulai ulang (reboot).
 
-This chapter is the refactor you have been craving. We convert the entire callback jungle into clean, linear, cancellable, testable Kotlin code using two coroutine primitives: `suspendCancellableCoroutine` for one-shot operations, and `callbackFlow` + `Flow` operators for continuous streams. You will learn thread-safety rules for coroutines interacting with Camera2, why blocking the main thread on any camera call is an ANR waiting to happen, and why the `PipedOutputStream`/`PipedInputStream` pattern you may have tried for ImageWriter data produces deadlocks that Flow naturally avoids.
+Bab ini adalah refaktor yang Anda dambakan. Kita mengubah seluruh hutan callback tersebut menjadi kode Kotlin yang bersih, linear, dapat dibatalkan, dan dapat diuji menggunakan dua primitif coroutine: `suspendCancellableCoroutine` untuk operasi satu kali, dan `callbackFlow` + operator `Flow` untuk aliran berkelanjutan. Anda akan mempelajari aturan keamanan thread untuk coroutine yang berinteraksi dengan Camera2, mengapa memblokir thread utama pada panggilan kamera apa pun adalah ANR yang tinggal menunggu waktu, dan mengapa pola `PipedOutputStream`/`PipedInputStream` yang mungkin Anda coba untuk data ImageWriter menghasilkan deadlock yang dihindari oleh Flow secara alami.
 
-As always, validate the hardware-level capabilities you are targeting with **Android Camera Parameters** ([Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams), [GitHub](https://github.com/zoozooll/AndroidCameraParameters)) to confirm that the capabilities your async pipeline needs (repeating burst, partial results, YUV reprocessing) actually ship on your test devices.
+Seperti biasa, validasi kemampuan tingkat perangkat keras yang Anda targetkan dengan **Android Camera Parameters** ([Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams), [GitHub](https://github.com/zoozooll/AndroidCameraParameters)) untuk mengonfirmasi bahwa kemampuan yang dibutuhkan pipeline asinkron Anda (burst berulang, hasil parsial, pemrosesan ulang YUV) benar-benar ada pada perangkat pengujian Anda.
 
 ---
 
-## Why Nested Callbacks Are "Callback Hell"
+## Mengapa Callback Bersarang Disebut "Callback Hell"
 
-Let us first visualize the problem. This is a real (simplified) structure from a production raw Camera2 app before coroutines:
+Mari kita visualisasikan masalahnya terlebih dahulu. Ini adalah struktur nyata (yang disederhanakan) dari aplikasi Camera2 mentah tingkat produksi sebelum coroutine:
 
 ```mermaid
 graph TD
-    A[onCreateView] -->|cameraId chosen| B[CameraManager.openCamera]
-    B -->|fires on| C[StateCallback.onOpened<br/>lambda 1]
-    C -->|holds cameraDevice| D[createCaptureSession<br/>(outputs = previewSurface + imageReaderSurface)]
-    D -->|fires on| E[Session.StateCallback.onConfigured<br/>lambda 2]
-    E -->|holds session| F[session.setRepeatingRequest<br/>+ CaptureCallback lambda 3]
-    F -->|fires onProgress| G[CaptureCallback.onCaptureProgressed<br/>partial results]
-    F -->|fires onCompleted| H[CaptureCallback.onCaptureCompleted<br/>TotalCaptureResult]
-    H -->|frame ready| I[ImageReader.OnImageAvailableListener<br/>lambda 4]
-    I -->|JPEG bytes| J[MediaStore save call<br/>lambda 5]
+    A["onCreateView"] -->|ID kamera dipilih| B["CameraManager.openCamera"]
+    B -->|dipicu pada| C[StateCallback.onOpened<br/>lambda 1]
+    C -->|memegang cameraDevice| D[createCaptureSession<br/>(output = previewSurface + imageReaderSurface)]
+    D -->|dipicu pada| E[Session.StateCallback.onConfigured<br/>lambda 2]
+    E -->|memegang sesi| F[session.setRepeatingRequest<br/>+ CaptureCallback lambda 3]
+    F -->|dipicu onProgress| G[CaptureCallback.onCaptureProgressed<br/>hasil parsial]
+    F -->|dipicu onCompleted| H[CaptureCallback.onCaptureCompleted<br/>TotalCaptureResult]
+    H -->|bingkai siap| I[ImageReader.OnImageAvailableListener<br/>lambda 4]
+    I -->|byte JPEG| J[panggilan simpan MediaStore<br/>lambda 5]
 
     style A fill:#e6d9f2
     style C fill:#f2d9e6
@@ -41,16 +41,16 @@ graph TD
     style J fill:#d9f2e6
 ```
 
-Every shaded callback is a separate anonymous class. Every one captures a reference to resources two levels up. Every error path must bubble from J back to A, closing `imageReader → session → cameraDevice → handlerThread` in reverse order, and any single missing `close()` in any of the 16 error permutations produces a permanent camera leak until the device reboots. This is the textbook definition of callback hell.
+Setiap callback yang diarsir adalah kelas anonim terpisah. Masing-masing menangkap referensi ke sumber daya dua tingkat di atasnya. Setiap jalur kesalahan harus bergelembung dari J kembali ke A, menutup `imageReader → sesi → cameraDevice → handlerThread` dalam urutan terbalik, dan satu saja `close()` yang hilang dalam salah satu dari 16 permutasi kesalahan akan menghasilkan kebocoran kamera permanen hingga perangkat dimulai ulang. Ini adalah definisi tekstual dari callback hell.
 
-The goal of this chapter is to turn that spaghetti into this:
+Tujuan dari bab ini adalah untuk mengubah spageti tersebut menjadi ini:
 
 ```mermaid
 flowchart LR
-    A[openCameraAwait()] --> B[createCaptureSessionAwait()]
+    A["openCameraAwait()"] --> B["createCaptureSessionAwait()"]
     B --> C[setRepeatingRequestFlow()]
     C --> D[aeStateFlow.map().combine(previewFlow)]
-    D --> E[UI State<br/>(single emit)]
+    D --> E[Status UI<br/>(emisi tunggal)]
     style A fill:#d9f2e6
     style B fill:#d9f2e6
     style C fill:#d9f2e6
@@ -58,22 +58,22 @@ flowchart LR
     style E fill:#e6d9f2
 ```
 
-Linear. Composable. Testable. Cancellable by cancelling the parent `Job`. Every stage is a plain function or a `Flow` operator. The same five callbacks now live in a 12-line linear pipeline.
+Linear. Dapat dikomposisikan. Dapat diuji. Dapat dibatalkan dengan membatalkan `Job` induk. Setiap tahap adalah fungsi biasa atau operator `Flow`. Lima callback yang sama sekarang hidup dalam pipeline linear 12 baris.
 
 ---
 
-## Kotlin Coroutines for One-Shot Operations: `suspendCancellableCoroutine`
+## Coroutine Kotlin untuk Operasi Satu Kali: `suspendCancellableCoroutine`
 
-The core pattern for wrapping any callback-based API as a `suspend` function is `suspendCancellableCoroutine`. The recipe is always identical:
+Pola inti untuk membungkus API berbasis callback apa pun sebagai fungsi `suspend` adalah `suspendCancellableCoroutine`. Resepnya selalu identik:
 
-1. Call `suspendCancellableCoroutine { cont -> ... }` to obtain a `CancellableContinuation<T>`.
-2. Call the real callback-based API, passing it an anonymous callback implementation.
-3. In the callback's success path, call `cont.resume(value)`.
-4. In every error path, call `cont.resumeWithException(t)`.
-5. In `cont.invokeOnCancellation { ... }`, do the cleanup: close the camera, cancel pending requests, unregister listeners so the callback never fires *after* the coroutine was cancelled.
-6. Wrap the whole thing in `withTimeout` at call sites so a dead HAL cannot hang your app forever.
+1. Panggil `suspendCancellableCoroutine { cont -> ... }` untuk mendapatkan `CancellableContinuation<T>`.
+2. Panggil API asli berbasis callback, berikan implementasi callback anonim kepadanya.
+3. Di jalur sukses callback, panggil `cont.resume(value)`.
+4. Di setiap jalur kesalahan, panggil `cont.resumeWithException(t)`.
+5. Di `cont.invokeOnCancellation { ... }`, lakukan pembersihan: tutup kamera, batalkan permintaan yang tertunda, batalkan pendaftaran listener agar callback tidak pernah dipicu *setelah* coroutine dibatalkan.
+6. Bungkus semuanya dalam `withTimeout` di tempat panggilan sehingga HAL yang mati tidak dapat menggantung aplikasi Anda selamanya.
 
-### Example 1: `suspend fun openCameraAwait()`
+### Contoh 1: `suspend fun openCameraAwait()`
 
 ```kotlin
 suspend fun CameraManager.openCameraAwait(
@@ -90,46 +90,46 @@ suspend fun CameraManager.openCameraAwait(
             cont.resumeWithException(
                 CameraAccessException(
                     CameraAccessException.CAMERA_DISCONNECTED,
-                    "Camera $cameraId disconnected during open"
+                    "Kamera $cameraId terputus saat pembukaan"
                 )
             )
         }
         override fun onError(camera: CameraDevice, error: Int) {
             cont.resumeWithException(
-                CameraAccessException(error, "Camera $cameraId error: $error")
+                CameraAccessException(error, "Kesalahan kamera $cameraId: $error")
             )
         }
     }
 
     cont.invokeOnCancellation {
         try {
-            // Workaround: openCamera() does not expose a cancellable handle
-            // on pre-API 30. Close device if it was opened in the race window.
-        } catch (_: Throwable) { /* ignore */ }
+            // Solusi: openCamera() tidak mengekspos handle yang dapat dibatalkan
+            // pada versi pra-API 30. Tutup perangkat jika dibuka di jendela balapan.
+        } catch (_: Throwable) { /* abaikan */ }
     }
 
     openCamera(cameraId, callback, handler)
 }
 ```
 
-**Why this works.** `openCamera` is fire-and-forget: you call it, and at some future point one of the three callback methods fires exactly once. That contract ("fires exactly once") is what lets us map it one-to-one onto a continuation. If the coroutine is cancelled *before* any callback fires, `invokeOnCancellation` runs and prevents a resource leak. If it is cancelled *after* `resume`, the `resume(value) { camera.close() }` block — the `onCancellation` parameter of `resume` — closes the device automatically.
+**Mengapa ini berhasil.** `openCamera` bersifat kirim-dan-lupakan: Anda memanggilnya, dan pada titik tertentu di masa mendatang salah satu dari tiga metode callback dipicu tepat satu kali. Kontrak tersebut ("dipicu tepat satu kali") adalah yang memungkinkan kita memetakannya satu-ke-satu ke dalam sebuah continuation. Jika coroutine dibatalkan *sebelum* callback apa pun dipicu, `invokeOnCancellation` berjalan dan mencegah kebocoran sumber daya. Jika dibatalkan *setelah* `resume`, blok `resume(value) { camera.close() }` — parameter `onCancellation` dari `resume` — menutup perangkat secara otomatis.
 
-Calling it with a timeout is trivial:
+Memanggilnya dengan timeout sangatlah mudah:
 
 ```kotlin
 val cameraDevice: CameraDevice = withTimeoutOrNull(5_000L) {
     cameraManager.openCameraAwait(cameraId, cameraHandler)
 } ?: run {
-    Log.w(TAG, "Camera open timed out after 5s")
+    Log.w(TAG, "Pembukaan kamera mencapai batas waktu setelah 5 detik")
     return@launch
 }
 ```
 
-If the HAL is hung (common on low-end `LEGACY` devices after a camera leak from a previous app), this fails fast and cleanly instead of presenting the user with an "App not responding" dialog.
+Jika HAL macet (umum terjadi pada perangkat `LEGACY` kelas bawah setelah kebocoran kamera dari aplikasi sebelumnya), ini akan gagal dengan cepat dan bersih alih-alih menampilkan dialog "Aplikasi tidak merespons" kepada pengguna.
 
-### Example 2: `suspend fun createCaptureSessionAwait()`
+### Contoh 2: `suspend fun createCaptureSessionAwait()`
 
-Same pattern, different callback:
+Pola yang sama, callback yang berbeda:
 
 ```kotlin
 suspend fun CameraDevice.createCaptureSessionAwait(
@@ -143,16 +143,15 @@ suspend fun CameraDevice.createCaptureSessionAwait(
         override fun onConfigureFailed(session: CameraCaptureSession) {
             cont.resumeWithException(
                 IllegalStateException(
-                    "Session configuration failed for device ${this@createCaptureSessionAwait.id}"
+                    "Konfigurasi sesi gagal untuk perangkat ${this@createCaptureSessionAwait.id}"
                 )
             )
         }
     }
 
     cont.invokeOnCancellation {
-        // Cannot cancel in-flight session create on older APIs.
-        // Session will close if it eventually completes via the resume
-        // onCancellation block above.
+        // Tidak dapat membatalkan pembuatan sesi yang sedang berlangsung pada API lama.
+        // Sesi akan ditutup jika akhirnya selesai melalui blok onCancellation resume di atas.
     }
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -170,9 +169,9 @@ suspend fun CameraDevice.createCaptureSessionAwait(
 }
 ```
 
-This is the exact same shape. The two API versions (`createCaptureSession(surfaces, callback, handler)` pre-S vs `SessionConfiguration` S+) are handled in one wrapper. Callers never need to know.
+Ini adalah bentuk yang persis sama. Dua versi API (`createCaptureSession(surfaces, callback, handler)` pra-S vs `SessionConfiguration` S+) ditangani dalam satu pembungkus. Pemanggil tidak perlu tahu.
 
-### Example 3: `suspend fun awaitCaptureResult()` for Single Capture
+### Contoh 3: `suspend fun awaitCaptureResult()` untuk Pengambilan Tunggal
 
 ```kotlin
 suspend fun CameraCaptureSession.captureAwait(
@@ -194,14 +193,14 @@ suspend fun CameraCaptureSession.captureAwait(
         ) {
             cont.resumeWithException(
                 CaptureFailureException(
-                    "Capture failed: reason=${failure.reason} frame=${failure.frameNumber}"
+                    "Pengambilan gagal: alasan=${failure.reason} bingkai=${failure.frameNumber}"
                 )
             )
         }
     }
 
     cont.invokeOnCancellation {
-        try { abortCaptures() } catch (_: Throwable) { /* ignore */ }
+        try { abortCaptures() } catch (_: Throwable) { /* abaikan */ }
     }
 
     try {
@@ -212,32 +211,32 @@ suspend fun CameraCaptureSession.captureAwait(
 }
 ```
 
-This is the building block for Chapter 19-style manual multi-frame bracketing — chain 7 `captureAwait(br[i])` calls in a `for` loop with `withTimeoutOrNull`, collect all 7 `TotalCaptureResult`s, and you have a complete HDR bracket sequence with per-frame timeout and automatic abort on cancellation. In the callback world this was hundreds of lines of state machine. Now it is a 12-line `for` loop.
+Ini adalah blok bangunan untuk bracketing multi-bingkai manual gaya Bab 19 — rantaikan 7 panggilan `captureAwait(br[i])` dalam loop `for` dengan `withTimeoutOrNull`, kumpulkan ke-7 `TotalCaptureResult`, dan Anda memiliki urutan bracket HDR lengkap dengan timeout per bingkai dan pembatalan otomatis saat coroutine dibatalkan. Dalam dunia callback, ini adalah ratusan baris mesin status. Sekarang ini adalah loop `for` 12 baris.
 
 ---
 
-## Flow for Continuous Streams
+## Flow untuk Aliran Berkelanjutan
 
-One-shot operations cover camera open, session create, and single capture. For repeating things — every preview frame, every `TotalCaptureResult`, every `Image` from an `ImageReader` — we want a `Flow<T>` so we can `map`, `filter`, `debounce`, `combine`, and share streams between subscribers.
+Operasi satu kali mencakup pembukaan kamera, pembuatan sesi, dan pengambilan gambar tunggal. Untuk hal-hal yang berulang — setiap bingkai pratinjau, setiap `TotalCaptureResult`, setiap `Image` dari sebuah `ImageReader` — kita menginginkan sebuah `Flow<T>` sehingga kita dapat melakukan `map`, `filter`, `debounce`, `combine`, dan berbagi aliran di antara pelanggan.
 
-### Example 4: ImageReader → `Flow&lt;Image&gt;` via `callbackFlow`
+### Contoh 4: ImageReader → `Flow<Image>` via `callbackFlow`
 
 ```kotlin
 fun ImageReader.imagesFlow(
     lifecycleScope: CoroutineScope
 ): Flow<Image> = callbackFlow {
     val listener = ImageReader.OnImageAvailableListener { reader ->
-        // acquireLatestImage() drops old frames if consumer is slower than
-        // the camera produces them — mandatory to avoid stalling the HAL.
+        // acquireLatestImage() membuang bingkai lama jika konsumen lebih lambat dari
+        // produksi kamera — wajib untuk menghindari macetnya HAL.
         val image = reader.acquireLatestImage() ?: return@OnImageAvailableListener
         trySend(image)
     }
 
-    // Must invokeOnClose FIRST so cancellation always removes the listener
-    // even if setOnImageAvailableListener itself throws.
+    // Harus panggil awaitClose TERLEBIH DAHULU agar pembatalan selalu menghapus listener
+    // bahkan jika setOnImageAvailableListener itu sendiri melempar eksepsi.
     awaitClose {
         setOnImageAvailableListener(null, null)
-        // Do NOT close the ImageReader here — caller owns its lifecycle.
+        // JANGAN tutup ImageReader di sini — pemanggil yang memiliki siklus hidupnya.
     }
 
     val handlerThread = HandlerThread("ImageReaderFlow").apply { start() }
@@ -245,22 +244,22 @@ fun ImageReader.imagesFlow(
     setOnImageAvailableListener(listener, handler)
 }.buffer(Channel.CONFLATED)
  .onCompletion {
-     // Any Image not consumed by downstream collectors is ours to close,
-     // because callbackFlow rethrows failures after emit.
+     // Setiap Image yang tidak dikonsumsi oleh pengumpul hilir adalah milik kita untuk ditutup,
+     // karena callbackFlow melempar kembali kegagalan setelah emit.
  }
 ```
 
-**Critical design choices:**
+**Pilihan desain kritis:**
 
-1. `acquireLatestImage()` over `acquireNextImage()`. If your image processing (ML inference, face detection) takes 40ms and the camera fires at 30fps (~33ms per frame), you *will* fall behind. `acquireNextImage` queues them up until you run out of gralloc buffers and the camera freezes. `acquireLatestImage` skips the old ones and gives you the freshest frame. This is almost always what you want for preview-side image analysis.
+1. `acquireLatestImage()` daripada `acquireNextImage()`. Jika pemrosesan gambar Anda (inferensi ML, deteksi wajah) memakan waktu 40ms dan kamera menembak pada 30fps (~33ms per bingkai), Anda *akan* tertinggal. `acquireNextImage` mengantrekan bingkai sampai Anda kehabisan buffer gralloc dan kamera membeku. `acquireLatestImage` melompati yang lama dan memberi Anda bingkai tersegar. Ini hampir selalu yang Anda inginkan untuk analisis gambar sisi pratinjau.
 
-2. `buffer(Channel.CONFLATED)`. A conflated buffer keeps only the latest value. Combined with `acquireLatestImage`, this is a hard guarantee that you never queue stale frames.
+2. `buffer(Channel.CONFLATED)`. Buffer yang dikonflasi hanya menyimpan nilai terbaru. Dikombinasikan dengan `acquireLatestImage`, ini adalah jaminan keras bahwa Anda tidak pernah mengantrekan bingkai basi.
 
-3. `awaitClose { setOnImageAvailableListener(null, null) }`. This is the `callbackFlow` equivalent of `cont.invokeOnCancellation`. Cancel the coroutine scope (for example, when the Fragment goes through `onDestroyView`) and the listener is automatically deregistered and the `HandlerThread` cleaned up. *No* leak.
+3. `awaitClose { setOnImageAvailableListener(null, null) }`. Ini adalah padanan `callbackFlow` dari `cont.invokeOnCancellation`. Batalkan coroutine scope (misalnya, saat Fragment melewati `onDestroyView`) dan listener secara otomatis dibatalkan pendaftarannya serta `HandlerThread` dibersihkan. *Tidak ada* kebocoran.
 
-### Example 5: CaptureCallback → `Flow&lt;TotalCaptureResult&gt;`
+### Contoh 5: CaptureCallback → `Flow<TotalCaptureResult>`
 
-Same pattern:
+Pola yang sama:
 
 ```kotlin
 fun CameraCaptureSession.repeatingResultsFlow(
@@ -280,8 +279,8 @@ fun CameraCaptureSession.repeatingResultsFlow(
             request: CaptureRequest,
             partial: CaptureResult
         ) {
-            // If you need partial results, emit them on a separate channel
-            // or send a sealed class.
+            // Jika Anda butuh hasil parsial, emisi pada channel terpisah
+            // atau kirim sebuah sealed class.
         }
     }
 
@@ -289,23 +288,23 @@ fun CameraCaptureSession.repeatingResultsFlow(
         try {
             stopRepeating()
             abortCaptures()
-        } catch (_: Throwable) { /* ignore */ }
+        } catch (_: Throwable) { /* abaikan */ }
     }
 
     setRepeatingRequest(repeatingRequest, callback, handler)
 }
 ```
 
-Now you have a cold `Flow&lt;TotalCaptureResult&gt;` that starts a repeating request when collected, stops it on cancellation, emits every completed result, and works with every standard Flow operator.
+Sekarang Anda memiliki `Flow<TotalCaptureResult>` dingin yang memulai permintaan berulang saat dikumpulkan, menghentikannya saat pembatalan, memancarkan setiap hasil yang selesai, dan berfungsi dengan setiap operator Flow standar.
 
-### Example 6: `combine(previewFlow, aeStateFlow)` for Reactive UI
+### Contoh 6: `combine(previewFlow, aeStateFlow)` untuk UI Reaktif
 
-The real power of Flow is composition. Suppose your UI shows:
-- Live preview FPS
-- Current AE state (converging / converged / locked)
-- A "Ready to shoot" indicator that is green only when AE is converged AND AF is converged AND AWB is converged.
+Kekuatan sebenarnya dari Flow adalah komposisi. Misalkan UI Anda menampilkan:
+- FPS pratinjau langsung
+- Status AE saat ini (memusat / terpusat / terkunci)
+- Indikator "Siap memotret" yang berwarna hijau hanya saat AE terpusat DAN AF terpusat DAN AWB terpusat.
 
-Without Flow you hand-write a state machine merging `CaptureCallback` with `Choreographer`. With Flow it is three lines:
+Tanpa Flow Anda menulis mesin status secara manual yang menggabungkan `CaptureCallback` dengan `Choreographer`. Dengan Flow, ini hanya tiga baris:
 
 ```kotlin
 data class UiCameraState(
@@ -318,7 +317,7 @@ data class UiCameraState(
 
 val resultFlow: Flow<TotalCaptureResult> = session
     .repeatingResultsFlow(previewRequest, cameraHandler)
-    .flowOn(cameraDispatcher)   // off main thread, no UI jank
+    .flowOn(cameraDispatcher)   // di luar thread utama, tidak ada jank UI
 
 val aeStateFlow = resultFlow.map {
     it[CaptureResult.CONTROL_AE_STATE] ?: CaptureResult.CONTROL_AE_STATE_INACTIVE
@@ -332,7 +331,7 @@ val awbStateFlow = resultFlow.map {
 val fpsFlow = resultFlow
     .map { it[CaptureResult.SENSOR_TIMESTAMP] }
     .runningFold(emptyList<Long>()) { acc, ts ->
-        (acc + ts).takeLast(30) // rolling 30-timestamp window
+        (acc + ts).takeLast(30) // jendela bergerak 30 stempel waktu
     }
     .map { timestamps ->
         if (timestamps.size < 2) 0 else {
@@ -340,7 +339,7 @@ val fpsFlow = resultFlow
             1_000_000_000 * (timestamps.size - 1) / windowNs.toInt()
         }
     }
-    .debounce(250)  // only update FPS label every 250ms, saves battery
+    .debounce(250)  // hanya perbarui label FPS setiap 250ms, hemat baterai
 
 val uiState: Flow<UiCameraState> = combine(
     aeStateFlow, afStateFlow, awbStateFlow, fpsFlow
@@ -362,45 +361,45 @@ val uiState: Flow<UiCameraState> = combine(
 }
 ```
 
-Collect `uiState` in your Fragment's `viewLifecycleOwner.lifecycleScope.launchWhenStarted` and pass every emit to your Compose UI or `viewBinding`. Every operator — `map`, `runningFold`, `debounce`, `combine` — is a standard library primitive. No custom state machine. No race conditions. No missed events. Cancel the scope and every single Flow upstream — including the repeating request and the `ImageReader` listener — stops, unsubscribes, and cleans up exactly once.
+Kumpulkan `uiState` di Fragment Anda menggunakan `viewLifecycleOwner.lifecycleScope.launchWhenStarted` dan berikan setiap emisi ke UI Compose atau `viewBinding` Anda. Setiap operator — `map`, `runningFold`, `debounce`, dan yang terpenting `combine` — adalah primitif pustaka standar. Tidak ada mesin status kustom. Tidak ada kondisi balapan. Tidak ada peristiwa yang terlewatkan. Batalkan scope dan setiap Flow tunggal di hulu — termasuk permintaan berulang dan listener `ImageReader` — berhenti, membatalkan langganan, dan membersihkan tepat satu kali.
 
 ---
 
-## Thread Safety
+## Keamanan Thread
 
-All of the above is worthless if you violate Camera2's thread-safety rules. Here they are, distilled from hundreds of ANR bug reports:
+Semua hal di atas tidak berguna jika Anda melanggar aturan keamanan thread Camera2. Berikut adalah intisarinya, disaring dari ratusan laporan bug ANR:
 
-1. **Never call any Camera2 API from the main thread.** `cameraManager.openCamera()` may look fast on a Pixel 7. On a budget Android Go device with a `LEGACY` HAL, it can block for 1.2s. That is an instant ANR. Even calls that *look* cheap, like `CameraCharacteristics.get()`, can allocate several KB of metadata and copy it — which on a cold process start while the user is swiping between Fragments is enough to drop 3 frames. Dispatch *everything* to `Dispatchers.Default` or a dedicated single-threaded dispatcher backed by a `HandlerThread`.
+1. **Jangan pernah memanggil API Camera2 apa pun dari thread utama.** `cameraManager.openCamera()` mungkin terlihat cepat pada Pixel 7. Pada perangkat Android Go murah dengan HAL `LEGACY`, ia dapat memblokir selama 1,2 detik. Itu adalah ANR instan. Bahkan panggilan yang *terlihat* murah, seperti `CameraCharacteristics.get()`, dapat mengalokasikan metadata beberapa KB dan menyalinnya — yang pada awal proses yang dingin saat pengguna menggeser antar Fragment sudah cukup untuk membuang 3 bingkai. Kirimkan *semuanya* ke `Dispatchers.Default` atau dispatcher satu thread khusus yang didukung oleh `HandlerThread`.
 
 2. **HandlerThread vs `CoroutineDispatcher.Default` vs `Dispatchers.IO`.**
-   - Use a **single-threaded dispatcher** (e.g. `HandlerThread("cam").asCoroutineDispatcher()`) for the *actual* Camera2 API calls. The legacy camera stack on many `LEGACY` devices has thread-affine HAL entry points. Switching threads between `openCamera` and `createCaptureSession` triggers known HAL bugs on Qualcomm msm8953 and older.
-   - Use `Dispatchers.Default` for pure computation on captured frames (HDR merge, JPEG encode, face detection). It has as many threads as cores.
-   - Use `Dispatchers.IO` for disk I/O (saving the JPEG to MediaStore). Never use `Default` for blocking writes.
+   - Gunakan **dispatcher satu thread** (misalnya `HandlerThread("cam").asCoroutineDispatcher()`) untuk panggilan API Camera2 yang *sebenarnya*. Tumpukan kamera lama pada banyak perangkat `LEGACY` memiliki titik masuk HAL yang terikat pada thread tertentu (thread-affine). Berpindah thread antara `openCamera` dan `createCaptureSession` memicu bug HAL yang diketahui pada Qualcomm msm8953 dan yang lebih lama.
+   - Gunakan `Dispatchers.Default` untuk komputasi murni pada bingkai yang ditangkap (penggabungan HDR, enkode JPEG, deteksi wajah). Ia memiliki thread sebanyak core prosesor.
+   - Gunakan `Dispatchers.IO` untuk I/O disk (menyimpan JPEG ke MediaStore). Jangan pernah gunakan `Default` untuk penulisan yang memblokir.
 
-3. **Shared mutable state between coroutines and callbacks must be `Mutex`-protected.** If a `CaptureCallback` writes `lastResult` and a Compose button click reads it, wrap both sides with `mutex.withLock { ... }` or use `atomicfu`/`@Volatile` for primitive types. Do NOT rely on "it only ever touches one thread." HAL callbacks on `LEGACY` devices occasionally fire on unexpected threads, and when they do, you get torn reads of 64-bit `Long` values like `SENSOR_TIMESTAMP`.
+3. **Status yang dapat berubah (shared mutable state) di antara coroutine dan callback harus dilindungi oleh `Mutex`.** Jika sebuah `CaptureCallback` menulis `lastResult` dan klik tombol Compose membacanya, bungkus kedua sisi dengan `mutex.withLock { ... }` atau gunakan `atomicfu`/`@Volatile` untuk tipe primitif. JANGAN mengandalkan "ia hanya menyentuh satu thread." Callback HAL pada perangkat `LEGACY` terkadang dipicu pada thread yang tidak terduga, dan saat itu terjadi, Anda mendapatkan bacaan yang terpecah (torn reads) dari nilai `Long` 64-bit seperti `SENSOR_TIMESTAMP`.
 
-4. **Why Flow avoids the `PipedOutputStream` deadlock.** The research doc's `PipedOutputStream` pitfall deserves a concrete example. If you did this:
+4. **Mengapa Flow menghindari deadlock `PipedOutputStream`.** Jebakan `PipedOutputStream` dalam dokumen penelitian layak mendapatkan contoh konkret. Jika Anda melakukan ini:
 
    ```kotlin
-   // DO NOT DO THIS
+   // JANGAN LAKUKAN INI
    val pos = PipedOutputStream()
    val pis = PipedInputStream(pos)
    lifecycleScope.launch(Dispatchers.Default) {
        while (true) { image.compressToJpeg(..., pos) }
    }
    lifecycleScope.launch(Dispatchers.IO) {
-       // read pis and write to file
+       // baca pis dan tulis ke file
    }
    ```
 
-   This deadlocks within 100 frames because `PipedInputStream` has a 64KB default buffer. If the writer produces faster than the reader consumes, the writer blocks on `pos.write()` and the buffer fills. If the reader meanwhile is blocked on something else (e.g. MediaStore bulk insert transaction), both coroutines block forever — a classic circular wait. Flow with `buffer(CONFLATED)` or `buffer(DROP_OLDEST)` has explicit backpressure semantics and never deadlocks. Drop frames, never deadlock. That is the right tradeoff for camera preview.
+   Ini akan deadlock dalam 100 bingkai karena `PipedInputStream` memiliki buffer default 64KB. Jika penulis memproduksi lebih cepat daripada yang dikonsumsi pembaca, penulis akan memblokir pada `pos.write()` dan buffer penuh. Jika pembaca sementara itu diblokir pada hal lain (misalnya transaksi penyisipan massal MediaStore), kedua coroutine akan memblokir selamanya — sebuah tunggu melingkar klasik. Flow dengan `buffer(CONFLATED)` atau `buffer(DROP_OLDEST)` memiliki semantik backpressure eksplisit dan tidak pernah deadlock. Buang bingkai, jangan pernah deadlock. Itulah pertukaran yang tepat untuk pratinjau kamera.
 
 ---
 
-## Summary
+## Ringkasan
 
-Camera2's callback-based API, when composed naively, produces deeply nested callback hell that is error-prone, leak-prone, and untestable. Kotlin coroutines and Flow give you two primitives that collapse the entire design: `suspendCancellableCoroutine` for one-shot operations (`openCamera`, `createCaptureSession`, single `capture`) with built-in timeout and cancellation support, and `callbackFlow` for continuous streams (ImageReader images, repeating `CaptureResult` callbacks) with explicit backpressure. Standard Flow operators — `map`, `filter`, `runningFold`, `debounce`, and the all-important `combine` — let you build reactive, cancel-safe UI state pipelines out of composable pieces. Enforce thread-safety with a dedicated camera dispatcher, protect shared state with `Mutex`, and replace any `PipedOutputStream`-style manual piping with Flow channels to avoid deadlocks.
+API berbasis callback milik Camera2, jika disusun secara naif, menghasilkan callback hell bersarang dalam yang rawan kesalahan, rawan kebocoran, dan tidak dapat diuji. Coroutine Kotlin dan Flow memberi Anda dua primitif yang menyederhanakan seluruh desain: `suspendCancellableCoroutine` untuk operasi satu kali (`openCamera`, `createCaptureSession`, satu kali `capture`) dengan dukungan timeout dan pembatalan bawaan, dan `callbackFlow` untuk aliran berkelanjutan (gambar ImageReader, callback `CaptureResult` berulang) dengan backpressure eksplisit. Operator Flow standar — `map`, `filter`, `runningFold`, `debounce`, dan yang terpenting `combine` — memungkinkan Anda membangun pipeline status UI yang reaktif dan aman dari pembatalan dari bagian-bagian yang dapat dikomposisikan. Terapkan keamanan thread dengan dispatcher kamera khusus, lindungi status bersama dengan `Mutex`, dan ganti setiap pemipaan manual gaya `PipedOutputStream` dengan channel Flow untuk menghindari deadlock.
 
-## What's Next
+## Apa Selanjutnya
 
-You now have the tools to write robust, production-grade Camera2 apps. But how do you verify your code works across the 24,000+ Android device models currently in the wild, and how do OEMs validate their HALs before shipping? Chapter 27 covers camera testing: Camera ITS, CTS Verifier, and instrumentation tests using mocks so you can run your camera test suite on CI servers without any physical hardware.
+Anda sekarang memiliki alat untuk menulis aplikasi Camera2 yang tangguh dan berkualitas produksi. Namun bagaimana Anda memverifikasi bahwa kode Anda berfungsi di 24.000+ model perangkat Android yang saat ini ada di pasaran, dan bagaimana OEM memvalidasi HAL mereka sebelum dikirimkan? Bab 27 membahas pengujian kamera: Camera ITS, CTS Verifier, dan pengujian instrumentasi menggunakan mock sehingga Anda dapat menjalankan rangkaian pengujian kamera di server CI tanpa perangkat keras fisik apa pun.

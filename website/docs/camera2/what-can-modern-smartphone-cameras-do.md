@@ -31,16 +31,16 @@ Every HDR system on modern phones uses **multi-frame bracketing** followed by co
 
 ```mermaid
 flowchart LR
-    A[Scene: Bright Window + Dark Room] --> B[Burst Capture]
-    B --> C1[-3 EV Frame\nDark, Preserves Highlights]
-    B --> C2[0 EV Frame\nMid-Exposure Reference]
-    B --> C3[+3 EV Frame\nBright, Preserves Shadows]
-    C1 --> D[Registration / Alignment\nFeature Matching + Warp]
+    A["Scene: Bright Window + Dark Room"] --> B["Burst Capture"]
+    B --> C1["-3 EV Frame<br/>Dark, Preserves Highlights"]
+    B --> C2["0 EV Frame<br/>Mid-Exposure Reference"]
+    B --> C3["+3 EV Frame<br/>Bright, Preserves Shadows"]
+    C1 --> D["Registration / Alignment<br/>Feature Matching + Warp"]
     C2 --> D
     C3 --> D
-    D --> E[Merge / Fuse\nPer-Pixel Exposure Blend]
-    E --> F[Local Tone Mapping\n16 Stops → 8-Bit Displayable]
-    F --> G[Final HDR Output\nFace Visible + Sky Detailed]
+    D --> E["Merge / Fuse<br/>Per-Pixel Exposure Blend"]
+    E --> F["Local Tone Mapping<br/>16 Stops to 8-Bit Displayable"]
+    F --> G["Final HDR Output<br/>Face Visible + Sky Detailed"]
 ```
 
 Real-world example: a Galaxy S26 Ultra in the default "Scene Optimizer HDR" mode internally fires 7 bracketed frames totaling approximately 0.2 seconds of capture time. The built-in hand-motion detection discards 2 blurred frames. The remaining 5 frames are aligned, fused, and tone-mapped. The output is written as a **JPEG_R Ultra HDR file** on Android 14+ devices: a standard JPEG primary image (8-bit SDR) with an embedded gain map that HDR-capable viewers (Android 14 Gallery, Chrome 120+, Adobe Lightroom) can use to reconstruct the full 10-bit HDR luminance range on an HDR10 or Dolby Vision display.
@@ -74,15 +74,15 @@ Once a depth map is obtained, the remaining steps are the same regardless of whi
 
 ```mermaid
 flowchart TD
-    A[Wide Camera Frame + Tele Camera Frame / ToF Data] --> B[Depth Estimation\nStereo / ToF / Mono ML]
-    B --> C[Depth Map\n0.5m → Infinity]
-    A --> D[Subject Segmentation\nU-Net Neural Network]
-    D --> E[Person Alpha Mask\nSoft-Edged Feathering]
-    C --> F[Per-Pixel Blur Radius\nScales with Depth]
+    A["Wide Camera Frame + Tele Camera Frame / ToF Data"] --> B["Depth Estimation<br/>Stereo / ToF / Mono ML"]
+    B --> C["Depth Map<br/>0.5m to Infinity"]
+    A --> D["Subject Segmentation<br/>U-Net Neural Network"]
+    D --> E["Person Alpha Mask<br/>Soft-Edged Feathering"]
+    C --> F["Per-Pixel Blur Radius<br/>Scales with Depth"]
     E --> F
-    F --> G[Apply Variable Blur\nSubject = Sharp, Background = Bokeh]
-    G --> H[Add Bokeh Speculars\nHexagonal / Circular Highlights]
-    H --> I[Final Portrait Photo\nCreamy Background Blur]
+    F --> G["Apply Variable Blur<br/>Subject = Sharp, Background = Bokeh"]
+    G --> H["Add Bokeh Speculars<br/>Hexagonal / Circular Highlights"]
+    H --> I["Final Portrait Photo<br/>Creamy Background Blur"]
 ```
 
 ## Night Mode: Multi-Frame Temporal Merging
@@ -99,12 +99,12 @@ Before 2018, low-light smartphone photography was essentially unusable without f
 
 ```mermaid
 flowchart LR
-    A[Dark Scene: City Street at Night] --> B[Capture 12 RAW Frames\n1/15s each = 0.66s total]
-    B --> C[Gyro EIS Alignment\nSub-Pixel Shift + Rotate]
-    C --> D[Temporal Merge\nRobust Mean / Outlier Reject\nNoise −3.5×]
-    D --> E[CNN Spatial Denoiser\nPreserve Edges / Texture]
-    E --> F[Local Tone Mapping\nBoost Shadows / Preserve Lights]
-    F --> G[Bright Clear Night Photo\nLow Noise, No Blur]
+    A["Dark Scene: City Street at Night"] --> B["Capture 12 RAW Frames<br/>1/15s each = 0.66s total"]
+    B --> C["Gyro EIS Alignment<br/>Sub-Pixel Shift + Rotate"]
+    C --> D["Temporal Merge<br/>Robust Mean / Outlier Reject<br/>Noise -3.5x"]
+    D --> E["CNN Spatial Denoiser<br/>Preserve Edges / Texture"]
+    E --> F["Local Tone Mapping<br/>Boost Shadows / Preserve Lights"]
+    F --> G["Bright Clear Night Photo<br/>Low Noise, No Blur"]
 ```
 
 Samsung's "Nightography," Apple's "Night Mode," Xiaomi's "Night Mode 2.0," and OPPO's "Ultra Dark Mode" all use substantially the same algorithm architecture. Variations exist in the exact number of frames, the choice of robust merging statistic, the denoiser architecture, and the tone map look, but the core gyro-aligned multi-frame temporal averaging is universal across the industry.
@@ -130,13 +130,13 @@ The numbers in practice: 960 fps capture × 0.3 seconds of real time = 288 indiv
 flowchart TD
     subgraph "Bandwidth Bottleneck: Sensor Readout"
         direction TB
-        A[Full Sensor Mode:\n48MP (8000×6000) @ 30fps\n= 1.44 GPix/s\n→ Photo / Standard Video]
-        B[Slow-Motion Crop Mode:\n1280×720 @ 960fps\n= 0.88 GPix/s\n→ 32× Ultra Slow-Mo]
+        A["Full Sensor Mode<br/>48MP (8000x6000) @ 30fps<br/>= 1.44 GPix/s<br/>Photo / Standard Video"]
+        B["Slow-Motion Crop Mode<br/>1280x720 @ 960fps<br/>= 0.88 GPix/s<br/>32x Ultra Slow-Mo"]
     end
-    A --> C{MIPI CSI-2 Bus\n4 Lanes × 2.5 Gbps\n= 10 Gbps Total}
+    A --> C{"MIPI CSI-2 Bus<br/>4 Lanes x 2.5 Gbps<br/>= 10 Gbps Total"}
     B --> C
-    C --> D[ISP Video Pipeline\nScales to Output Resolution]
-    D --> E[HEVC / AV1 Encoder\nWrites Slow-Motion MP4]
+    C --> D["ISP Video Pipeline<br/>Scales to Output Resolution"]
+    D --> E["HEVC / AV1 Encoder<br/>Writes Slow-Motion MP4"]
 ```
 
 Slow-motion modes also often use a staggered HDR technique where alternate rows of the sensor are exposed for different durations to maintain high dynamic range even at 240 fps or 960 fps.
@@ -153,11 +153,11 @@ However, the ultra-wide focal length comes with three characteristic optical fla
 
 ```mermaid
 flowchart LR
-    A[Raw Ultra-Wide Capture\n120° Fisheye\nBarrel Distorted] --> B[ISP Geometric Correction\n6th-Order Polynomial Remap]
-    B --> C[Cropped Rectilinear Output\nStraight Lines Actually Straight]
-    C --> D[Lateral CA Correction\nRed/Blue Plane Rescaling]
-    D --> E[Lens Shading + Corner Sharpening]
-    E --> F[Final Corrected Ultra-Wide Photo]
+    A["Raw Ultra-Wide Capture<br/>120 deg Fisheye<br/>Barrel Distorted"] --> B["ISP Geometric Correction<br/>6th-Order Polynomial Remap"]
+    B --> C["Cropped Rectilinear Output<br/>Straight Lines Actually Straight"]
+    C --> D["Lateral CA Correction<br/>Red/Blue Plane Rescaling"]
+    D --> E["Lens Shading + Corner Sharpening"]
+    E --> F["Final Corrected Ultra-Wide Photo"]
 ```
 
 ## Telephoto: Standard vs Periscope
@@ -172,16 +172,16 @@ The telephoto camera captures distant subjects that the wide camera cannot resol
 graph LR
     subgraph "Periscope Telephoto (Side View Inside Phone)"
         direction LR
-        A[Light In\nRear Glass Window] --> B[45° Prism\n90° Reflection]
-        B --> C[Lens Element 1]
-        C --> D[Lens Element 2]
-        D --> E[Lens Element 3]
-        E --> F[Lens Element 4]
-        F --> G[Lens Element 5]
-        G --> H[IR Cut Filter]
-        H --> I[Image Sensor\nMounted Horizontally]
+        A["Light In<br/>Rear Glass Window"] --> B["45 deg Prism<br/>90 deg Reflection"]
+        B --> C["Lens Element 1"]
+        C --> D["Lens Element 2"]
+        D --> E["Lens Element 3"]
+        E --> F["Lens Element 4"]
+        F --> G["Lens Element 5"]
+        G --> H["IR Cut Filter"]
+        H --> I["Image Sensor<br/>Mounted Horizontally"]
     end
-    J[Phone Thickness: 8.5mm Total] --> B
+    J["Phone Thickness: 8.5mm Total"] --> B
 ```
 
 At zoom boundaries between physical cameras (for example, 2.9× still digitally cropped from the wide camera vs 3.1× using the 3× periscope telephoto), the HAL performs a multi-camera fusion trick: for roughly ±0.2× around the switchover point, it captures both cameras simultaneously and performs a cross-fade weighted by zoom ratio, so the user never sees a visible "jump" when the active physical camera changes.
@@ -207,16 +207,16 @@ Zooming seamlessly across 0.5× to 10× on a Galaxy S26 Ultra is computational: 
 ```mermaid
 graph TD
     subgraph "Computational Photography Venn Diagram"
-        A[Optics\nLenses, Aperture, OIS]
-        B[Sensors\nCMOS, Bayer, Rolling Shutter]
-        C[Machine Learning\nSegmentation, Denoise, Depth]
-        D[Multi-Frame Signal Processing\nHDR Merge, Night Merge, EIS]
+        A["Optics<br/>Lenses, Aperture, OIS"]
+        B["Sensors<br/>CMOS, Bayer, Rolling Shutter"]
+        C["Machine Learning<br/>Segmentation, Denoise, Depth"]
+        D["Multi-Frame Signal Processing<br/>HDR Merge, Night Merge, EIS"]
     end
-    A -- Overlap --> E[Portrait Bokeh]
-    B -- Overlap --> F[HDR Bracketed Capture]
-    C -- Overlap --> G[ML Portrait Segmentation]
-    D -- Overlap --> H[Night Sight Temporal Merge]
-    A & B & C & D --> I[Seamless Multi-Camera Zoom]
+    A -- Overlap --> E["Portrait Bokeh"]
+    B -- Overlap --> F["HDR Bracketed Capture"]
+    C -- Overlap --> G["ML Portrait Segmentation"]
+    D -- Overlap --> H["Night Sight Temporal Merge"]
+    A & B & C & D --> I["Seamless Multi-Camera Zoom"]
 ```
 
 This is the most important idea to carry into the Camera2 API chapters that follow. The Camera2 API is not just a tool to "take a picture." It is a low-level control interface that lets your app fire precise multi-frame bursts, read gyro metadata per frame, select which physical camera fires at which zoom ratio, and stream frames through on-device neural networks — the building blocks for implementing your own computational photography features.

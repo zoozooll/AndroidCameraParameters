@@ -1,22 +1,22 @@
 ---
 sidebar_position: 13
-title: "Chapter 13: Exposure"
-description: Master the fundamentals of photographic exposure—the Exposure Triangle of ISO, shutter speed, and aperture. Understand EV stops, the Sunny 16 rule, and how different combinations create the same exposure with creative tradeoffs.
-keywords: [android camera2, exposure triangle, ISO, shutter speed, aperture, exposure value, sunny 16 rule, photography basics]
+title: "Bab 13: Eksposur"
+description: Kuasai dasar-dasar eksposur fotografi—Segitiga Eksposur dari ISO, kecepatan rana, dan bukaan (aperture). Pahami stop EV, aturan Sunny 16, dan bagaimana berbagai kombinasi menciptakan eksposur yang sama dengan pertukaran kreatif.
+keywords: [android camera2, segitiga eksposur, ISO, kecepatan rana, bukaan, aperture, nilai eksposur, aturan sunny 16, dasar fotografi]
 ---
 
-# Chapter 13: Exposure
+# Bab 13: Eksposur
 
-## The Exposure Triangle: Three Knobs, One Goal
+## Segitiga Eksposur: Tiga Kenop, Satu Tujuan
 
-When you take a photo with a smartphone camera, you're capturing light. The *amount* of light that reaches the sensor determines whether your photo is too dark (underexposed), too bright (overexposed), or just right (correctly exposed). Three fundamental controls govern this — together they form the **Exposure Triangle**.
+Saat Anda mengambil foto dengan kamera smartphone, Anda sedang menangkap cahaya. *Jumlah* cahaya yang mencapai sensor menentukan apakah foto Anda terlalu gelap (underexposed), terlalu terang (overexposed), atau pas (terekspos dengan benar). Tiga kontrol fundamental mengatur hal ini — bersama-sama mereka membentuk **Segitiga Eksposur**.
 
 ```mermaid
 graph TD
-    A[Exposure<br/>Light Reaching Sensor] --> B[Shutter Speed<br/>Time Light Enters]
-    A --> C[ISO<br/>Sensor Sensitivity]
-    A --> D[Aperture<br/>Size of Opening]
-    B <--> C[Equivalent Exposure<br/>Tradeoffs]
+    A["Eksposur<br/>Cahaya Mencapai Sensor"] --> B["Kecepatan Rana<br/>Waktu Cahaya Masuk"]
+    A --> C[ISO<br/>Sensitivitas Sensor]
+    A --> D[Bukaan (Aperture)<br/>Ukuran Lubang]
+    B <--> C[Eksposur Setara<br/>Pertukaran (Tradeoffs)]
     C <--> D
     B <--> D
     style A fill:#e74c3c,color:#fff
@@ -25,82 +25,82 @@ graph TD
     style D fill:#f39c12,color:#fff
 ```
 
-**The core idea:** Each corner of the triangle controls light, but each also introduces a *creative tradeoff*. You can achieve the *same* total exposure with different combinations of the three settings — but each combination yields a different *look* to your photograph.
+**Ide inti:** Setiap sudut segitiga mengontrol cahaya, tetapi masing-masing juga memperkenalkan *pertukaran kreatif*. Anda dapat mencapai eksposur total yang *sama* dengan kombinasi berbeda dari ketiga pengaturan tersebut — tetapi setiap kombinasi menghasilkan *tampilan* yang berbeda pada foto Anda.
 
-Before we dive into Android Camera2 API specifics in the next chapter, let's build a solid intuitive foundation for each element.
+Sebelum kita mendalami spesifikasi API Android Camera2 di bab berikutnya, mari kita bangun fondasi intuitif yang kuat untuk setiap elemen.
 
 ---
 
-## ISO: Sensor Sensitivity (Gain Control)
+## ISO: Sensitivitas Sensor (Kontrol Gain)
 
-In the days of film, **ISO** described the *film stock's sensitivity to light* — ISO 100 film was "slow" and needed bright light, while ISO 800 film was "fast" and could shoot indoors.
+Pada zaman film, **ISO** menjelaskan *sensitivitas stok film terhadap cahaya* — film ISO 100 bersifat "lambat" dan membutuhkan cahaya terang, sedangkan film ISO 800 bersifat "cepat" dan bisa memotret di dalam ruangan.
 
-**In digital photography (including smartphone cameras), ISO is sensor gain / electronic amplification.** When you double the ISO value, you're effectively doubling the amplification applied to the sensor's analog signal before it's digitized.
+**Dalam fotografi digital (termasuk kamera smartphone), ISO adalah sensor gain / amplifikasi elektronik.** Saat Anda menggandakan nilai ISO, Anda secara efektif menggandakan amplifikasi yang diterapkan pada sinyal analog sensor sebelum didigitalkan.
 
-### How ISO Works
+### Cara Kerja ISO
 
-Imagine the sensor's pixel wells collecting photons (light particles). After the exposure period ends:
+Bayangkan sumur piksel sensor mengumpulkan foton (partikel cahaya). Setelah periode eksposur berakhir:
 
-1. Each pixel converts accumulated photons into a tiny electrical charge
-2. An **analog gain amplifier** multiplies this signal by a factor corresponding to your ISO setting
-3. The amplified signal is converted from analog to digital (ADC)
-4. Digital processing then applies further processing (noise reduction, tone-mapping)
+1. Setiap piksel mengubah foton yang terkumpul menjadi muatan listrik kecil
+2. Sebuah **penguat gain analog (analog gain amplifier)** mengalikan sinyal ini dengan faktor yang sesuai dengan pengaturan ISO Anda
+3. Sinyal yang dikuatkan diubah dari analog ke digital (ADC)
+4. Pemrosesan digital kemudian menerapkan pemrosesan lebih lanjut (pengurangan noise, pemetaan nada)
 
-**ISO 100 = base / lowest gain.** The signal is amplified least, so:
-- Photos are *clean* with minimal digital noise (grain)
-- Dynamic range (difference between brightest and darkest recordable tones) is highest
-- Colors are most accurate
+**ISO 100 = basis / penguatan terendah.** Sinyal dikuatkan paling sedikit, jadi:
+- Foto *bersih* dengan noise digital (bintik-bintik) minimal
+- Rentang dinamis (perbedaan antara nada terekam paling terang dan paling gelap) paling tinggi
+- Warna paling akurat
 
-**ISO 3200 = high gain.** The signal is amplified 32×:
-- You can shoot in dimmer scenes without increasing shutter time
-- But you get *visible noise* (color speckle, luminance grain)
-- Dynamic range and color accuracy degrade significantly
+**ISO 3200 = penguatan tinggi.** Sinyal dikuatkan 32×:
+- Anda dapat memotret di pemandangan yang lebih redup tanpa menambah waktu rana
+- Tetapi Anda mendapatkan *noise yang terlihat* (bintik warna, bintik luminans)
+- Rentang dinamis dan akurasi warna menurun secara signifikan
 
-### Typical Smartphone ISO Range
+### Rentang ISO Smartphone yang Khas
 
-| ISO Range | Characteristic | Use Case |
+| Rentang ISO | Karakteristik | Kasus Penggunaan |
 |-----------|---------------|----------|
-| 50–200 | Base ISO, cleanest image | Bright daylight, studio lighting |
-| 200–800 | Moderate gain, minor noise | Overcast day, shaded areas |
-| 800–3200 | Visible noise, still usable | Indoor lighting, dusk |
-| 3200–12800+ | Heavy noise / heavy NR applied | Night scenes, low-light events |
+| 50–200 | ISO basis, gambar paling bersih | Cahaya siang terang, pencahayaan studio |
+| 200–800 | Penguatan moderat, noise minor | Hari mendung, area teduh |
+| 800–3200 | Noise terlihat, masih bisa digunakan | Pencahayaan dalam ruangan, senja |
+| 3200–12800+ | Noise berat / pengurangan noise berat diterapkan | Pemandangan malam, acara rendah cahaya |
 
-> **Smartphone Reality Note:** Flagship phones often apply heavy computational noise reduction at high ISO values (vendor-specific "night mode" processing). When you later disable the auto pipeline in Camera2, you *lose* many of these OEM optimizations — a critical caveat we'll return to in Chapter 14.
+> **Catatan Realitas Smartphone:** Ponsel unggulan sering kali menerapkan pengurangan noise komputasional yang berat pada nilai ISO tinggi (pemrosesan "mode malam" khusus vendor). Saat Anda nanti menonaktifkan pipeline otomatis di Camera2, Anda akan *kehilangan* banyak optimalisasi OEM ini — sebuah peringatan kritis yang akan kita bahas di Bab 14.
 
 ---
 
-## Shutter Speed (Exposure Time)
+## Kecepatan Rana (Waktu Eksposur)
 
-**Shutter speed** is simply *how long the sensor is exposed to light*. In traditional cameras, a mechanical shutter physically opens and closes. In smartphones, it's almost always an **electronic shutter** — the sensor is reset, allowed to collect photons for a precise duration, then read out.
+**Kecepatan rana (shutter speed)** hanyalah *seberapa lama sensor terkena cahaya*. Pada kamera tradisional, rana mekanis membuka dan menutup secara fisik. Di smartphone, hampir selalu merupakan **rana elektronik** — sensor direset, dibiarkan mengumpulkan foton untuk durasi yang tepat, lalu dibaca.
 
-Shutter speed is measured in **seconds**, typically expressed as fractions:
+Kecepatan rana diukur dalam **detik**, biasanya dinyatakan sebagai pecahan:
 
-| Shutter Speed | What It Does | Typical Use |
+| Kecepatan Rana | Apa Kegunaannya | Penggunaan Umum |
 |--------------|-------------|-------------|
-| 1/2000s – 1/1000s | Very short exposure, freezes all motion | Sports, birds, fast-moving vehicles |
-| 1/500s – 1/250s | Freezes typical human motion | Walking people, children playing |
-| 1/125s – 1/60s | "Safe" handheld speed with stabilization | General photography on stable hands |
-| 1/30s – 1/15s | Slight motion blur visible, needs tripod | Creative motion, low light |
-| 1s – 30s | Long exposure, heavy motion blur | Waterfalls, star trails, smooth water |
-| 30s+ | Ultra-long exposure (specialized) | Astrophotography, light painting |
+| 1/2000d – 1/1000d | Eksposur sangat pendek, membekukan semua gerakan | Olahraga, burung, kendaraan cepat |
+| 1/500d – 1/250d | Membekukan gerakan manusia biasa | Orang berjalan, anak-anak bermain |
+| 1/125d – 1/60d | Kecepatan genggam "aman" dengan stabilisasi | Fotografi umum dengan tangan stabil |
+| 1/30d – 1/15d | Sedikit buram gerakan (motion blur) terlihat, butuh tripod | Gerakan kreatif, cahaya rendah |
+| 1d – 30d | Eksposur panjang, buram gerakan berat | Air terjun, jejak bintang, air halus |
+| 30d+ | Eksposur sangat panjang (khusus) | Astrofotografi, lukisan cahaya |
 
-### The Motion Blur Effect
+### Efek Buram Gerakan (Motion Blur)
 
-There are **two** reasons to deliberately choose a specific shutter speed beyond "enough light":
+Ada **dua** alasan untuk sengaja memilih kecepatan rana tertentu di luar "cahaya yang cukup":
 
-1. **Freeze action:** A bird in flight at 1/1000s shows every feather crisply because the bird moved almost zero distance during the exposure.
+1. **Membekukan aksi:** Burung yang terbang pada 1/1000 detik menunjukkan setiap helai bulu dengan tajam karena burung tersebut bergerak hampir nol jarak selama eksposur.
 
-2. **Create motion blur:** A waterfall at 2 seconds renders the moving water as smooth, silky white trails — because each water droplet traveled across many pixels on the sensor while it was exposed.
+2. **Menciptakan buram gerakan:** Air terjun pada 2 detik merender air yang bergerak sebagai jejak putih yang halus dan sutra — karena setiap tetesan air menempuh perjalanan melintasi banyak piksel pada sensor saat terekspos.
 
-Think of it like a long-exposure painting: *anything that moves while the shutter is open becomes a streak.*
+Anggap saja seperti lukisan eksposur panjang: *apa pun yang bergerak saat rana terbuka akan menjadi garis.*
 
-**Important for video:** When shooting 30fps video, each frame is exposed for ~1/30s *maximum*. Cinematographers follow the **180° shutter rule**: set shutter speed to double the frame rate → 1/60s for 30fps video. This gives natural, "film-like" motion blur without being too choppy or too smeary.
+**Penting untuk video:** Saat merekam video 30fps, setiap bingkai terekspos selama *maksimal* ~1/30 detik. Sinematografer mengikuti **aturan rana 180°**: atur kecepatan rana menjadi dua kali frame rate → 1/60 detik untuk video 30fps. Ini memberikan buram gerakan yang alami dan "seperti film" tanpa terlalu patah-patah atau terlalu kabur.
 
 ---
 
-## Aperture
+## Bukaan (Aperture)
 
-**Aperture** is the size of the opening in the lens through which light passes. It's measured in **f-stops** (f/1.4, f/2.0, f/2.8, f/4.0, f/5.6, f/8.0, etc.) — a *counterintuitive scale where smaller numbers = wider opening*.
+**Bukaan (aperture)** adalah ukuran lubang di lensa yang dilewati cahaya. Ini diukur dalam **f-stop** (f/1.4, f/2.0, f/2.8, f/4.0, f/5.6, f/8.0, dll.) — sebuah *skala berlawanan dengan intuisi di mana angka yang lebih kecil = lubang yang lebih lebar*.
 
 ```
   f/1.4     f/2.0     f/2.8     f/4.0     f/5.6     f/8.0
@@ -112,152 +112,152 @@ Think of it like a long-exposure painting: *anything that moves while the shutte
 ███████████                                      ██████
 ```
 
-**Halving the light each stop:** Moving from f/1.4 → f/2.0 → f/2.8 → f/4.0 each *halves* the area of the opening, so half the total light gets through. This is one "stop" darker per step.
+**Mengurangi cahaya separuh di setiap stop:** Berpindah dari f/1.4 → f/2.0 → f/2.8 → f/4.0 masing-masing *mengurangi separuh* luas lubang, jadi separuh dari total cahaya yang masuk. Ini adalah satu "stop" lebih gelap per langkah.
 
-### Aperture Tradeoffs (Creative & Practical)
+### Pertukaran Bukaan (Kreatif & Praktis)
 
-1. **Depth of Field (DoF):** Wide aperture (f/1.8) = *shallow* DoF — only a narrow plane is in focus; everything in front/behind blurs out (bokeh). Narrow aperture (f/8) = *deep* DoF — everything from foreground to background is sharp.
+1. **Kedalaman Bidang (Depth of Field / DoF):** Bukaan lebar (f/1.8) = DoF *dangkal* — hanya bidang sempit yang fokus; segala sesuatu di depan/belakang menjadi kabur (bokeh). Bukaan sempit (f/8) = DoF *dalam* — segala sesuatu dari latar depan hingga latar belakang tajam.
 
-2. **Light gathering:** f/1.4 gathers 4× more light than f/2.8. This is why "fast lenses" (wide maximum aperture) are prized for low-light shooting.
+2. **Pengumpulan cahaya:** f/1.4 mengumpulkan cahaya 4× lebih banyak daripada f/2.8. Inilah sebabnya "lensa cepat" (bukaan maksimum lebar) sangat dihargai untuk pemotretan cahaya rendah.
 
-3. **Diffraction:** At very narrow apertures (f/11+), light waves bend around the aperture blades, slightly softening the image. This is usually irrelevant on smartphones.
+3. **Difraksi:** Pada bukaan yang sangat sempit (f/11+), gelombang cahaya berbelok di sekitar bilah bukaan, sedikit melembutkan gambar. Ini biasanya tidak relevan pada smartphone.
 
-### Smartphone Reality Check
+### Cek Realitas Smartphone
 
-Most smartphones have **fixed aperture lenses** — you cannot change the f-stop. Budget phones might have f/2.4–f/2.8; flagships often reach f/1.4–f/1.8. The [Android Camera Parameters app](https://play.google.com/store/apps/details?id=com.minininja.cameraparams) lets you check your lens' fixed aperture in `CameraCharacteristics`.
+Kebanyakan smartphone memiliki **lensa bukaan tetap** — Anda tidak dapat mengubah f-stop. Ponsel anggaran mungkin memiliki f/2.4–f/2.8; ponsel unggulan sering mencapai f/1.4–f/1.8. [Aplikasi Android Camera Parameters](https://play.google.com/store/apps/details?id=com.minininja.cameraparams) memungkinkan Anda memeriksa bukaan tetap lensa Anda di `CameraCharacteristics`.
 
-A few premium phones (e.g., Samsung Galaxy S23 Ultra, Xperia series) offer a *dual aperture* mechanism that mechanically switches between two stops (e.g., f/1.5 and f/2.4). In Camera2, query `LENS_INFO_AVAILABLE_APERTURES` to see if your device supports multiple apertures.
+Beberapa ponsel premium (misalnya, Samsung Galaxy S23 Ultra, seri Xperia) menawarkan mekanisme *bukaan ganda* yang secara mekanis beralih di antara dua stop (misalnya, f/1.5 dan f/2.4). Di Camera2, kueri `LENS_INFO_AVAILABLE_APERTURES` untuk melihat apakah perangkat Anda mendukung banyak bukaan.
 
-**The practical takeaway:** For most Android Camera2 development, aperture is *fixed*, so you control exposure via **ISO + shutter speed only**. Two knobs instead of three — which actually simplifies things!
+**Kesimpulan praktis:** Untuk sebagian besar pengembangan Android Camera2, bukaan bersifat *tetap*, jadi Anda mengontrol eksposur melalui **ISO + kecepatan rana saja**. Dua kenop alih-alih tiga — yang sebenarnya menyederhanakan segalanya!
 
 ---
 
-## EV: Exposure Value (The Logarithmic Scale)
+## EV: Nilai Eksposur (Skala Logaritmik)
 
-When photographers say "adjust by one stop," they mean **double or halve the total light**. To make stop-based thinking precise, the industry standardized on **Exposure Value (EV)**.
+Saat fotografer berkata "sesuaikan satu stop," yang mereka maksud adalah **gandakan atau kurangi separuh cahaya total**. Untuk membuat pemikiran berbasis stop menjadi presisi, industri menstandardisasi pada **Exposure Value (EV)**.
 
-**EV 0** is defined as the exposure combination that produces a standard reference brightness: **1 second exposure, f/1.0 aperture, ISO 100**.
+**EV 0** didefinisikan sebagai kombinasi eksposur yang menghasilkan kecerahan referensi standar: **1 detik eksposur, bukaan f/1.0, ISO 100**.
 
-Every **+1 EV doubles the light** (brighter). Every **−1 EV halves the light** (darker):
+Setiap **+1 EV menggandakan cahaya** (lebih terang). Setiap **−1 EV mengurangi separuh cahaya** (lebih gelap):
 
-| EV Change | Meaning |
+| Perubahan EV | Arti |
 |-----------|---------|
-| +3 EV | 8× more light (2³) |
-| +2 EV | 4× more light |
-| +1 EV | 2× more light |
-| 0 EV | Reference: 1s @ f/1.0 ISO 100 |
-| −1 EV | ½ the light |
-| −2 EV | ¼ the light |
-| −3 EV | ⅛ the light |
+| +3 EV | 8× cahaya lebih banyak (2³) |
+| +2 EV | 4× cahaya lebih banyak |
+| +1 EV | 2× cahaya lebih banyak |
+| 0 EV | Referensi: 1d @ f/1.0 ISO 100 |
+| −1 EV | ½ cahaya |
+| −2 EV | ¼ cahaya |
+| −3 EV | ⅛ cahaya |
 
-The beautiful thing: **any combination of ISO + shutter + aperture that sums to the same EV value produces the same total exposure**. This is the *equivalent exposure* principle connecting the three triangle corners.
+Hal yang indah: **setiap kombinasi ISO + rana + bukaan yang berjumlah nilai EV yang sama akan menghasilkan eksposur total yang sama**. Ini adalah prinsip *eksposur setara* yang menghubungkan ketiga sudut segitiga.
 
-### EV and ISO/Shutter Combinations
+### Kombinasi EV dan ISO/Rana
 
-With fixed aperture, the EV equation simplifies dramatically. For a smartphone at f/1.8:
+Dengan bukaan tetap, persamaan EV menjadi jauh lebih sederhana. Untuk smartphone pada f/1.8:
 
-| Scene | Typical EV | ISO 100 Shutter | ISO 400 Shutter | ISO 1600 Shutter |
+| Adegan | EV Tipikal | Rana ISO 100 | Rana ISO 400 | Rana ISO 1600 |
 |-------|-----------|----------------|-----------------|------------------|
-| Bright sunny beach | 15 | 1/4000s | 1/1000s | 1/250s |
-| Hazy / overcast day | 12 | 1/500s | 1/125s | 1/30s |
-| Indoor bright office | 8 | 1/30s | 1/8s | 1/2s |
-| Living room at night | 4 | 2s | 0.5s | 1/8s |
-| Starry night scene | −2 | 30s | 8s | 2s |
+| Pantai cerah terik | 15 | 1/4000d | 1/1000d | 1/250d |
+| Hari berkabut / mendung | 12 | 1/500d | 1/125d | 1/30d |
+| Kantor dalam ruangan terang | 8 | 1/30d | 1/8d | 1/2d |
+| Ruang tamu di malam hari | 4 | 2d | 0,5d | 1/8d |
+| Adegan malam berbintang | −2 | 30d | 8d | 2d |
 
-### The Famous Sunny 16 Rule
+### Aturan Sunny 16 yang Terkenal
 
-Before matrix metering and sophisticated autoexposure algorithms, photographers relied on a rule of thumb to nail daylight exposure without a meter:
+Sebelum matrix metering dan algoritma autoexposure yang canggih, fotografer mengandalkan aturan praktis untuk mendapatkan eksposur siang hari yang tepat tanpa meteran:
 
-> **On a sunny day, set aperture to f/16, shutter speed to 1/ISO seconds.**
+> **Pada hari yang cerah, atur bukaan ke f/16, kecepatan rana ke 1/ISO detik.**
 
-| Sunny 16 (f/16) | Equivalent at f/1.8 (Smartphone) |
+| Sunny 16 (f/16) | Setara pada f/1.8 (Smartphone) |
 |-----------------|----------------------------------|
-| ISO 100, 1/100s, f/16 → EV 15 | ISO 100, 1/4000s, f/1.8 → EV 15 ✓ |
-| ISO 200, 1/200s, f/16 → EV 15 | ISO 200, 1/8000s, f/1.8 → EV 15 ✓ |
+| ISO 100, 1/100d, f/16 → EV 15 | ISO 100, 1/4000d, f/1.8 → EV 15 ✓ |
+| ISO 200, 1/200d, f/16 → EV 15 | ISO 200, 1/8000d, f/1.8 → EV 15 ✓ |
 
-The math checks out: f/1.8 is about **6⅓ stops wider** than f/16. Each stop quadruples? No — each stop *doubles* the light area. 2^(6.33) ≈ 80× more light. So the shutter must be 80× faster to compensate: 1/100s ÷ 80 ≈ 1/8000s (at ISO 200). Close enough for field work.
-
----
-
-## The Look of Underexposed / Correct / Overexposed
-
-Let's mentally compare three shots of the same scene (e.g., a person outdoors with sky behind them):
-
-**Underexposed (−2 EV):** The subject is too dark. Shadows are *crushed* to pure black with no detail. In a histogram, all data piles up on the left (dark) side. The sky might look good, but the person appears as a silhouette. You *can* try to "push" underexposed raw data in post-processing, but the shadows will reveal heavy noise because you're amplifying a weak signal.
-
-**Correct Exposure (0 EV):** Mid-tones show proper texture. The person's face has visible skin detail, shirt wrinkles, eye catchlights. Histogram has data spread across the full range without hard clipping at either end. On phones with limited dynamic range, this may mean *some* bright sky highlights clip to white (no blue detail) — that's a classic tradeoff vs. underexposing the subject.
-
-**Overexposed (+2 EV):** Highlights are *blown out* to pure white with no recovery. Sky is a uniform white flat field; bright shirt buttons and specular reflections are clipped. The person's face might look flattering (bright skin), but you've permanently lost all highlight detail. Unlike underexposed shadows (which you can often partially recover with noise), *blown highlights are gone forever* — there's simply no data in those pixels.
-
-**The Photographer's Mantra:** *Expose for the highlights, recover the shadows.* In RAW capture (which we'll cover later), this is especially powerful because 14-bit RAW stores enough shadow detail to pull +2 EV or more without catastrophic noise.
+Matematikanya cocok: f/1.8 sekitar **6⅓ stop lebih lebar** daripada f/16. Setiap stop empat kali lipat? Tidak — setiap stop *menggandakan* area cahaya. 2^(6,33) ≈ 80× cahaya lebih banyak. Jadi rana harus 80× lebih cepat untuk mengompensasi: 1/100d ÷ 80 ≈ 1/8000d (pada ISO 200). Cukup dekat untuk pekerjaan lapangan.
 
 ---
 
-## Real-World EV Reference Table
+## Tampilan Underexposed / Benar / Overexposed
 
-Memorizing a few landmark EV values lets you estimate exposure anywhere:
+Mari kita bandingkan secara mental tiga bidikan dari adegan yang sama (misalnya, seseorang di luar ruangan dengan langit di belakangnya):
 
-| Scene | Typical EV (at ISO 100) | Rough Shutter @ f/1.8, ISO 400 |
+**Underexposed (−2 EV):** Subjek terlalu gelap. Bayangan *hancur (crushed)* menjadi hitam pekat tanpa detail. Dalam histogram, semua data menumpuk di sisi kiri (gelap). Langit mungkin terlihat bagus, tetapi orang tersebut tampak sebagai siluet. Anda *bisa* mencoba "mendorong" data mentah yang underexposed dalam pemrosesan pasca, tetapi bayangan akan menunjukkan noise yang berat karena Anda memperkuat sinyal yang lemah.
+
+**Eksposur Benar (0 EV):** Nada tengah menunjukkan tekstur yang tepat. Wajah orang tersebut memiliki detail kulit yang terlihat, kerutan baju, tangkapan cahaya di mata. Histogram memiliki data yang tersebar di seluruh rentang tanpa pemotongan keras (hard clipping) di kedua ujungnya. Pada ponsel dengan rentang dinamis terbatas, ini mungkin berarti *beberapa* sorotan langit yang cerah terpotong menjadi putih (tidak ada detail biru) — itu adalah pertukaran klasik vs. membuat subjek menjadi underexposed.
+
+**Overexposed (+2 EV):** Sorotan *terbakar (blown out)* menjadi putih murni tanpa bisa dipulihkan. Langit adalah bidang putih seragam; kancing baju yang cerah dan pantulan spekular terpotong. Wajah orang tersebut mungkin terlihat menawan (kulit cerah), tetapi Anda telah kehilangan semua detail sorotan secara permanen. Berbeda dengan bayangan underexposed (yang sering kali dapat Anda pulihkan sebagian dengan noise), *sorotan yang terbakar hilang selamanya* — sama sekali tidak ada data dalam piksel tersebut.
+
+**Mantra Fotografer:** *Atur eksposur untuk sorotan, pulihkan bayangan.* Dalam pengambilan gambar RAW (yang akan kita bahas nanti), ini sangat ampuh karena RAW 14-bit menyimpan cukup detail bayangan untuk ditarik +2 EV atau lebih tanpa noise yang membawa bencana.
+
+---
+
+## Tabel Referensi EV Dunia Nyata
+
+Menghafal beberapa nilai EV patokan memungkinkan Anda memperkirakan eksposur di mana saja:
+
+| Adegan | EV Tipikal (pada ISO 100) | Perkiraan Rana @ f/1.8, ISO 400 |
 |-------|------------------------|--------------------------------|
-| Snow landscape in direct sun | 16 | 1/4000s |
-| Sunny beach, bright day | 15 | 1/2000s |
-| Typical sunny day | 14 | 1/1000s |
-| Overcast / cloudy day | 12 | 1/250s |
-| Very cloudy / rain | 11 | 1/125s |
-| Open shade (person in shadow, sunlit background) | 9 | 1/30s |
-| Sunset / golden hour | 7 | 1/8s |
-| Bright indoor office | 8 | 1/15s |
-| Home living room, lamps only | 4 | 1/2s |
-| Dark restaurant interior | 2 | 2s |
-| City street at night (neon signs) | 1 | 4s |
-| Night landscape, distant city lights | −2 | 30s |
-| Moonlit landscape (full moon) | −3 | 1 minute |
-| Starry sky, no moon | −6 | 8 minutes |
+| Lanskap salju di bawah matahari langsung | 16 | 1/4000d |
+| Pantai cerah, hari yang cerah | 15 | 1/2000d |
+| Hari cerah yang khas | 14 | 1/1000d |
+| Hari mendung / berawan | 12 | 1/250d |
+| Sangat mendung / hujan | 11 | 1/125d |
+| Teduh terbuka (orang di bayangan, latar belakang disinari matahari) | 9 | 1/30d |
+| Matahari terbenam / golden hour | 7 | 1/8d |
+| Kantor dalam ruangan yang terang | 8 | 1/15d |
+| Ruang tamu rumah, hanya lampu | 4 | 1/2d |
+| Interior restoran gelap | 2 | 2d |
+| Jalanan kota di malam hari (tanda neon) | 1 | 4d |
+| Lanskap malam, lampu kota yang jauh | −2 | 30d |
+| Lanskap bermandikan cahaya bulan (bulan purnama) | −3 | 1 menit |
+| Langit berbintang, tanpa bulan | −6 | 8 menit |
 
-You can verify these approximations against what your phone's auto-exposure actually chooses. Launch the [Android Camera Parameters app](https://github.com/zoozooll/AndroidCameraParameters), go into Live Preview, and observe `SENSOR_EXPOSURE_TIME` and `SENSOR_SENSITIVITY` as you walk from bright sun to a dark room — you'll see real values that map roughly to this table.
+Anda dapat memverifikasi perkiraan ini terhadap apa yang sebenarnya dipilih oleh auto-exposure ponsel Anda. Luncurkan [aplikasi Android Camera Parameters](https://github.com/zoozooll/AndroidCameraParameters), buka Live Preview, dan amati `SENSOR_EXPOSURE_TIME` dan `SENSOR_SENSITIVITY` saat Anda berjalan dari matahari cerah ke ruangan gelap — Anda akan melihat nilai nyata yang memetakan secara kasar ke tabel ini.
 
 ---
 
-## Putting It All Together: Equivalent Exposures
+## Menyatukan Semuanya: Eksposur Setara
 
-Let's say you want the *same total exposure* (EV 12 = overcast day, f/1.8 smartphone). Here are three valid combinations producing identical sensor brightness:
+Katakanlah Anda menginginkan *eksposur total yang sama* (EV 12 = hari mendung, smartphone f/1.8). Berikut adalah tiga kombinasi valid yang menghasilkan kecerahan sensor yang identik:
 
-| Combination | ISO | Shutter Speed | Look & Feel |
+| Kombinasi | ISO | Kecepatan Rana | Tampilan & Nuansa |
 |-------------|-----|---------------|-------------|
-| Clean & Sharp | 100 | 1/500s | Cleanest noise, sharpest freeze of motion |
-| Middle Ground | 400 | 1/125s | Minor noise, good balance |
-| Smooth Motion | 1600 | 1/30s | Visible noise; slight blur on moving subjects |
+| Bersih & Tajam | 100 | 1/500d | Noise paling bersih, pembekuan gerakan paling tajam |
+| Jalan Tengah | 400 | 1/125d | Noise minor, keseimbangan yang baik |
+| Gerakan Halus | 1600 | 1/30d | Noise terlihat; sedikit buram pada subjek yang bergerak |
 
-All three land at the same EV. All three *look equally bright*. But the *texture* (noise grain) and *motion portrayal* are completely different. **That's the art of exposure.**
+Ketiganya mendarat di EV yang sama. Ketiganya *terlihat sama cerahnya*. Tetapi *tekstur* (bintik noise) dan *penggambaran gerakan* sangat berbeda. **Itulah seni eksposur.**
 
-### What If You Need Both?
+### Bagaimana Jika Anda Membutuhkan Keduanya?
 
-This is where computational photography shines. A phone in "night mode" doesn't take *one* 2-second shot — it captures *dozens* of 1/60s frames (freezing motion in each), then aligns and averages them computationally. The result approximates the light gathering of a long exposure without the motion blur penalty.
+Di sinilah fotografi komputasional bersinar. Ponsel dalam "mode malam" tidak mengambil *satu* bidikan 2 detik — ia menangkap *lusinan* bingkai 1/60 detik (membekukan gerakan di setiap bingkai), lalu menyelaraskan dan merata-ratakannya secara komputasional. Hasilnya mendekati pengumpulan cahaya dari eksposur panjang tanpa penalti buram gerakan.
 
-Once you understand manual exposure at the Camera2 level, you can implement techniques like this yourself.
+Setelah Anda memahami eksposur manual di tingkat Camera2, Anda dapat mengimplementasikan teknik seperti ini sendiri.
 
 ---
 
-## Summary
+## Ringkasan
 
-In this chapter, we covered the *photography fundamentals* without touching a line of Android code:
+Dalam bab ini, kita membahas *dasar-dasar fotografi* tanpa menyentuh satu baris kode Android pun:
 
-- **Exposure Triangle:** Shutter Speed (time), ISO (sensor gain), and Aperture (opening size) combine to control total light. Each has a creative tradeoff.
-- **ISO** in digital photography = analog sensor gain. Low ISO = clean, high ISO = noisy. Smartphones commonly support ISO 100–6400+ with OEM noise reduction.
-- **Shutter Speed** is exposure time in seconds. Fast shutters (1/1000s) freeze action; slow shutters (1s+) create motion blur. The 180° shutter rule applies to video.
-- **Aperture** is f-stop-controlled lens opening. Most smartphones have fixed aperture, so we rely on ISO + shutter only.
-- **EV (Exposure Value)** is the logarithmic stop scale where each ±1 step doubles/halves light. EV 0 = 1s @ f/1.0 ISO 100.
-- **Sunny 16 Rule** and the EV reference table let you ballpark exposures without metering.
-- **Correct exposure** balances mid-tone detail, avoiding crushed shadows and blown highlights. RAW preserves recovery headroom.
+- **Segitiga Eksposur:** Kecepatan Rana (waktu), ISO (penguatan sensor), dan Bukaan (ukuran lubang) bergabung untuk mengontrol cahaya total. Masing-masing memiliki pertukaran kreatif.
+- **ISO** dalam fotografi digital = penguatan sensor analog. ISO rendah = bersih, ISO tinggi = ber-noise. Smartphone umumnya mendukung ISO 100–6400+ dengan pengurangan noise OEM.
+- **Kecepatan Rana** adalah waktu eksposur dalam detik. Rana cepat (1/1000d) membekukan aksi; rana lambat (1d+) menciptakan buram gerakan. Aturan rana 180° berlaku untuk video.
+- **Bukaan (Aperture)** adalah lubang lensa yang dikontrol f-stop. Kebanyakan smartphone memiliki bukaan tetap, jadi kita mengandalkan ISO + rana saja.
+- **EV (Exposure Value)** adalah skala stop logaritmik di mana setiap langkah ±1 menggandakan/mengurangi separuh cahaya. EV 0 = 1d @ f/1.0 ISO 100.
+- **Aturan Sunny 16** dan tabel referensi EV memungkinkan Anda memperkirakan eksposur tanpa meteran.
+- **Eksposur yang benar** menyeimbangkan detail nada tengah, menghindari bayangan yang hancur dan sorotan yang terbakar. RAW menjaga ruang pemulihan.
 
-## What's Next
+## Apa Selanjutnya
 
-In **Chapter 14: Manual Exposure in Camera2**, we translate this entire conceptual model into concrete Camera2 API calls. You'll learn:
+Dalam **Bab 14: Eksposur Manual di Camera2**, kita menerjemahkan seluruh model konseptual ini menjadi panggilan API Camera2 yang konkret. Anda akan mempelajari:
 
-- How to disable the auto-exposure pipeline (`CONTROL_MODE = OFF`, `CONTROL_AE_MODE = OFF`)
-- How to translate ISO values to `SENSOR_SENSITIVITY`
-- How to convert human-readable seconds ↔ nanoseconds for `SENSOR_EXPOSURE_TIME`
-- Complete working Kotlin code for fixed timelapse exposure, long night exposure, and a 3-shot exposure bracketing series
-- The critical caveat about OEM noise reduction being disabled when you turn off 3A
+- Cara menonaktifkan pipeline auto-exposure (`CONTROL_MODE = OFF`, `CONTROL_AE_MODE = OFF`)
+- Cara menerjemahkan nilai ISO ke `SENSOR_SENSITIVITY`
+- Cara mengubah detik yang dapat dibaca manusia ↔ nanodetik untuk `SENSOR_EXPOSURE_TIME`
+- Kode Kotlin yang berfungsi lengkap untuk eksposur timelapse tetap, eksposur malam panjang, dan seri bracketing eksposur 3 bidikan
+- Peringatan kritis tentang pengurangan noise OEM yang dinonaktifkan saat Anda mematikan 3A
 
-Grab your thinking cap — the code starts next.
+Siapkan pikiran Anda — kode dimulai selanjutnya.

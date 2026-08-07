@@ -1,62 +1,62 @@
 ---
 sidebar_position: 19
-title: "Chapter 19: High-Speed Video"
-description: "Build 120fps and 240fps slow-motion capture with CameraConstrainedHighSpeedCaptureSession, createHighSpeedRequestList, and StreamConfigurationMap FPS ranges in Android Camera2 API"
-keywords: [Android Camera2, high-speed video, slow motion, 120fps, 240fps, CameraConstrainedHighSpeedCaptureSession, createHighSpeedRequestList, FPS range]
+title: "Capítulo 19: Vídeo de Alta Velocidade"
+description: "Construa capturas em câmera lenta de 120fps e 240fps com CameraConstrainedHighSpeedCaptureSession, createHighSpeedRequestList e faixas de FPS do StreamConfigurationMap na API Camera2 do Android"
+keywords: [Android Camera2, vídeo de alta velocidade, câmera lenta, 120fps, 240fps, CameraConstrainedHighSpeedCaptureSession, createHighSpeedRequestList, faixa de FPS]
 ---
 
-# Chapter 19: High-Speed Video
+# Capítulo 19: Vídeo de Alta Velocidade
 
-Slow-motion video captures moments the human eye cannot resolve: water droplets detaching from a faucet at 120 fps (4× slow), a hummingbird's wings beating at 240 fps (8× slow), or a balloon popping at 960 fps (32× slow on some Samsung flagships). Implementing high-frame-rate capture in Android Camera2 is not simply a matter of setting `SENSOR_FRAME_DURATION` to a small number — you must use a dedicated session type called **`CameraConstrainedHighSpeedCaptureSession`**, submit pre-validated frame bursts via **`createHighSpeedRequestList`**, and restrict your output sizes/resolutions to a device-specific list of "high-speed approved" configurations returned by **`SCALER_STREAM_CONFIGURATION_MAP.getHighSpeedVideoSizes`**.
+O vídeo em câmera lenta captura momentos que o olho humano não consegue resolver: gotas de água se soltando de uma torneira a 120 fps (4× mais lento), as asas de um beija-flor batendo a 240 fps (8× mais lento) ou um balão estourando a 960 fps (32× mais lento em alguns flagships da Samsung). Implementar a captura com alta taxa de quadros no Android Camera2 não é apenas uma questão de definir `SENSOR_FRAME_DURATION` para um número pequeno — você deve usar um tipo de sessão dedicado chamado **`CameraConstrainedHighSpeedCaptureSession`**, enviar bursts de quadros pré-validados via **`createHighSpeedRequestList`** e restringir seus tamanhos/resoluções de saída a uma lista específica do dispositivo de configurações "aprovadas para alta velocidade" retornada por **`SCALER_STREAM_CONFIGURATION_MAP.getHighSpeedVideoSizes`**.
 
-This chapter draws directly on the *High-Speed Sessions* section of the project research document, which benchmarks the CPU cost of submitting 240 individual CaptureRequests per second (prohibitive — up to 70% CPU usage on a Snapdragon 8 Gen 2, vs < 5% with the constrained burst list) and enumerates the exact constraints the HAL enforces on output counts, FPS ranges, and template types. You can look up which FPS ranges your device supports for every camera ID in the [Android Camera Parameters](https://github.com/zoozooll/AndroidCameraParameters) app — also available on the [Google Play Store](https://play.google.com/store/apps/details?id=com.zoozooll.cameraparameters) — which exposes the raw output of `getHighSpeedVideoSizes()` and `getHighSpeedVideoFpsRangesFor()` in its Stream Configurations panel.
+Este capítulo baseia-se diretamente na seção *High-Speed Sessions* do documento de pesquisa do projeto, que avalia o custo de CPU de enviar 240 CaptureRequests individuais por segundo (proibitivo — até 70% de uso de CPU em um Snapdragon 8 Gen 2, vs < 5% com a lista de burst restrita) e enumera as restrições exatas que o HAL impõe sobre as contagens de saída, faixas de FPS e tipos de modelo. Você pode pesquisar quais faixas de FPS seu dispositivo suporta para cada ID de câmera no aplicativo [Android Camera Parameters](https://github.com/zoozooll/AndroidCameraParameters) — também disponível na [Google Play Store](https://play.google.com/store/apps/details?id=com.zoozooll.cameraparameters) — que expõe a saída bruta de `getHighSpeedVideoSizes()` e `getHighSpeedVideoFpsRangesFor()` em seu painel de Configurações de Fluxo.
 
-## Why Standard Sessions Won't Work at 240 FPS
+## Por Que Sessões Padrão Não Funcionam a 240 FPS
 
-Before diving into the dedicated high-speed API, understand what makes 240 fps fundamentally different from 30 fps capture:
+Antes de mergulhar na API de alta velocidade dedicada, entenda o que torna a captura de 240 fps fundamentalmente diferente da de 30 fps:
 
-- **Throughput**: A 1080p frame at 8-bit YUV_420_888 is ~3.0 MB. At 240 fps this is **720 MB/s** of pixel data flowing through memory — 8× the 30 fps load, and enough to saturate a MIPI D-PHY v1.2 link at full bandwidth.
-- **Latency budget**: A single frame interval at 240 fps is **4.167 ms**. If the Android camera service spends > 2 ms just marshalling a CaptureRequest parcel from userspace to HAL, you have already burned 50% of your budget before the sensor starts exposing.
-- **Jitter tolerance**: Individual `capture()` / `setRepeatingRequest()` calls go through the Framework → CameraService → HAL bridge via binder IPC, which introduces ±1 ms jitter under load. At 240 fps, even ±1 ms jitter causes visible frame-duration inconsistencies and A/V sync drift.
-- **CPU overhead**: Each `CaptureRequest` requires object construction, parcel marshalling, binder transaction, and HAL-side validation. Doing this 240×/sec in userspace was measured by the research team at **68–74% sustained CPU usage on a Snapdragon 8 Gen 2** (Cortex-X3 + A715), which will kill preview smoothness, drain the battery in 20 minutes, and crash the Thermal HAL long before you record a usable clip.
+- **Taxa de transferência (Throughput)**: Um quadro 1080p em YUV_420_888 de 8 bits tem ~3,0 MB. A 240 fps, isso representa **720 MB/s** de dados de pixel fluindo pela memória — 8× a carga de 30 fps, e o suficiente para saturar um link MIPI D-PHY v1.2 em largura de banda total.
+- **Orçamento de latência**: Um único intervalo de quadro a 240 fps é de **4,167 ms**. Se o serviço de câmera do Android gastar mais de 2 ms apenas organizando (marshalling) um pacote CaptureRequest do espaço do usuário para o HAL, você já queimou 50% do seu orçamento antes mesmo de o sensor começar a exposição.
+- **Tolerância a jitter**: Chamadas individuais de `capture()` / `setRepeatingRequest()` passam pela ponte Framework → CameraService → HAL via binder IPC, o que introduz um jitter de ±1 ms sob carga. A 240 fps, mesmo um jitter de ±1 ms causa inconsistências visíveis na duração do quadro e desvio na sincronização A/V.
+- **Sobrecarga de CPU**: Cada `CaptureRequest` exige construção de objeto, organização de pacotes, transação de binder e validação do lado do HAL. Fazer isso 240 vezes por segundo no espaço do usuário foi medido pela equipe de pesquisa em **68–74% de uso sustentado de CPU em um Snapdragon 8 Gen 2** (Cortex-X3 + A715), o que matará a fluidez da pré-visualização, drenará a bateria em 20 minutos e travará o HAL Térmico muito antes de você gravar um clipe utilizável.
 
-The **Constrained High-Speed Capture Session** solves all of these problems by collapsing N individual CaptureRequests into **one pre-validated burst list that the HAL hardware scheduler consumes directly**, bypassing the per-frame binder overhead entirely.
+A **Sessão de Captura de Alta Velocidade Restrita** resolve todos esses problemas ao colapsar N CaptureRequests individuais em **uma única lista de burst pré-validada que o agendador de hardware do HAL consome diretamente**, ignorando totalmente a sobrecarga de binder por quadro.
 
 ```mermaid
 flowchart TD
-    subgraph Standard["Standard CaptureSession (30/60 FPS)"]
-        S1["App Builds CaptureRequest\nper frame via Builder"] --> S2["Binder IPC to CameraService\n(1 call per frame)"]
-        S2 --> S3["CameraService Validates +\nDispatches to HAL"]
-        S3 --> S4["HAL Schedules Frame\non Sensor ISP Pipeline"]
-        S4 --> S5["Frame Output\n→ Surface / MediaCodec"]
+    subgraph Standard["Sessão de Captura Padrão (30/60 FPS)"]
+        S1["App Constrói CaptureRequest<br/>por quadro via Builder"] --> S2["Binder IPC para CameraService<br/>(1 chamada por quadro)"]
+        S2 --> S3["CameraService Valida +<br/>Despacha para o HAL"]
+        S3 --> S4["HAL Agenda o Quadro<br/>no Pipeline ISP do Sensor"]
+        S4 --> S5["Saída do Quadro<br/>→ Surface / MediaCodec"]
     end
 
     subgraph HighSpeed["CameraConstrainedHighSpeedCaptureSession (120/240 FPS)"]
-        H1["App Calls createHighSpeedRequestList()\nONCE — builds burst list"] --> H2["HAL Pre-Validates ALL Frames\nin Burst List (timings, sizes, FPS)"]
-        H2 --> H3["Burst List Loaded into\nHAL Hardware Scheduler"]
-        H3 --> H4["Scheduler Drives Sensor + ISP\nDirectly — No Per-Frame Binder"]
-        H4 --> H5["240 Frames/sec Output\n→ MediaCodec Video Encoder"]
+        H1["App chama createHighSpeedRequestList()<br/>UMA VEZ — constrói lista de burst"] --> H2["HAL Pré-Valida TODOS os Quadros<br/>na Lista de Burst (tempos, tamanhos, FPS)"]
+        H2 --> H3["Lista de Burst Carregada no<br/>Agendador de Hardware do HAL"]
+        H3 --> H4["Agendador Conduz Sensor + ISP<br/>Diretamente — Sem Binder por Quadro"]
+        H4 --> H5["Saída de 240 Quadros/seg<br/>→ Codificador de Vídeo MediaCodec"]
     end
 ```
 
-The diagram makes the architectural difference explicit: the standard path has a binder IPC waterfall for every frame, while the high-speed path constructs and validates the schedule once, then lets the HAL's dedicated hardware sequencer deliver frames uninterrupted.
+O diagrama torna explícita a diferença arquitetural: o caminho padrão tem uma cascata de binder IPC para cada quadro, enquanto o caminho de alta velocidade constrói e valida o cronograma uma vez, permitindo que o sequenciador de hardware dedicado do HAL entregue os quadros sem interrupção.
 
-## Supported FPS Ranges and Slow-Motion Factors
+## Faixas de FPS Suportadas e Fatores de Câmera Lenta
 
-The Android Camera2 API does not expose "slow motion" as a feature — it exposes **`FpsRange`** pairs `[min, max]` where min == max for fixed-FPS capture. The slow-motion playback factor is derived by dividing the capture FPS by the playback FPS (which is almost always 30 fps for consumer video):
+A API Android Camera2 não expõe "câmera lenta" como um recurso — ela expõe pares de **`FpsRange`** `[min, max]` onde min == max para captura de FPS fixo. O fator de reprodução em câmera lenta é derivado dividindo o FPS de captura pelo FPS de reprodução (que é quase sempre 30 fps para vídeo de consumo):
 
-| Capture FPS | Fixed `FpsRange` | Playback @ 30 fps → Slow-Motion Factor | Typical Minimum Resolution | Typical Device Tier |
+| FPS de Captura | `FpsRange` Fixo | Reprodução @ 30 fps → Fator de Câmera Lenta | Resolução Mínima Típica | Nível de Dispositivo Típico |
 |-------------|------------------|----------------------------------------|----------------------------|---------------------|
-| 120 | `[120, 120]` | 120 ÷ 30 = **4× slower** | 1280×720 (720p) | Mid-range and above |
-| 240 | `[240, 240]` | 240 ÷ 30 = **8× slower** | 1280×720 or 1920×1080 | Flagship (Snapdragon 8-series, Exynos 2xxx) |
-| 480 | `[480, 480]` | 480 ÷ 30 = **16× slower** | 720p (usually cropped) | Gaming phones (Black Shark, ROG Phone, RedMagic) |
-| 960 | `[960, 960]` | 960 ÷ 30 = **32× slower** | 720p (DRAM-buffered, short &lt;0.5 sec bursts) | Samsung Galaxy S/Ultra, Sony Xperia 1-series |
+| 120 | `[120, 120]` | 120 ÷ 30 = **4× mais lento** | 1280×720 (720p) | Intermediário e superior |
+| 240 | `[240, 240]` | 240 ÷ 30 = **8× mais lento** | 1280×720 ou 1920×1080 | Flagship (Série Snapdragon 8, Exynos 2xxx) |
+| 480 | `[480, 480]` | 480 ÷ 30 = **16× mais lento** | 720p (geralmente cortado) | Celulares gamers (Black Shark, ROG Phone, RedMagic) |
+| 960 | `[960, 960]` | 960 ÷ 30 = **32× mais lento** | 720p (bufferizado em DRAM, rajadas curtas < 0,5 seg) | Samsung Galaxy S/Ultra, Série Sony Xperia 1 |
 
-Crucially, **960 fps and 480 fps modes are typically "super-slow-motion" modes that require on-sensor DRAM buffering** and only capture ~0.33–0.5 seconds of footage before filling the buffer — these modes are NOT exposed through `CameraConstrainedHighSpeedCaptureSession` (the standard session cannot keep up), and are instead handled by vendor-specific extensions or via the CameraX ExtensionsManager on OEM-whitelisted devices. This chapter focuses on 120 fps and 240 fps, which are the two ranges the standard Camera2 constrained-high-speed API universally supports.
+Fundamentalmente, **os modos de 960 fps e 480 fps são tipicamente modos de "super-câmera lenta" que exigem buffer de DRAM no sensor** e capturam apenas ~0,33–0,5 segundos de filmagem antes de encher o buffer — esses modos NÃO são expostos através da `CameraConstrainedHighSpeedCaptureSession` (a sessão padrão não consegue acompanhar) e são tratados por extensões específicas do fabricante ou via CameraX ExtensionsManager em dispositivos permitidos pelos OEMs. Este capítulo foca em 120 fps e 240 fps, que são as duas faixas que a API de alta velocidade restrita padrão do Camera2 suporta universalmente.
 
-## Querying High-Speed Sizes and FPS Ranges
+## Consultando Tamanhos e Faixas de FPS de Alta Velocidade
 
-The correct way to enumerate supported high-speed configurations is **NOT** `getOutputSizes()` — regular output sizes often include 1080p, but the HAL may refuse 1080p at 240 fps due to MIPI bandwidth limits. You must call two dedicated methods on `StreamConfigurationMap`:
+A maneira correta de enumerar as configurações de alta velocidade suportadas **NÃO** é através de `getOutputSizes()` — os tamanhos de saída regulares costumam incluir 1080p, mas o HAL pode recusar 1080p a 240 fps devido aos limites de largura de banda MIPI. Você deve chamar dois métodos dedicados no `StreamConfigurationMap`:
 
 ```kotlin
 import android.hardware.camera2.CameraCharacteristics
@@ -88,31 +88,31 @@ fun queryHighSpeedProfiles(
 }
 ```
 
-The `highSpeedVideoSizes` property is the authoritative list. If a 1080p size does not appear here, then attempting to create a constrained high-speed session at 1080p will throw `IllegalArgumentException` even if `getOutputSizes(PRAGMA)` lists it. The research doc notes that 2021–2024 flagships universally support `Size(1920, 1080)` with both `[120,120]` and `[240,240]`, while mid-range devices support only `Size(1280, 720)` with `[120,120]`.
+A propriedade `highSpeedVideoSizes` é a lista autoritativa. Se um tamanho 1080p não aparecer aqui, tentar criar uma sessão de alta velocidade restrita em 1080p lançará uma `IllegalArgumentException`, mesmo que o `getOutputSizes(PRAGMA)` o liste. O documento de pesquisa observa que os flagships de 2021–2024 suportam universalmente `Size(1920, 1080)` com `[120,120]` e `[240,240]`, enquanto dispositivos intermediários suportam apenas `Size(1280, 720)` com `[120,120]`.
 
-The Android Camera Parameters app renders the exact output of `highSpeedVideoSizes` and `getHighSpeedVideoFpsRangesFor()` in the Stream Config → High-Speed tab, so you can confirm your code's output against a proven enumerator.
+O aplicativo Android Camera Parameters renderiza a saída exata de `highSpeedVideoSizes` e `getHighSpeedVideoFpsRangesFor()` na aba Stream Config → High-Speed, para que você possa confirmar a saída do seu código contra um enumerador comprovado.
 
-## Constraints Enforced by the HAL
+## Restrições Impostas pelo HAL
 
-The *High-Speed Sessions* section of the project research document enumerates the exact input/output constraints that `createCaptureSession` will validate before a `CameraConstrainedHighSpeedCaptureSession` is created. Violate any constraint and you will receive a `onConfigureFailed()` callback with no explanation:
+A seção *High-Speed Sessions* do documento de pesquisa do projeto enumera as restrições exatas de entrada/saída que o `createCaptureSession` validará antes de uma `CameraConstrainedHighSpeedCaptureSession` ser criada. Violando qualquer restrição, você receberá um callback `onConfigureFailed()` sem explicação:
 
-| Constraint ID | Requirement |
+| ID da Restrição | Requisito |
 |---------------|-------------|
-| **HS-1** | Output surface count must be ≤ 2. Typical combo: `MediaCodec input surface` + `SurfaceView preview`. Adding a 3rd surface (e.g. `ImageReader` for stills) is NOT allowed. |
-| **HS-2** | All output surfaces MUST have sizes listed in `highSpeedVideoSizes` (same size for both surfaces, or one size from the list per surface). |
-| **HS-3** | FPS range in every CaptureRequest in the burst MUST come from `getHighSpeedVideoFpsRangesFor(size)` for the chosen size. `[30,120]` adaptive FPS is NOT allowed — min must equal max for fixed-FPS. |
-| **HS-4** | Only templates `TEMPLATE_RECORD` and `TEMPLATE_PREVIEW` are allowed. `TEMPLATE_STILL_CAPTURE`, `TEMPLATE_MANUAL`, and `TEMPLATE_VIDEO_SNAPSHOT` are rejected by `createHighSpeedRequestList`. |
-| **HS-5** | Burst length from `createHighSpeedRequestList()` must be ≥ 2 frames. The HAL scheduler needs at least one complete frame interval to pre-load timing. |
-| **HS-6** | Output format is restricted to `PRIVATE` (SurfaceView / MediaCodec surface) or `YUV_420_888` (ImageReader for on-device processing). `JPEG`, `RAW_SENSOR`, and `HEIC` are disallowed. |
-| **HS-7** | `CONTROL_AE_TARGET_FPS_RANGE` is locked to the burst's FPS value once the session is active. Attempting to change it in a later burst will cause that burst to be silently dropped. |
+| **HS-1** | A contagem de superfícies de saída deve ser ≤ 2. Combinação típica: `superfície de entrada MediaCodec` + `preview SurfaceView`. Adicionar uma 3ª superfície (ex: `ImageReader` para fotos) NÃO é permitido. |
+| **HS-2** | Todas as superfícies de saída DEVEM ter tamanhos listados em `highSpeedVideoSizes` (mesmo tamanho para ambas as superfícies, ou um tamanho da lista por superfície). |
+| **HS-3** | A faixa de FPS em cada CaptureRequest no burst DEVE vir de `getHighSpeedVideoFpsRangesFor(size)` para o tamanho escolhido. FPS adaptativo `[30,120]` NÃO é permitido — o mínimo deve ser igual ao máximo para FPS fixo. |
+| **HS-4** | Apenas os modelos `TEMPLATE_RECORD` e `TEMPLATE_PREVIEW` são permitidos. `TEMPLATE_STILL_CAPTURE`, `TEMPLATE_MANUAL` e `TEMPLATE_VIDEO_SNAPSHOT` são rejeitados por `createHighSpeedRequestList`. |
+| **HS-5** | O comprimento do burst de `createHighSpeedRequestList()` deve ser ≥ 2 quadros. O agendador do HAL precisa de pelo menos um intervalo de quadro completo para pré-carregar o tempo. |
+| **HS-6** | O formato de saída é restrito a `PRIVATE` (superfície SurfaceView / MediaCodec) ou `YUV_420_888` (ImageReader para processamento no dispositivo). `JPEG`, `RAW_SENSOR` e `HEIC` são proibidos. |
+| **HS-7** | `CONTROL_AE_TARGET_FPS_RANGE` é travado no valor de FPS do burst assim que a sessão está ativa. Tentar alterá-lo em um burst posterior fará com que esse burst seja descartado silenciosamente. |
 
-Constraint **HS-1** is the most commonly violated in practice — developers try to attach an ImageReader for per-frame YUV analysis alongside MediaCodec encoding, and the HAL silently refuses the configuration. If you need simultaneous preview + encode + per-frame processing at 240 fps, use the MediaCodec output surface **and** read YUV frames back from the encoder's output ByteBuffer via `MediaCodec.dequeueOutputBuffer()` with `BUFFER_FLAG_KEY_FRAME` filtering — never attach two independent YUV outputs.
+A restrição **HS-1** é a mais comumente violada na prática — os desenvolvedores tentam anexar um ImageReader para análise YUV por quadro junto com a codificação MediaCodec, e o HAL recusa silenciosamente a configuração. Se você precisar de pré-visualização + codificação + processamento por quadro simultâneos a 240 fps, use a superfície de saída MediaCodec **e** leia os quadros YUV de volta do ByteBuffer de saída do codificador via `MediaCodec.dequeueOutputBuffer()` com filtragem `BUFFER_FLAG_KEY_FRAME` — nunca anexe duas saídas YUV independentes.
 
-## Setting Up the Constrained High-Speed Session and Recording
+## Configurando a Sessão de Alta Velocidade Restrita e Gravação
 
-### Step 1: Build the MediaRecorder / MediaCodec Encoder
+### Passo 1: Construir o MediaRecorder / Codificador MediaCodec
 
-For simplicity the code below uses `MediaRecorder` (which handles audio muxing internally). For HEVC encoding or low-latency streaming you would use `MediaCodec.createEncoderByType("video/hevc")` directly, but the Surface feeding either is identical.
+Para simplificar, o código abaixo usa o `MediaRecorder` (que lida com a multiplexação de áudio internamente). Para codificação HEVC ou streaming de baixa latência, você usaria o `MediaCodec.createEncoderByType("video/hevc")` diretamente, mas a Surface que alimenta ambos é idêntica.
 
 ```kotlin
 import android.hardware.camera2.CameraDevice
@@ -139,19 +139,19 @@ fun setupMediaRecorder(outputFile: File,
         setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
         setOutputFile(outputFile.absolutePath)
 
-        setVideoEncodingBitRate(40_000_000) // 40 Mbps for 240fps 1080p
+        setVideoEncodingBitRate(40_000_000) // 40 Mbps para 1080p a 240fps
         setVideoFrameRate(fps)
         setVideoSize(size.width, size.height)
-        setVideoEncoder(MediaRecorder.VideoEncoder.HEVC) // H.265 for better size
+        setVideoEncoder(MediaRecorder.VideoEncoder.HEVC) // H.265 para melhor tamanho
 
         setAudioEncodingBitRate(192_000)
         setAudioSamplingRate(48_000)
         setAudioChannels(2)
         setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
 
-        setCaptureRate(fps.toDouble()) // THIS IS WHAT TRIGGERS SLOW-MOTION
-        // ^ Captures at fps variable, but playback in MP4 metadata = 30 fps
-        //   resulting in (fps / 30)× slow-motion
+        setCaptureRate(fps.toDouble()) // ISSO É O QUE DISPARA A CÂMERA LENTA
+        // ^ Captura em fps variável, mas a reprodução nos metadados do MP4 = 30 fps
+        //   resultando em (fps / 30)× câmera lenta
 
         prepare()
     }
@@ -159,11 +159,11 @@ fun setupMediaRecorder(outputFile: File,
 }
 ```
 
-The critical line that actually creates slow motion (rather than just high-framerate playback) is **`setCaptureRate(fps.toDouble())`**. This writes an MP4 `tkhd` box with a 30 fps playback timescale and a per-frame duration equal to `1/fps` seconds at capture time. Most video players (YouTube, Instagram, Google Photos, ExoPlayer) honor the capture-rate metadata and play the clip at 30 fps, giving the 4× (120÷30) or 8× (240÷30) slowdown that users expect.
+A linha crítica que realmente cria a câmera lenta (em vez de apenas uma reprodução com alta taxa de quadros) é **`setCaptureRate(fps.toDouble())`**. Isso grava um box `tkhd` do MP4 com uma escala de tempo de reprodução de 30 fps e uma duração por quadro igual a `1/fps` segundos no momento da captura. A maioria dos reprodutores de vídeo (YouTube, Instagram, Google Fotos, ExoPlayer) respeita os metadados de taxa de captura e reproduz o clipe a 30 fps, proporcionando a desaceleração de 4× (120÷30) ou 8× (240÷30) que os usuários esperam.
 
-### Step 2: Create the CameraConstrainedHighSpeedCaptureSession
+### Passo 2: Criar a CameraConstrainedHighSpeedCaptureSession
 
-The session constructor name is a clear signal: instead of `createCaptureSession`, you call **`createConstrainedHighSpeedCaptureSession`** and provide an output list limited to the constraint rules (≤ 2 surfaces, both from highSpeedVideoSizes).
+O nome do construtor da sessão é um sinal claro: em vez de `createCaptureSession`, você chama **`createConstrainedHighSpeedCaptureSession`** e fornece uma lista de saída limitada pelas regras de restrição (≤ 2 superfícies, ambas do `highSpeedVideoSizes`).
 
 ```kotlin
 import android.hardware.camera2.CameraCaptureSession
@@ -207,17 +207,17 @@ fun createHighSpeedSession(
 
                 highSpeedSession.setRepeatingBurst(
                     highSpeedRequestList,
-                    null, // Skip per-frame callbacks at 240fps!
+                    null, // Ignorar callbacks por quadro a 240fps!
                     backgroundHandler
                 )
 
-                // Now start the MediaRecorder when user taps RECORD button
+                // Agora inicie o MediaRecorder quando o usuário tocar no botão RECORD
                 mediaRecorder.start()
             }
 
             override fun onConfigureFailed(session: CameraCaptureSession) {
-                Log.e(TAG, "High-speed session config FAILED. " +
-                      "Check HS-1..HS-7 constraints are satisfied.")
+                Log.e(TAG, "Falha na config da sessão de alta velocidade. " +
+                      "Verifique se as restrições HS-1..HS-7 foram satisfeitas.")
             }
         },
         backgroundHandler
@@ -225,54 +225,54 @@ fun createHighSpeedSession(
 }
 ```
 
-Every line here is deliberate and directly maps to a research-doc constraint:
-- **`TEMPLATE_RECORD`** → satisfies constraint HS-4.
-- **`CONTROL_AE_TARGET_FPS_RANGE = [240,240]`** → satisfies constraint HS-3.
-- **Exactly 2 output surfaces** (preview + recording) → satisfies constraint HS-1.
-- **`createHighSpeedRequestList(recordBuilder.build())`** → creates the minimum-length (2 frame) pre-validated burst that the HAL scheduler consumes directly.
-- **Per-frame CaptureCallback is `null`** → another performance optimization. Enabling per-frame callbacks at 240 fps causes binder IPC floods of ~2 MB/s of CaptureResult parcels, which is measurable in the Thermal HAL CPU throttling. Only enable callbacks for short debugging windows, never in production recording.
+Cada linha aqui é deliberada e mapeia diretamente para uma restrição do documento de pesquisa:
+- **`TEMPLATE_RECORD`** → satisfaz a restrição HS-4.
+- **`CONTROL_AE_TARGET_FPS_RANGE = [240,240]`** → satisfaz a restrição HS-3.
+- **Exatamente 2 superfícies de saída** (preview + gravação) → satisfaz a restrição HS-1.
+- **`createHighSpeedRequestList(recordBuilder.build())`** → cria o burst pré-validado de comprimento mínimo (2 quadros) que o agendador do HAL consome diretamente.
+- **O CaptureCallback por quadro é `null`** → outra otimização de desempenho. Ativar callbacks por quadro a 240 fps causa inundações de binder IPC de ~2 MB/s de pacotes CaptureResult, o que é mensurável na aceleração da CPU do HAL Térmico. Só ative callbacks para janelas curtas de depuração, nunca em gravações de produção.
 
-## Architecture: Normal Pipeline vs High-Speed Pipeline (Detailed Mermaid)
+## Arquitetura: Pipeline Normal vs Pipeline de Alta Velocidade (Mermaid Detalhado)
 
 ```mermaid
 flowchart LR
-    subgraph NormalPipeline["Normal 30/60 FPS Recording Pipeline"]
-        NP1[Sensor 30fps Readout] --> NP2[Full ISP Pipeline:\nDemosaic + NR + Color + Tone]
-        NP2 --> NP3[Framework Queue\neach CaptureRequest via Binder]
-        NP3 --> NP4[Hardware JPEG/HEVC\nEncoder Block]
-        NP4 --> NP5[File Writer /\nNetwork Streamer]
+    subgraph NormalPipeline["Pipeline de Gravação Normal 30/60 FPS"]
+        NP1[Leitura do Sensor 30fps] --> NP2[Pipeline ISP Completo:<br/>Demosaic + NR + Cor + Tom]
+        NP2 --> NP3[Fila do Framework<br/>cada CaptureRequest via Binder]
+        NP3 --> NP4[Bloco Codificador<br/>JPEG/HEVC por Hardware]
+        NP4 --> NP5[Gravador de Arquivo /<br/>Streamer de Rede]
     end
 
-    subgraph HSPipeline["240 FPS Constrained High-Speed Pipeline"]
-        HP1[Sensor 240fps Readout\nvia MIPI D-PHY High-Speed Mode] --> HP2[Minimal / Fast ISP:\nBinning + Lite Noise Reduction\n(No Heavy Tone Mapping)]
-        HP2 --> HP3["HAL Hardware Scheduler\nBurst List (pre-validated)\n← NO binder per-frame"]
-        HP3 --> HP4["Dedicated HEVC/H.264\nEncoder (High-Throughput Mode)"]
-        HP4 --> HP5[MediaRecorder Muxes\nAudio + MP4 Container]
+    subgraph HSPipeline["Pipeline de Alta Velocidade Restrito 240 FPS"]
+        HP1[Leitura do Sensor 240fps<br/>via Modo High-Speed MIPI D-PHY] --> HP2[ISP Mínimo / Rápido:<br/>Binning + Redução de Ruído Leve<br/>(Sem Mapeamento de Tons Pesado)]
+        HP2 --> HP3["Agendador de Hardware do HAL<br/>Lista de Burst (pré-validada)<br/>← SEM binder por quadro"]
+        HP3 --> HP4["Codificador HEVC/H.264 Dedicado<br/>(Modo de Alto Rendimento)"]
+        HP4 --> HP5[MediaRecorder Multiplexa<br/>Áudio + Contêiner MP4]
     end
 
     style HSPipeline fill:#fff4dd,stroke:#c58111
     style NormalPipeline fill:#e5f3ff,stroke:#2563eb
 ```
 
-The high-speed ISP (HP2 block) is intentionally **lightweight**: most flagships drop demosaic resolution by 2× binning, skip multi-frame temporal noise reduction (only single-frame spatial), and apply a linear tone curve instead of the standard non-linear gamma, all to stay within the 4.167 ms/frame budget. This is why 240 fps video looks softer and noisier than 30 fps video at the same resolution — it is not your imagination, it is a deliberate ISP tradeoff mandated by physics.
+O ISP de alta velocidade (bloco HP2) é intencionalmente **leve**: a maioria dos flagships reduz a resolução do demosaic via binning 2×, ignora a redução de ruído temporal multi-quadro (apenas espacial de quadro único) e aplica uma curva de tom linear em vez da gama não linear padrão, tudo para permanecer dentro do orçamento de 4,167 ms/quadro. É por isso que o vídeo de 240 fps parece mais suave e com mais ruído do que o vídeo de 30 fps na mesma resolução — não é sua imaginação, é uma compensação deliberada do ISP imposta pela física.
 
-## CPU Overhead Benchmarks from Research Doc
+## Benchmarks de Sobrecarga de CPU do Documento de Pesquisa
 
-The *High-Speed Sessions* section of the project research document contains the following empirical measurements on a Snapdragon 8 Gen 2 (Xiaomi 13) at 1920×1080 resolution:
+A seção *High-Speed Sessions* do documento de pesquisa do projeto contém as seguintes medições empíricas em um Snapdragon 8 Gen 2 (Xiaomi 13) na resolução 1920×1080:
 
-| Configuration | CPU Usage (Big Cores) | CPU Usage (Little Cores) | Thermal Throttle Time | Frames Dropped/10 min |
+| Configuração | Uso de CPU (Núcleos Grandes) | Uso de CPU (Núcleos Pequenos) | Tempo para Limite Térmico | Quadros Descartados/10 min |
 |---------------|----------------------|--------------------------|-----------------------|----------------------|
-| **Standard Session, 60 fps, repeatingRequest** | 8% | 12% | > 30 min | 0 |
-| **Standard Session, 120 fps, repeatingRequest** | 34% | 41% | ~11 min | 218 frames |
-| **Standard Session, 240 fps, repeatingRequest** | **68–74%** | **59–62%** | **~3.5 min** | **4,890 frames** |
-| **Constrained HS Session, 120 fps, repeatingBurst** | **< 3%** | **< 5%** | **> 30 min** | **0** |
-| **Constrained HS Session, 240 fps, repeatingBurst** | **< 5%** | **< 7%** | **> 30 min** | **2 frames** |
+| **Sessão Padrão, 60 fps, repeatingRequest** | 8% | 12% | > 30 min | 0 |
+| **Sessão Padrão, 120 fps, repeatingRequest** | 34% | 41% | ~11 min | 218 quadros |
+| **Sessão Padrão, 240 fps, repeatingRequest** | **68–74%** | **59–62%** | **~3,5 min** | **4.890 quadros** |
+| **Sessão HS Restrita, 120 fps, repeatingBurst** | **< 3%** | **< 5%** | **> 30 min** | **0** |
+| **Sessão HS Restrita, 240 fps, repeatingBurst** | **< 5%** | **< 7%** | **> 30 min** | **2 quadros** |
 
-The numbers speak for themselves. The constrained burst list at 240 fps uses **~8× less CPU** than the standard session approach, never throttles, and drops only 2 frames over 10 minutes (due to a single thermal interrupt). This is why `CameraConstrainedHighSpeedCaptureSession` is **the only supported path for high-speed recording** — any other approach is technically functional but practically unusable due to thermal, battery, and frame-drop issues.
+Os números falam por si sós. A lista de burst restrita a 240 fps usa **~8× menos CPU** do que a abordagem de sessão padrão, nunca atinge o limite térmico e descarta apenas 2 quadros em 10 minutos (devido a uma única interrupção térmica). É por isso que a `CameraConstrainedHighSpeedCaptureSession` é **o único caminho suportado para gravação em alta velocidade** — qualquer outra abordagem é tecnicamente funcional, mas praticamente inutilizável devido a problemas térmicos, de bateria e de descarte de quadros.
 
-## Stopping Recording and Releasing Resources
+## Parando a Gravação e Liberando Recursos
 
-The shutdown sequence for high-speed sessions is order-sensitive: stop the MediaRecorder **before** aborting the repeating burst, because stopping the burst first flushes the encoder's input surface and can drop the final keyframe required for the MP4 `moov` atom.
+A sequência de desligamento para sessões de alta velocidade é sensível à ordem: pare o MediaRecorder **antes** de abortar o burst repetido, porque parar o burst primeiro limpa a superfície de entrada do codificador e pode descartar o quadro-chave final necessário para o átomo `moov` do MP4.
 
 ```kotlin
 import android.hardware.camera2.CameraConstrainedHighSpeedCaptureSession
@@ -281,40 +281,40 @@ fun stopHighSpeedRecording(
     highSpeedSession: CameraConstrainedHighSpeedCaptureSession
 ) {
     try {
-        // 1. STOP MEDIARECORDER FIRST
+        // 1. PARE O MEDIARECORDER PRIMEIRO
         mediaRecorder.stop()
         mediaRecorder.reset()
     } catch (e: RuntimeException) {
-        // No valid frames recorded — no MP4 atom written; ignore
+        // Nenhum quadro válido gravado — nenhum átomo MP4 escrito; ignorar
     }
 
-    // 2. Abort repeating burst
+    // 2. Abortar o burst repetido
     highSpeedSession.stopRepeating()
 
-    // 3. Abort any pending captures
+    // 3. Abortar quaisquer capturas pendentes
     highSpeedSession.abortCaptures()
 
-    // 4. Close session
+    // 4. Fechar a sessão
     highSpeedSession.close()
 
-    // 5. Release MediaRecorder LAST
+    // 5. Liberar o MediaRecorder POR ÚLTIMO
     mediaRecorder.release()
 }
 ```
 
-## Summary
+## Resumo
 
-This chapter covered the full implementation of 120 fps and 240 fps slow-motion recording via the Android Camera2 constrained high-speed path:
+Este capítulo cobriu a implementação completa da gravação em câmera lenta de 120 fps e 240 fps através do caminho de alta velocidade restrito do Android Camera2:
 
-- **CameraConstrainedHighSpeedCaptureSession** is the only supported API for high frame rates, because individual per-frame CaptureRequests via binder cause prohibitive CPU overhead (68%+ at 240 fps, thermal throttling in 3.5 minutes per research benchmarks).
-- **`getHighSpeedVideoSizes()` + `getHighSpeedVideoFpsRangesFor(size)`** are the authoritative enumerators — regular `getOutputSizes()` results may be rejected by the HAL.
-- **Slow-motion factor** = capture fps ÷ 30 fps playback: 120 fps → 4× slow, 240 fps → 8× slow. Use `MediaRecorder.setCaptureRate(fps)` to embed the correct slow-motion playback metadata in the MP4 container.
-- **`createHighSpeedRequestList(builder.build())`** is mandatory. This pre-validates every frame in a burst list and loads it directly into the HAL hardware scheduler, eliminating per-frame binder IPC.
-- **7 HAL constraints (HS-1 through HS-7)** are strictly enforced. Most common failure: > 2 output surfaces.
-- **Architectural Mermaid diagram** shows the lightweight/fast ISP used at 240 fps (binning, lite NR) vs the full ISP in the 30 fps pipeline.
+- **CameraConstrainedHighSpeedCaptureSession** é a única API suportada para altas taxas de quadros, porque as CaptureRequests individuais por quadro via binder causam uma sobrecarga de CPU proibitiva (68%+ a 240 fps, limite térmico em 3,5 minutos conforme benchmarks de pesquisa).
+- **`getHighSpeedVideoSizes()` + `getHighSpeedVideoFpsRangesFor(size)`** são os enumeradores autoritativos — resultados regulares de `getOutputSizes()` podem ser rejeitados pelo HAL.
+- **Fator de câmera lenta** = fps de captura ÷ reprodução de 30 fps: 120 fps → 4× mais lento, 240 fps → 8× mais lento. Use `MediaRecorder.setCaptureRate(fps)` para incorporar os metadados corretos de reprodução em câmera lenta no contêiner MP4.
+- **`createHighSpeedRequestList(builder.build())`** é obrigatório. Isso pré-valida cada quadro em uma lista de burst e a carrega diretamente no agendador de hardware do HAL, eliminando o binder IPC por quadro.
+- **7 restrições do HAL (HS-1 a HS-7)** são rigorosamente aplicadas. Falha mais comum: > 2 superfícies de saída.
+- **Diagrama Mermaid arquitetural** mostra o ISP leve/rápido usado a 240 fps (binning, NR leve) vs o ISP completo no pipeline de 30 fps.
 
-## What's Next
+## O Que Vem a Seguir
 
-In **Chapter 20: Multi-Camera**, we enter the world of Android 9+ logical cameras — virtual devices that group multiple same-facing physical cameras (ultra-wide, wide, telephoto) and let the HAL transparently switch lenses at zoom thresholds. You will learn to retrieve `getPhysicalCameraIds()`, differentiate between APPROXIMATE vs CALIBRATED sensor sync, and use **`OutputConfiguration.setPhysicalCameraId()`** to capture frames from BOTH the wide and telephoto sensors simultaneously in a single CaptureRequest for computational-photography disparity matching.
+No **Capítulo 20: Multicâmera**, entramos no mundo das câmeras lógicas do Android 9+ — dispositivos virtuais que agruparam várias câmeras físicas na mesma direção (ultra-wide, wide, teleobjetiva) e permitem que o HAL troque as lentes de forma transparente nos limites de zoom. Você aprenderá a recuperar `getPhysicalCameraIds()`, diferenciar entre sincronização de sensor APPROXIMATE vs CALIBRATED e usar o **`OutputConfiguration.setPhysicalCameraId()`** para capturar quadros dos sensores wide e teleobjetiva simultaneamente em uma única CaptureRequest para correspondência de disparidade em fotografia computacional.
 
-Check the [Android Camera Parameters](https://play.google.com/store/apps/details?id=com.zoozooll.cameraparameters) app to see if your device reports `REQUEST_AVAILABLE_CAPABILITIES_LOGICAL_MULTI_CAMERA` and browse the full list of physical camera IDs per logical device in the open-source [GitHub repository](https://github.com/zoozooll/AndroidCameraParameters) — contributions of new device reports are always welcome.
+Verifique se o seu dispositivo relata `REQUEST_AVAILABLE_CAPABILITIES_LOGICAL_MULTI_CAMERA` no aplicativo [Android Camera Parameters](https://play.google.com/store/apps/details?id=com.zoozooll.cameraparameters) e navegue pela lista completa de IDs de câmera física por dispositivo lógico no [repositório de código aberto no GitHub](https://github.com/zoozooll/AndroidCameraParameters) — contribuições de novos relatórios de dispositivos são sempre bem-vindas.

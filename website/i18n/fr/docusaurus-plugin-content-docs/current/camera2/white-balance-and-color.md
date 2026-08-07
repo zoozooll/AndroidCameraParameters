@@ -1,35 +1,35 @@
 ---
 sidebar_position: 16
-title: "Chapter 16: White Balance & Color"
-description: Control color in Android Camera2 with Auto White Balance presets and manual color correction. Learn AWB modes, color temperature (2000K–10000K), 3×3 color transforms, COLOR_CORRECTION_GAINS, and working Kotlin code for warm-tone sunset presets and full manual white balance.
-keywords: [android camera2 white balance, CONTROL_AWB_MODE, COLOR_CORRECTION_GAINS, COLOR_CORRECTION_TRANSFORM, color temperature, color correction matrix, Rec.709 vs DCI-P3 camera2]
+title: "Chapitre 16 : Balance des blancs et couleur"
+description: Contrôlez la couleur dans Android Camera2 avec les préréglages de balance des blancs automatique et la correction manuelle des couleurs. Apprenez les modes AWB, la température de couleur (2000K–10000K), les transformations de couleur 3x3, COLOR_CORRECTION_GAINS et le code Kotlin fonctionnel pour les préréglages de coucher de soleil aux tons chauds et la balance des blancs manuelle complète.
+keywords: [balance des blancs android camera2, CONTROL_AWB_MODE, COLOR_CORRECTION_GAINS, COLOR_CORRECTION_TRANSFORM, température de couleur, matrice de correction de couleur, Rec.709 vs DCI-P3 camera2]
 ---
 
-# Chapter 16: White Balance & Color
+# Chapitre 16 : Balance des blancs et couleur
 
-You've mastered brightness (exposure) and sharpness (focus). Now it's time to control the **look** — the *color tone* of the image.
+Vous maîtrisez la luminosité (exposition) et la netteté (mise au point). Il est maintenant temps de contrôler l'**aspect** — le *ton chromatique* de l'image.
 
-When you take a photo of a white piece of paper under a warm incandescent lamp, the lamp's yellow/orange light hits the paper, and the sensor sees it as orange. *Your brain* corrects for this instantly and still sees "white paper" — but the raw sensor data records the truth: it's orange.
+Lorsque vous prenez une photo d'une feuille de papier blanche sous une lampe à incandescence chaude, la lumière jaune/orange de la lampe frappe le papier, et le capteur la voit comme orange. *Votre cerveau* corrige cela instantanément et voit toujours du "papier blanc" — mais les données brutes du capteur enregistrent la vérité : c'est orange.
 
-**White Balance (WB)** is the camera's process of compensating for the color of the light source so that neutral whites look neutral. Get it wrong, and your entire photo has an unwanted color cast (too orange, too blue, too green).
+La **balance des blancs (White Balance - WB)** est le processus par lequel la caméra compense la couleur de la source lumineuse pour que les blancs neutres paraissent neutres. Si vous vous trompez, toute votre photo aura une dominante de couleur indésirable (trop orange, trop bleue, trop verte).
 
-The [Android Camera Parameters app](https://github.com/zoozooll/AndroidCameraParameters) showcases every AWB preset in a live grid view and exposes a manual gains slider — open the app, switch to the White Balance panel, and you can watch exactly what we'll implement in this chapter.
+L'application [Android Camera Parameters](https://github.com/zoozooll/AndroidCameraParameters) présente chaque préréglage AWB dans une vue en grille en direct et expose un curseur de gains manuels — ouvrez l'application, passez au panneau Balance des blancs, et vous pourrez observer exactement ce que nous allons implémenter dans ce chapitre.
 
 ---
 
-## Color Temperature: The Warm-to-Cool Spectrum
+## Température de couleur : Le spectre du chaud au froid
 
-Light sources are described by their **color temperature** in Kelvin (K). The scale describes the temperature of a theoretical "black body radiator" that glows the same color.
+Les sources lumineuses sont décrites par leur **température de couleur** en Kelvin (K). L'échelle décrit la température d'un "radiateur à corps noir" théorique qui émettrait la même couleur de lueur.
 
 ```mermaid
 graph LR
-    A[1800K<br/>Candlelight] --> B[2800K<br/>Incandescent Lamp]
-    B --> C[3500K<br/>Warm Fluorescent]
-    C --> D[4500K<br/>Cool Fluorescent]
-    D --> E[5500K<br/>Daylight / Flash]
-    E --> F[6500K<br/>Overcast Day]
-    F --> G[8000K<br/>Open Shade]
-    G --> H[10000K+<br/>Blue Sky / Deep Shade]
+    A["1800K<br/>Lueur de bougie"] --> B["2800K<br/>Lampe à incandescence"]
+    B --> C[3500K<br/>Fluorescent chaud]
+    C --> D[4500K<br/>Fluorescent froid]
+    D --> E[5500K<br/>Lumière du jour / Flash]
+    E --> F[6500K<br/>Jour couvert]
+    F --> G[8000K<br/>Ombre découverte]
+    G --> H[10000K+<br/>Ciel bleu / Ombre profonde]
     style A fill:#e67e22,color:#fff
     style B fill:#f39c12,color:#fff
     style C fill:#f1c40f,color:#333
@@ -40,105 +40,105 @@ graph LR
     style H fill:#3498db,color:#fff
 ```
 
-**Counterintuitive rule:** Warm light = *low* Kelvin number (1800K candle = very orange). Cool light = *high* Kelvin number (10000K sky = very blue). Your eyes learn this in childhood; your code must remember it explicitly.
+**Règle contre-intuitive :** Lumière chaude = chiffre Kelvin *bas* (bougie 1800K = très orange). Lumière froide = chiffre Kelvin *élevé* (ciel 10000K = très bleu). Vos yeux l'apprennent dès l'enfance ; votre code doit s'en souvenir explicitement.
 
-| Scene | Typical Color Temp | Cast if "Daylight" WB Used |
-|-------|-------------------|----------------------------|
-| Candlelight dinner | 1800–2200K | Very orange / amber |
-| Home tungsten bulb | 2700–3000K | Orange / yellow |
-| Sunrise / Sunset | 3000–4000K | Warm golden tint (often desirable!) |
-| "Cool white" fluorescent | 4000–5000K | Greenish tint |
-| Midday sunlight | 5200–5800K | Correct neutral |
-| Electronic flash | 5500–6000K | Neutral (matches daylight) |
-| Overcast / heavy cloud | 6000–7500K | Slightly blue |
-| Open shade (no direct sun) | 7000–9000K | Blue cast |
-| Hazy blue sky | 9000–12000K | Very blue |
+| Scène | Température de couleur typique | Dominante si WB "Lumière du jour" utilisée |
+|-------|-------------------------------|--------------------------------------------|
+| Dîner aux chandelles | 1800–2200K | Très orange / ambrée |
+| Ampoule tungstène domestique | 2700–3000K | Orange / jaune |
+| Lever / Coucher de soleil | 3000–4000K | Teinte dorée chaude (souvent souhaitable !) |
+| Fluorescent "blanc froid" | 4000–5000K | Teinte verdâtre |
+| Soleil de midi | 5200–5800K | Neutre correct |
+| Flash électronique | 5500–6000K | Neutre (correspond à la lumière du jour) |
+| Temps couvert / gros nuages | 6000–7500K | Légèrement bleue |
+| Ombre découverte (pas de soleil direct) | 7000–9000K | Dominante bleue |
+| Ciel bleu brumeux | 9000–12000K | Très bleue |
 
-Auto White Balance's job: detect the likely illuminant from scene statistics, then *subtract* the color cast so neutral objects appear neutral.
+Le rôle de la balance des blancs automatique est de détecter l'illuminant probable à partir des statistiques de la scène, puis de *soustraire* la dominante de couleur pour que les objets neutres paraissent neutres.
 
 ---
 
-## Auto White Balance (AWB) Modes in Camera2
+## Modes de balance des blancs automatique (AWB) dans Camera2
 
-Set via `CaptureRequest.CONTROL_AWB_MODE`:
+Définis via `CaptureRequest.CONTROL_AWB_MODE` :
 
-| Mode (CONTROL_AWB_MODE_*) | Effect | Use Case |
-|---------------------------|--------|----------|
-| `OFF` | Manual white balance only. Use `COLOR_CORRECTION_GAINS` or `_TRANSFORM` explicitly. | Pro mode, custom color grading, RAW + post |
-| `AUTO` | Default. The ISP runs illuminant detection continuously. | General photography |
-| `INCANDESCENT` (TUNGSTEN) | ~2800K. Strong blue gain to cancel warm tungsten light. | Indoor home lamps, stage lighting |
-| `FLUORESCENT` | ~4500K. Gains for typical office fluorescent (tends toward green cast). | Office / classroom |
-| `WARM_FLUORESCENT` | ~3200K. Compensates warm-white fluorescent tubes. | Home CFL "warm white" lamps |
-| `DAYLIGHT` | ~5500K. Standard noon-sun illuminant profile. | Outdoor sunny day, matches flash |
-| `CLOUDY_DAYLIGHT` | ~6500K. Slight warming to cancel cool overcast. | Cloudy / hazy day |
-| `TWILIGHT` | Warm twilight golden-hour profile (~4500K). | Sunset, dusk, warm landscape |
-| `SHADE` | ~7500K. Strong red/gain against deep blue shade light. | Portrait in shadow, city shade |
+| Mode (CONTROL_AWB_MODE_*) | Effet | Cas d'utilisation |
+|---------------------------|-------|-------------------|
+| `OFF` | Balance des blancs manuelle uniquement. Utilisez explicitement `COLOR_CORRECTION_GAINS` ou `_TRANSFORM`. | Mode Pro, étalonnage personnalisé, RAW + post-prod |
+| `AUTO` | Par défaut. L'ISP exécute la détection d'illuminant en continu. | Photographie générale |
+| `INCANDESCENT` (TUNGSTEN) | ~2800K. Gain bleu fort pour annuler la lumière chaude du tungstène. | Intérieur avec lampes domestiques, éclairage de scène |
+| `FLUORESCENT` | ~4500K. Gains pour le fluorescent typique de bureau (tend vers une dominante verte). | Bureaux / salles de classe |
+| `WARM_FLUORESCENT` | ~3200K. Compense les tubes fluorescents blanc chaud. | Lampes CFL "blanc chaud" domestiques |
+| `DAYLIGHT` | ~5500K. Profil d'illuminant standard du soleil de midi. | Extérieur jour ensoleillé, correspond au flash |
+| `CLOUDY_DAYLIGHT` | ~6500K. Léger réchauffement pour annuler le froid d'un temps couvert. | Jour nuageux / brumeux |
+| `TWILIGHT` | Profil d'heure dorée chaud (~4500K). | Coucher de soleil, crépuscule, paysage chaud |
+| `SHADE` | ~7500K. Gain rouge fort contre la lumière bleue profonde de l'ombre. | Portrait à l'ombre, ombre citadine |
 
-**Query supported modes first:** Not every device ships all 9 presets. Flagship phones usually do; budget devices may offer only `AUTO` + `OFF`.
+**Interrogez d'abord les modes supportés :** Tous les appareils ne proposent pas les 9 préréglages. Les fleurons le font généralement ; les appareils budget peuvent ne proposer que `AUTO` + `OFF`.
 
 ```kotlin
 val availableAwbModes = characteristics.get(
     CameraCharacteristics.CONTROL_AWB_AVAILABLE_MODES
 ) ?: intArrayOf()
-Log.d("AWB", "Available modes: ${availableAwbModes.toList()}")
+Log.d("AWB", "Modes disponibles : ${availableAwbModes.toList()}")
 ```
 
-### AWB States (Like AF, But Less Talkative)
+### États AWB (Comme l'AF, mais moins bavards)
 
-The AWB state machine is conceptually similar to AF's but simpler — it has fewer states:
+La machine à états AWB est conceptuellement similaire à celle de l'AF mais plus simple — elle possède moins d'états :
 
-| AWB State | Meaning |
-|-----------|---------|
-| `CONTROL_AWB_STATE_INACTIVE` | AWB disabled (`AWB_MODE = OFF`) |
-| `CONTROL_AWB_STATE_SEARCHING` | Looking for correct illuminant (cast may drift) |
-| `CONTROL_AWB_STATE_CONVERGED` | Found stable illuminant — color is stable |
-| `CONTROL_AWB_STATE_LOCKED` | Explicitly locked via `CONTROL_AWB_LOCK = true` |
+| État AWB | Signification |
+|-----------|---------------|
+| `CONTROL_AWB_STATE_INACTIVE` | AWB désactivé (`AWB_MODE = OFF`) |
+| `CONTROL_AWB_STATE_SEARCHING` | Recherche de l'illuminant correct (la dominante peut varier) |
+| `CONTROL_AWB_STATE_CONVERGED` | Illuminant stable trouvé — la couleur est stable |
+| `CONTROL_AWB_STATE_LOCKED` | Explicitement verrouillé via `CONTROL_AWB_LOCK = true` |
 
-Use the same "wait for converged / locked before capture" pattern you applied to AF for color-critical photography (product shots, catalog work).
+Utilisez le même modèle "attendre convergé / verrouillé avant la capture" que celui appliqué à l'AF pour la photographie où la couleur est critique (photos de produits, catalogue).
 
 ---
 
-## How White Balance Correction Works: Under the Hood
+## Comment fonctionne la correction de balance des blancs : Sous le capot
 
-AWB applies two color transforms to get from sensor RGB → displayable sRGB. Understanding them lets you bypass AWB entirely with manual values.
+L'AWB applique deux transformations de couleur pour passer du RVB du capteur au sRVB affichable. Les comprendre vous permet de contourner entièrement l'AWB avec des valeurs manuelles.
 
-### Step 1: Channel Gains (White Point Correction)
+### Étape 1 : Gains par canal (Correction du point blanc)
 
-First, multiply each color channel by a gain so a neutral surface comes out equal in R, G, B:
+Tout d'abord, multipliez chaque canal de couleur par un gain pour qu'une surface neutre ressorte avec des valeurs égales en R, V, B :
 
-> If a scene with a 3200K tungsten lamp produces `[R=200, G=150, B=100]` from the sensor for a gray target, AWB applies channel gains of approximately `R: 1.0, G: 1.33, B: 2.0` to normalize to `[200, 200, 200]`.
+> Si une scène avec une lampe tungstène à 3200K produit `[R=200, V=150, B=100]` en sortie du capteur pour une cible grise, l'AWB applique des gains par canal d'environ `R: 1.0, V: 1.33, B: 2.0` pour normaliser à `[200, 200, 200]`.
 
-In Camera2, this is exposed as **`CaptureRequest.COLOR_CORRECTION_GAINS`**: a 4-element float array in the order **[R, Geven, B, Godd]**.
+Dans Camera2, cela est exposé sous le nom de **`CaptureRequest.COLOR_CORRECTION_GAINS`** : un tableau de 4 flottants dans l'ordre **[R, Vpair, B, Vimpair]**.
 
-The two green channels (`Geven`, `Godd`) exist because many smartphone sensors use a 2×2 Bayer grid: **GR / BG** alternating rows. Rows starting with Green-R vs Green-B have slightly different spectral sensitivity and need independent digital gains. For everyday work, setting both greens to the same value is fine.
+Les deux canaux verts (`Vpair`, `Vimpair`) existent car de nombreux capteurs de smartphone utilisent une matrice de Bayer 2×2 : des lignes alternées **RV / VB**. Les lignes commençant par Vert-R vs Vert-B ont une sensibilité spectrale légèrement différente et nécessitent des gains numériques indépendants. Pour le travail quotidien, régler les deux verts sur la même valeur est suffisant.
 
 ```kotlin
-// COLOR_CORRECTION_GAINS = [ R gain, G-even gain, B gain, G-odd gain ]
-val warmGains = floatArrayOf(1.0f, 1.2f, 0.8f, 1.2f)  // Warm tint: boost R, reduce B
-val coolGains = floatArrayOf(0.85f, 1.0f, 1.25f, 1.0f) // Cool tint: boost B, reduce R
-val neutralGains = floatArrayOf(1.0f, 1.0f, 1.0f, 1.0f) // Unity gains (raw sensor color)
+// COLOR_CORRECTION_GAINS = [ gain R, gain V-pair, gain B, gain V-impair ]
+val warmGains = floatArrayOf(1.0f, 1.2f, 0.8f, 1.2f)  // Teinte chaude : boost R, réduit B
+val coolGains = floatArrayOf(0.85f, 1.0f, 1.25f, 1.0f) // Teinte froide : boost B, réduit R
+val neutralGains = floatArrayOf(1.0f, 1.0f, 1.0f, 1.0f) // Gains unitaires (couleur brute capteur)
 ```
 
-**Valid range:** Gains are typically clamped to [0.0, 4.0] by the HAL. Use multiplicative factors between 0.5× and 3× for plausible results.
+**Plage valide :** Les gains sont généralement bridés entre [0.0, 4.0] par le HAL. Utilisez des facteurs multiplicatifs entre 0.5× et 3× pour des résultats plausibles.
 
-### Step 2: 3×3 Color Transform Matrix (Gamut Mapping)
+### Étape 2 : Matrice de transformation de couleur 3×3 (Mappage de la gamme)
 
-Channel gains only correct for the *white point*. But different sensors have different native color filter spectral responses, and different output devices have different display gamuts (sRGB/Rec.709 vs DCI-P3 vs Display P3). A **3×3 color correction matrix (CCM)** maps the sensor's native RGB color space → standard output space.
+Les gains par canal ne corrigent que le *point blanc*. Mais différents capteurs ont des réponses spectrales de filtres colorés natives différentes, et différents appareils de sortie ont des gammes d'affichage différentes (sRVB/Rec.709 vs DCI-P3 vs Display P3). Une **matrice de correction de couleur (CCM) 3×3** mappe l'espace colorimétrique RVB natif du capteur vers l'espace de sortie standard.
 
-Mathematically:
+Mathématiquement :
 
 ```
 [ R' ]   [ m11  m12  m13 ] [ R ]
-[ G' ] = [ m21  m22  m23 ] [ G ]
+[ V' ] = [ m21  m22  m23 ] [ V ]
 [ B' ]   [ m31  m32  m33 ] [ B ]
 ```
 
-Or in code: `output = M × input` where M is a 3×3 matrix.
+Ou en code : `sortie = M × entrée` où M est une matrice 3×3.
 
-Camera2 exposes this via **`COLOR_CORRECTION_TRANSFORM`**, which is set using a `Rational[9]` array (row-major: `m11, m12, m13, m21, m22, m23, m31, m32, m33`). Identity matrix = input copied directly:
+Camera2 expose cela via **`COLOR_CORRECTION_TRANSFORM`**, qui est défini en utilisant un tableau `Rational[9]` (ordre des lignes : `m11, m12, m13, m21, m22, m23, m31, m32, m33`). Matrice identité = entrée copiée directement :
 
 ```kotlin
-// Identity 3x3 matrix in Rationals: 1/1 for diagonal, 0/1 for off-diagonal
+// Matrice identité 3x3 en Rationals : 1/1 pour la diagonale, 0/1 pour le reste
 val identityMatrix = arrayOf(
     Rational(1,1), Rational(0,1), Rational(0,1),
     Rational(0,1), Rational(1,1), Rational(0,1),
@@ -146,24 +146,24 @@ val identityMatrix = arrayOf(
 )
 ```
 
-**The Rec.709 vs DCI-P3 Gamuts:**
+**Les gammes Rec.709 vs DCI-P3 :**
 
-| Color Space | Coverage | Use Case |
-|-------------|----------|----------|
-| **Rec.709 (sRGB)** | ~35% of visible light | HDTV, web, JPEG default, ~100% of phone displays until ~2020 |
-| **DCI-P3** | ~45% of visible light | Digital cinema, 4K UHD, modern iPhone/Android wide-gamut displays |
+| Espace colorimétrique | Couverture | Cas d'utilisation |
+|------------------------|------------|-------------------|
+| **Rec.709 (sRVB)** | ~35 % de la lumière visible | TVHD, web, défaut JPEG, ~100 % des écrans de téléphone jusqu'en ~2020 |
+| **DCI-P3** | ~45 % de la lumière visible | Cinéma numérique, 4K UHD, écrans larges gammes modernes iPhone/Android |
 
-A P3 display can show richer reds and greens than Rec.709. Your output CCM must pick a target gamut that matches what the viewer's screen expects. On Android, check `Display.isWideColorGamut()` and use an appropriate matrix.
+Un écran P3 peut afficher des rouges et des verts plus riches que le Rec.709. Votre CCM de sortie doit choisir une gamme cible qui correspond à ce que l'écran du spectateur attend. Sur Android, vérifiez `Display.isWideColorGamut()` et utilisez une matrice appropriée.
 
-**Practical advice:** Unless you're writing a professional RAW developer or color-managed cinema app, set `COLOR_CORRECTION_MODE = TRANSFORM_MATRIX` and let the OEM's default matrix handle gamut mapping. Most pro-mode apps tweak only `COLOR_CORRECTION_GAINS` (the 4 gains) and leave the matrix alone.
+**Conseil pratique :** À moins d'écrire un développeur RAW professionnel ou une application de cinéma à gestion de couleur, réglez `COLOR_CORRECTION_MODE = TRANSFORM_MATRIX` et laissez la matrice par défaut de l'OEM gérer le mappage de la gamme. La plupart des applications en mode pro ne modifient que `COLOR_CORRECTION_GAINS` (les 4 gains) et ne touchent pas à la matrice.
 
 ---
 
-## Complete Example 1: Lock AWB to Daylight Preset (Warm Tint Lock)
+## Exemple complet 1 : Verrouiller l'AWB sur le préréglage Lumière du jour (Verrouillage de teinte chaude)
 
-Let's start simple. Sometimes you don't want full manual — you just want to **prevent AWB from drifting** between frames (e.g., timelapse, video with scene changes). Setting a fixed preset like `DAYLIGHT` guarantees consistent color across shots.
+Commençons simplement. Parfois, vous ne voulez pas du manuel complet — vous voulez simplement **empêcher l'AWB de dériver** entre les images (ex : timelapse, vidéo avec changements de scène). Définir un préréglage fixe comme `DAYLIGHT` garantit une couleur cohérente sur tous les clichés.
 
-This is the simplest manual color control.
+C'est le contrôle manuel de la couleur le plus simple.
 
 ```kotlin
 class AwbPresetController(
@@ -171,7 +171,7 @@ class AwbPresetController(
     private val captureSession: CameraCaptureSession,
     private val previewSurface: Surface
 ) {
-    // Return true if the HAL actually supports this mode
+    // Renvoie true si le HAL supporte réellement ce mode
     fun isModeSupported(mode: Int): Boolean {
         val available = characteristics.get(
             CameraCharacteristics.CONTROL_AWB_AVAILABLE_MODES
@@ -181,7 +181,7 @@ class AwbPresetController(
 
     fun setPresetDaylightForWarmTintLock(): Boolean {
         if (!isModeSupported(CameraMetadata.CONTROL_AWB_MODE_DAYLIGHT)) {
-            Log.w("AWB", "DAYLIGHT preset not supported on this device")
+            Log.w("AWB", "Préréglage DAYLIGHT non supporté sur cet appareil")
             return false
         }
 
@@ -190,13 +190,13 @@ class AwbPresetController(
         ).apply {
             addTarget(previewSurface)
 
-            // Lock white balance to DAYLIGHT (~5500K) mode.
-            // This will render indoor tungsten scenes as intentionally warm/orange,
-            // which is the "filmic" look preferred in cinematography.
+            // Verrouiller la balance des blancs sur le mode DAYLIGHT (~5500K).
+            // Cela rendra les scènes intérieures au tungstène intentionnellement chaudes/orange,
+            // ce qui est l'aspect "film" préféré en cinématographie.
             set(CaptureRequest.CONTROL_AWB_MODE,
                 CameraMetadata.CONTROL_AWB_MODE_DAYLIGHT)
 
-            // Keep AE and AF in their defaults (auto) for this example
+            // Laisser l'AE et l'AF dans leurs réglages par défaut (auto) pour cet exemple
             set(CaptureRequest.CONTROL_MODE,
                 CameraMetadata.CONTROL_MODE_AUTO)
         }
@@ -209,7 +209,7 @@ class AwbPresetController(
                     result: TotalCaptureResult
                 ) {
                     val awbState = result.get(CaptureResult.CONTROL_AWB_STATE)
-                    Log.d("AWB", "Preset DAYLIGHT applied, AWB state=$awbState")
+                    Log.d("AWB", "Préréglage DAYLIGHT appliqué, état AWB=$awbState")
                 }
             }, null
         )
@@ -218,13 +218,13 @@ class AwbPresetController(
 }
 ```
 
-**Artistic application:** If you're shooting a sunset with `AWB_MODE = DAYLIGHT`, the 3000K sunset light will register as *warm* to the fixed 5500K balance — producing rich, saturated golden-orange tones. Using `AWB_MODE = AUTO` here would *neutralize the sunset* (the entire point!) by pumping in more blue to cancel the golden light. Presets preserve mood.
+**Application artistique :** Si vous photographiez un coucher de soleil avec `AWB_MODE = DAYLIGHT`, la lumière du coucher de soleil à 3000K s'enregistrera comme *chaude* par rapport à la balance fixe de 5500K — produisant des tons orange doré riches et saturés. Utiliser `AWB_MODE = AUTO` ici *neutraliserait le coucher de soleil* (le but inverse !) en injectant plus de bleu pour annuler la lumière dorée. Les préréglages préservent l'ambiance.
 
 ---
 
-## Complete Example 2: Full Manual AWB — Custom Warm Sunset Gains
+## Exemple complet 2 : AWB manuel complet — Gains personnalisés pour coucher de soleil chaud
 
-For ultimate creative control, disable AWB entirely and write your own gains. Let's build a "warm sunset look" — boosting red slightly, suppressing blue, with a subtle green boost to avoid a purple shift.
+Pour un contrôle créatif ultime, désactivez entièrement l'AWB et écrivez vos propres gains. Construisons un "aspect coucher de soleil chaud" — en boostant légèrement le rouge, en supprimant le bleu, avec un subtil boost du vert pour éviter un décalage vers le violet.
 
 ```kotlin
 class ManualColorGradingController(
@@ -233,23 +233,23 @@ class ManualColorGradingController(
     private val previewSurface: Surface,
     private val jpegReaderSurface: Surface
 ) {
-    // Canonical color grading presets (R, Geven, B, Godd)
+    // Préréglages d'étalonnage de couleur canoniques (R, Vpair, B, Vimpair)
     object Presets {
         val NEUTRAL = floatArrayOf(1.00f, 1.00f, 1.00f, 1.00f)
-        val WARM_SUNSET = floatArrayOf(1.00f, 1.20f, 0.80f, 1.20f)  // Warm amber
-        val COOL_MORNING = floatArrayOf(0.85f, 1.00f, 1.25f, 1.00f)  // Cool blue
-        val VINTAGE_KODAK = floatArrayOf(1.15f, 1.00f, 0.85f, 1.00f) // Classic film-ish
-        val GREEN_SHIFT_FLUO = floatArrayOf(1.00f, 1.25f, 1.00f, 1.25f) // Fluorescent fix
+        val WARM_SUNSET = floatArrayOf(1.00f, 1.20f, 0.80f, 1.20f)  // Ambre chaud
+        val COOL_MORNING = floatArrayOf(0.85f, 1.00f, 1.25f, 1.00f)  // Bleu froid
+        val VINTAGE_KODAK = floatArrayOf(1.15f, 1.00f, 0.85f, 1.00f) // Aspect film classique
+        val GREEN_SHIFT_FLUO = floatArrayOf(1.00f, 1.25f, 1.00f, 1.25f) // Correction fluorescent
     }
 
     fun applyManualGains(gains: FloatArray, includeMatrix: Boolean = true) {
-        // Validate: AWB_MODE = OFF must be supported (it always is on MANUAL capability)
+        // Validation : AWB_MODE = OFF doit être supporté (il l'est toujours sur la capacité MANUAL)
         val hwLevel = characteristics.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL)
         val supportsManualColor = (hwLevel == CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_3 ||
                                    hwLevel == CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_FULL ||
                                    isModeSupported(CameraMetadata.CONTROL_AWB_MODE_OFF))
         if (!supportsManualColor) {
-            Log.e("AWB", "This LEGACY-level device cannot do manual AWB gains")
+            Log.e("AWB", "Cet appareil de niveau LEGACY ne peut pas faire de gains AWB manuels")
             return
         }
 
@@ -258,20 +258,20 @@ class ManualColorGradingController(
         ).apply {
             addTarget(previewSurface)
 
-            // 1) DISABLE AWB entirely
+            // 1) DÉSACTIVER l'AWB entièrement
             set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_OFF)
 
-            // 2) Apply the 4 channel gains (R, Geven, B, Godd)
+            // 2) Appliquer les 4 gains de canaux (R, Vpair, B, Vimpair)
             set(CaptureRequest.COLOR_CORRECTION_GAINS, gains)
 
-            // 3) Pick a color correction strategy
+            // 3) Choisir une stratégie de correction de couleur
             if (includeMatrix) {
-                // FAST: let the HAL compute a good matrix for this illuminant
-                // (matrix is auto-derived; only gains are user-controlled)
+                // FAST : laisser le HAL calculer une bonne matrice pour cet illuminant
+                // (la matrice est auto-dérivée ; seuls les gains sont contrôlés par l'utilisateur)
                 set(CaptureRequest.COLOR_CORRECTION_MODE,
                     CameraMetadata.COLOR_CORRECTION_MODE_FAST)
             } else {
-                // EXPERT: set our own 3x3 transform matrix + gains together
+                // EXPERT : définir notre propre matrice de transformation 3x3 + gains ensemble
                 set(CaptureRequest.COLOR_CORRECTION_MODE,
                     CameraMetadata.COLOR_CORRECTION_MODE_TRANSFORM_MATRIX)
                 set(CaptureRequest.COLOR_CORRECTION_TRANSFORM, identityMatrix())
@@ -279,10 +279,10 @@ class ManualColorGradingController(
         }
 
         captureSession.setRepeatingRequest(request.build(), null, null)
-        Log.d("AWB", "Manual gains applied: [${gains.joinToString()}]")
+        Log.d("AWB", "Gains manuels appliqués : [${gains.joinToString()}]")
     }
 
-    // ------- Still capture with locked manual color -------
+    // ------- Capture fixe avec couleur manuelle verrouillée -------
     fun captureStillWithColorGrading(gains: FloatArray) {
         applyManualGains(gains)
 
@@ -303,7 +303,7 @@ class ManualColorGradingController(
         captureSession.capture(stillRequest.build(), null, null)
     }
 
-    // ------- Helpers -------
+    // ------- Aides -------
     private fun identityMatrix(): Array<Rational> = arrayOf(
         Rational(1,1), Rational(0,1), Rational(0,1),
         Rational(0,1), Rational(1,1), Rational(0,1),
@@ -319,45 +319,45 @@ class ManualColorGradingController(
 }
 ```
 
-### Using the Presets
+### Utilisation des préréglages
 
 ```kotlin
-// User taps "Sunset Warm" button
+// L'utilisateur appuie sur le bouton "Coucher de soleil chaud"
 controller.applyManualGains(ManualColorGradingController.Presets.WARM_SUNSET)
 
-// User taps "Capture" — the same gains flow to the JPEG
+// L'utilisateur appuie sur "Capturer" — les mêmes gains s'appliquent au JPEG
 controller.captureStillWithColorGrading(ManualColorGradingController.Presets.WARM_SUNSET)
 ```
 
-### COLOR_CORRECTION_MODE: FAST vs TRANSFORM_MATRIX
+### COLOR_CORRECTION_MODE : FAST vs TRANSFORM_MATRIX
 
-Use this decision table:
+Utilisez ce tableau de décision :
 
-| Scenario | Choose `COLOR_CORRECTION_MODE =` |
-|----------|----------------------------------|
-| I only want manual gains; let OEM pick the matrix (most apps) | `FAST` |
-| I'm applying a full color-grading LUT / matrix externally, need untouched raw color space | `TRANSFORM_MATRIX` + identity matrix |
-| I have a custom color profile (ICC / DCP) derived for this sensor | `TRANSFORM_MATRIX` + custom 3x3 |
+| Scénario | Choisir `COLOR_CORRECTION_MODE =` |
+|-----------|-----------------------------------|
+| Je veux seulement des gains manuels ; laisser l'OEM choisir la matrice (plupart des apps) | `FAST` |
+| J'applique une matrice / LUT d'étalonnage complète en externe, j'ai besoin de l'espace couleur brut intact | `TRANSFORM_MATRIX` + matrice identité |
+| J'ai un profil de couleur personnalisé (ICC / DCP) dérivé pour ce capteur | `TRANSFORM_MATRIX` + 3x3 personnalisée |
 
-**Warning:** `TRANSFORM_MATRIX` with the identity matrix gives you **raw sensor color** without OEM gamut mapping. On many sensors, this looks noticeably desaturated and slightly green-tinted without additional processing. This is correct behavior — it's the raw sensor output ready for your custom processing pipeline.
+**Avertissement :** `TRANSFORM_MATRIX` avec la matrice identité vous donne la **couleur brute du capteur** sans le mappage de la gamme de l'OEM. Sur de nombreux capteurs, cela paraît nettement désaturé et légèrement teinté de vert sans traitement supplémentaire. C'est un comportement correct — c'est la sortie brute du capteur prête pour votre pipeline de traitement personnalisé.
 
 ---
 
-## Manual Kelvin-to-Gains Converter (Color Temperature Slider)
+## Convertisseur manuel Kelvin-vers-Gains (Curseur de température de couleur)
 
-Pro camera apps (including [Android Camera Parameters](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)) expose a **Kelvin temperature slider**. Since Camera2 doesn't accept Kelvin directly, we approximate the R/B gains curve.
+Les applications caméra Pro (y compris [Android Camera Parameters](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)) exposent un **curseur de température en Kelvin**. Comme Camera2 n'accepte pas directement les Kelvin, nous approximons la courbe des gains R/B.
 
-A simple approximation that works for most smartphone sensors (calibrate your gain curve empirically on your target hardware):
+Une approximation simple qui fonctionne pour la plupart des capteurs de smartphone (étalonnez votre courbe de gains de manière empirique sur votre matériel cible) :
 
 ```kotlin
 class KelvinGainsConverter {
-    // Convert Kelvin [2000..10000] → approximate gains [R, Geven, B, Godd]
-    // Simple Planckian locus approximation (good enough for UI sliders)
+    // Convertir Kelvin [2000..10000] → gains approximatifs [R, Vpair, B, Vimpair]
+    // Approximation simple du lieu planckien (suffisante pour des curseurs UI)
     fun kelvinToRgbGains(kelvin: Int): FloatArray {
         val k = kelvin.coerceIn(2000, 10000)
         val temp = k / 100.0
 
-        // Red (warm at low K)
+        // Rouge (chaud à bas K)
         val r = when {
             temp <= 66 -> 255.0
             else -> {
@@ -367,7 +367,7 @@ class KelvinGainsConverter {
             }
         }
 
-        // Green
+        // Vert
         val g = when {
             temp <= 66 -> {
                 var x = temp
@@ -381,7 +381,7 @@ class KelvinGainsConverter {
             }
         }
 
-        // Blue (cold at high K)
+        // Bleu (froid à haut K)
         val b = when {
             temp >= 66 -> 255.0
             temp <= 19 -> 0.0
@@ -392,17 +392,17 @@ class KelvinGainsConverter {
             }
         }
 
-        // Normalize so GREEN = 1.0, then invert: we want GAINS to compensate for temp.
-        // If user picks 2800K (warm), we need MORE blue gain to cancel the warm cast.
-        // This function returns the *source* RGB; gains are 1/R : 1/G : 1/B, normalized at G=1
+        // Normaliser pour que VERT = 1.0, puis inverser : on veut des GAINS pour compenser la temp.
+        // Si l'utilisateur choisit 2800K (chaud), on a besoin de PLUS de gain bleu pour annuler la dominante chaude.
+        // Cette fonction renvoie le RVB *source* ; les gains sont 1/R : 1/V : 1/B, normalisés à V=1
         val rGain = (g / r).toFloat().coerceIn(0.3f, 3.0f)
         val bGain = (g / b).toFloat().coerceIn(0.3f, 3.0f)
-        return floatArrayOf(rGain, 1.0f, bGain, 1.0f)  // [R, Geven, B, Godd]
+        return floatArrayOf(rGain, 1.0f, bGain, 1.0f)  // [R, Vpair, B, Vimpair]
     }
 }
 ```
 
-Use it with a SeekBar (2000–10000 K range):
+Utilisez-le avec un SeekBar (plage 2000–10000 K) :
 
 ```kotlin
 val converter = KelvinGainsConverter()
@@ -418,44 +418,44 @@ seekKelvin.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
 })
 ```
 
-**Calibration note:** This is a generic Planckian approximation. For perfect results, run a Macbeth ColorChecker or white point calibration on your target device, then fit a curve to measured R/B gain ratios vs. true Kelvin. The [Android Camera Parameters app](https://github.com/zoozooll/AndroidCameraParameters) uses per-device calibration data loaded from the HAL via `SENSOR_CALIBRATION_TRANSFORM1` where available.
+**Note sur l'étalonnage :** C'est une approximation planckienne générique. Pour des résultats parfaits, exécutez une mire de couleur Macbeth ou un étalonnage du point blanc sur votre appareil cible, puis ajustez une courbe aux rapports de gains R/B mesurés par rapport au vrai Kelvin. L'application [Android Camera Parameters](https://github.com/zoozooll/AndroidCameraParameters) utilise les données d'étalonnage par appareil chargées depuis le HAL via `SENSOR_CALIBRATION_TRANSFORM1` quand elles sont disponibles.
 
 ---
 
-## Troubleshooting Color Issues
+## Dépannage des problèmes de couleur
 
-| Symptom | Cause | Fix |
-|---------|-------|-----|
-| Manual gains set but color is unchanged | Forgot `CONTROL_AWB_MODE = OFF` → AWB still overriding gains | Set AWB_MODE = OFF *before* setting GAINS/TRANSFORM |
-| COLOR_CORRECTION_TRANSFORM ignored | Mode still `FAST`; only respected in `TRANSFORM_MATRIX` mode | Set `COLOR_CORRECTION_MODE = TRANSFORM_MATRIX` first |
-| AWB drifts between timelapse frames (green/purple tint flash) | AWB still in AUTO and re-evaluating each frame | Set fixed AWB_MODE preset or full manual gains for timelapse |
-| JPEG different color than preview | JPEG applied different mode/gains than the last repeating request | Apply SAME gains to both TEMPLATE_PREVIEW and TEMPLATE_STILL_CAPTURE builders |
-| LEGACY-level device: manual gains crash | INFO_SUPPORTED_HARDWARE_LEVEL = LEGACY (no manual color) | Graceful fallback; only expose AUTO + presets UI |
+| Symptôme | Cause | Solution |
+|----------|-------|----------|
+| Gains manuels définis mais la couleur est inchangée | Oubli de `CONTROL_AWB_MODE = OFF` → l'AWB surcharge toujours les gains | Réglez AWB_MODE = OFF *avant* de définir GAINS/TRANSFORM |
+| COLOR_CORRECTION_TRANSFORM ignorée | Mode toujours sur `FAST` ; respectée uniquement en mode `TRANSFORM_MATRIX` | Réglez d'abord `COLOR_CORRECTION_MODE = TRANSFORM_MATRIX` |
+| L'AWB dérive entre les images d'un timelapse (flash de teinte vert/violet) | L'AWB est toujours en AUTO et ré-évalue chaque image | Réglez un préréglage AWB_MODE fixe ou des gains manuels complets pour le timelapse |
+| Couleur du JPEG différente de l'aperçu | Le JPEG a appliqué un mode/gains différent de la dernière requête répétée | Appliquez les MÊMES gains aux constructeurs TEMPLATE_PREVIEW et TEMPLATE_STILL_CAPTURE |
+| Appareil de niveau LEGACY : plantage gains manuels | INFO_SUPPORTED_HARDWARE_LEVEL = LEGACY (pas de couleur manuelle) | Repli gracieux ; n'exposez que l'UI AUTO + préréglages |
 
 ---
 
-## Summary
+## Résumé
 
-White balance & color correction in Camera2 give you the final piece of the manual controls trilogy:
+La balance des blancs et la correction de couleur dans Camera2 vous donnent la dernière pièce de la trilogie des contrôles manuels :
 
-- **Color Temperature (K):** Low K (1800K candle) = warm/orange; high K (10000K shade) = cool/blue. AWB compensates to neutralize the illuminant.
-- **AWB Modes:** 9 presets (`INCANDESCENT` → `SHADE`) + `AUTO` + `OFF`. Query `CONTROL_AWB_AVAILABLE_MODES` before use.
-- **AWB States:** `SEARCHING → CONVERGED → LOCKED`. Wait for CONVERGED/LOCKED in color-critical sequences.
-- **Manual control has two layers:**
-  1. `COLOR_CORRECTION_GAINS` = 4-element float array `[R, Geven, B, Godd]` — white-point correction. Use `COLOR_CORRECTION_MODE = FAST` (OEM matrix, custom gains).
-  2. `COLOR_CORRECTION_TRANSFORM` = 3×3 `Rational[9]` matrix — full gamut mapping. Use `TRANSFORM_MATRIX` mode for identity matrix or custom CCM.
-- **Rec.709 vs DCI-P3:** The 3×3 matrix maps sensor color space → display-target gamut.
-- **Kelvin slider:** Approximate Kelvin→gains via Planckian locus math, apply with AWB OFF.
+- **Température de couleur (K) :** K bas (bougie 1800K) = chaud/orange ; K élevé (ombre 10000K) = froid/bleu. L'AWB compense pour neutraliser l'illuminant.
+- **Modes AWB :** 9 préréglages (`INCANDESCENT` → `SHADE`) + `AUTO` + `OFF`. Interrogez `CONTROL_AWB_AVAILABLE_MODES` avant utilisation.
+- **États AWB :** `SEARCHING → CONVERGED → LOCKED`. Attendez CONVERGED/LOCKED dans les séquences où la couleur est critique.
+- **Le contrôle manuel a deux couches :**
+  1. `COLOR_CORRECTION_GAINS` = tableau de 4 flottants `[R, Vpair, B, Vimpair]` — correction du point blanc. Utilisez `COLOR_CORRECTION_MODE = FAST` (matrice OEM, gains personnalisés).
+  2. `COLOR_CORRECTION_TRANSFORM` = matrice `Rational[9]` 3x3 — mappage complet de la gamme. Utilisez le mode `TRANSFORM_MATRIX` pour la matrice identité ou une CCM personnalisée.
+- **Rec.709 vs DCI-P3 :** La matrice 3x3 mappe l'espace couleur du capteur → la gamme cible d'affichage.
+- **Curseur Kelvin :** Approximation Kelvin→gains via les mathématiques du lieu planckien, appliquer avec AWB OFF.
 
-## What's Next
+## Et ensuite ?
 
-You now understand **exposure, focus, and white balance individually**. In **Chapter 17: The 3A Pipeline**, we finally orchestrate all three together as a single cohesive still-photo capture sequence:
+Vous comprenez maintenant **l'exposition, la mise au point et la balance des blancs individuellement**. Dans le **Chapitre 17 : Le pipeline 3A**, nous orchestrons enfin les trois ensemble dans une séquence de capture photo fixe unique et cohérente :
 
-- The complete `AF trigger → AF locked → AE precapture → AE converged with flash → capture photo` flow
-- AE flash modes (`ON_AUTO_FLASH`, `ON_ALWAYS_FLASH`, `ON_AUTO_FLASH_REDEYE`)
-- AE states and the precapture trigger sequence
-- AWB states coordinated with AE+AF
-- A full production-quality Kotlin class that implements the entire 3A orchestration with a Mermaid sequence diagram
-- Reference to 3A Control Pipeline research
+- Le flux complet `Déclencheur AF → AF verrouillé → Pré-capture AE → AE convergé avec flash → capture photo`
+- Les modes de flash AE (`ON_AUTO_FLASH`, `ON_ALWAYS_FLASH`, `ON_AUTO_FLASH_REDEYE`)
+- Les états AE et la séquence du déclencheur de pré-capture
+- Les états AWB coordonnés avec l'AE+AF
+- Une classe Kotlin de qualité production complète qui implémente toute l'orchestration 3A avec un diagramme de séquence Mermaid
+- Référence à la recherche sur le pipeline de contrôle 3A
 
-This is the chapter that ties everything into a working pro-camera app. Don't miss it.
+C'est le chapitre qui lie tout pour créer une application de caméra pro fonctionnelle. Ne le manquez pas.

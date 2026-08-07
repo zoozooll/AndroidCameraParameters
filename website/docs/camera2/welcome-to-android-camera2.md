@@ -1,4 +1,4 @@
----
+﻿---
 sidebar_position: 1
 title: "Chapter 1: Welcome to Android Camera2"
 description: Learn why Android Camera2 matters, how it compares to Camera1 and CameraX, what it enables, and what you'll build in this series.
@@ -183,18 +183,18 @@ Throughout this book you will **progressively build a real, fully functional Cam
 flowchart TB
     subgraph LAYERED ["Full Application Architecture"]
         direction TB
-        UI["Jetpack Compose UI\nHome / Preview / Settings"] --> VM["ViewModel\n3A State Machine"]
-        VM --> CAM["Camera2 Engine\nSession + Repeating Request"]
-        CAM --> HW["Physical Camera\nSensor + Lens + ISP"]
-        CAM --> OUT["Output Streams\nPreview (TextureView)\nJPEG (ImageReader)\nRAW_SENSOR (ImageReader)\nYUV (ImageAnalysis)"]
+        UI["Jetpack Compose UI<br/>Home / Preview / Settings"] --> VM["ViewModel<br/>3A State Machine"]
+        VM --> CAM["Camera2 Engine<br/>Session + Repeating Request"]
+        CAM --> HW["Physical Camera<br/>Sensor + Lens + ISP"]
+        CAM --> OUT["Output Streams<br/>Preview (TextureView)<br/>JPEG (ImageReader)<br/>RAW_SENSOR (ImageReader)<br/>YUV (ImageAnalysis)"]
     end
     
     subgraph FEATURES ["Features Implemented Per Chapter Group"]
         direction LR
-        P2["Ch 5-9\nCore App:\nPermissions\nCameraManager\nCamera Open\nLive Preview\nPhoto Capture"]
-        P4["Ch 13-17\nManual Modes:\nExposure Dial\nISO Slider\nAF + MF Slider\nWB Presets\nFull 3A Orchestration"]
-        P5["Ch 18-23\nPro Features:\nRAW + DNG\n120/240fps Video\nMulti-Camera Sync\nJPEG_R Ultra HDR\nCamera Extensions\nZero Shutter Lag"]
-        P6["Ch 24-28\nModern Hardening:\nCameraX Interop\nNDK Zero-Copy\nCoroutine + Flow\nCTS / ITS Testing\nFull HAL Arch"]
+        P2["Ch 5-9<br/>Core App:<br/>Permissions<br/>CameraManager<br/>Camera Open<br/>Live Preview<br/>Photo Capture"]
+        P4["Ch 13-17<br/>Manual Modes:<br/>Exposure Dial<br/>ISO Slider<br/>AF + MF Slider<br/>WB Presets<br/>Full 3A Orchestration"]
+        P5["Ch 18-23<br/>Pro Features:<br/>RAW + DNG<br/>120/240fps Video<br/>Multi-Camera Sync<br/>JPEG_R Ultra HDR<br/>Camera Extensions<br/>Zero Shutter Lag"]
+        P6["Ch 24-28<br/>Modern Hardening:<br/>CameraX Interop<br/>NDK Zero-Copy<br/>Coroutine + Flow<br/>CTS / ITS Testing<br/>Full HAL Arch"]
     end
     
     LAYERED ~~~ FEATURES
@@ -231,4 +231,4 @@ That is a genuinely rare skill set. Let's start the journey.
 
 ## 1.7 What's Next
 
-Before writing a single line of Camera2 code, we need to understand the hardware we're commanding. In **Chapter 2: Understanding Smartphone Cameras**, you will learn what each part of a phone camera module actually does: the lens, the image sensor, the ISP, and how raw light becomes a compressed JPEG. By the end, you will see why a "48 MP" label on the box tells you almost nothing about real image quality.
+Before writing a single line of Camera2 code, we need to understand the hardware we're commanding. In **Chapter 2: Understanding Smartphone Cameras**, you will learn what each part of a phone camera module actually does: the lens, the image sensor, the ISP, and how raw light becomes a compressed JPEG. By the end, you will see why a "48 MP" label on the box tells you almost nothing about real image quality.   

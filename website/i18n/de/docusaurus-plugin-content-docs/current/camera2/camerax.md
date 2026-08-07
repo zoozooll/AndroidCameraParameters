@@ -1,42 +1,42 @@
 ---
 sidebar_position: 24
-title: "Chapter 24: CameraX"
-description: "Master CameraX, Jetpack's lifecycle-aware camera library that wraps Camera2. Learn UseCase architecture, Camera2Interop for injecting manual parameters, and a decision framework for choosing CameraX vs Camera2."
-keywords: [camerax, jetpack camera, camerax architecture, usecase model, camera2interop, processcameraprovider, preview usecase, imagecapture, imageanalysis, videocapture, camerax vs camera2]
+title: "Kapitel 24: CameraX"
+description: "Meistern Sie CameraX, die Lifecycle-bewusste Kamera-Bibliothek von Jetpack, die Camera2 kapselt. Lernen Sie die UseCase-Architektur, Camera2Interop zum Einschleusen manueller Parameter und ein Entscheidungs-Framework für die Wahl zwischen CameraX und Camera2 kennen."
+keywords: [CameraX, Jetpack Camera, CameraX Architektur, UseCase-Modell, Camera2Interop, ProcessCameraProvider, Preview UseCase, ImageCapture, ImageAnalysis, VideoCapture, CameraX vs. Camera2]
 ---
 
-# Chapter 24: CameraX
+# Kapitel 24: CameraX
 
-## Summary
+## Zusammenfassung
 
-By the time you reach this chapter, you have mastered the raw Camera2 API: opening `CameraDevice` instances by hand, constructing `CaptureRequest.Builder` objects, managing `CameraCaptureSession` lifecycles, juggling three different callback types, and carefully releasing every resource on every edge case. You have earned your scars. Now we step back and ask: what if 80% of that boilerplate could disappear?
+Wenn Sie dieses Kapitel erreichen, haben Sie die rohe Camera2-API gemeistert: Sie haben `CameraDevice`-Instanzen von Hand geöffnet, `CaptureRequest.Builder`-Objekte konstruiert, den Lebenszyklus von `CameraCaptureSession` verwaltet, mit drei verschiedenen Callback-Typen jongliert und sorgfältig jede Ressource in jedem Sonderfall freigegeben. Sie haben sich Ihre Sporen verdient. Jetzt treten wir einen Schritt zurück und fragen uns: Was wäre, wenn 80 % dieses Boilerplate-Codes verschwinden könnten?
 
-CameraX is Google's Jetpack library that wraps Camera2 in a lifecycle-aware, declarative, use-case-driven API. It does not replace Camera2 — it is Camera2 under the hood. What it replaces is hundreds of lines of session configuration code, device-specific quirk handling, and manual lifecycle bookkeeping. In this chapter you will learn CameraX's architecture, understand the `UseCase` model, see how to inject raw Camera2 parameters *into* CameraX via `Camera2Interop`, and walk away with a decision table for exactly when to reach for CameraX and when you must drop down to raw Camera2.
+CameraX ist die Jetpack-Bibliothek von Google, die Camera2 in eine Lifecycle-bewusste, deklarative und Use-Case-gesteuerte API hüllt. Sie ersetzt Camera2 nicht – sie ist Camera2 unter der Haube. Was sie ersetzt, sind hunderte Zeilen Code für die Sitzungskonfiguration, die Handhabung gerätespezifischer Eigenheiten und die manuelle Buchführung des Lebenszyklus. In diesem Kapitel lernen Sie die Architektur von CameraX kennen, verstehen das `UseCase`-Modell, sehen, wie Sie rohe Camera2-Parameter über `Camera2Interop` *in* CameraX einspeisen, und erhalten eine Entscheidungstabelle dafür, wann Sie zu CameraX greifen sollten und wann Sie auf die rohe Camera2-Ebene herabsteigen müssen.
 
-To follow along and inspect every camera capability on your own device before deciding which layer to target, install **Android Camera Parameters** from [Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams) or browse the source at [github.com/zoozooll/AndroidCameraParameters](https://github.com/zoozooll/AndroidCameraParameters).
+Um die Erklärungen nachzuvollziehen und jede Kamerafunktion auf Ihrem eigenen Gerät zu inspizieren, bevor Sie sich für eine Schicht entscheiden, installieren Sie **Android Camera Parameters** aus dem [Google Play Store](https://play.google.com/store/apps/details?id=com.minininja.cameraparams) oder durchsuchen Sie den Quellcode auf [github.com/zoozooll/AndroidCameraParameters](https://github.com/zoozooll/AndroidCameraParameters).
 
 ---
 
-## CameraX Architecture
+## CameraX-Architektur
 
-CameraX ships as five Jetpack artifacts: `camera-core`, `camera-camera2`, `camera-lifecycle`, `camera-view`, and `camera-extensions`. The architectural spine is the `UseCase` model — instead of thinking in surfaces and sessions, you think in *what you want the camera to do*.
+CameraX wird als fünf Jetpack-Artefakte ausgeliefert: `camera-core`, `camera-camera2`, `camera-lifecycle`, `camera-view` und `camera-extensions`. Das architektonische Rückgrat ist das `UseCase`-Modell – anstatt in Surfaces und Sessions zu denken, denken Sie daran, *was die Kamera tun soll*.
 
-### The UseCase Model
+### Das UseCase-Modell
 
-There are four canonical use cases, and you bind any subset of them simultaneously to a lifecycle:
+Es gibt vier kanonische Anwendungsfälle, und Sie können jede beliebige Teilmenge davon gleichzeitig an einen Lebenszyklus binden:
 
-| UseCase          | Purpose                                                        |
+| UseCase          | Zweck                                                          |
 |------------------|----------------------------------------------------------------|
-| `Preview`        | Streams frames to a `PreviewView` or `Surface`. Analogous to setting up a repeating request targeting a `SurfaceTexture`. |
-| `ImageAnalysis`  | Streams `ImageProxy` frames to your analyzer on a background thread. Replaces hand-rolling an `ImageReader` with `YUV_420_888` and plumbing its listener into a repeating request. |
-| `ImageCapture`   | One-shot or burst photo capture. Handles the capture request, `ImageReader` plumbing, rotation, and EXIF for you. |
-| `VideoCapture`   | Merged into CameraX as of 1.1; wraps a `MediaRecorder` or `ParcelFileDescriptor` pipeline with correct pause/resume semantics and audio routing. |
+| `Preview`        | Streamt Frames an eine `PreviewView` oder `Surface`. Analog zum Einrichten einer wiederholten Anforderung, die auf eine `SurfaceTexture` abzielt. |
+| `ImageAnalysis`  | Streamt `ImageProxy`-Frames an Ihren Analyzer in einem Hintergrund-Thread. Ersetzt das manuelle Erstellen eines `ImageReader` mit `YUV_420_888` und das Verknüpfen seines Listeners mit einer wiederholten Anforderung. |
+| `ImageCapture`   | One-Shot- oder Burst-Fotoaufnahme. Übernimmt die Aufnahmeanforderung, das `ImageReader`-Plumbing, die Rotation und EXIF für Sie. |
+| `VideoCapture`   | Seit Version 1.1 in CameraX integriert; kapselt eine `MediaRecorder`- oder `ParcelFileDescriptor`-Pipeline mit korrekter Pause/Resume-Semantik und Audio-Routing. |
 
-Binding all four is perfectly legal — CameraX internally resolves the stream combination against `SCALER_STREAM_CONFIGURATION_MAP` and calls `isSessionConfigurationSupported` on your behalf, falling back to lower resolutions if your exact combination is not supported. This is one of the single biggest wins: you will never again spend three hours discovering that the 2019 midrange Samsung in your test matrix does not support `4:3 PRIV + 16:9 JPEG_MAX` simultaneously. CameraX just works.
+Das Binden aller vier UseCases ist absolut zulässig – CameraX gleicht die Stream-Kombination intern mit der `SCALER_STREAM_CONFIGURATION_MAP` ab und ruft in Ihrem Namen `isSessionConfigurationSupported` auf, wobei auf niedrigere Auflösungen zurückgegriffen wird, falls Ihre exakte Kombination nicht unterstützt wird. Dies ist einer der größten Vorteile: Sie werden nie wieder drei Stunden damit verbringen, herauszufinden, dass das Mittelklasse-Samsung von 2019 in Ihrer Testmatrix nicht gleichzeitig `4:3 PRIV + 16:9 JPEG_MAX` unterstützt. CameraX funktioniert einfach.
 
-### ProcessCameraProvider and Lifecycle Awareness
+### ProcessCameraProvider und Lifecycle-Bewusstsein
 
-The binding point is `ProcessCameraProvider`, a singleton owned by your application process. The key line is:
+Der Bindungspunkt ist der `ProcessCameraProvider`, ein Singleton im Besitz Ihres Anwendungsprozesses. Die entscheidende Zeile lautet:
 
 ```kotlin
 val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
@@ -52,44 +52,44 @@ cameraProviderFuture.addListener({
 }, ContextCompat.getMainExecutor(context))
 ```
 
-That is it. No `openCamera` callback hell, no `StateCallback`, no session configuration callback, no teardown. When `lifecycleOwner` (your `Fragment` or `Activity`) reaches `ON_STOP`, CameraX closes the `CameraDevice`. On `ON_DESTROY`, it tears down the session and releases every surface. Resource leaks of the kind you hunted down in Chapter 7 simply cannot happen — the lifecycle contract enforces it.
+Das ist alles. Keine Hölle aus `openCamera`-Callbacks, kein `StateCallback`, kein Sitzungskonfigurations-Callback, kein Teardown. Wenn der `lifecycleOwner` (Ihr `Fragment` oder Ihre `Activity`) den Zustand `ON_STOP` erreicht, schließt CameraX das `CameraDevice`. Bei `ON_DESTROY` wird die Sitzung abgebaut und jede Surface freigegeben. Ressourcenlecks der Art, wie Sie sie in Kapitel 7 gejagt haben, können schlichtweg nicht auftreten – der Lebenszyklus-Vertrag erzwingt dies.
 
-### CameraX Internally Wraps Camera2
+### CameraX kapselt Camera2 intern
 
-Internally, CameraX is Camera2. The `camera-camera2` artifact contains `Camera2Camera`, `Camera2CameraCaptureResult`, and `Camera2RequestProcessor`, all of which translate your high-level UseCase declarations into the exact `CameraManager.openCamera`, `createCaptureSession`, and `setRepeatingRequest` calls you wrote by hand over the preceding 23 chapters. Vendor-specific workarounds are encoded in per-device XML files inside the library — the famous "CameraX quirk database."
+Intern ist CameraX Camera2. Das Artefakt `camera-camera2` enthält `Camera2Camera`, `Camera2CameraCaptureResult` und `Camera2RequestProcessor`, welche Ihre High-Level-UseCase-Deklarationen in genau die Aufrufe von `CameraManager.openCamera`, `createCaptureSession` und `setRepeatingRequest` übersetzen, die Sie in den vorangegangenen 23 Kapiteln von Hand geschrieben haben. Herstellerspezifische Workarounds sind in gerätespezifischen XML-Dateien innerhalb der Bibliothek kodiert – der berühmten "CameraX-Quirk-Datenbank".
 
-The full architecture looks like this:
+Die vollständige Architektur sieht so aus:
 
 ```mermaid
 graph LR
-    App[Your App<br/>LifecycleOwner] -->|bindToLifecycle| UC[CameraX UseCases<br/>Preview · ImageCapture<br/>ImageAnalysis · VideoCapture]
-    UC -->|UseCase config| CX[CameraX Core<br/>camera-camera2 module<br/>Quirk DB · Resolution Selector]
+    App["Ihre App<br/>LifecycleOwner"] -->|bindToLifecycle| UC["CameraX UseCases<br/>Preview · ImageCapture<br/>ImageAnalysis · VideoCapture"]
+    UC -->|UseCase Konfig| CX[CameraX Core<br/>Modul camera-camera2<br/>Quirk-DB · Resolution Selector]
     CX -->|CaptureRequest · Session| C2[Camera2 Framework<br/>android.hardware.camera2]
     C2 -->|Binder IPC| HAL[Camera HAL3<br/>camera3_device_t]
 ```
 
-Follow the arrows left to right: your app declares *what* it wants (use cases), CameraX resolves *how* to get it (surface sizes, session config, quirks) and then issues the identical Camera2 calls you would have written. The value add is the middle two boxes — hundreds of thousands of lines of Google-authored device compatibility code you do not have to write.
+Folgen Sie den Pfeilen von links nach rechts: Ihre App deklariert, *was* sie möchte (Anwendungsfälle), CameraX entscheidet, *wie* dies erreicht wird (Surface-Größen, Sitzungskonfiguration, Quirks), und gibt dann die identischen Camera2-Aufrufe ab, die Sie auch geschrieben hätten. Der Mehrwert liegt in den beiden mittleren Boxen – hunderttausende Zeilen von Google verfasster Code zur Gerätekompatibilität, den Sie nicht schreiben müssen.
 
 ---
 
-## Camera2Interop: Injecting Camera2 Parameters Into CameraX
+## Camera2Interop: Camera2-Parameter in CameraX einspeisen
 
-CameraX is brilliant for the 80% case. But you, dear reader, are a Camera2 master. You know what `CONTROL_AE_MODE_OFF` means. You know the difference between `SENSOR_SENSITIVITY` and `CONTROL_AE_EXPOSURE_COMPENSATION`. When the product spec says "let the user lock ISO to 400 and exposure to 1/60s even when using CameraX," you do not rewrite the whole feature in raw Camera2. You reach for `Camera2Interop`.
+CameraX ist brillant für die 80 % der Standardfälle. Aber Sie, lieber Leser, sind ein Camera2-Meister. Sie wissen, was `CONTROL_AE_MODE_OFF` bedeutet. Sie kennen den Unterschied zwischen `SENSOR_SENSITIVITY` und `CONTROL_AE_EXPOSURE_COMPENSATION`. Wenn die Produktspezifikation verlangt, "dem Benutzer zu ermöglichen, ISO auf 400 und die Belichtung auf 1/60 s zu fixieren, selbst wenn er CameraX verwendet", schreiben Sie das ganze Feature nicht in rohem Camera2 neu. Sie greifen zu `Camera2Interop`.
 
-### The Extender Pattern
+### Das Extender-Muster
 
-Every `UseCase.Builder` has a matching `Camera2Interop.Extender`. Call it *before* `build()` to inject raw Camera2 keys at either the session level or the per-request level:
+Jeder `UseCase.Builder` hat einen passenden `Camera2Interop.Extender`. Rufen Sie ihn *vor* `build()` auf, um rohe Camera2-Schlüssel entweder auf Sitzungsebene oder auf Ebene einzelner Anforderungen einzuspeisen:
 
-| Method                                         | Camera2 Equivalent                           |
+| Methode                                         | Camera2-Äquivalent                           |
 |------------------------------------------------|----------------------------------------------|
 | `extender.setCaptureRequestOption(key, value)` | `CaptureRequest.Builder.set(key, value)`     |
-| `extender.setSessionOption(key, value)`        | Session init params (less commonly used)     |
+| `extender.setSessionOption(key, value)`        | Session-Init-Parameter (seltener verwendet) |
 
-The extender is additive: CameraX still sets its own defaults for every key you do not override. If you only set `SENSOR_SENSITIVITY`, CameraX still handles AF, AWB, rotation, and metadata.
+Der Extender ist additiv: CameraX setzt weiterhin eigene Standardwerte für jeden Schlüssel, den Sie nicht überschreiben. Wenn Sie nur `SENSOR_SENSITIVITY` festlegen, übernimmt CameraX weiterhin AF, AWB, Rotation und Metadaten.
 
-### Real-World Example: Manual ISO and Exposure in CameraX
+### Praxisbeispiel: Manuelle ISO und Belichtung in CameraX
 
-Here is a complete `ImageCapture` builder that locks the camera to manual AE with a fixed ISO of 400 and an exposure time of 1/60 second, then snaps a photo:
+Hier ist ein vollständiger `ImageCapture`-Builder, der die Kamera auf manuelle Belichtungsautomatik (AE) mit festem ISO 400 und einer Belichtungszeit von 1/60 Sekunde festlegt und dann ein Foto schießt:
 
 ```kotlin
 val iso = 400
@@ -130,29 +130,29 @@ cameraProvider.bindToLifecycle(
     imageCapture
 )
 
-// Later, trigger the shot:
+// Später die Aufnahme auslösen:
 imageCapture.takePicture(
     ContextCompat.getMainExecutor(context),
     object : ImageCapture.OnImageCapturedCallback() {
         override fun onCaptureSuccess(imageProxy: ImageProxy) {
-            // imageProxy contains the manually-exposed frame
+            // imageProxy enthält den manuell belichteten Frame
             imageProxy.close()
         }
 
         override fun onError(exception: ImageCaptureException) {
-            Log.e(TAG, "Capture failed: ${exception.imageCaptureError}", exception)
+            Log.e(TAG, "Aufnahme fehlgeschlagen: ${exception.imageCaptureError}", exception)
         }
     }
 )
 ```
 
-**Critical caveat:** setting `CONTROL_MODE_OFF` disables *all* 3A. If you only want to lock exposure but still run AF and AWB, set only `CONTROL_AE_MODE_OFF` (or `CONTROL_AE_LOCK = true`) and leave `CONTROL_MODE` at the default (`CONTROL_MODE_AUTO`). CameraX defaults every key you do not touch.
+**Wichtiger Vorbehalt:** Das Setzen von `CONTROL_MODE_OFF` deaktiviert *alle* 3A-Funktionen. Wenn Sie nur die Belichtung fixieren, aber weiterhin AF und AWB ausführen möchten, setzen Sie nur `CONTROL_AE_MODE_OFF` (oder `CONTROL_AE_LOCK = true`) und lassen Sie `CONTROL_MODE` auf dem Standardwert (`CONTROL_MODE_AUTO`). CameraX setzt für jeden Schlüssel, den Sie nicht berühren, Standardwerte ein.
 
-And yes — you can do the same thing with `Preview.Builder` and `ImageAnalysis.Builder` for repeating manual streams. The extender applies to every single repeating or single request issued for that UseCase's lifetime.
+Und ja – Sie können dasselbe mit `Preview.Builder` und `ImageAnalysis.Builder` für wiederholte manuelle Streams tun. Der Extender gilt für jede einzelne wiederholte oder einzelne Anforderung während der Lebensdauer dieses UseCase.
 
-### Reading Camera2 Results Back Out
+### Camera2-Ergebnisse wieder auslesen
 
-Going the other direction — extracting a `TotalCaptureResult` from a CameraX callback — is equally straightforward via `Camera2CameraCaptureResult`:
+Der umgekehrte Weg – das Extrahieren eines `TotalCaptureResult` aus einem CameraX-Callback – ist über `Camera2CameraCaptureResult` gleichermaßen unkompliziert:
 
 ```kotlin
 imageCapture.takePicture(
@@ -163,57 +163,57 @@ imageCapture.takePicture(
                 .cameraCaptureResult as? Camera2CameraCaptureResult
             val totalResult: TotalCaptureResult? = camera2Result?.captureResult
             val actualIso = totalResult?.get(CaptureResult.SENSOR_SENSITIVITY)
-            Log.d(TAG, "Actual ISO on sensor: $actualIso")
+            Log.d(TAG, "Tatsächlicher ISO auf dem Sensor: $actualIso")
             imageProxy.close()
         }
     }
 )
 ```
 
-This lets you verify that your injected parameters actually made it to the sensor. Use **Android Camera Parameters** to cross-check which `SENSOR_INFO_SENSITIVITY_RANGE` your device claims — if your injected ISO falls outside that range, CameraX silently clamps it (or the HAL does), and reading the result back is the only way to know.
+Dies ermöglicht Ihnen zu überprüfen, ob Ihre eingespeisten Parameter tatsächlich am Sensor angekommen sind. Verwenden Sie **Android Camera Parameters**, um gegenzuchecken, welchen Bereich für `SENSOR_INFO_SENSITIVITY_RANGE` Ihr Gerät angibt – wenn Ihr eingespeister ISO-Wert außerhalb dieses Bereichs liegt, begrenzt CameraX ihn stillschweigend (oder der HAL tut es), und das Auslesen des Ergebnisses ist der einzige Weg, dies zu erfahren.
 
 ---
 
-## Choosing CameraX vs Camera2
+## Wahl zwischen CameraX und Camera2
 
-The hardest architectural question is not "how do I use CameraX?" but "should I use CameraX at all?" Here is the decision framework distilled from real production work.
+Die schwierigste architektonische Frage ist nicht "Wie verwende ich CameraX?", sondern "Sollte ich CameraX überhaupt verwenden?". Hier ist das Entscheidungs-Framework, destilliert aus echter Produktionsarbeit.
 
-### Decision Flowchart
+### Entscheidungs-Flussdiagramm
 
 ```mermaid
 flowchart TD
-    A[Start] --> B{Need RAW capture,<br/>ZSL reprocessing,<br/>multi-camera physical streams,<br/>high-speed &gt;60fps?}
-    B -->|Yes| D[Use raw Camera2]
-    B -->|No| C{Need per-frame CaptureRequest<br/>templating per physical camera,<br/>custom session config<br/>(input reprocess surfaces),<br/>or offline sessions?}
-    C -->|Yes| D
-    C -->|No| E{Simple Preview + Photo<br/>+ Video + Analysis,<br/>broad device compatibility?}
-    E -->|Yes| F[Use CameraX]
-    E -->|No| G{CameraX quirk DB covers<br/>your device set?<br/>Verify via Android Camera Parameters}
-    G -->|Yes| F
-    G -->|No| D
+    A["Start"] --> B{Benötigen Sie RAW-Aufnahme,<br/>ZSL-Reprocessing,<br/>physische Multi-Kamera-Streams,<br/>High-Speed > 60 fps?}
+    B -->|Ja| D[Verwenden Sie rohes Camera2]
+    B -->|Nein| C{Benötigen Sie CaptureRequest-<br/>Templating pro Frame pro physischer Kamera,<br/>eigene Sitzungskonfiguration<br/>(Input Reprocess Surfaces)<br/>oder Offline-Sitzungen?}
+    C -->|Ja| D
+    C -->|Nein| E{Einfache Vorschau + Foto<br/>+ Video + Analyse,<br/>breite Gerätekompatibilität?}
+    E -->|Ja| F[Verwenden Sie CameraX]
+    E -->|Nein| G{Deckt die CameraX-Quirk-DB<br/>Ihre Gerätepalette ab?<br/>Überprüfung über Android Camera Parameters}
+    G -->|Ja| F
+    G -->|Nein| D
 ```
 
-### Decision Table
+### Entscheidungstabelle
 
-| Scenario                                                              | CameraX | Raw Camera2 |
+| Szenario                                                              | CameraX | Rohes Camera2 |
 |-----------------------------------------------------------------------|:-------:|:-----------:|
-| Instagram-style preview + one-tap photo + video                       |    ✅    |      ⛔      |
-| QR code / barcode / ML Kit face detection with no frame customization |    ✅    |      ⛔      |
-| Manual exposure with fixed ISO + shutter (Camera2Interop covers it)   |    ✅    |      ⚠️       |
-| Custom 3A state machine overriding OEM algorithms                     |    ⛔    |      ✅      |
-| `RAW_SENSOR` / `RAW_PRIVATE` / DNG professional photography           |    ⛔    |      ✅      |
-| Zero Shutter Lag (Chapter 23) with reprocessing input surfaces        |    ⛔    |      ✅      |
-| Logical multi-camera physical stream access (Chapter 20)              |    ⛔    |      ✅      |
-| High speed 120/240fps with constrained-high-speed-sessions            |    ⛔    |      ✅      |
-| Camera Extensions (Night / Bokeh / HDR) via OEM extensions            |    ✅    |      ✅      |
-| Automotive rear-view camera with early-boot EVS migration             |    ⛔    |      ✅ (NDK)  |
-| Cross-device compatibility is #1 non-functional requirement           |    ✅    |      ⚠️       |
+| Vorschau im Instagram-Stil + One-Tap Foto + Video                     |    ✅    |      ⛔      |
+| QR-Code / Barcode / ML Kit Gesichtserkennung ohne Frame-Anpassung      |    ✅    |      ⛔      |
+| Manuelle Belichtung mit festem ISO + Verschluss (Camera2Interop deckt dies ab) |    ✅    |      ⚠️       |
+| Eigene 3A-Zustandsmaschine, die OEM-Algorithmen überschreibt           |    ⛔    |      ✅      |
+| Profi-Fotografie mit `RAW_SENSOR` / `RAW_PRIVATE` / DNG                |    ⛔    |      ✅      |
+| Zero Shutter Lag (Kapitel 23) mit Reprocessing-Input-Surfaces         |    ⛔    |      ✅      |
+| Physischer Zugriff auf Multi-Kamera-Streams (Kapitel 20)              |    ⛔    |      ✅      |
+| High Speed 120/240 fps mit Constrained-High-Speed-Sessions            |    ⛔    |      ✅      |
+| Camera Extensions (Nacht / Bokeh / HDR) über OEM-Erweiterungen         |    ✅    |      ✅      |
+| Rückfahrkamera im Automobilbereich mit EVS-Migration beim Booten       |    ⛔    |      ✅ (NDK)  |
+| Geräteübergreifende Kompatibilität ist die wichtigste Anforderung     |    ✅    |      ⚠️       |
 
-The middle ground (⚠️) is where judgment matters. Manual exposure control via `Camera2Interop` works reliably on `HARDWARE_LEVEL_FULL` devices but silently fails on `LEGACY` devices because `LEGACY` HALs ignore `CONTROL_MODE_OFF` entirely. Run **Android Camera Parameters** on your test fleet, check `INFO_SUPPORTED_HARDWARE_LEVEL` for each device, and if 20% of your fleet is `LEGACY`, either drop to raw Camera2 with a fallback path or accept that manual controls will no-op on those devices.
+Der Mittelweg (⚠️) ist der Bereich, in dem es auf das Urteilsvermögen ankommt. Die manuelle Belichtungssteuerung über `Camera2Interop` funktioniert zuverlässig auf Geräten mit `HARDWARE_LEVEL_FULL`, schlägt jedoch stillschweigend auf `LEGACY`-Geräten fehl, da `LEGACY`-HALs `CONTROL_MODE_OFF` komplett ignorieren. Führen Sie **Android Camera Parameters** auf Ihrer Testflotte aus, prüfen Sie `INFO_SUPPORTED_HARDWARE_LEVEL` für jedes Gerät, und wenn 20 % Ihrer Flotte `LEGACY` sind, steigen Sie entweder auf rohes Camera2 mit einem Fallback-Pfad um oder akzeptieren Sie, dass manuelle Steuerungen auf diesen Geräten keine Wirkung haben.
 
-### Basic CameraX Preview + ImageCapture Setup (Full)
+### Grundlegendes CameraX-Setup für Preview + ImageCapture (Vollständig)
 
-For reference, here is the complete, minimal setup that replaces ~300 lines of the raw Camera2 code you wrote in Chapters 6–9.
+Als Referenz dient hier das vollständige, minimale Setup, das ca. 300 Zeilen des rohen Camera2-Codes ersetzt, den Sie in den Kapiteln 6–9 geschrieben haben.
 
 ```kotlin
 class CameraXFragment : Fragment() {
@@ -255,7 +255,7 @@ class CameraXFragment : Fragment() {
                 imageCapture
             )
         } catch (exc: Exception) {
-            Log.e(TAG, "UseCase binding failed", exc)
+            Log.e(TAG, "UseCase-Bindung fehlgeschlagen", exc)
         }
     }
 
@@ -275,10 +275,10 @@ class CameraXFragment : Fragment() {
                 override fun onImageSaved(output: ImageCapture.OutputFileResults) {
                     val savedUri = Uri.fromFile(photoFile)
                     Toast.makeText(requireContext(),
-                        "Saved: $savedUri", Toast.LENGTH_SHORT).show()
+                        "Gespeichert: $savedUri", Toast.LENGTH_SHORT).show()
                 }
                 override fun onError(exc: ImageCaptureException) {
-                    Log.e(TAG, "Photo capture failed: ${exc.message}", exc)
+                    Log.e(TAG, "Fotoaufnahme fehlgeschlagen: ${exc.message}", exc)
                 }
             }
         )
@@ -290,14 +290,14 @@ class CameraXFragment : Fragment() {
 }
 ```
 
-That is the entire preview + photo pipeline. Note the total absence of `HandlerThread`, `CameraDevice.StateCallback`, `CameraCaptureSession.StateCallback`, `ImageReader.OnImageAvailableListener`, or manual `close()` calls. CameraX handles every one.
+Das ist die gesamte Pipeline für Vorschau und Foto. Beachten Sie das vollständige Fehlen von `HandlerThread`, `CameraDevice.StateCallback`, `CameraCaptureSession.StateCallback`, `ImageReader.OnImageAvailableListener` oder manuellen `close()`-Aufrufen. CameraX kümmert sich um jeden einzelnen davon.
 
 ---
 
-## Summary
+## Zusammenfassung
 
-CameraX is Camera2 with a lifecycle-aware, use-case-driven facade backed by Google's cross-device quirk database. The architecture stacks your app → UseCases → CameraX Core → Camera2 → HAL, and the `ProcessCameraProvider.bindToLifecycle()` call replaces hundreds of lines of manual setup. For the 20% of parameters CameraX does not expose at the UseCase level, `Camera2Interop.Extender` injects raw `CaptureRequest` keys and reads raw `TotalCaptureResult` values back out. The decision of when to use it is straightforward: CameraX is the default unless your feature explicitly requires RAW, ZSL, physical multi-camera streams, high-speed video, or a custom session topology that CameraX's resolver cannot express.
+CameraX ist Camera2 mit einer Lifecycle-bewussten, Use-Case-gesteuerten Fassade, unterstützt durch die geräteübergreifende Quirk-Datenbank von Google. Die Architektur schichtet Ihre App → UseCases → CameraX Core → Camera2 → HAL, und der Aufruf `ProcessCameraProvider.bindToLifecycle()` ersetzt hunderte Zeilen manuellem Setup. Für die 20 % der Parameter, die CameraX nicht auf UseCase-Ebene offenlegt, schleust der `Camera2Interop.Extender` rohe `CaptureRequest`-Schlüssel ein und liest rohe `TotalCaptureResult`-Werte wieder aus. Die Entscheidung, wann es verwendet werden soll, ist unkompliziert: CameraX ist der Standard, es sei denn, Ihr Feature erfordert explizit RAW, ZSL, physische Multi-Kamera-Streams, High-Speed-Video oder eine benutzerdefinierte Sitzungstopologie, die der Resolver von CameraX nicht ausdrücken kann.
 
-## What's Next
+## Wie geht es weiter?
 
-CameraX is still Java/Kotlin Dalvik/ART code sitting above the Binder boundary. What if even that overhead is too much for your AR engine's 16ms frame budget? In Chapter 25 we cross the JNI line entirely and open the camera directly from C++ using the NDK's native camera stack, binding frames as Vulkan textures with zero copies.
+CameraX ist immer noch Java/Kotlin-Dalvik/ART-Code, der über der Binder-Grenze sitzt. Was ist, wenn selbst dieser Overhead zu viel für das 16-ms-Frame-Budget Ihrer AR-Engine ist? In Kapitel 25 überschreiten wir die JNI-Linie komplett und öffnen die Kamera direkt aus C++ unter Verwendung des nativen NDK-Kamera-Stacks, wobei wir Frames ohne Kopien als Vulkan-Texturen binden.

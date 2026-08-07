@@ -1,34 +1,34 @@
-﻿---
+---
 sidebar_position: 20
-title: "Chapter 20: Multi-Camera"
-description: "Explore Android 9+ logical multi-camera devices, physical camera IDs, APPROXIMATE vs CALIBRATED sensor sync, seamless zoom switching, and simultaneous dual-physical capture via OutputConfiguration.setPhysicalCameraId() in Camera2 API"
-keywords: [Android Camera2, multi-camera, logical camera, physical camera, getPhysicalCameraIds, sensor sync, APPROXIMATE, CALIBRATED, seamless zoom, disparity, setPhysicalCameraId]
+title: "Capítulo 20: Cámara múltiple"
+description: "Explore los dispositivos de cámara múltiple lógica de Android 9+, los ID de cámara física, la sincronización de sensores APPROXIMATE frente a CALIBRATED, el cambio de zoom fluido y la captura física dual simultánea mediante OutputConfiguration.setPhysicalCameraId() en la API Camera2"
+keywords: [Android Camera2, cámara múltiple, cámara lógica, cámara física, getPhysicalCameraIds, sincronización de sensores, APPROXIMATE, CALIBRATED, zoom fluido, disparidad, setPhysicalCameraId]
 ---
 
-# Chapter 20: Multi-Camera
+# Capítulo 20: Cámara múltiple
 
-Modern smartphones ship with 3–5 rear cameras and 2 front cameras — ultra-wide, wide, telephoto, macro, depth, and periscope lenses on 2023+ flagships. Before Android 9 (API 28), every lens appeared as an independent `CameraCharacteristics` camera ID, and apps had to manually open/close cameras at zoom boundaries to switch lenses. This caused visible black frames, lost AF state, and audio pops during video — all unacceptable UX defects. Android 9 solved this with the **logical camera** abstraction: a virtual camera ID that groups multiple same-facing physical cameras and lets the HAL transparently switch lenses at zoom thresholds, preserving session state. The research project's *Logical Multi-Camera* section specifies the exact rules for stream replacement, sensor sync semantics, and dual-physical capture that this chapter implements.
+Los smartphones modernos incorporan de 3 a 5 cámaras traseras y 2 frontales: lentes ultra gran angular, gran angular, teleobjetivo, macro, profundidad y periscopio en los insignias de 2023+. Antes de Android 9 (API 28), cada lente aparecía como un ID de cámara independiente en `CameraCharacteristics`, y las aplicaciones tenían que abrir/cerrar cámaras manualmente en los límites del zoom para cambiar de lente. Esto provocaba fotogramas negros visibles, pérdida del estado de AF y chasquidos de audio durante el video: todos ellos defectos de UX inaceptables. Android 9 solucionó esto con la abstracción de **cámara lógica**: un ID de cámara virtual que agrupa varias cámaras físicas con la misma orientación y permite que la HAL cambie de lente de forma transparente en los umbrales de zoom, preservando el estado de la sesión. La sección *Logical Multi-Camera* del proyecto de investigación especifica las reglas exactas para la sustitución de flujos, la semántica de sincronización de sensores y la captura física dual que implementa este capítulo.
 
-You can browse the full logical/physical camera topology of every supported device in the [Android Camera Parameters](https://github.com/zoozooll/AndroidCameraParameters) app (also on the [Play Store](https://play.google.com/store/apps/details?id=com.zoozooll.cameraparameters)): the Multi-Camera dashboard reports the `REQUEST_AVAILABLE_CAPABILITIES_LOGICAL_MULTI_CAMERA` flag, lists `getPhysicalCameraIds()` per logical ID, and renders the calibrated vs approximate sensor sync type for every rear-facing combo. These reports are directly pulled from the HAL via the Camera2 API with no vendor-specific filtering, so they match exactly what your app will see at runtime.
+Puede explorar la topología completa de las cámaras lógicas/físicas de cada dispositivo compatible en la aplicación [Android Camera Parameters](https://github.com/zoozooll/AndroidCameraParameters) (también en la [Play Store](https://play.google.com/store/apps/details?id=com.zoozooll.cameraparameters)): el panel Multi-Camera informa de la bandera `REQUEST_AVAILABLE_CAPABILITIES_LOGICAL_MULTI_CAMERA`, enumera `getPhysicalCameraIds()` por cada ID lógico y muestra el tipo de sincronización de sensores calibrado frente a aproximado para cada combinación orientada hacia atrás. Estos informes se extraen directamente de la HAL a través de la API Camera2 sin filtrado específico del fabricante, por lo que coinciden exactamente con lo que su aplicación verá en tiempo de ejecución.
 
-## Logical vs Physical Camera Topology
+## Topología de cámara lógica frente a física
 
-A logical camera is a virtual HAL device backed by N ≥ 2 physical cameras that share the same facing direction (`LENS_FACING_FRONT` or `LENS_FACING_BACK`). When you open a logical ID, the HAL internally manages power rails, ISP pipelines, and lens switching for all underlying physical cameras. The topology looks like this:
+Una cámara lógica es un dispositivo virtual de la HAL respaldado por N ≥ 2 cámaras físicas que comparten la misma orientación (`LENS_FACING_FRONT` o `LENS_FACING_BACK`). Al abrir un ID lógico, la HAL gestiona internamente los carriles de alimentación, las tuberías de ISP y el cambio de lente para todas las cámaras físicas subyacentes. La topología tiene este aspecto:
 
 ```mermaid
 flowchart TB
-    subgraph UserSpace["App (Userspace)"]
-        APP[CameraManager.openCamera\ncameraId = \"0\" (Logical ID)]
+    subgraph UserSpace["App (Espacio de usuario)"]
+        APP["CameraManager.openCamera<br/>cameraId = \"0\" (ID Lógico)"]
     end
 
-    subgraph HAL["Camera HAL (Kernel / Vendor Partition)"]
-        LOG[Logical Camera Device 0\nVirtual Node]
+    subgraph HAL["HAL de cámara (Kernel / Partición de proveedor)"]
+        LOG["Dispositivo de cámara lógica 0<br/>Nodo virtual"]
 
-        subgraph PhysicalCams["Physical Cameras (Same-Facing Group)"]
-            UW["Physical ID \"8\"\nUltra-Wide 0.5×\n12MP, 13mm eq."]
-            W["Physical ID \"0\"\nWide 1.0×\n50MP, 24mm eq."]
-            T["Physical ID \"5\"\nTelephoto 3.0×\n10MP, 72mm eq."]
-            P["Physical ID \"7\"\nPeriscope 10×\n8MP, 240mm eq."]
+        subgraph PhysicalCams["Cámaras físicas (Grupo con misma orientación)"]
+            UW["ID físico \"8\"<br/>Ultra gran angular 0,5×<br/>12 MP, 13 mm eq."]
+            W["ID físico \"0\"<br/>Gran angular 1,0×<br/>50 MP, 24 mm eq."]
+            T["ID físico \"5\"<br/>Teleobjetivo 3,0×<br/>10 MP, 72 mm eq."]
+            P["ID físico \"7\"<br/>Periscopio 10×<br/>8 MP, 240 mm eq."]
         end
 
         LOG <--> UW
@@ -37,76 +37,76 @@ flowchart TB
         LOG <--> P
     end
 
-    subgraph ZoomScale["Zoom Ratios → HAL Lens Switch Points"]
-        Z1["0.5× – 0.9× → ULTRA-WIDE (ID 8)"]
-        Z2["1.0× – 2.9× → WIDE (ID 0)"]
-        Z3["3.0× – 9.9× → TELEPHOTO (ID 5)"]
-        Z4["10.0×+ → PERISCOPE (ID 7)"]
+    subgraph ZoomScale["Relaciones de zoom → Puntos de cambio de lente HAL"]
+        Z1["0,5× – 0,9× → ULTRA GRAN ANGULAR (ID 8)"]
+        Z2["1,0× – 2,9× → GRAN ANGULAR (ID 0)"]
+        Z3["3,0× – 9,9× → TELEOBJETIVO (ID 5)"]
+        Z4["10,0×+ → PERISCOPIO (ID 7)"]
     end
 
     APP --> LOG
     LOG -.-> ZoomScale
 ```
 
-The zoom switch points (Z1–Z4) are completely HAL-controlled and opaque to your app — when you set `CaptureRequest.CONTROL_ZOOM_RATIO = 3.2f` on a 4-lens logical device, the HAL instantly routes capture traffic to the 3× telephoto (ID 5) and digitally crops back to the correct framing without your app ever knowing a lens change happened. This is the "seamless zoom" behavior that flagship camera apps use.
+Los puntos de cambio de zoom (Z1–Z4) están totalmente controlados por la HAL y son opacos para su aplicación: cuando establece `CaptureRequest.CONTROL_ZOOM_RATIO = 3.2f` en un dispositivo lógico de 4 lentes, la HAL encamina instantáneamente el tráfico de captura al teleobjetivo de 3 aumentos (ID 5) y recorta digitalmente de vuelta al encuadre correcto sin que su aplicación sepa jamás que se produjo un cambio de lente. Este es el comportamiento de "zoom fluido" que utilizan las aplicaciones de cámara de los teléfonos insignia.
 
-The critical properties are:
-- **`getPhysicalCameraIds()`** (called on the `CameraCharacteristics` of the logical ID) returns a `Set&lt;String&gt;` of the underlying physical ID strings, e.g. `{"0", "5", "7", "8"}` for the example above.
-- **`LENS_INFO_MINIMUM_FOCUS_DISTANCE`** and **`LENS_INFO_AVAILABLE_FOCAL_LENGTHS`** on the logical ID represent the currently-active physical lens. Query the *physical* characteristics if you need per-lens focal length data.
-- **`SCALER_AVAILABLE_MAX_DIGITAL_ZOOM`** on the logical ID gives the zoom ceiling (e.g., 100×) which is a combination of per-lens optical zoom + digital crop across all physical lenses.
+Las propiedades críticas son:
+- **`getPhysicalCameraIds()`** (llamado sobre las `CameraCharacteristics` del ID lógico) devuelve un `Set<String>` de las cadenas de ID físico subyacentes, p. ej. `{"0", "5", "7", "8"}` para el ejemplo anterior.
+- **`LENS_INFO_MINIMUM_FOCUS_DISTANCE`** y **`LENS_INFO_AVAILABLE_FOCAL_LENGTHS`** en el ID lógico representan la lente física activa actualmente. Consulte las características *físicas* si necesita los datos de la distancia focal por lente.
+- **`SCALER_AVAILABLE_MAX_DIGITAL_ZOOM`** en el ID lógico indica el techo de zoom (p. ej., 100×), que es una combinación de zoom óptico por lente + recorte digital en todas las lentes físicas.
 
-## Sensor Synchronization: APPROXIMATE vs CALIBRATED
+## Sincronización de sensores: APPROXIMATE frente a CALIBRATED
 
-When you capture from two physical cameras simultaneously (e.g., wide + tele for depth/disparity matching, or wide + ultra-wide for multi-frame fusion), the pixel data is only computationally useful if the two sensor exposures start within a known time delta. Android defines two sync levels in the key **`CameraCharacteristics.LOGICAL_MULTI_CAMERA_SENSOR_SYNC_TYPE`**:
+Cuando se captura desde dos cámaras físicas simultáneamente (p. ej., gran angular + tele para el emparejamiento de profundidad/disparidad, o gran angular + ultra gran angular para la fusión multifotograma), los datos de los píxeles solo son computacionalmente útiles si las dos exposiciones del sensor comienzan dentro de un delta de tiempo conocido. Android define dos niveles de sincronización en la clave **`CameraCharacteristics.LOGICAL_MULTI_CAMERA_SENSOR_SYNC_TYPE`**:
 
-| Sync Level | Numeric Value | Meaning | Typical Use Case |
+| Nivel de sincronización | Valor numérico | Significado | Caso de uso típico |
 |------------|---------------|---------|------------------|
-| **APPROXIMATE** | 0 | Sensor start-of-exposure timestamps match within ±1 frame interval (±33 ms at 30 fps). AF/AE are synchronized, but not pixel-level exposure start. | Portrait mode with a depth sensor, casual bokeh. |
-| **CALIBRATED** | 1 | Sensor start-of-exposure timestamps match within ±1 ms. Hardware-level sync is enforced via the SoC CSI-2 receiver. Pixel-level temporal alignment is guaranteed. | Stereo depth estimation for AR, photogrammetry, simultaneous dual-focal-length fusion, super-resolution. |
+| **APPROXIMATE** | 0 | Las marcas de tiempo de inicio de exposición del sensor coinciden dentro de ±1 intervalo de fotograma (±33 ms a 30 fps). El AF/AE están sincronizados, pero no el inicio de la exposición a nivel de píxel. | Modo retrato con un sensor de profundidad, bokeh informal. |
+| **CALIBRATED** | 1 | Las marcas de tiempo de inicio de exposición del sensor coinciden dentro de ±1 ms. La sincronización a nivel de hardware se impone mediante el receptor CSI-2 del SoC. La alineación temporal a nivel de píxel está garantizada. | Estimación de profundidad estéreo para AR, fotogrametría, fusión simultánea de dos distancias focales, superresolución. |
 
-The research doc's *Logical Multi-Camera* section found that only **Snapdragon 8 Gen 1+ and Exynos 2200+ flagships report CALIBRATED sync**. All mid-range (Snapdragon 7-series, Dimensity 8000-series) and budget devices report APPROXIMATE. If you attempt pixel-level disparity matching on an APPROXIMATE-sync device, you will get ±1-frame parallax drift that breaks depth maps. Always gate disparity features behind the CALIBRATED check.
+La sección *Logical Multi-Camera* del documento de investigación concluyó que solo los **insignias con Snapdragon 8 Gen 1+ y Exynos 2200+ informan de sincronización CALIBRATED**. Todos los dispositivos de gama media (serie Snapdragon 7, serie Dimensity 8000) y económicos informan APPROXIMATE. Si intenta el emparejamiento por disparidad a nivel de píxel en un dispositivo con sincronización APPROXIMATE, obtendrá una deriva de paralaje de ±1 fotograma que romperá los mapas de profundidad. Proteja siempre las funciones de disparidad tras la comprobación de CALIBRATED.
 
 ```mermaid
 flowchart LR
-    subgraph APPROX["APPROXIMATE Sync (±33 ms)"]
-        A1[Wide Sensor Exposure Start\nt=0.000 ms] --> A2[ISP Merge\nDepth OK, Motion NOT OK]
-        A3[Tele Sensor Exposure Start\nt=+27 ms] --> A2
+    subgraph APPROX["Sincronización APPROXIMATE (±33 ms)"]
+        A1[Inicio exposición sensor angular<br/>t=0.000 ms] --> A2[Fusión ISP<br/>Profundidad OK, Movimiento NO OK]
+        A3[Inicio exposición sensor tele<br/>t=+27 ms] --> A2
     end
-    subgraph CALIB["CALIBRATED Sync (±1 ms)"]
-        C1[Wide Sensor Exposure Start\nt=0.000 ms] --> C2[ISP / GPU Fusion\nDepth + Motion + AR OK]
-        C3[Tele Sensor Exposure Start\nt=+0.4 ms] --> C2
+    subgraph CALIB["Sincronización CALIBRATED (±1 ms)"]
+        C1[Inicio exposición sensor angular<br/>t=0.000 ms] --> C2[Fusión ISP / GPU<br/>Profundidad + Movimiento + AR OK]
+        C3[Inicio exposición sensor tele<br/>t=+0.4 ms] --> C2
     end
 
     style APPROX fill:#ffe9e9,stroke:#b91c1c
     style CALIB fill:#e6ffef,stroke:#15803d
 ```
 
-The time-delta difference is not subtle: 27 ms of misalignment means a moving subject (e.g., a runner at 5 m/s) has moved 13.5 cm between the two exposures — a parallax error large enough to completely destroy any depth-from-disparity algorithm.
+La diferencia de delta de tiempo no es sutil: 27 ms de desalineación significan que un sujeto en movimiento (p. ej., un corredor a 5 m/s) se ha movido 13,5 cm entre las dos exposiciones, un error de paralaje lo suficientemente grande como para destruir por completo cualquier algoritmo de profundidad por disparidad.
 
-## Stream Replacement Rule (From Research Doc)
+## Regla de sustitución de flujos (del documento de investigación)
 
-The single most important constraint the HAL enforces on physical-camera targeting is the **Stream Replacement Rule**, verbatim from the *Logical Multi-Camera* specification in the research doc:
+La restricción más importante que impone la HAL al direccionamiento a la cámara física es la **Regla de sustitución de flujos**, recogida textualmente de la especificación *Logical Multi-Camera* en el documento de investigación:
 
-> **Rule MR-1:** If a logical camera has N physical children, then for every 1 logical-format stream (YUV or RAW) of size S that you attach to the logical session, you may replace it with up to **2 identical-format streams of the SAME size S**, each targeted at a DIFFERENT physical camera via `OutputConfiguration.setPhysicalCameraId()`.
+> **Regla MR-1:** Si una cámara lógica tiene N hijos físicos, entonces por cada 1 flujo de formato lógico (YUV o RAW) de tamaño S que conecte a la sesión lógica, puede sustituirlo por hasta **2 flujos de formato idéntico del MISMO tamaño S**, cada uno dirigido a una cámara física DIFERENTE mediante `OutputConfiguration.setPhysicalCameraId()`.
 
-Consequences of violating MR-1:
-- 3 or more physical streams → session `onConfigureFailed()`.
-- Different sizes for the two physical streams → session `onConfigureFailed()`.
-- Mixing RAW and YUV in the same replacement pair → session `onConfigureFailed()`.
-- Adding 2 physical streams without removing the parent logical stream → HAL allocates 3× the required bandwidth and silently drops frames.
+Consecuencias de violar la MR-1:
+- 3 o más flujos físicos → fallo en la sesión `onConfigureFailed()`.
+- Tamaños diferentes para los dos flujos físicos → fallo en la sesión `onConfigureFailed()`.
+- Mezclar RAW y YUV en el mismo par de sustitución → fallo en la sesión `onConfigureFailed()`.
+- Añadir 2 flujos físicos sin eliminar el flujo lógico padre → la HAL asigna el triple del ancho de banda necesario y pierde fotogramas silenciosamente.
 
-Correct examples (4 physical children → 2 allowed replacements):
-| Logical Stream | Replacement (Valid per MR-1) |
+Ejemplos correctos (4 hijos físicos → 2 sustituciones permitidas):
+| Flujo lógico | Sustitución (Válida según MR-1) |
 |----------------|-------------------------------|
-| 1× Logical YUV 1920×1080 | → 2× Physical YUV 1920×1080 (Wide + Tele) |
-| 1× Logical RAW 4000×3000 | → 2× Physical RAW 4000×3000 (UltraWide + Wide) |
-| 2× Logical YUV (preview + video) | → 2× (Logical YUV preview) + 2× (Physical YUV Wide+Tele encode) — 2 replacements total |
+| 1× YUV lógico 1920×1080 | → 2× YUV físico 1920×1080 (Angular + Tele) |
+| 1× RAW lógico 4000×3000 | → 2× RAW físico 4000×3000 (Ultra angular + Angular) |
+| 2× YUV lógico (vista previa + video) | → 2× (vista previa YUV lógica) + 2× (codificación YUV física Angular+Tele): 2 sustituciones en total |
 
-## Implementation: Step-by-Step Dual-Physical Capture
+## Implementación: Captura física dual paso a paso
 
-The workflow below captures simultaneous frames from the wide (1×) and telephoto (3×) physical sensors, using the Stream Replacement Rule.
+El flujo de trabajo siguiente captura fotogramas simultáneos de los sensores físicos gran angular (1×) y teleobjetivo (3×), utilizando la Regla de sustitución de flujos.
 
-### Step 1: Query Logical Capability and Physical Camera IDs
+### Paso 1: Consultar la capacidad lógica e ID de cámaras físicas
 
 ```kotlin
 import android.hardware.camera2.CameraCharacteristics
@@ -145,7 +145,7 @@ fun enumerateLogicalMultiCams(
             CameraCharacteristics.LOGICAL_MULTI_CAMERA_SENSOR_SYNC_TYPE
         ) ?: 0
 
-        // Identify roles by focal length
+        // Identificar roles por distancia focal
         var ultraWideId: String? = null
         var wideId: String? = null
         var teleId: String? = null
@@ -184,11 +184,11 @@ fun enumerateLogicalMultiCams(
 }
 ```
 
-Role identification by focal length (shortest = ultra-wide, longest = tele, remainder = wide) is reliable across all OEMs because the HAL reports LENS_INFO_AVAILABLE_FOCAL_LENGTHS as 35mm-equivalent or actual-mm values consistent with marketing specs. The Android Camera Parameters app uses this exact algorithm for its Multi-Camera dashboard.
+La identificación del rol por la distancia focal (la más corta = ultra gran angular, la más larga = tele, el resto = gran angular) es fiable en todos los fabricantes porque la HAL informa de `LENS_INFO_AVAILABLE_FOCAL_LENGTHS` como valores equivalentes a 35 mm o mm reales coherentes con las especificaciones de marketing. La aplicación Android Camera Parameters utiliza exactamente este algoritmo para su panel Multi-Camera.
 
-### Step 2: Create OutputConfigurations with setPhysicalCameraId()
+### Paso 2: Crear las OutputConfigurations con setPhysicalCameraId()
 
-The replacement pair (wide YUV + tele YUV) requires `OutputConfiguration` objects with `setPhysicalCameraId()` invoked **before** the session is created. Once the session is configured, changing the physical ID via `setPhysicalCameraId()` is not allowed on existing surfaces (requires session re-creation).
+El par de sustitución (YUV angular + YUV tele) requiere objetos `OutputConfiguration` con `setPhysicalCameraId()` invocado **antes** de que se cree la sesión. Una vez configurada la sesión, no se permite cambiar el ID físico mediante `setPhysicalCameraId()` en las superficies existentes (requiere la recreación de la sesión).
 
 ```kotlin
 import android.hardware.camera2.params.OutputConfiguration
@@ -203,7 +203,7 @@ var teleImageReader: ImageReader? = null
 fun createPhysicalOutputConfigs(
     wideId: String,
     teleId: String,
-    sharedSize: Size // Must be SAME size for both per Rule MR-1!
+    sharedSize: Size // ¡Debe ser el MISMO tamaño para ambos según la Regla MR-1!
 ): Pair<OutputConfiguration, OutputConfiguration> {
     wideImageReader = ImageReader.newInstance(
         sharedSize.width, sharedSize.height,
@@ -226,11 +226,11 @@ fun createPhysicalOutputConfigs(
 }
 ```
 
-Rule MR-1 is enforced in the code above: both `ImageReader` instances use `sharedSize` (identical dimensions) and `YUV_420_888` (identical format). Using different sizes guarantees `onConfigureFailed` — the HAL has no mechanism to run two physical sensors at different resolutions in the same sync group.
+La Regla MR-1 se aplica en el código anterior: ambas instancias de `ImageReader` utilizan `sharedSize` (dimensiones idénticas) y `YUV_420_888` (formato idéntico). El uso de diferentes tamaños garantiza un `onConfigureFailed`: la HAL no tiene ningún mecanismo para ejecutar dos sensores físicos a diferentes resoluciones en el mismo grupo de sincronización.
 
-### Step 3: Create CaptureSession and Submit Dual-Physical Capture
+### Paso 3: Crear la CaptureSession y enviar la captura física dual
 
-The session uses the 2 physical OutputConfigurations plus 1 logical preview Surface (total 3 outputs). 3 outputs total is within the bandwidth budget of flagships (the research doc measured 68% ISP utilization on Snapdragon 8 Gen 2 for 3-output simultaneous wide+tele+preview at 1080p30).
+La sesión utiliza las 2 `OutputConfiguration` físicas más 1 `Surface` de vista previa lógica (3 salidas en total). Un total de 3 salidas entra dentro del presupuesto de ancho de banda de los insignias (el documento de investigación midió una utilización del ISP del 68% en un Snapdragon 8 Gen 2 para 3 salidas simultáneas de angular + tele + vista previa a 1080p30).
 
 ```kotlin
 import android.hardware.camera2.CameraDevice
@@ -238,7 +238,7 @@ import android.hardware.camera2.CameraCaptureSession
 import android.hardware.camera2.CaptureRequest
 import android.os.Handler
 
-lateinit var cameraDevice: CameraDevice // Already-opened logical ID
+lateinit var cameraDevice: CameraDevice // ID lógico ya abierto
 
 fun createDualPhysicalSession(
     previewSurface: Surface,
@@ -247,9 +247,9 @@ fun createDualPhysicalSession(
     backgroundHandler: Handler
 ) {
     val outputs = listOf(
-        OutputConfiguration(previewSurface), // Logical preview (any size)
-        widePhysConfig,                      // Physical wide YUV (sharedSize)
-        telePhysConfig                       // Physical tele YUV (sharedSize)
+        OutputConfiguration(previewSurface), // Vista previa lógica (cualquier tamaño)
+        widePhysConfig,                      // YUV físico angular (sharedSize)
+        telePhysConfig                       // YUV físico tele (sharedSize)
     )
 
     val sessionConfig = android.hardware.camera2.params.SessionConfiguration(
@@ -272,8 +272,8 @@ fun createDualPhysicalSession(
                     set(CaptureRequest.CONTROL_AF_MODE,
                         CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
 
-                    // Optional: Lock AE across both physical lenses so fusion
-                    // does not produce mismatched exposure halves
+                    // Opcional: Bloquear la AE en ambas lentes físicas para que la fusión
+                    // no produzca mitades de exposición desajustadas
                     set(CaptureRequest.CONTROL_AE_LOCK, true)
                 }
 
@@ -284,7 +284,7 @@ fun createDualPhysicalSession(
                 )
             }
             override fun onConfigureFailed(s: CameraCaptureSession) =
-                Log.e(TAG, "Dual-physical session FAILED — check Rule MR-1")
+                Log.e(TAG, "Fallo en la sesión física dual: compruebe la Regla MR-1")
         }
     )
 
@@ -292,41 +292,41 @@ fun createDualPhysicalSession(
 }
 ```
 
-Once `setRepeatingRequest()` is running, every frame interval the HAL: (a) triggers both physical sensors' start-of-exposure at the calibrated time delta, (b) routes each sensor's output to its targeted ImageReader surface via the CSI-2 virtual channel demux, (c) combines both with the logical preview output into a single CaptureResult with one timestamp.
+Una vez que `setRepeatingRequest()` está funcionando, en cada intervalo de fotograma la HAL: (a) dispara el inicio de la exposición de ambos sensores físicos con el delta de tiempo calibrado, (b) encamina la salida de cada sensor a su superficie ImageReader de destino a través del demultiplexor de canal virtual CSI-2, (c) combina ambos con la salida de vista previa lógica en un único CaptureResult con una marca de tiempo.
 
-The two `Image` objects will have **identical `image.timestamp` values** when `LOGICAL_MULTI_CAMERA_SENSOR_SYNC_TYPE == CALIBRATED`, and timestamps within ±1 frame interval when APPROXIMATE.
+Los dos objetos `Image` tendrán **valores de `image.timestamp` idénticos** cuando `LOGICAL_MULTI_CAMERA_SENSOR_SYNC_TYPE == CALIBRATED`, y marcas de tiempo dentro de ±1 intervalo de fotograma cuando sea APPROXIMATE.
 
-## Logical → Physical Topology Diagram (Mermaid ER-style)
+## Diagrama de topología lógica → física (estilo Mermaid ER)
 
 ```mermaid
 graph TD
-    subgraph BackLogical["Logical Rear Camera ID \"0\""]
+    subgraph BackLogical["Cámara trasera lógica ID \"0\""]
         direction TB
-        CAPFLAG["CAPABILITIES:\nLOGICAL_MULTI_CAMERA = true\nSENSOR_SYNC_TYPE = CALIBRATED\nMAX_DIGITAL_ZOOM = 100×"]
+        CAPFLAG["CAPABILITIES:<br/>LOGICAL_MULTI_CAMERA = true<br/>SENSOR_SYNC_TYPE = CALIBRATED<br/>MAX_DIGITAL_ZOOM = 100×"]
     end
 
-    subgraph PhysChildren["Physical Children (getPhysicalCameraIds)"]
-        UWPHYS["ID \"8\" → Ultra-Wide\nFocal=1.7mm\nf/1.8\nFOV=120°"]
-        WPHYS["ID \"0\" → Wide\nFocal=5.5mm\nf/1.6\nFOV=84°"]
-        TPHYS["ID \"5\" → Telephoto 3×\nFocal=16.5mm\nf/2.0\nFOV=28°"]
-        PPHYS["ID \"7\" → Periscope 10×\nFocal=55mm\nf/3.4\nFOV=8.5°"]
+    subgraph PhysChildren["Hijos físicos (getPhysicalCameraIds)"]
+        UWPHYS["ID \"8\" → Ultra gran angular<br/>Focal=1,7 mm<br/>f/1.8<br/>FOV=120°"]
+        WPHYS["ID \"0\" → Gran angular<br/>Focal=5,5 mm<br/>f/1.6<br/>FOV=84°"]
+        TPHYS["ID \"5\" → Teleobjetivo 3×<br/>Focal=16,5 mm<br/>f/2.0<br/>FOV=28°"]
+        PPHYS["ID \"7\" → Periscopio 10×<br/>Focal=55 mm<br/>f/3.4<br/>FOV=8,5°"]
     end
 
-    subgraph ReplaceRule["Session Outputs (Rule MR-1 Applied)"]
+    subgraph ReplaceRule["Salidas de sesión (Regla MR-1 aplicada)"]
         direction TB
-        PREV["1x Logical Preview\nSurfaceView 1080p\n(No physical ID set)"]
-        PHYS1["1x Physical YUV 12MP\n→ OutputConfiguration\n.setPhysicalCameraId(ID \"0\")\n← Targets WIDE lens"]
-        PHYS2["1x Physical YUV 12MP\n→ OutputConfiguration\n.setPhysicalCameraId(ID \"5\")\n← Targets TELE lens"]
-        NOTE["✓ VALID per MR-1:\nFormat YUV × Size Match × 2 Replacements"]
+        PREV["1x Vista previa lógica<br/>SurfaceView 1080p<br/>(Sin ID físico establecido)"]
+        PHYS1["1x YUV físico 12 MP<br/>→ OutputConfiguration<br/>.setPhysicalCameraId(ID \"0\")<br/>← Dirigido a lente ANGULAR"]
+        PHYS2["1x YUV físico 12 MP<br/>→ OutputConfiguration<br/>.setPhysicalCameraId(ID \"5\")<br/>← Dirigido a lente TELE"]
+        NOTE["✓ VÁLIDO según MR-1:<br/>Formato YUV × Tamaño idéntico × 2 sustituciones"]
     end
 
     BackLogical --> PhysChildren
-    PhysChildren -.->|"HAL selects by zoom ratio"| ReplaceRule
+    PhysChildren -.->|"La HAL selecciona según la relación de zoom"| ReplaceRule
 ```
 
-## Seamless Zoom Implementation
+## Implementación del zoom fluido
 
-The HAL's automatic lens switching at zoom boundaries is what makes "seamless zoom" seamless. You do **not** need to manually swap physical IDs when zoom crosses a threshold — just set `CONTROL_ZOOM_RATIO` on the repeating request and let the HAL do the work:
+El cambio automático de lente de la HAL en los límites del zoom es lo que hace que el "zoom fluido" sea fluido. **No** es necesario intercambiar manualmente los ID físicos cuando el zoom cruza un umbral: simplemente establezca `CONTROL_ZOOM_RATIO` en la solicitud repetitiva y deje que la HAL haga el trabajo:
 
 ```kotlin
 fun updateZoom(session: CameraCaptureSession,
@@ -337,40 +337,40 @@ fun updateZoom(session: CameraCaptureSession,
 }
 ```
 
-When `zoomRatio` crosses from `2.9× → 3.0×` on a typical 4-lens device, the HAL internally:
-1. Starts the 3× telephoto sensor from standby (takes ~2 frames, 66 ms)
-2. Synchronizes exposure/white balance between the wide and tele
-3. Fades digitally-cropped wide output into native tele output over ~10 frames (333 ms)
-4. Powers down the wide sensor if not used elsewhere
+Cuando el `zoomRatio` pasa de `2,9× → 3,0×` en un dispositivo típico de 4 lentes, la HAL internamente:
+1. Inicia el sensor teleobjetivo de 3 aumentos desde el modo de espera (tarda unos 2 fotogramas, 66 ms).
+2. Sincroniza la exposición/balance de blancos entre el gran angular y el teleobjetivo.
+3. Realiza un fundido de la salida gran angular recortada digitalmente a la salida teleobjetivo nativa durante unos 10 fotogramas (333 ms).
+4. Apaga el sensor gran angular si no se usa en otro lugar.
 
-All four steps happen transparently — your CaptureCallback never sees a session-teardown event, `CaptureResult.SENSOR_TIMESTAMP` stays monotonically increasing, and AF/AE state is preserved across the boundary. The only way to detect a lens change is to compare `CaptureResult.LENS_FOCAL_LENGTH` between consecutive frames (which jumps from 5.5mm → 16.5mm when switching to tele on the example above).
+Los cuatro pasos ocurren de forma transparente: su CaptureCallback nunca ve un evento de desmontaje de sesión, `CaptureResult.SENSOR_TIMESTAMP` sigue aumentando de forma monótona y el estado de AF/AE se preserva a través del límite. La única forma de detectar un cambio de lente es comparar `CaptureResult.LENS_FOCAL_LENGTH` entre fotogramas consecutivos (que salta de 5,5 mm → 16,5 mm al cambiar al teleobjetivo en el ejemplo anterior).
 
-## Performance and Limitations
+## Rendimiento y limitaciones
 
-The *Logical Multi-Camera* section of the research doc contains the following measured limits on a 2023 flagship (Snapdragon 8 Gen 2, 4 rear cameras):
+La sección *Logical Multi-Camera* del documento de investigación contiene las siguientes limitaciones medidas en un insignia de 2023 (Snapdragon 8 Gen 2, 4 cámaras traseras):
 
-| Configuration | Sustained Frame Rate | ISP Bandwidth Utilized |
+| Configuración | Velocidad de fotogramas sostenida | Ancho de banda ISP utilizado |
 |---------------|---------------------|-------------------------|
-| Logical preview + 2 physical YUV (12 MP each) | 22 fps | 89% |
-| Logical preview + 2 physical YUV (4 MP each) | 30 fps (locked) | 62% |
-| Logical preview + 2 physical RAW (12 MP each) | 10 fps | 94% — triggers thermal ~60 s |
-| Logical preview + 2 physical YUV + 1 physical RAW | **Not allowed** (HAL bandwidth check fails) | — |
+| Vista previa lógica + 2 YUV físicos (12 MP cada uno) | 22 fps | 89% |
+| Vista previa lógica + 2 YUV físicos (4 MP cada uno) | 30 fps (bloqueado) | 62% |
+| Vista previa lógica + 2 RAW físicos (12 MP cada uno) | 10 fps | 94%: activa protección térmica ~60 s |
+| Vista previa lógica + 2 YUV físicos + 1 RAW físico | **No permitido** (fallo en comprobación ancho banda HAL) | — |
 
-The 2-physical-stream cap is enforced both by Rule MR-1 and by raw ISP throughput. Attempting to attach 3 physical streams (e.g., ultra-wide + wide + tele simultaneous) will result in `onConfigureFailed` even if you try to trick Rule MR-1 with two separate replacement pairs — the HAL's CAMERA_ISP_BANDWIDTH check rejects it at configuration time.
+El límite de 2 flujos físicos se impone tanto por la Regla MR-1 como por el rendimiento bruto del ISP. Intentar conectar 3 flujos físicos (p. ej., ultra gran angular + gran angular + teleobjetivo simultáneos) resultará en un `onConfigureFailed` incluso si intenta engañar a la Regla MR-1 con dos pares de sustitución separados: la comprobación CAMERA_ISP_BANDWIDTH de la HAL lo rechazará en el momento de la configuración.
 
-## Summary
+## Resumen
 
-This chapter covered Android 9+ logical multi-camera support in full detail:
+Este capítulo ha cubierto en detalle el soporte de cámara múltiple lógica de Android 9+:
 
-- **Logical cameras** are virtual HAL nodes grouping same-facing physical cameras. Query via `REQUEST_AVAILABLE_CAPABILITIES_LOGICAL_MULTI_CAMERA`; get children via `getPhysicalCameraIds()`.
-- **Sensor sync** comes in two levels: APPROXIMATE (±33 ms, for portrait bokeh) and CALIBRATED (±1 ms, for AR/disparity fusion). Always gate computational photography features behind CALIBRATED.
-- **Seamless zoom** is HAL-controlled via `CONTROL_ZOOM_RATIO` — set the ratio and the HAL switches lenses at internal thresholds with no session tear-down.
-- **Stream Replacement Rule MR-1** (from the research doc) allows exactly 2 same-size, same-format physical streams per 1 logical stream. 3+ streams or mismatched sizes cause `onConfigureFailed`.
-- **`OutputConfiguration.setPhysicalCameraId()`** must be called before session creation to target individual physical lenses for simultaneous capture.
-- The two Mermaid diagrams (topology + ER-style rule mapping) visualize how the logical/physical hierarchy maps to session outputs.
+- Las **cámaras lógicas** son nodos virtuales de la HAL que agrupan cámaras físicas con la misma orientación. Consulte a través de `REQUEST_AVAILABLE_CAPABILITIES_LOGICAL_MULTI_CAMERA`; obtenga los hijos mediante `getPhysicalCameraIds()`.
+- La **sincronización de sensores** tiene dos niveles: APPROXIMATE (±33 ms, para bokeh de retrato) y CALIBRATED (±1 ms, para fusión de disparidad/AR). Proteja siempre las funciones de fotografía computacional tras CALIBRATED.
+- El **zoom fluido** está controlado por la HAL mediante `CONTROL_ZOOM_RATIO`: establezca la relación y la HAL cambiará de lente en los umbrales internos sin desmontar la sesión.
+- La **Regla de sustitución de flujos MR-1** (del documento de investigación) permite exactamente 2 flujos físicos del mismo tamaño y formato por cada 1 flujo lógico. 3 o más flujos o tamaños desajustados provocan un `onConfigureFailed`.
+- Se debe llamar a **`OutputConfiguration.setPhysicalCameraId()`** antes de la creación de la sesión para dirigirse a lentes físicas individuales para la captura simultánea.
+- Los dos diagramas de Mermaid (topología + mapeo de reglas estilo ER) visualizan cómo la jerarquía lógica/física se mapea a las salidas de la sesión.
 
-## What's Next
+## ¿Qué sigue?
 
-In **Chapter 21: HDR & Ultra HDR**, we move beyond 8-bit Standard Dynamic Range (SDR, sRGB, 100 nits) into the world of High Dynamic Range video and stills. You will learn about `DynamicRangeProfiles` for HDR10 (10-bit ST.2084 PQ, Rec.2020, static metadata) and HLG (Hybrid Log-Gamma, broadcast SDR-compatible), and the brand-new Android 14 (API 34) **JPEG_R (Ultra HDR)** format — ISO 21496-1, which embeds a "gain map" inside a standard JPEG so legacy readers see SDR while HDR displays boost highlights by up to 8 stops locally.
+En el **Capítulo 21: HDR y Ultra HDR**, vamos más allá del rango dinámico estándar de 8 bits (SDR, sRGB, 100 nits) para entrar en el mundo del video y las fotos de alto rango dinámico. Aprenderá sobre los `DynamicRangeProfiles` para HDR10 (10 bits ST.2084 PQ, Rec.2020, metadatos estáticos) e HLG (Hybrid Log-Gamma, compatible con SDR de emisión), y el flamante formato **JPEG_R (Ultra HDR)** de Android 14 (API 34): el estándar ISO 21496-1, que incrusta un "mapa de ganancia" dentro de un JPEG estándar para que los lectores antiguos vean SDR mientras las pantallas HDR aumentan las luces hasta en 8 pasos localmente.
 
-Check which `DynamicRangeProfiles` your device supports per camera ID (HDR10, HDR10+, HLG, JPEG_R) and verify CDD Performance Class 15 compliance for Ultra HDR using the [Android Camera Parameters app](https://play.google.com/store/apps/details?id=com.zoozooll.cameraparameters). New device reports uploaded to the open-source [GitHub project](https://github.com/zoozooll/AndroidCameraParameters) help build a public database of HDR-capable phones.
+Compruebe qué `DynamicRangeProfiles` admite su dispositivo por ID de cámara (HDR10, HDR10+, HLG, JPEG_R) y verifique el cumplimiento de la Clase de Rendimiento 15 del CDD para Ultra HDR usando la aplicación [Android Camera Parameters](https://play.google.com/store/apps/details?id=com.zoozooll.cameraparameters). Los nuevos informes de dispositivos subidos al [proyecto de código abierto en GitHub](https://github.com/zoozooll/AndroidCameraParameters) ayudan a construir una base de datos pública de teléfonos con capacidad HDR.

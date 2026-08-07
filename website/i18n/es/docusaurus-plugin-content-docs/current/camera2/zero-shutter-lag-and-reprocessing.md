@@ -1,77 +1,77 @@
 ---
 sidebar_position: 23
-title: "Chapter 23: Zero Shutter Lag & Reprocessing"
-description: "Build Zero Shutter Lag (ZSL) with circular YUV/PRIVATE buffering, CONTROL_CAPTURE_INTENT_ZERO_SHUTTER_LAG, reprocessable capture sessions via InputConfiguration, ImageWriter frame reinjection, and createReprocessCaptureRequest for heavy post-capture ISP processing. Also covers switchToOffline() for background processing continuity."
-keywords: [Android Camera2, Zero Shutter Lag, ZSL, Reprocessing, InputConfiguration, createReprocessableCaptureSession, ImageWriter, createReprocessCaptureRequest, CONTROL_CAPTURE_INTENT_ZERO_SHUTTER_LAG, PRIVATE_REPROCESSING, YUV_REPROCESSING, LEVEL_3, switchToOffline, CameraOfflineSessionCallback]
+title: "Capítulo 23: Retraso de Obturador Cero y Reprocesamiento"
+description: "Construya el Retraso de Obturador Cero (ZSL) con almacenamiento en búfer YUV/PRIVATE circular, CONTROL_CAPTURE_INTENT_ZERO_SHUTTER_LAG, sesiones de captura reprocesables a través de InputConfiguration, reinyección de fotogramas ImageWriter y createReprocessCaptureRequest para un procesamiento ISP pesado tras la captura. También cubre switchToOffline() para la continuidad del procesamiento en segundo plano."
+keywords: [Android Camera2, Retraso de Obturador Cero, ZSL, Reprocesamiento, InputConfiguration, createReprocessableCaptureSession, ImageWriter, createReprocessCaptureRequest, CONTROL_CAPTURE_INTENT_ZERO_SHUTTER_LAG, PRIVATE_REPROCESSING, YUV_REPROCESSING, LEVEL_3, switchToOffline, CameraOfflineSessionCallback]
 ---
 
-# Chapter 23: Zero Shutter Lag & Reprocessing
+# Capítulo 23: Retraso de Obturador Cero y Reprocesamiento
 
-The single most frustrating defect in consumer camera apps is **shutter lag**: tap the shutter button, and the captured photo shows a scene 200–800 ms *after* the tap — the kid has already stopped smiling, the bird has left the branch, the sports car has moved out of frame. Standard Camera2 sessions work like this by design: the shutter tap triggers `session.capture()`, which triggers AE convergence, which triggers a new sensor exposure, which triggers ISP processing. Every step adds latency.
+El defecto más frustrante en las aplicaciones de cámara de consumo es el **retraso del obturador (shutter lag)**: se toca el botón del obturador y la foto capturada muestra una escena de 200 a 800 ms *después* del toque: el niño ya ha dejado de sonreír, el pájaro ha abandonado la rama, el coche deportivo se ha salido del encuadre. Las sesiones estándar de Camera2 funcionan así por diseño: el toque del obturador activa `session.capture()`, lo que activa la convergencia de AE, lo que activa una nueva exposición del sensor, lo que activa el procesamiento del ISP. Cada paso añade latencia.
 
-**Zero Shutter Lag (ZSL)** eliminates this delay by running the sensor continuously at still-capture resolution, buffering the most recent N frames in a circular in-memory queue, and when the user taps the shutter, **capturing the frame that was visible at the moment of the tap**, not a frame from half a second later. The magic comes from the **Reprocessing API**: instead of feeding light through the sensor again, you take an already-exposed YUV or PRIVATE buffer from the circular queue, feed it *back* into the ISP via `ImageWriter` + `InputConfiguration`, then run heavy noise reduction and edge enhancement on it as if it were a fresh capture.
+El **Retraso de Obturador Cero (ZSL, Zero Shutter Lag)** elimina este retraso ejecutando el sensor continuamente a resolución de captura de fotos fijas, almacenando en búfer los N fotogramas más recientes en una cola circular en memoria y, cuando el usuario toca el obturador, **capturando el fotograma que era visible en el momento del toque**, no un fotograma de medio segundo después. La magia proviene de la **API de Reprocesamiento**: en lugar de alimentar de nuevo la luz a través del sensor, se toma un búfer YUV o PRIVATE ya expuesto de la cola circular, se alimenta *de nuevo* al ISP a través de `ImageWriter` + `InputConfiguration` y luego se ejecuta en él una reducción de ruido y una mejora de bordes intensas como si fuera una captura nueva.
 
-This chapter follows the exact **4-step ZSL workflow** from the *ZSL / Reprocessing* section of the project research doc, and also covers **`switchToOffline()`** — the Android 12 (API 31) API that transfers the reprocessing pipeline to a background HAL service so your app can be killed (home button press, incoming call) and the user still gets their photo. You can verify which reprocessing capabilities your device supports (`REQUEST_AVAILABLE_CAPABILITIES_YUV_REPROCESSING`, `PRIVATE_REPROCESSING`, or `INFO_SUPPORTED_HARDWARE_LEVEL_LEVEL_3`) in the [Android Camera Parameters](https://github.com/zoozooll/AndroidCameraParameters) app on the [Play Store](https://play.google.com/store/apps/details?id=com.zoozooll.cameraparameters); the ZSL Support tab cross-references all required capabilities and reports a clear YES/NO verdict.
+Este capítulo sigue el **flujo de trabajo ZSL de 4 pasos** exacto de la sección *ZSL / Reprocessing* del documento de investigación del proyecto, y también cubre **`switchToOffline()`**: la API de Android 12 (API 31) que transfiere la canalización de reprocesamiento a un servicio HAL en segundo plano para que su aplicación pueda ser cerrada (pulsación del botón de inicio, llamada entrante) y el usuario siga recibiendo su foto. Puede verificar qué capacidades de reprocesamiento admite su dispositivo (`REQUEST_AVAILABLE_CAPABILITIES_YUV_REPROCESSING`, `PRIVATE_REPROCESSING` o `INFO_SUPPORTED_HARDWARE_LEVEL_LEVEL_3`) en la aplicación [Android Camera Parameters](https://github.com/zoozooll/AndroidCameraParameters) en la [Play Store](https://play.google.com/store/apps/details?id=com.zoozooll.cameraparameters); la pestaña Soporte ZSL cruza todas las capacidades requeridas e informa de un veredicto claro SÍ/NO.
 
-## Why ZSL Is Hard (and Why Reprocessing Exists)
+## Por qué el ZSL es difícil (y por qué existe el reprocesamiento)
 
-First, quantify the latency of a standard non-ZSL still capture on a 2023 flagship (Snapdragon 8 Gen 2) per the research doc measurements:
+En primer lugar, cuantifique la latencia de una captura fija estándar sin ZSL en un buque insignia de 2023 (Snapdragon 8 Gen 2) según las mediciones del documento de investigación:
 
-| Pipeline Stage | Latency | Notes |
-|----------------|---------|-------|
-| AE convergence trigger → new exposure programmed | 40 ms | `CONTROL_AE_PRECAPTURE_TRIGGER` |
-| Rolling shutter readout (12 MP full frame) | 32 ms | 1/30 s nominal; actual 32 ms from first to last row |
-| ISP demosaic + standard NR + color | 24 ms | Standard quality pipeline |
-| JPEG encode (12 MP, quality 95) | 18 ms | Hardware JPEG encoder |
-| **Total standard capture latency** | **~114 ms** | Best case; under load 200–800 ms common |
+| Etapa de la canalización | Latencia | Notas |
+| :--- | :--- | :--- |
+| Activación de convergencia AE → nueva exposición programada | 40 ms | `CONTROL_AE_PRECAPTURE_TRIGGER` |
+| Lectura de obturador rodante (12 MP fotograma completo) | 32 ms | 1/30 s nominal; 32 ms reales desde la primera a la última fila |
+| Demosaic del ISP + NR estándar + color | 24 ms | Canalización de calidad estándar |
+| Codificación JPEG (12 MP, calidad 95) | 18 ms | Codificador JPEG por hardware |
+| **Latencia total de captura estándar** | **~114 ms** | En el mejor de los casos; bajo carga es común 200–800 ms |
 
-Under real-world conditions (thermal throttling, GPU contention from the UI, a background app doing work) the standard path routinely hits 500 ms of lag. A 5-year-old human can move 40 cm in 500 ms while running — the difference between capturing a smile and capturing the back of a head.
+En condiciones reales (limitación térmica, contención de la GPU desde la UI, una aplicación en segundo plano realizando trabajo), la ruta estándar alcanza habitualmente los 500 ms de retraso. Un niño de 5 años puede moverse 40 cm en 500 ms mientras corre: la diferencia entre capturar una sonrisa y capturar la nuca.
 
-ZSL solves this by reversing the pipeline order: instead of capture → process → store, you do **continuous capture → buffer → tap → reprocess → store**. The sensor and ISP are *always* running at still-capture resolution; the user tap just selects which pre-existing frame to fully process.
+El ZSL soluciona esto invirtiendo el orden de la canalización: en lugar de captura → proceso → almacenamiento, se realiza una **captura continua → búfer → toque → reprocesamiento → almacenamiento**. El sensor y el ISP están *siempre* funcionando a la resolución de captura de fotos fijas; el toque del usuario solo selecciona qué fotograma preexistente procesar por completo.
 
 ```mermaid
 flowchart LR
-    subgraph STANDARD["Standard Capture (114 ms LAG)"]
+    subgraph STANDARD["Captura estándar (114 ms de RETRASO)"]
         direction TB
-        T1["T=0: User Taps SHUTTER"] --> T2["T+40ms: AE Converges,\nNew Exposure Starts"]
-        T2 --> T3["T+72ms: Sensor Rolling\nShutter Readout Complete"]
-        T3 --> T4["T+96ms: ISP Standard\nProcessing Done"]
-        T4 --> T5["T+114ms: JPEG Stored"]
-        LOST["⚠ Scene Changed DURING T+0 – T+114ms\n→ Missed the decisive moment"]
+        T1["T=0: El usuario toca el OBTURADOR"] --> T2["T+40ms: La AE converge,<br/>comienza la nueva exposición"]
+        T2 --> T3["T+72ms: Lectura de obturador<br/>rodante del sensor completada"]
+        T3 --> T4["T+96ms: Procesamiento<br/>estándar del ISP terminado"]
+        T4 --> T5["T+114ms: JPEG almacenado"]
+        LOST["⚠ La escena cambió DURANTE T+0 – T+114ms<br/>→ Se perdió el momento decisivo"]
     end
 
-    subgraph ZSLFLOW["Zero Shutter Lag (0 ms LAG)"]
+    subgraph ZSLFLOW["Retraso de obturador cero (0 ms de RETRASO)"]
         direction TB
-        C0["T=-2000ms: Circular Buffer\nStarts Filling (always running)"]
-        C1["T=-66ms: Frame N-2\n→ Buffer slot 0"]
-        C2["T=-33ms: Frame N-1\n→ Buffer slot 1"]
-        C3["T=0ms: Frame N → Buffer slot 2\n★★★ USER TAPS SHUTTER NOW ★★★"]
-        C4["T=0ms (INSTANT): Select\nFrame N (T=0) from Circular Buffer"]
-        C4 --> C5["T=0ms: ImageWriter\nFeeds Frame N BACK into HAL"]
-        C5 --> C6["T=+30ms: HEAVY ISP\nReprocessing (NR+EDGE)"]
-        C6 --> C7["T=+48ms: JPEG Stored"]
-        PERFECT["✓ Captured EXACTLY the frame the user\nsaw at the moment of the tap"]
+        C0["T=-2000ms: El búfer circular<br/>comienza a llenarse (siempre funcionando)"]
+        C1["T=-66ms: Fotograma N-2<br/>→ Ranura de búfer 0"]
+        C2["T=-33ms: Fotograma N-1<br/>→ Ranura de búfer 1"]
+        C3["T=0ms: Fotograma N → Ranura de búfer 2<br/>★★★ EL USUARIO TOCA EL OBTURADOR AHORA ★★★"]
+        C4["T=0ms (INSTANTÁNEO): Seleccionar<br/>fotograma N (T=0) del búfer circular"]
+        C4 --> C5["T=0ms: ImageWriter alimenta el fotograma<br/>N DE NUEVO en el HAL"]
+        C5 --> C6["T=+30ms: Reprocesamiento<br/>pesado del ISP (NR+EDGE)"]
+        C6 --> C7["T=+48ms: JPEG almacenado"]
+        PERFECT["✓ Se capturó EXACTAMENTE el fotograma que el usuario<br/>vio en el momento del toque"]
     end
 
     style STANDARD fill:#ffeded,stroke:#b91c1c
     style ZSLFLOW fill:#e6ffef,stroke:#15803d
 ```
 
-The Mermaid diagram shows the conceptual shift: in the standard path, the tap *initiates* the capture; in the ZSL path, the tap *selects* a capture that has already happened. The total time from tap to stored file is still ~48 ms (reprocessing is not free), but **the pixel content is from T=0 (instant), not T=114 ms (late)** — that's what "Zero Shutter Lag" actually means. It's zero lag of content, not zero lag of output file.
+El diagrama de Mermaid muestra el cambio conceptual: en la ruta estándar, el toque *inicia* la captura; en la ruta ZSL, el toque *selecciona* una captura que ya ha ocurrido. El tiempo total desde el toque hasta el archivo almacenado sigue siendo de ~48 ms (el reprocesamiento no es gratuito), pero **el contenido de los píxeles es de T=0 (instantáneo), no de T=114 ms (tarde)**; eso es lo que significa realmente "Retraso de Obturador Cero". Es un retraso cero del contenido, no un retraso cero del archivo de salida.
 
-## Mandatory Capability Gates (Per Research Doc)
+## Puertas de capacidad obligatorias (según el documento de investigación)
 
-ZSL + Reprocessing requires hardware cooperation at the HAL level. You must check **one** of the following three conditions before attempting to create a reprocessable session:
+El ZSL + Reprocesamiento requiere la cooperación del hardware a nivel de HAL. Debe comprobar **una** de las tres condiciones siguientes antes de intentar crear una sesión reprocesable:
 
-| Capability Check | When It Passes | Devices That Support It |
-|------------------|----------------|--------------------------|
-| **A)** `INFO_SUPPORTED_HARDWARE_LEVEL == LEVEL_3` | Full reprocessing (both YUV and PRIVATE) allowed at any size in StreamConfigurationMap. | 2016+ Google Pixel (all generations); 2021+ Samsung Galaxy S/Ultra (Snapdragon variants); 2023+ OnePlus 11/OPPO Find X6 Pro. |
-| **B)** `REQUEST_AVAILABLE_CAPABILITIES contains YUV_REPROCESSING` | YUV_420_888 buffers can be fed back via InputConfiguration at a subset of sizes. | 2019+ Snapdragon 8xx/7xx devices; most MediaTek Dimensity 9000+ devices. |
-| **C)** `REQUEST_AVAILABLE_CAPABILITIES contains PRIVATE_REPROCESSING` | `ImageFormat.PRIVATE` buffers (opaque, stored in vendor compression) can be fed back. Use this preferentially as it uses 2× less memory. | Snapdragon 888+ / Exynos 2100+ and newer. |
+| Comprobación de capacidad | Cuándo se supera | Dispositivos que la admiten |
+| :--- | :--- | :--- |
+| **A)** `INFO_SUPPORTED_HARDWARE_LEVEL == LEVEL_3` | Se permite el reprocesamiento completo (tanto YUV como PRIVATE) a cualquier tamaño en StreamConfigurationMap. | Google Pixel 2016+ (todas las generaciones); Samsung Galaxy S/Ultra 2021+ (variantes Snapdragon); OnePlus 11/OPPO Find X6 Pro 2023+. |
+| **B)** `REQUEST_AVAILABLE_CAPABILITIES contiene YUV_REPROCESSING` | Los búferes YUV_420_888 pueden alimentarse de nuevo a través de InputConfiguration en un subconjunto de tamaños. | Dispositivos Snapdragon 8xx/7xx 2019+; la mayoría de los dispositivos MediaTek Dimensity 9000+. |
+| **C)** `REQUEST_AVAILABLE_CAPABILITIES contiene PRIVATE_REPROCESSING` | Los búferes `ImageFormat.PRIVATE` (opacos, almacenados en compresión del proveedor) se pueden alimentar de nuevo. Use esto preferentemente ya que usa 2 veces menos memoria. | Snapdragon 888+ / Exynos 2100+ y posteriores. |
 
-> Research doc rule ZSL-1: **If none of A/B/C pass, fall back to non-ZSL standard capture.** Do not attempt to build a custom circular buffer of JPEGs and re-decompress them; this yields 6 dB of quality loss from double-encoding and is not a substitute for real reprocessing.
+> Regla ZSL-1 del documento de investigación: **Si no se supera ninguna de las condiciones A/B/C, recurra a la captura estándar sin ZSL.** No intente construir un búfer circular personalizado de JPEG y volver a descomprimirlos; esto produce 6 dB de pérdida de calidad por la doble codificación y no es un sustituto del reprocesamiento real.
 
-Query the gates with:
+Consulte las puertas con:
 
 ```kotlin
 import android.hardware.camera2.CameraCharacteristics
@@ -87,7 +87,7 @@ fun queryZslSupport(chars: CameraCharacteristics): Pair<ZslSupport, Int> {
 
     return when {
         level == CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_3 ->
-            Pair(ZslSupport.LEVEL3, ImageFormat.PRIVATE) // PRIVATE preferred for memory
+            Pair(ZslSupport.LEVEL3, ImageFormat.PRIVATE) // Se prefiere PRIVATE por la memoria
         caps.contains(
             CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_PRIVATE_REPROCESSING
         ) -> Pair(ZslSupport.PRIVATE_REPROC, ImageFormat.PRIVATE)
@@ -99,15 +99,15 @@ fun queryZslSupport(chars: CameraCharacteristics): Pair<ZslSupport, Int> {
 }
 ```
 
-## The 4-Step ZSL + Reprocessing Workflow (Per Research Doc)
+## El flujo de trabajo ZSL + Reprocesamiento de 4 pasos (según el documento de investigación)
 
-The project research doc specifies the exact 4-step pipeline. Every step is mandatory; skipping any step yields a broken session (dropped frames, `IllegalStateException`, or reprocessing output identical to preview quality).
+El documento de investigación del proyecto especifica la canalización exacta de 4 pasos. Cada paso es obligatorio; omitir cualquier paso produce una sesión defectuosa (pérdida de fotogramas, `IllegalStateException` o salida de reprocesamiento idéntica a la calidad de la vista previa).
 
 ---
 
-### Step 1: Circular Buffering with ImageReader + CONTROL_CAPTURE_INTENT_ZERO_SHUTTER_LAG
+### Paso 1: Almacenamiento en búfer circular con ImageReader + CONTROL_CAPTURE_INTENT_ZERO_SHUTTER_LAG
 
-First, create a high-resolution `ImageReader` (the "ZSL buffer") whose `maxImages` parameter is the circular depth (typically 8–16; research doc recommends 8 for memory-constrained devices, 16 for devices with ≥ 8 GB RAM). Tag every repeating request with `CONTROL_CAPTURE_INTENT_ZERO_SHUTTER_LAG` — this tells the HAL to use the shortest-possible preview pipeline and disable preview-specific optimizations that would damage reprocessed output quality (e.g., heavy temporal noise reduction that leaves motion ghost artifacts).
+En primer lugar, cree un `ImageReader` de alta resolución (el \"búfer ZSL\") cuyo parámetro `maxImages` sea la profundidad circular (típicamente de 8 a 16; el documento de investigación recomienda 8 para dispositivos con memoria limitada, 16 para dispositivos con ≥ 8 GB de RAM). Etiquete cada solicitud repetitiva con `CONTROL_CAPTURE_INTENT_ZERO_SHUTTER_LAG`: esto indica al HAL que utilice la canalización de vista previa más corta posible y desactive las optimizaciones específicas de la vista previa que dañarían la calidad de la salida reprocesada (por ejemplo, una reducción de ruido temporal intensa que deja artefactos de fantasmas en movimiento).
 
 ```kotlin
 import android.hardware.camera2.CameraDevice
@@ -122,19 +122,19 @@ import java.util.concurrent.ConcurrentLinkedDeque
 
 data class ZslBufferFrame(
     val timestamp: Long,
-    val imageRef: Image, // Do NOT close; managed by deque GC
+    val imageRef: Image, // NO cerrar; gestionado por el GC de la deque
     val captureResultRef: android.hardware.camera2.TotalCaptureResult
 )
 
-const val ZSL_BUFFER_DEPTH = 12 // Research doc sweet spot: 12 frames = 400 ms at 30 fps
+const val ZSL_BUFFER_DEPTH = 12 // Punto ideal del documento de investigación: 12 fotogramas = 400 ms a 30 fps
 var zslImageReader: ImageReader? = null
 private val zslCircularBuffer = ConcurrentLinkedDeque<ZslBufferFrame>()
-private var zslStillSize: Size = Size(4000, 3000) // Match max still size
+private var zslStillSize: Size = Size(4000, 3000) // Coincide con el tamaño máximo de foto fija
 
 fun setupZslCircularBuffer(
     cameraDevice: CameraDevice,
     previewSurface: Surface,
-    reprocessingFormat: Int, // PRIVATE or YUV_420_888
+    reprocessingFormat: Int, // PRIVATE o YUV_420_888
     backgroundHandler: android.os.Handler
 ) {
     zslImageReader = ImageReader.newInstance(
@@ -153,18 +153,18 @@ fun setupZslCircularBuffer(
 inner class ZslCircularBufferListener : ImageReader.OnImageAvailableListener {
     override fun onImageAvailable(reader: ImageReader) {
         val image = reader.acquireLatestImage() ?: return
-        // We don't have captureResult here yet; pairing happens in CaptureCallback
-        // For brevity, the Timestamp → CaptureResult map mirrors Chapter 18's pattern
-        // Pair them and enqueue:
+        // No tenemos el captureResult aquí todavía; el emparejamiento ocurre en el CaptureCallback
+        // Por brevedad, el mapa Marca de tiempo → CaptureResult refleja el patrón del Capítulo 18
+        // Emparejarlos y encolarlos:
         val result = pendingZslResults.remove(image.timestamp) ?: return
         val frame = ZslBufferFrame(image.timestamp, image, result)
 
         zslCircularBuffer.addLast(frame)
 
-        // --- CIRCULAR BUFFER EVICTION (oldest first) ---
+        // --- ELIMINACIÓN DEL BÚFER CIRCULAR (el más antiguo primero) ---
         while (zslCircularBuffer.size > ZSL_BUFFER_DEPTH) {
             val evicted = zslCircularBuffer.pollFirst()
-            evicted.imageRef.close() // Release old frames to HAL buffer pool
+            evicted.imageRef.close() // Liberar los fotogramas antiguos al grupo de búferes del HAL
         }
     }
 }
@@ -192,10 +192,10 @@ fun buildZslSessionAndStartRepeating(
                 ).apply {
                     addTarget(previewSurface)
                     addTarget(zslImageReader!!.surface)
-                    // THE MAGIC INTENT FLAG:
+                    // LA BANDERA MÁGICA DE INTENCIÓN:
                     set(CaptureRequest.CONTROL_CAPTURE_INTENT,
                         CaptureRequest.CONTROL_CAPTURE_INTENT_ZERO_SHUTTER_LAG)
-                    // HAL: lightweight preview ISP, full-res stream
+                    // HAL: canalización ISP ligera de vista previa, flujo de resolución completa
                     set(CaptureRequest.CONTROL_MODE,
                         CaptureRequest.CONTROL_MODE_AUTO)
                     set(CaptureRequest.CONTROL_AF_MODE,
@@ -210,24 +210,24 @@ fun buildZslSessionAndStartRepeating(
             }
             override fun onConfigureFailed(
                 s: android.hardware.camera2.CameraCaptureSession
-            ) = Log.e(TAG, "ZSL circular buffer session failed")
+            ) = Log.e(TAG, "Fallo en la sesión de búfer circular ZSL")
         }
     )
     cameraDevice.createCaptureSession(sessionConfig)
 }
 ```
 
-Four implementation details from the research doc that are not documented in the official Android SDK reference:
-1. **Use `TEMPLATE_ZERO_SHUTTER_LAG`** as the base template. It configures the sensor readout mode to support simultaneous preview + full-res output, which `TEMPLATE_PREVIEW` does not guarantee.
-2. **`ZSL_BUFFER_DEPTH = 12` at 30 fps** gives exactly 400 ms of past frames to choose from. This is enough to cover the user's own reaction time (150–250 ms tap-to-brain delay) plus Android's input-dispatch jitter (±150 ms). Less than 8 depth and you start discarding useful frames; more than 16 and you waste ~1 GB of RAM for no benefit.
-3. **Eviction order is FIFO, not LRU.** Always evict the oldest frame. If you evict recent frames, you discard the frame the user actually saw at tap time.
-4. **Never call `image.close()` in `onImageAvailable` before enqueuing.** If you close the image, the HAL reclaims the buffer, and when you later try to feed it to ImageWriter, the buffer is invalid → hard crash. Use the eviction loop only.
+Cuatro detalles de implementación del documento de investigación que no están documentados en la referencia oficial del SDK de Android:
+1. **Utilice `TEMPLATE_ZERO_SHUTTER_LAG`** como plantilla base. Configura el modo de lectura del sensor para admitir la salida simultánea de vista previa + resolución completa, algo que `TEMPLATE_PREVIEW` no garantiza.
+2. **`ZSL_BUFFER_DEPTH = 12` a 30 fps** proporciona exactamente 400 ms de fotogramas pasados para elegir. Esto es suficiente para cubrir el propio tiempo de reacción del usuario (retraso de 150 a 250 ms entre el toque y el cerebro) más el jitter del despacho de entrada de Android (±150 ms). Con una profundidad menor de 8 se empiezan a descartar fotogramas útiles; con más de 16 se desperdicia ~1 GB de RAM sin ningún beneficio.
+3. **El orden de eliminación es FIFO, no LRU.** Elimine siempre el fotograma más antiguo. Si elimina fotogramas recientes, descarta el fotograma que el usuario vio realmente en el momento del toque.
+4. **Nunca llame a `image.close()` en `onImageAvailable` antes de encolar.** Si cierra la imagen, el HAL reclama el búfer, y cuando más tarde intente alimentarlo al ImageWriter, el búfer será inválido → cierre forzoso. Use solo el bucle de eliminación.
 
 ---
 
-### Step 2: InputConfiguration + createReprocessableCaptureSession
+### Paso 2: InputConfiguration + createReprocessableCaptureSession
 
-A standard capture session has only **output** surfaces (sensor → ISP → surface). A reprocessable session adds **one input surface** (ImageWriter → HAL → ISP → output), enabling the pipeline to process a buffer that never touched the sensor. Create the reprocessable session via `createReprocessableCaptureSession(inputConfig, outputs, callback, handler)` or via the newer `SessionConfiguration` API with `InputConfiguration`.
+Una sesión de captura estándar solo tiene superficies de **salida** (sensor → ISP → superficie). Una sesión reprocesable añade **una superficie de entrada** (ImageWriter → HAL → ISP → salida), lo que permite a la canalización procesar un búfer que nunca ha tocado el sensor. Cree la sesión reprocesable a través de `createReprocessableCaptureSession(inputConfig, outputs, callback, handler)` o a través de la API `SessionConfiguration` más reciente con `InputConfiguration`.
 
 ```kotlin
 import android.hardware.camera2.CameraDevice
@@ -264,12 +264,12 @@ fun createZslReprocessableSession(
     )
 
     reprocessingImageWriter = ImageWriter.newInstance(
-        jpegStillReader!!.surface, // Output surface of reprocessing
-        inputConfig,                // Input config to HAL
-        1                           // Max in-flight reprocess requests
+        jpegStillReader!!.surface, // Superficie de salida del reprocesamiento
+        inputConfig,                // Configuración de entrada al HAL
+        1                           // Máximo de solicitudes de reprocesamiento en vuelo
     )
 
-    // Outputs of the reprocessed frame: just JPEG for this example
+    // Salidas del fotograma reprocesado: solo JPEG para este ejemplo
     val reprocessOutputs = listOf(
         OutputConfiguration(jpegStillReader!!.surface)
     )
@@ -285,27 +285,27 @@ fun createZslReprocessableSession(
             }
             override fun onConfigureFailed(
                 s: CameraCaptureSession
-            ) = Log.e(TAG, "Reprocessable session config FAILED. " +
-                  "Check capability gate (LEVEL3/YUV_REPROC/PRIVATE_REPROC)?")
+            ) = Log.e(TAG, "FALLO en la configuración de la sesión reprocesable. " +
+                  "¿Comprobó la puerta de capacidad (LEVEL3/YUV_REPROC/PRIVATE_REPROC)?")
         }
     )
-    sessionConfig.setInputConfiguration(inputConfig) // Mandatory!
+    sessionConfig.setInputConfiguration(inputConfig) // ¡Mandatorio!
     cameraDevice.createCaptureSession(sessionConfig)
 }
 ```
 
-Research doc note ZSL-2: the reprocessable session and the circular-buffer preview session **do not need to be the same session**. In fact, most production implementations run two sessions simultaneously — a preview session feeding the circular buffer, and a dedicated reprocessable session fed only at tap time. The HAL handles multi-session arbitration internally for LEVEL_3 devices.
+Nota ZSL-2 del documento de investigación: la sesión reprocesable y la sesión de vista previa con búfer circular **no necesitan ser la misma sesión**. En hecho, la mayoría de las implementaciones de producción ejecutan dos sesiones simultáneamente: una sesión de vista previa que alimenta el búfer circular y una sesión reprocesable dedicada que solo se alimenta en el momento del toque. El HAL maneja el arbitraje de múltiples sesiones internamente para los dispositivos LEVEL_3.
 
 ---
 
-### Step 3: Shutter Tap → Find Closest Timestamp Frame → ImageWriter Feeds HAL
+### Paso 3: Toque del obturador → Buscar fotograma con marca de tiempo más cercana → ImageWriter alimenta al HAL
 
-When the user taps the shutter:
-1. Record the tap's real-time timestamp (`System.currentTimeMillis()` or `System.nanoTime()`)
-2. Walk the circular buffer **from newest to oldest** and find the ZslBufferFrame whose `image.timestamp` (in nanoseconds, `CLOCK_MONOTONIC`) is closest to the tap timestamp
-3. Acquire a free input buffer from `ImageWriter` via `dequeueInputImage()`
-4. Copy the circular buffer frame's pixel planes into the ImageWriter input buffer
-5. Queue the ImageWriter buffer with `queueInputImage()`
+Cuando el usuario toca el obturador:
+1. Registre la marca de tiempo en tiempo real del toque (`System.currentTimeMillis()` o `System.nanoTime()`)
+2. Recorra el búfer circular **del más nuevo al más antiguo** y busque el ZslBufferFrame cuya `image.timestamp` (en nanosegundos, `CLOCK_MONOTONIC`) sea la más cercana a la marca de tiempo del toque.
+3. Adquiera un búfer de entrada libre de `ImageWriter` a través de `dequeueInputImage()`.
+4. Copie los planos de píxeles del fotograma del búfer circular en el búfer de entrada de ImageWriter.
+5. Encole el búfer de ImageWriter con `queueInputImage()`.
 
 ```kotlin
 import android.hardware.camera2.TotalCaptureResult
@@ -318,7 +318,7 @@ fun onShutterTap(
     imageWriter: ImageWriter,
     captureStartTimeNanos: Long = SystemClock.elapsedRealtimeNanos()
 ) {
-    // --- Step 3a: Walk circular buffer NEWEST → OLDEST ---
+    // --- Paso 3a: Recorrer el búfer circular MÁS NUEVO → MÁS ANTIGUO ---
     var bestFrame: ZslBufferFrame? = null
     var bestDeltaNs = Long.MAX_VALUE
 
@@ -328,20 +328,20 @@ fun onShutterTap(
             bestDeltaNs = delta
             bestFrame = frame
         }
-        // Optimization: once delta starts growing again, we've passed the best frame
+        // Optimización: una vez que el delta empieza a crecer de nuevo, hemos pasado el mejor fotograma
         if (delta > bestDeltaNs * 1.1) break
     }
     val selectedFrame = bestFrame ?: run {
-        Log.w(TAG, "ZSL buffer empty — fallback to non-ZSL capture")
-        // ... trigger standard capture() fallback ...
+        Log.w(TAG, "Búfer ZSL vacío: recurriendo a la captura estándar sin ZSL")
+        // ... activar el recurso de captura estándar capture() ...
         return
     }
 
-    // --- Step 3b: Get ImageWriter input buffer, copy pixels, queue ---
+    // --- Paso 3b: Obtener el búfer de entrada de ImageWriter, copiar píxeles, encolar ---
     val writerInputImage: Image = try {
         imageWriter.dequeueInputImage(100 /* timeoutMs */)
     } catch (e: IllegalStateException) {
-        Log.e(TAG, "ImageWriter has no free buffers", e); return
+        Log.e(TAG, "ImageWriter no tiene búferes libres", e); return
     }
 
     try {
@@ -350,14 +350,14 @@ fun onShutterTap(
             .let { pendingReprocessResults[writerInputImage.timestamp] = it }
         imageWriter.queueInputImage(writerInputImage)
     } finally {
-        // Do NOT close selectedFrame.imageRef yet — only after reprocess completes
-        // (deferred to onCaptureCompleted of the reprocess request)
+        // NO cerrar selectedFrame.imageRef todavía; solo después de que se complete el reprocesamiento
+        // (diferido a onCaptureCompleted de la solicitud de reprocesamiento)
     }
 }
 
-// --- Pixel copy helper (handles both PRIVATE and YUV_420_888) ---
+// --- Ayudante de copia de píxeles (maneja tanto PRIVATE como YUV_420_888) ---
 private fun copyImagePlanes(src: Image, dst: Image) {
-    require(src.format == dst.format) { "Reprocess requires matching formats" }
+    require(src.format == dst.format) { "El reprocesamiento requiere formatos coincidentes" }
     for (planeIdx in 0 until src.planes.size) {
         val srcPlane = src.planes[planeIdx]
         val dstPlane = dst.planes[planeIdx]
@@ -372,13 +372,13 @@ private val pendingReprocessResults =
     HashMap<Long, TotalCaptureResult>()
 ```
 
-The "closest timestamp" selection is critical because the circular buffer fills every 33 ms (30 fps). The selected frame will be at most ±16 ms away from the actual tap moment — perceptually zero lag for a human observer. Research doc rule ZSL-3: *always* walk descending (newest first); walking ascending increases the probability of selecting a frame that is already 400 ms stale.
+La selección de la \"marca de tiempo más cercana\" es crítica porque el búfer circular se llena cada 33 ms (30 fps). El fotograma seleccionado estará como máximo a ±16 ms del momento real del toque: un retraso perceptualmente nulo para un observador humano. Regla ZSL-3 del documento de investigación: *siempre* recorrer en orden descendente (el más nuevo primero); recorrer en orden ascendente aumenta la probabilidad de seleccionar un fotograma que ya esté anticuado en 400 ms.
 
 ---
 
-### Step 4: createReprocessCaptureRequest(TotalCaptureResult) → Apply Heavy NR + EDGE
+### Paso 4: createReprocessCaptureRequest(TotalCaptureResult) → Aplicar NR + EDGE pesados
 
-The final step submits the reprocess request, but with a twist: instead of `createCaptureRequest(template)`, you use **`createReprocessCaptureRequest(originalTotalCaptureResult)`**, which re-uses the *original AE, AWB, and AF settings from the preview frame*. On top of those baseline settings, you apply heavy-duty `NOISE_REDUCTION_MODE_HIGH_QUALITY` and `EDGE_MODE_HIGH_QUALITY` — the ISP processing passes that were disabled for the lightweight preview pipeline to save power.
+El paso final envía la solicitud de reprocesamiento, pero con un detalle: en lugar de `createCaptureRequest(template)`, se utiliza **`createReprocessCaptureRequest(originalTotalCaptureResult)`**, que reutiliza los *ajustes originales de AE, AWB y AF del fotograma de vista previa*. Además de esos ajustes de referencia, se aplican los modos de alta calidad `NOISE_REDUCTION_MODE_HIGH_QUALITY` y `EDGE_MODE_HIGH_QUALITY`: los pases de procesamiento del ISP que estaban desactivados en la canalización de vista previa ligera para ahorrar energía.
 
 ```kotlin
 import android.hardware.camera2.CameraCaptureSession
@@ -396,19 +396,19 @@ fun submitZslReprocessRequest(
         .apply {
             addTarget(jpegSurface)
 
-            // --- HEAVY POST-CAPTURE ISP PROCESSING ---
+            // --- PROCESAMIENTO ISP PESADO TRAS LA CAPTURA ---
             set(CaptureRequest.NOISE_REDUCTION_MODE,
                 CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY)
             set(CaptureRequest.EDGE_MODE,
                 CaptureRequest.EDGE_MODE_HIGH_QUALITY)
 
-            // Optional (LEVEL_3 only): re-apply shading and hot-pixel correction
+            // Opcional (solo LEVEL_3): volver a aplicar el sombreado y la corrección de píxeles calientes
             set(CaptureRequest.HOT_PIXEL_MODE,
                 CaptureRequest.HOT_PIXEL_MODE_HIGH_QUALITY)
             set(CaptureRequest.COLOR_CORRECTION_MODE,
-                CaptureRequest.COLOR_CORRECTION_MODE_HIGH_QUALITY)
+                CameraMetadata.COLOR_CORRECTION_MODE_HIGH_QUALITY)
 
-            // Keep JPEG quality high
+            // Mantener la calidad JPEG alta
             set(CaptureRequest.JPEG_QUALITY, REPROC_JPEG_QUALITY.toByte())
             set(CaptureRequest.JPEG_ORIENTATION, getJpegOrientation())
         }
@@ -419,9 +419,9 @@ fun submitZslReprocessRequest(
             request: CaptureRequest,
             result: TotalCaptureResult
         ) {
-            // JPEG will be delivered via jpegStillReader OnImageAvailableListener
+            // El JPEG se entregará a través del OnImageAvailableListener de jpegStillReader
 
-            // Now safe to close the circular buffer reference — reprocessing done
+            // Ahora es seguro cerrar la referencia del búfer circular: reprocesamiento terminado
             val ts = result.get(CaptureResult.SENSOR_TIMESTAMP) ?: return
             pendingReprocessResults.remove(ts)
             val iter = zslCircularBuffer.iterator()
@@ -440,48 +440,48 @@ fun submitZslReprocessRequest(
 }
 ```
 
-`createReprocessCaptureRequest(originalResult)` is not just a convenience wrapper — it validates that the original frame's sensor settings (exposure time, ISO, lens position) are compatible with the reprocessing pipeline. If you use a standard `createCaptureRequest()` on an input-fed session, the HAL may re-converge AE/AWB, defeating the purpose of ZSL (the output would look like a *different* frame than the one selected).
+`createReprocessCaptureRequest(originalResult)` no es solo un envoltorio de conveniencia: valida que los ajustes del sensor del fotograma original (tiempo de exposición, ISO, posición de la lente) sean compatibles con la canalización de reprocesamiento. Si utiliza una `createCaptureRequest()` estándar en una sesión alimentada por entrada, el HAL puede volver a converger la AE/AWB, frustrando el propósito del ZSL (la salida podría parecer un fotograma *diferente* al seleccionado).
 
-## ZSL Circular Buffer + Reinjection Flowchart (Mermaid)
+## Diagrama de flujo del búfer circular ZSL + Reinyección (Mermaid)
 
 ```mermaid
 flowchart TD
-    A[Sensor Continuous Readout\n30fps full-res] --> B[ZSL Preview ISP:\nLow-power mode\nEDGE_MODE=FAST\nNR_MODE=FAST]
-    B --> C[Preview SurfaceView\nUser sees live 30fps view]
-    B --> D[ZSL ImageReader\nPRIVATE or YUV full-res]
+    A["Lectura continua del sensor<br/>30 fps resolución completa"] --> B["ISP de vista previa ZSL:<br/>Modo de bajo consumo<br/>EDGE_MODE=FAST<br/>NR_MODE=FAST"]
+    B --> C[Preview SurfaceView<br/>El usuario ve la vista en vivo a 30 fps]
+    B --> D[ZSL ImageReader<br/>PRIVATE o YUV resolución completa]
     
-    subgraph CB["🗘 Circular Buffer (Depth 12, 400ms history)"]
+    subgraph CB["🗘 Búfer circular (Profundidad 12, 400 ms de historial)"]
         direction TB
-        CB1["Slot N-11 (T-366ms)"]
+        CB1["Ranura N-11 (T-366ms)"]
         CB2["..."]
-        CB3["Slot N-1 (T-33ms)"]
-        CB4["★ Slot N (T=0ms) ★\nCLOSEST TO TAP TIME"]
+        CB3["Ranura N-1 (T-33ms)"]
+        CB4["★ Ranura N (T=0ms) ★<br/>MÁS CERCANA AL MOMENTO DEL TOQUE"]
     end
     D --> CB
 
-    E[★ USER TAPS SHUTTER AT T=0ms ★] --> F{Walk CB NEWEST → OLDEST\nFind min |frame.ts − tap.ts|}
-    F -->|"Selected: Slot N"| G[ImageWriter.dequeueInputImage()]
-    G --> H[Copy selected frame's\nPlanes → ImageWriter buffer]
-    H --> I[ImageWriter.queueInputImage()\n→ Feeds BACK into HAL Input Port]
+    E["★ EL USUARIO TOCA EL OBTURADOR EN T=0ms ★"] --> F{Recorrer CB MÁS NUEVO → MÁS ANTIGUO<br/>Buscar min |fotograma.ts − toque.ts|}
+    F -->|"Seleccionado: Ranura N"| G[ImageWriter.dequeueInputImage()]
+    G --> H[Copiar planos del fotograma seleccionado<br/>→ Búfer de ImageWriter]
+    H --> I[ImageWriter.queueInputImage()<br/>→ Se alimenta DE NUEVO al puerto de entrada del HAL]
     
-    subgraph REPROC["🔄 Reprocessing Pipeline (HEAVY QUALITY)"]
+    subgraph REPROC["🔄 Canalización de reprocesamiento (ALTA CALIDAD)"]
         direction TB
-        R1["ISP NR_MODE = HIGH_QUALITY\n(Multi-frame spatial+TNR)"]
-        R2["ISP EDGE_MODE = HIGH_QUALITY\n(Unsharp mask + LPA sharpening)"]
-        R3["ISP COLOR_CORRECTION =\nHIGH_QUALITY (3D LUT)"]
-        R4["Hardware JPEG Encoder\nQ=95"]
+        R1["ISP NR_MODE = HIGH_QUALITY<br/>(Multifotograma espacial+TNR)"]
+        R2["ISP EDGE_MODE = HIGH_QUALITY<br/>(Máscara de desenfoque + nitidez LPA)"]
+        R3["ISP COLOR_CORRECTION =<br/>HIGH_QUALITY (3D LUT)"]
+        R4["Codificador JPEG por hardware<br/>Q=95"]
     end
 
     I --> REPROC
-    REPROC --> J["JPEG Stored\nContent = EXACT frame user\n saw at T=0ms — ✓ ZERO LAG"]
+    REPROC --> J["JPEG almacenado<br/>Contenido = fotograma EXACTO que el<br/>usuario vio en T=0ms — ✓ RETRASO CERO"]
 
     style CB fill:#eff6ff,stroke:#2563eb
     style REPROC fill:#fef3c7,stroke:#d97706
 ```
 
-## switchToOffline(): Background Processing Continuity
+## switchToOffline(): Continuidad del procesamiento en segundo plano
 
-One of the worst UX defects a camera app can have is: user taps shutter → immediately gets a phone call or presses home → app process is killed → the in-progress photo is lost. Android 12 (API 31) solved this with **`CameraCaptureSession.switchToOffline()`**, which transfers ownership of the reprocessing pipeline from your app process to a persistent HAL service. The HAL service completes any in-flight capture/reprocess even if your app is killed by the system, and notifies you via `CameraOfflineSessionCallback.onReady()` when the app is relaunched.
+Uno de los peores defectos de UX que puede tener una aplicación de cámara es: el usuario toca el obturador → recibe inmediatamente una llamada telefónica o pulsa el botón de inicio → el proceso de la aplicación se cierra → la foto en curso se pierde. Android 12 (API 31) solucionó esto con **`CameraCaptureSession.switchToOffline()`**, que transfiere la propiedad de la canalización de reprocesamiento del proceso de su aplicación a un servicio HAL persistente. El servicio HAL completa cualquier captura/reprocesamiento en curso incluso si el sistema cierra su aplicación, y le notifica a través de `CameraOfflineSessionCallback.onReady()` cuando se vuelve a iniciar la aplicación.
 
 ```kotlin
 import android.hardware.camera2.CameraCaptureSession
@@ -495,22 +495,22 @@ fun moveToOfflineOnBackground(
 ) {
     val offlineCallback = object : CameraOfflineSessionCallback() {
         override fun onReady(session: CameraOfflineSession) {
-            // HAL has taken ownership. App can die now — photo will be saved.
-            Log.i(TAG, "Offline session ready. Pending captures will complete.")
-            // At this point you can finish() the Activity or release cameraDevice
+            // El HAL ha tomado la propiedad. La aplicación puede morir ahora: la foto se guardará.
+            Log.i(TAG, "Sesión sin conexión lista. Las capturas pendientes se completarán.")
+            // En este punto puede llamar a finish() en la Actividad o liberar el cameraDevice
         }
         override fun onError(
             session: CameraOfflineSession,
             errorCode: Int
-        ) = Log.e(TAG, "Offline session error: $errorCode")
+        ) = Log.e(TAG, "Error de la sesión sin conexión: $errorCode")
 
         override fun onCaptureCompleted(
             offlineSession: CameraOfflineSession,
             captureResult: android.hardware.camera2.CaptureResult
         ) {
-            // Optional: called when the offline pipeline finishes each frame
-            // JPEG bytes are still delivered via the original ImageReader
-            // On app restart, query CameraOfflineSession for pending
+            // Opcional: se llama cuando la canalización sin conexión termina cada fotograma
+            // Los bytes JPEG se siguen entregando a través del ImageReader original
+            // Al reiniciar la aplicación, consulte CameraOfflineSession para los pendientes
         }
     }
 
@@ -522,31 +522,31 @@ fun moveToOfflineOnBackground(
 }
 ```
 
-`switchToOffline()` requires `INFO_SUPPORTED_HARDWARE_LEVEL >= LEVEL_3` on the device. It's recommended to call it in `Activity.onPause()` **only if** the app has in-flight ZSL reprocesses; never call it during idle because the offline session consumes HAL resources for up to 30 seconds post-close.
+`switchToOffline()` requiere `INFO_SUPPORTED_HARDWARE_LEVEL >= LEVEL_3` en el dispositivo. Se recomienda llamarlo en `Activity.onPause()` **solo si** la aplicación tiene reprocesamientos ZSL en curso; nunca lo llame durante el estado de inactividad porque la sesión sin conexión consume recursos del HAL hasta 30 segundos después del cierre.
 
-## Summary
+## Resumen
 
-This chapter implemented the complete Zero Shutter Lag + Reprocessing pipeline as specified in the research doc:
+Este capítulo implementó la canalización completa de Retraso de Obturador Cero + Reprocesamiento según lo especificado en el documento de investigación:
 
-- **ZSL Problem Definition**: Standard capture has 114 ms (best-case) to 800 ms (worst-case) lag. ZSL captures the *exact frame the user saw at tap time* by using a continuously-filling circular buffer.
-- **Capability Gates**: One of three mandatory checks must pass: `HARDWARE_LEVEL_LEVEL_3`, `CAPABILITIES_PRIVATE_REPROCESSING`, or `CAPABILITIES_YUV_REPROCESSING`.
-- **4-step ZSL Workflow** (from the *ZSL / Reprocessing* research section):
-  1. **Circular buffering** with `ImageReader` (depth 12 = 400 ms history) + `CONTROL_CAPTURE_INTENT_ZERO_SHUTTER_LAG` + `TEMPLATE_ZERO_SHUTTER_LAG`.
-  2. **`InputConfiguration` + `createReprocessableCaptureSession`** with `ImageWriter` to re-inject pixel buffers back into the HAL.
-  3. **Shutter tap → closest timestamp selection** (walk newest → oldest, ±16 ms target). Copy selected planes into ImageWriter, queue.
-  4. **`createReprocessCaptureRequest(originalResult)`** with `NOISE_REDUCTION_MODE_HIGH_QUALITY` + `EDGE_MODE_HIGH_QUALITY` for heavy post-capture ISP processing.
-- **`switchToOffline()`** (Android 12 API 31, LEVEL_3 only) transfers ownership to HAL service so in-flight reprocesses complete even if the app is killed.
-- Two Mermaid diagrams (Standard vs ZSL timeline, full circular buffer + reinjection flowchart) visualize the content-lag difference and pipeline flow.
+- **Definición del problema ZSL**: La captura estándar tiene un retraso de 114 ms (en el mejor de los casos) a 800 ms (en el peor de los casos). El ZSL captura el *fotograma exacto que el usuario vio en el momento del toque* mediante el uso de un búfer circular que se llena continuamente.
+- **Puertas de capacidad**: Debe superarse una de las tres comprobaciones obligatorias: `HARDWARE_LEVEL_LEVEL_3`, `CAPABILITIES_PRIVATE_REPROCESSING` o `CAPABILITIES_YUV_REPROCESSING`.
+- **Flujo de trabajo ZSL de 4 pasos** (de la sección de investigación *ZSL / Reprocessing*):
+  1. **Almacenamiento en búfer circular** con `ImageReader` (profundidad 12 = 400 ms de historial) + `CONTROL_CAPTURE_INTENT_ZERO_SHUTTER_LAG` + `TEMPLATE_ZERO_SHUTTER_LAG`.
+  2. **`InputConfiguration` + `createReprocessableCaptureSession`** con `ImageWriter` para volver a inyectar los búferes de píxeles en el HAL.
+  3. **Toque del obturador → selección de la marca de tiempo más cercana** (recorrido del más nuevo al más antiguo, objetivo de ±16 ms). Copiar los planos seleccionados en ImageWriter, encolar.
+  4. **`createReprocessCaptureRequest(originalResult)`** con `NOISE_REDUCTION_MODE_HIGH_QUALITY` + `EDGE_MODE_HIGH_QUALITY` para un procesamiento ISP pesado tras la captura.
+- **`switchToOffline()`** (Android 12 API 31, solo LEVEL_3) transfiere la propiedad al servicio HAL para que los reprocesamientos en curso se completen incluso si se cierra la aplicación.
+- Dos diagramas de Mermaid (línea de tiempo estándar frente a ZSL, flujo completo de búfer circular + reinyección) visualizan la diferencia de retraso del contenido y el flujo de la canalización.
 
-## What's Next — End of Professional Camera Features Part V
+## Qué sigue: Fin de las Funciones de Cámara Profesionales Parte V
 
-You have now completed **Part V: Professional Camera Features** — the final part of the Android Camera2 API tutorial series. You learned:
+Ya ha completado la **Parte V: Funciones de Cámara Profesionales**, la parte final de la serie de tutoriales de la API Android Camera2. Ha aprendido:
 
-- Chapter 18: RAW photography with RAW_SENSOR + DngCreator + simultaneous RAW+JPEG capture.
-- Chapter 19: 120/240 fps high-speed video via `CameraConstrainedHighSpeedCaptureSession` + `createHighSpeedRequestList`.
-- Chapter 20: Logical multi-camera, physical camera IDs, CALIBRATED sync, and dual-physical simultaneous capture.
-- Chapter 21: HDR10 / HLG video and Android 14 JPEG_R Ultra HDR stills with gain maps.
-- Chapter 22: OEM Camera Extensions — Night, Bokeh, HDR, Face Retouch, Automatic.
-- Chapter 23: Zero Shutter Lag circular buffer + reprocessing pipeline and offline session support.
+- Capítulo 18: Fotografía RAW con RAW_SENSOR + DngCreator + captura simultánea RAW+JPEG.
+- Capítulo 19: Video de alta velocidad a 120/240 fps a través de `CameraConstrainedHighSpeedCaptureSession` + `createHighSpeedRequestList`.
+- Capítulo 20: Cámara múltiple lógica, ID de cámara física, sincronización CALIBRATED y captura simultánea de cámaras físicas duales.
+- Capítulo 21: Video HDR10 / HLG y fotos fijas JPEG_R Ultra HDR de Android 14 con mapas de ganancia.
+- Capítulo 22: Extensiones de cámara del OEM: Nocturno, Bokeh, HDR, Retoque facial, Automático.
+- Capítulo 23: Canalización de búfer circular Retraso de Obturador Cero + reprocesamiento y soporte de sesión sin conexión.
 
-To validate every feature from Parts I–V on your device, install the [Android Camera Parameters app](https://play.google.com/store/apps/details?id=com.zoozooll.cameraparameters). It enumerates every capability, size, FPS range, extension, dynamic range profile, RAW variant, and sync type discussed in this series, and exports full device reports as JSON. Contribute reports for unsupported devices by opening a pull request on the open-source [GitHub repository](https://github.com/zoozooll/AndroidCameraParameters) — the community database is used by thousands of developers to pre-filter feature support in their camera apps.
+Para validar cada función de las Partes I-V en su dispositivo, instale la [aplicación Android Camera Parameters](https://play.google.com/store/apps/details?id=com.zoozooll.cameraparameters). Enumera cada capacidad, tamaño, rango de FPS, extensión, perfil de rango dinámico, variante de RAW y tipo de sincronización discutidos en esta serie, y exporta informes completos del dispositivo como JSON. Contribuya con informes para dispositivos no admitidos abriendo una solicitud de extracción en el [repositorio de GitHub](https://github.com/zoozooll/AndroidCameraParameters) de código abierto: la base de datos de la comunidad es utilizada por miles de desarrolladores para prefiltrar el soporte de funciones en sus aplicaciones de cámara.

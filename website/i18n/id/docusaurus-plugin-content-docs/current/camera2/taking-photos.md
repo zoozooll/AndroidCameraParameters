@@ -1,143 +1,144 @@
 ---
 sidebar_position: 9
-title: "Chapter 9: Taking Photos"
-description: Capture high-quality still photos with Camera2 using ImageReader (JPEG), precapture AE trigger, and CaptureCallback state machine. Save photos with Scoped Storage-compatible MediaStore (Android 10+) and legacy FileOutputStream, always remembering to close the Image buffer.
-keywords: [ImageReader, JPEG capture, precapture AE trigger, MediaStore Scoped Storage, CaptureCallback still photo]
+title: "Bab 9: Mengambil Foto"
+description: Ambil foto diam berkualitas tinggi dengan Camera2 menggunakan ImageReader (JPEG), pemicu AE pra-pengambilan, dan mesin status CaptureCallback. Simpan foto dengan MediaStore yang kompatibel dengan Scoped Storage (Android 10+) dan FileOutputStream lama, selalu ingat untuk menutup buffer Image.
+keywords: [ImageReader, pengambilan JPEG, pemicu AE pra-pengambilan, MediaStore Scoped Storage, CaptureCallback foto diam]
 ---
 
-Congratulations on reaching the final chapter of Part II! If you've followed along since Chapter 5, your app now has: permission handling, a dedicated background thread, camera enumeration with `CameraCharacteristics`, robust open/close lifecycle management via `Semaphore`, and a smooth, correctly-oriented live preview rendered through `TextureView`. What's missing? **The ability to tap a button and keep a photo**. That's what this chapter delivers.
+Selamat telah mencapai bab terakhir dari Bagian II! Jika Anda telah mengikuti sejak Bab 5, aplikasi Anda sekarang memiliki: penanganan izin, thread latar belakang khusus, enumerasi kamera dengan `CameraCharacteristics`, manajemen siklus hidup buka/tutup yang kuat melalui `Semaphore`, dan pratinjau langsung dengan orientasi yang benar yang dirender melalui `TextureView`. Apa yang kurang? **Kemampuan untuk mengetuk tombol dan menyimpan foto**. Itulah yang diberikan oleh bab ini.
 
-By the end of this chapter, your tutorial project will be a genuinely usable camera application: tap the shutter, the app briefly freezes preview (as it should, to flush the pipeline), a still image is captured with proper auto-exposure convergence, it is saved to the device's shared Pictures directory with correct EXIF orientation metadata, and preview resumes automatically. You can then open the photo in Google Photos or the Android Camera Parameters app ([GitHub](https://github.com/zoozooll/AndroidCameraParameters), [Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)) to inspect EXIF data, resolution, and quality.
+Pada akhir bab ini, proyek tutorial Anda akan menjadi aplikasi kamera yang benar-benar dapat digunakan: ketuk rana, aplikasi membekukan pratinjau sebentar (sebagaimana mestinya, untuk mengosongkan pipeline), gambar diam ditangkap dengan pemusatan auto-exposure yang tepat, gambar tersebut disimpan ke direktori Pictures bersama di perangkat dengan metadata orientasi EXIF yang benar, dan pratinjau dilanjutkan secara otomatis. Anda kemudian dapat membuka foto di Google Photos atau aplikasi Android Camera Parameters ([GitHub](https://github.com/zoozooll/AndroidCameraParameters), [Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)) untuk memeriksa data EXIF, resolusi, dan kualitasnya.
 
-The Android Camera Parameters app's manual capture mode uses a more advanced version of the pipeline we build in this chapter: it runs multi-frame burst captures with per-frame custom ISO, exposure time, and lens position — but it all builds on the same `ImageReader` + `CaptureCallback` fundamentals you will learn here.
+Mode pengambilan manual pada aplikasi Android Camera Parameters menggunakan versi pipeline yang lebih canggih daripada yang kita bangun di bab ini: ia menjalankan pengambilan burst multi-bingkai dengan ISO kustom per-bingkai, waktu eksposur, dan posisi lensa — tetapi semuanya dibangun di atas fundamental `ImageReader` + `CaptureCallback` yang sama yang akan Anda pelajari di sini.
 
-## Why Taking a Photo Is More Complex Than Preview
+## Mengapa Mengambil Foto Lebih Kompleks Daripada Pratinjau
 
-At first glance, "just capture a frame" sounds easy — we already have 60 preview frames per second flowing through the session, why can't we grab one? The answer is that preview frames and still frames are fundamentally different outputs:
+Sekilas, "ambil saja satu bingkai" terdengar mudah — kita sudah memiliki 60 bingkai pratinjau per detik yang mengalir melalui sesi, mengapa kita tidak bisa mengambil satu? Jawabannya adalah bingkai pratinjau dan bingkai foto diam adalah output yang berbeda secara fundamental:
 
-1. **Resolution difference**: Preview is ~1–2 MP (1080p). A still photo should use the sensor's **maximum** resolution (often 50+ MP on modern flagships). You don't want a 2 MP photo when your phone can deliver 50 MP.
-2. **Exposure difference**: `TEMPLATE_PREVIEW` optimizes for low-latency frame rate. `TEMPLATE_STILL_CAPTURE` optimizes for dynamic range, noise reduction, and color accuracy — the still frame needs the highest-quality ISP processing the pipeline can deliver.
-3. **3A convergence**: Before taking a photo, the camera's Auto-Exposure (AE) algorithm needs to be told "we're about to take a still — lock onto the current scene, converge exposure, white balance, and focus, and fire the flash if needed." This is the **precapture trigger** sequence. Skipping it leads to photos that are over/underexposed relative to what preview showed.
-4. **Storage and Scoped Storage**: The preview frame is never persisted. The photo frame must be written to disk as a valid JPEG file, indexed by the MediaStore so gallery apps can see it, and on Android 10+ this must use the Scoped Storage APIs (no arbitrary `File` writes to `/sdcard/DCIM/`).
+1. **Perbedaan resolusi**: Pratinjau adalah ~1–2 MP (1080p). Foto diam harus menggunakan resolusi **maksimum** sensor (seringkali 50+ MP pada ponsel unggulan modern). Anda tentu tidak ingin foto 2 MP saat ponsel Anda bisa memberikan 50 MP.
+2. **Perbedaan eksposur**: `TEMPLATE_PREVIEW` mengoptimalkan frame rate dengan latensi rendah. `TEMPLATE_STILL_CAPTURE` mengoptimalkan rentang dinamis, pengurangan noise, dan akurasi warna — bingkai diam membutuhkan pemrosesan ISP kualitas tertinggi yang dapat diberikan oleh pipeline.
+3. **Pemusatan 3A**: Sebelum mengambil foto, algoritma Auto-Exposure (AE) kamera perlu diberi tahu "kita akan mengambil foto diam — kunci adegan saat ini, pusatkan eksposur, keseimbangan putih, dan fokus, serta nyalakan lampu kilat jika perlu." Ini adalah urutan **pemicu pra-pengambilan (precapture trigger)**. Melewatkannya akan menghasilkan foto yang kelebihan/kekurangan eksposur relatif terhadap apa yang ditampilkan pratinjau.
+4. **Penyimpanan dan Scoped Storage**: Bingkai pratinjau tidak pernah disimpan secara permanen. Bingkai foto harus ditulis ke penyimpanan sebagai file JPEG yang valid, diindeks oleh MediaStore agar aplikasi galeri dapat melihatnya, dan pada Android 10+ ini harus menggunakan API Scoped Storage (tidak boleh menulis file sembarangan ke `/sdcard/DCIM/`).
 
-Still capture is a **multi-stage asynchronous state machine**, not a single call. The sequence diagram below shows the exact order and timing you must implement. Do not skip any step.
+Pengambilan foto diam adalah **mesin status asinkron multi-tahap**, bukan satu panggilan tunggal. Diagram urutan di bawah ini menunjukkan urutan dan waktu tepat yang harus Anda implementasikan. Jangan lewatkan langkah apa pun.
 
 ```mermaid
 sequenceDiagram
-    actor User as 👤 User
+    actor User as 👤 Pengguna
     participant App as 📱 MainActivity
     participant CB as 🎞️ CaptureCallback
     participant IR as 🖼️ ImageReader
     participant MS as 💾 MediaStore/Pictures
-    User->>App: Taps shutter button
+    User->>App: Mengetuk tombol rana
     App->>App: lockFocusForCapture() 🔒
     App->>App: stopRepeating() ⏹️
     
-    App->>CB: Capture single request<br/>CONTROL_AE_PRECAPTURE_TRIGGER_START
-    Note over App,CB: Triggers AE flash metering + convergence
-    loop Wait for AE_STATE_CONVERGED or AE_STATE_FLASH_REQUIRED
-        CB-->>App: onCaptureCompleted(partial results)
+    App->>CB: Ambil permintaan tunggal<br/>CONTROL_AE_PRECAPTURE_TRIGGER_START
+    Note over App,CB: Memicu metering lampu kilat AE + pemusatan
+    loop Tunggu AE_STATE_CONVERGED atau AE_STATE_FLASH_REQUIRED
+        CB-->>App: onCaptureCompleted(hasil parsial)
     end
     
-    Note over App,CB: ⏰ AE has converged (or timed out after ~3s)
+    Note over App,CB: ⏰ AE telah memusat (atau waktu habis setelah ~3 detik)
     
-    App->>CB: Capture still request<br/>TEMPLATE_STILL_CAPTURE + JPEG target
-    Note over App,CB: One-shot high-res capture through ISP
+    App->>CB: Ambil permintaan foto diam<br/>TEMPLATE_STILL_CAPTURE + target JPEG
+    Note over App,CB: Pengambilan resolusi tinggi sekali jalan melalui ISP
     
     CB-->>IR: onImageAvailable() 🌠
-    IR->>IR: acquireLatestImage() → Image object
-    IR->>App: planes[0].buffer (raw JPEG ByteBuffer)
+    IR->>IR: acquireLatestImage() → objek Image
+    IR->>App: planes[0].buffer (buffer ByteBuffer JPEG mentah)
     App->>MS: MediaStore.createWriteRequest() → OutputStream
-    App->>MS: Write ByteBuffer bytes to OutputStream
-    App->>IR: image.close() ✅ FREE BUFFER
-    App->>MS: close() OutputStream → photo appears in Gallery
+    App->>MS: Tulis byte ByteBuffer ke OutputStream
+    App->>IR: image.close() ✅ BEBASKAN BUFFER
+    App->>MS: close() OutputStream → foto muncul di Galeri
     
     App->>App: unlockFocus() 🔓
-    App->>App: setRepeatingRequest() 🔄 Resume preview
+    App->>App: setRepeatingRequest() 🔄 Lanjutkan pratinjau
     
-    Note over App,CB: 🎉 Ready for next shutter tap
+    Note over App,CB: 🎉 Siap untuk ketukan rana berikutnya
 ```
 
-The timing of the precapture trigger is critical: it must be sent BEFORE the still capture, and you must wait for AE to converge (or hit a timeout) before firing the still. If you skip the wait, the photo will use the preview's exposure settings, which may be tuned for high frame rate rather than photo quality.
+Waktu pemicu pra-pengambilan sangat penting: ia harus dikirim SEBELUM pengambilan foto diam, dan Anda harus menunggu AE memusat (atau mencapai batas waktu habis) sebelum menembakkan foto diam tersebut. Jika Anda melewatkan penungguan ini, foto akan menggunakan pengaturan eksposur pratinjau, yang mungkin disetel untuk frame rate tinggi daripada kualitas foto.
 
-## Introducing ImageReader: The CPU-Accessible Frame Sink
+## Memperkenalkan ImageReader: Wastafel Bingkai yang Dapat Diakses CPU
 
-In Chapter 8 we fed preview frames to a `SurfaceTexture` (GPU sink). For still capture we need a CPU-accessible sink so we can write the JPEG bytes to disk. That sink is `ImageReader`.
+Di Bab 8 kita menyalurkan bingkai pratinjau ke `SurfaceTexture` (wastafel GPU). Untuk pengambilan foto diam, kita membutuhkan wastafel yang dapat diakses CPU agar kita dapat menulis byte JPEG ke penyimpanan. Wastafel itu adalah `ImageReader`.
 
-`ImageReader` is constructed with:
+`ImageReader` dikonstruksi dengan:
 ```kotlin
 val imageReader = ImageReader.newInstance(
-    width,           // Pixel width of still frames (max still size from characteristics)
-    height,          // Pixel height of still frames
-    ImageFormat.JPEG,// Format — JPEG for photos, RAW_SENSOR for DNG RAW, YUV_420_888 for processing
-    maxImages        // How many buffers to allocate in the queue (2–5 typically)
+    width,           // Lebar piksel bingkai diam (ukuran diam maks dari karakteristik)
+    height,          // Tinggi piksel bingkai diam
+    ImageFormat.JPEG,// Format — JPEG untuk foto, RAW_SENSOR untuk RAW DNG, YUV_420_888 untuk pemrosesan
+    maxImages        // Berapa banyak buffer yang akan dialokasikan dalam antrean (biasanya 2–5)
 )
 ```
 
-The four parameters explained:
+Penjelasan empat parameternya:
 
-1. **width/height**: Use the camera's maximum JPEG size from `SCALER_STREAM_CONFIGURATION_MAP.getOutputSizes(ImageFormat.JPEG)`. Always pick the largest size for the highest-quality photo.
-2. **ImageFormat.JPEG**: The Image Signal Processor (ISP) will run full JPEG encoding pipeline (Huffman coding, quantization, EXIF embedding, JFIF header) before delivering the frame. The `Image.planes[0].buffer` is a **complete, valid JPEG file** — no re-encoding needed; you can write those bytes directly to disk.
-3. **maxImages**: The depth of the internal `BufferQueue`. JPEG buffers are large (5–20 MB each). Set this to **2** for a typical photo capture (one in-flight + one spare). Setting it higher wastes RAM; setting it to **1** and forgetting to `close()` the Image leads to permanent capture deadlock (the queue can never dequeue an empty buffer again).
+1. **width/height**: Gunakan ukuran JPEG maksimum kamera dari `SCALER_STREAM_CONFIGURATION_MAP.getOutputSizes(ImageFormat.JPEG)`. Selalu pilih ukuran terbesar untuk foto kualitas tertinggi.
+2. **ImageFormat.JPEG**: Image Signal Processor (ISP) akan menjalankan pipeline pengkodean JPEG penuh (pengkodean Huffman, kuantisasi, penyematan EXIF, header JFIF) sebelum mengirimkan bingkai. `Image.planes[0].buffer` adalah **file JPEG yang lengkap dan valid** — tidak perlu pengkodean ulang; Anda dapat menulis byte tersebut langsung ke penyimpanan.
+3. **maxImages**: Kedalaman `BufferQueue` internal. Buffer JPEG berukuran besar (masing-masing 5–20 MB). Atur ke **2** untuk pengambilan foto biasa (satu yang sedang diproses + satu cadangan). Mengaturnya lebih tinggi akan membuang RAM; mengaturnya ke **1** dan lupa melakukan `close()` pada Image akan menyebabkan deadlock pengambilan gambar permanen (antrean tidak akan pernah bisa mengeluarkan buffer kosong lagi).
 
-`ImageReader` exposes two crucial API surfaces:
-- **`imageReader.surface`**: Returns a `Surface` that can be added as a target to CaptureRequests and included in the `CameraCaptureSession` output surface list.
-- **`imageReader.setOnImageAvailableListener(listener, handler)`**: Registers a callback that fires on **every new frame** delivered to this reader. Inside this callback, you call `acquireLatestImage()` (or `acquireNextImage()`) to get the `Image` object.
+`ImageReader` mengekspos dua permukaan API yang krusial:
+- **`imageReader.surface`**: Mengembalikan sebuah `Surface` yang dapat ditambahkan sebagai target ke CaptureRequests dan disertakan dalam daftar surface output `CameraCaptureSession`.
+- **`imageReader.setOnImageAvailableListener(listener, handler)`**: Mendaftarkan callback yang dipicu pada **setiap bingkai baru** yang dikirimkan ke pembaca ini. Di dalam callback ini, Anda memanggil `acquireLatestImage()` (atau `acquireNextImage()`) untuk mendapatkan objek `Image`.
 
-### ⚠️ CRITICAL RULE: Always close the Image
+### ⚠️ ATURAN KRITIS: Selalu tutup Image
 
-If you call `acquireLatestImage()` and do **not** call `image.close()`, that buffer is **permanently removed from the pool**. Once `maxImages` buffers are leaked, `OnImageAvailableListener` stops firing FOREVER (the queue has no empty buffers to dequeue into, so no new frames can arrive). Always use a try/finally block:
+Jika Anda memanggil `acquireLatestImage()` dan **tidak** memanggil `image.close()`, buffer tersebut **dihapus secara permanen dari pool**. Setelah `maxImages` buffer bocor, `OnImageAvailableListener` akan berhenti dipicu SELAMANYA (antrean tidak memiliki buffer kosong untuk mengeluarkan data, sehingga bingkai baru tidak dapat tiba). Selalu gunakan blok try/finally:
 
 ```kotlin
 val image = imageReader.acquireLatestImage()
 try {
-    // Use image bytes here
+    // Gunakan byte gambar di sini
 } finally {
-    image.close() // ALWAYS. No exceptions.
+    image.close() // SELALU. Tidak ada pengecualian.
 }
 ```
 
-This is the single most common Chapter 9 bug: capture works once, then never works again until the app is restarted.
+Ini adalah bug Bab 9 yang paling umum: pengambilan gambar berfungsi sekali, lalu tidak pernah berfungsi lagi sampai aplikasi dimulai ulang.
 
-## The Precapture AE State Machine
+## Mesin Status AE Pra-Pengambilan
 
-The Camera2 3A (Auto-Exposure / Auto-Focus / Auto-White-Balance) system is a per-frame state machine driven by the `CONTROL_AE_PRECAPTURE_TRIGGER` request key. The flow:
+Sistem Camera2 3A (Auto-Exposure / Auto-Focus / Auto-White-Balance) adalah mesin status per-bingkai yang digerakkan oleh kunci permintaan `CONTROL_AE_PRECAPTURE_TRIGGER`. Alurnya:
 
-1. **Stop repeating preview**: `captureSession.stopRepeating()`. We don't want preview frames interleaving with the still pipeline.
-2. **Fire precapture trigger**: Build a single `CaptureRequest` that sets `CONTROL_AE_PRECAPTURE_TRIGGER` to `START`. Submit it with `captureSession.capture()` (NOT `setRepeatingRequest` — it's a one-shot command, not continuous).
-3. **Wait for convergence**: In the `CaptureCallback.onCaptureCompleted()` for the precapture trigger (and subsequent frames), inspect `CaptureResult.CONTROL_AE_STATE`. We are waiting for one of:
-   - `CONTROL_AE_STATE_CONVERGED` ✓ (AE is happy, scene is correctly metered)
-   - `CONTROL_AE_STATE_FLASH_REQUIRED` ✓ (AE determined flash is needed, flash is now charged)
-   - `CONTROL_AE_STATE_LOCKED` ✓ (if user manually locked AE earlier)
-   - A 3000ms timeout fires ✗ (safety valve — some buggy devices never signal convergence).
-4. **Fire still capture**: Build a `TEMPLATE_STILL_CAPTURE` request targeting the `ImageReader`'s Surface. Submit it with `captureSession.capture()`.
-5. **Image arrives**: `OnImageAvailableListener.onImageAvailable()` fires → acquire JPEG bytes → save to disk.
-6. **Unlock and resume**: Build a request that cancels AE trigger (`CONTROL_AE_PRECAPTURE_TRIGGER_CANCEL`), call `unlockFocus()` for AF/AWB, then `setRepeatingRequest(previewRequest, ...)` to restart preview.
+1. **Hentikan pratinjau berulang**: `captureSession.stopRepeating()`. Kita tidak ingin bingkai pratinjau menyela pipeline foto diam.
+2. **Tembakkan pemicu pra-pengambilan**: Bangun sebuah `CaptureRequest` tunggal yang menyetel `CONTROL_AE_PRECAPTURE_TRIGGER` ke `START`. Kirimkan dengan `captureSession.capture()` (BUKAN `setRepeatingRequest` — ini adalah perintah sekali jalan, bukan berkelanjutan).
+3. **Tunggu pemusatan**: Di dalam `CaptureCallback.onCaptureCompleted()` untuk pemicu pra-pengambilan (dan bingkai-bingkai berikutnya), periksa `CaptureResult.CONTROL_AE_STATE`. Kita sedang menunggu salah satu dari:
+   - `CONTROL_AE_STATE_CONVERGED` ✓ (AE sudah oke, adegan sudah terukur dengan benar)
+   - `CONTROL_AE_STATE_FLASH_REQUIRED` ✓ (AE menentukan lampu kilat diperlukan, lampu kilat sekarang sudah terisi)
+   - `CONTROL_AE_STATE_LOCKED` ✓ (jika pengguna mengunci AE secara manual sebelumnya)
+   - Batas waktu 3000ms tercapai ✗ (katup pengaman — beberapa perangkat yang bermasalah tidak pernah memberi sinyal pemusatan).
+4. **Tembakkan pengambilan foto diam**: Bangun permintaan `TEMPLATE_STILL_CAPTURE` yang menargetkan Surface milik `ImageReader`. Kirimkan dengan `captureSession.capture()`.
+5. **Gambar tiba**: `OnImageAvailableListener.onImageAvailable()` dipicu → ambil byte JPEG → simpan ke penyimpanan.
+6. **Buka kunci dan lanjutkan**: Bangun permintaan yang membatalkan pemicu AE (`CONTROL_AE_PRECAPTURE_TRIGGER_CANCEL`), panggil `unlockFocus()` untuk AF/AWB, lalu `setRepeatingRequest(previewRequest, ...)` untuk memulai kembali pratinjau.
 
-Each of the 6 steps corresponds to one state in our `CaptureStateMachine` enum we'll define in the code.
+Masing-masing dari 6 langkah tersebut sesuai dengan satu status dalam enum `CaptureStateMachine` yang akan kita definisikan dalam kode.
 
-## Scoped Storage and MediaStore (Android 10+)
+## Scoped Storage dan MediaStore (Android 10+)
 
-From Android 10 (API 29) onward, apps can no longer write arbitrary files to the shared `/sdcard/Pictures` directory using the `java.io.File` API — doing so throws a `FileNotFoundException` with "Permission denied" even if you hold `WRITE_EXTERNAL_STORAGE`. The correct, future-proof approach uses the `MediaStore` content provider:
+Dari Android 10 (API 29) dan seterusnya, aplikasi tidak dapat lagi menulis file sembarangan ke direktori `/sdcard/Pictures` bersama menggunakan API `java.io.File` — melakukannya akan melempar `FileNotFoundException` dengan pesan "Permission denied" bahkan jika Anda memegang `WRITE_EXTERNAL_STORAGE`. Pendekatan yang benar dan tahan lama di masa depan adalah menggunakan penyedia konten `MediaStore`:
 
-1. **Prepare a `ContentValues` bundle**: MIME type (`image/jpeg`), relative path (`Pictures/Camera2Tutorial/` — the system creates the directory if needed), display name (timestamped).
-2. **Insert a pending row**: `contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)` returns a `Uri`.
-3. **Open an OutputStream to the Uri**: `contentResolver.openOutputStream(uri)` gives you a `ParcelFileDescriptor`-backed stream.
-4. **Write bytes and close**: The JPEG ByteBuffer from `ImageReader` is copied directly into the OutputStream.
-5. **Make the file visible to gallery apps**: Optional — add `IS_PENDING=0` in the values if you used a pending-write pattern (we'll use the simpler `IS_PENDING=1`-then-update approach for maximum compatibility).
+1. **Siapkan bundel `ContentValues`**: Tipe MIME (`image/jpeg`), jalur relatif (`Pictures/Camera2Tutorial/` — sistem akan membuat direktori tersebut jika diperlukan), nama tampilan (berstempel waktu).
+2. **Masukkan baris tertunda (pending)**: `contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)` mengembalikan sebuah `Uri`.
+3. **Buka OutputStream ke Uri tersebut**: `contentResolver.openOutputStream(uri)` memberi Anda aliran yang didukung oleh `ParcelFileDescriptor`.
+4. **Tulis byte dan tutup**: ByteBuffer JPEG dari `ImageReader` disalin langsung ke OutputStream.
+5. **Jadikan file terlihat oleh aplikasi galeri**: Opsional — tambahkan `IS_PENDING=0` di nilai jika Anda menggunakan pola pending-write (kita akan menggunakan pendekatan `IS_PENDING=1`-lalu-perbarui yang lebih sederhana untuk kompatibilitas maksimum).
 
-On API 28 and below, we fall back to the traditional `File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), ...)` path with direct `FileOutputStream`, which still works because legacy storage models apply.
+Pada API 28 ke bawah, kita kembali ke jalur tradisional `File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), ...)` dengan `FileOutputStream` langsung, yang masih berfungsi karena model penyimpanan lama masih berlaku.
 
-## Full Chapter 9 Code — Photo Capture
+## Kode Lengkap Bab 9 — Pengambilan Foto
 
-Here is the complete, end-to-end `MainActivity.kt` incorporating all of the above: the `ImageReader`, the 6-state precapture AE state machine, the shutter button, `MediaStore`/legacy save, and teardown of both session surfaces (preview + jpeg). We also update the layout XML for the shutter button.
+Berikut adalah `MainActivity.kt` lengkap dari awal hingga akhir yang menggabungkan semua hal di atas: `ImageReader`, mesin status AE pra-pengambilan 6-status, tombol rana, penyimpanan `MediaStore`/lama, dan pembongkaran kedua surface sesi (pratinjau + jpeg). Kita juga memperbarui layout XML untuk tombol rana.
 
-### Updated Layout (activity_main.xml)
+### Layout yang Diperbarui (activity_main.xml)
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
@@ -157,7 +158,7 @@ Here is the complete, end-to-end `MainActivity.kt` incorporating all of the abov
         android:padding="8dp"
         android:textColor="#FFFFFFFF"
         android:textSize="12sp"
-        tools:text="Initializing..." />
+        tools:text="Menginisialisasi..." />
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/shutterButton"
@@ -165,16 +166,16 @@ Here is the complete, end-to-end `MainActivity.kt` incorporating all of the abov
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|center_horizontal"
         android:layout_marginBottom="48dp"
-        android:contentDescription="Take photo"
+        android:contentDescription="Ambil foto"
         android:src="@android:drawable/ic_menu_camera"
         app:fabSize="normal" />
 
 </FrameLayout>
 ```
 
-If you don't have Material Components, replace the FAB with a `Button` with `layout_gravity="bottom|center_horizontal"`.
+Jika Anda tidak memiliki Komponen Material, ganti FAB dengan `Button` dengan `layout_gravity="bottom|center_horizontal"`.
 
-### Full Kotlin Activity
+### Activity Kotlin Lengkap
 
 ```kotlin
 package com.example.camera2tutorial
@@ -239,7 +240,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var backgroundThread: HandlerThread
     private lateinit var backgroundHandler: Handler
 
-    // Camera pipeline state
+    // Status pipeline kamera
     private lateinit var cameraManager: CameraManager
     private var cameraDevice: CameraDevice? = null
     private var captureSession: CameraCaptureSession? = null
@@ -251,31 +252,31 @@ class MainActivity : AppCompatActivity() {
     private lateinit var previewSize: Size
     private lateinit var jpegSize: Size
 
-    // 🆕 Still capture sink
+    // 🆕 Wastafel pengambilan foto diam
     private lateinit var imageReader: ImageReader
 
-    // Concurrency
+    // Konkurensi
     private val cameraOpenCloseLock = Semaphore(1)
 
-    // 🆕 Capture state machine
+    // 🆕 Mesin status pengambilan gambar
     private enum class CaptureState {
-        IDLE,                 // Preview running normally
-        WAITING_AE_PRECAPTURE, // AE precapture trigger fired, waiting for converge
-        WAITING_AF_LOCK,      // (optional) used if we add AF trigger too
-        WAITING_STILL_CAPTURE,// Still capture submitted, waiting for ImageReader
-        PICTURE_SAVED         // Photo saved, about to return to IDLE
+        IDLE,                 // Pratinjau berjalan normal
+        WAITING_AE_PRECAPTURE, // Pemicu AE pra-pengambilan ditembakkan, menunggu pemusatan
+        WAITING_AF_LOCK,      // (opsional) digunakan jika kita menambahkan pemicu AF juga
+        WAITING_STILL_CAPTURE,// Pengambilan foto diam dikirim, menunggu ImageReader
+        PICTURE_SAVED         // Foto disimpan, akan segera kembali ke IDLE
     }
     private var captureState: CaptureState = CaptureState.IDLE
     private val precaptureTimeoutHandler: Handler by lazy { Handler(mainLooper) }
     private val precaptureTimeoutRunnable = Runnable {
         if (captureState == CaptureState.WAITING_AE_PRECAPTURE) {
-            Log.w(TAG, "⏰ Precapture AE timeout — proceeding with still anyway")
+            Log.w(TAG, "⏰ Waktu habis AE pra-pengambilan — tetap melanjutkan pengambilan foto diam")
             captureStillPicture()
         }
     }
 
     // -------------------------------------------------------------------------
-    // Lifecycle + UI hookup
+    // Siklus hidup + hubungkan UI
     // -------------------------------------------------------------------------
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -284,7 +285,7 @@ class MainActivity : AppCompatActivity() {
         textureView = findViewById(R.id.textureView)
         statusTextView = findViewById(R.id.statusTextView)
         shutterButton = findViewById(R.id.shutterButton)
-        statusTextView.text = "Initializing..."
+        statusTextView.text = "Menginisialisasi..."
 
         shutterButton.setOnClickListener { takePicture() }
 
@@ -322,7 +323,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     // -------------------------------------------------------------------------
-    // Chapter 6 condensed: camera discovery
+    // Bab 6 diringkas: penemuan kamera
     // -------------------------------------------------------------------------
     data class CamInfo(val id: String, val facing: Int?, val hw: Int?, val chars: CameraCharacteristics)
 
@@ -357,7 +358,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     // -------------------------------------------------------------------------
-    // Chapter 7 condensed: openCamera
+    // Bab 7 diringkas: openCamera
     // -------------------------------------------------------------------------
     private val deviceCallback = object : CameraDevice.StateCallback() {
         override fun onOpened(cam: CameraDevice) {
@@ -372,42 +373,42 @@ class MainActivity : AppCompatActivity() {
         override fun onError(cam: CameraDevice, err: Int) {
             cameraOpenCloseLock.release()
             cameraDevice?.close(); cameraDevice = null
-            Toast.makeText(this@MainActivity, "Camera error $err", Toast.LENGTH_LONG).show()
+            Toast.makeText(this@MainActivity, "Kesalahan kamera $err", Toast.LENGTH_LONG).show()
         }
     }
 
     // -------------------------------------------------------------------------
-    // Session creation (now with 2 surfaces: preview + jpeg)
+    // Pembuatan sesi (sekarang dengan 2 surface: pratinjau + jpeg)
     // -------------------------------------------------------------------------
     private fun openCameraAndStartSession(vw: Int, vh: Int) {
         val camId = selectedCameraId ?: return
         if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) return
         if (!cameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
-            Toast.makeText(this, "Camera lock timeout", Toast.LENGTH_SHORT).show(); return
+            Toast.makeText(this, "Waktu habis kunci kamera", Toast.LENGTH_SHORT).show(); return
         }
         val chars = cameraManager.getCameraCharacteristics(camId)
 
-        // Preview size
+        // Ukuran pratinjau
         previewSize = choosePreviewSize(chars, vw, vh)
-        // 🆕 Still JPEG size (MAXIMUM available for best quality)
+        // 🆕 Ukuran JPEG foto diam (MAKSIMUM yang tersedia untuk kualitas terbaik)
         jpegSize = chooseMaxJpegSize(chars)
 
-        // JPEG orientation tag = sensor orientation rotated by device rotation
+        // Tag orientasi JPEG = orientasi sensor yang diputar oleh rotasi perangkat
         jpegOrientation = computeJpegOrientation()
 
-        // 🆕 Create the ImageReader: width=jpegW, height=jpegH, format=JPEG, 2 buffers
+        // 🆕 Buat ImageReader: width=jpegW, height=jpegH, format=JPEG, 2 buffer
         imageReader = ImageReader.newInstance(
             jpegSize.width,
             jpegSize.height,
             ImageFormat.JPEG,
             2
         )
-        // 🆕 Hook the JPEG frame available listener
+        // 🆕 Pasang listener bingkai JPEG tersedia
         imageReader.setOnImageAvailableListener(onJpegAvailableListener, backgroundHandler)
 
         configureTransform(vw, vh)
         textureView.surfaceTexture!!.setDefaultBufferSize(previewSize.width, previewSize.height)
-        statusTextView.text = "Session: preview ${previewSize} • JPEG ${jpegSize}"
+        statusTextView.text = "Sesi: pratinjau ${previewSize} • JPEG ${jpegSize}"
 
         try { cameraManager.openCamera(camId, deviceCallback, backgroundHandler) }
         catch (e: CameraAccessException) { cameraOpenCloseLock.release() }
@@ -429,17 +430,17 @@ class MainActivity : AppCompatActivity() {
                 previewRequest = previewRequestBuilder!!.build()
                 captureState = CaptureState.IDLE
                 shutterButton.isEnabled = true
-                statusTextView.text = "🎥 Preview — tap shutter to take photo"
+                statusTextView.text = "🎥 Pratinjau — ketuk rana untuk ambil foto"
                 session.setRepeatingRequest(previewRequest!!, captureCallback, backgroundHandler)
             }
             override fun onConfigureFailed(session: CameraCaptureSession) {
-                Toast.makeText(this@MainActivity, "Session failed", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@MainActivity, "Sesi gagal", Toast.LENGTH_LONG).show()
             }
         }, backgroundHandler)
     }
 
     // -------------------------------------------------------------------------
-    // 🆕 CaptureCallback + takePicture state machine
+    // 🆕 CaptureCallback + mesin status ambil foto
     // -------------------------------------------------------------------------
     private val captureCallback = object : CameraCaptureSession.CaptureCallback() {
         override fun onCaptureStarted(
@@ -466,8 +467,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         /**
-         * Called for every partial and completed frame.
-         * When we are waiting for AE precapture to converge, check AE_STATE here.
+         * Dipanggil untuk setiap bingkai parsial dan yang sudah selesai.
+         * Saat kita menunggu AE pra-pengambilan untuk memusat, periksa AE_STATE di sini.
          */
         private fun process(result: CaptureResult) {
             when (captureState) {
@@ -479,41 +480,41 @@ class MainActivity : AppCompatActivity() {
                         CaptureResult.CONTROL_AE_STATE_CONVERGED,
                         CaptureResult.CONTROL_AE_STATE_FLASH_REQUIRED,
                         CaptureResult.CONTROL_AE_STATE_LOCKED -> {
-                            // ✅ AE is ready — cancel timeout and fire still capture
+                            // ✅ AE sudah siap — batalkan waktu habis dan tembakkan pengambilan foto diam
                             precaptureTimeoutHandler.removeCallbacks(precaptureTimeoutRunnable)
                             captureStillPicture()
                         }
-                        // else → CONTROL_AE_STATE_PRECAPTURE / SEARCHING / INACTIVE → keep waiting
+                        // lainnya → CONTROL_AE_STATE_PRECAPTURE / SEARCHING / INACTIVE → tetap menunggu
                     }
                 }
-                else -> { /* No state-tracking needed in IDLE or other states */ }
+                else -> { /* Tidak diperlukan pelacakan status di IDLE atau status lainnya */ }
             }
         }
     }
 
-    /** Public shutter click entry point. */
+    /** Titik masuk publik klik tombol rana. */
     fun takePicture() {
         if (cameraDevice == null || captureSession == null) return
         if (captureState != CaptureState.IDLE) {
-            Log.d(TAG, "⚠️ Capture in progress — ignoring duplicate shutter tap")
+            Log.d(TAG, "⚠️ Pengambilan sedang berlangsung — mengabaikan ketukan rana duplikat")
             return
         }
         shutterButton.isEnabled = false
-        statusTextView.text = "📸 Locking exposure..."
+        statusTextView.text = "📸 Mengunci eksposur..."
         lockFocusAndFirePrecaptureTrigger()
     }
 
     /**
-     * Step 1–3: Stop repeating preview, submit AE precapture trigger, start 3s timeout.
-     * The captureCallback.process() method watches AE_STATE and calls captureStillPicture()
-     * when converged.
+     * Langkah 1–3: Hentikan pratinjau berulang, kirim pemicu AE pra-pengambilan, mulai batas waktu 3 detik.
+     * Metode captureCallback.process() memantau AE_STATE dan memanggil captureStillPicture()
+     * saat sudah memusat.
      */
     private fun lockFocusAndFirePrecaptureTrigger() {
         val session = captureSession ?: return
         try {
             captureState = CaptureState.WAITING_AE_PRECAPTURE
 
-            // Build a request identical to preview but with AE precapture trigger = START
+            // Bangun permintaan yang identik dengan pratinjau tetapi dengan pemicu AE pra-pengambilan = START
             previewRequestBuilder?.apply {
                 set(
                     CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER,
@@ -521,35 +522,35 @@ class MainActivity : AppCompatActivity() {
                 )
             }
 
-            // Pause continuous preview frames — use capture() to fire ONE trigger frame
+            // Jeda bingkai pratinjau berkelanjutan — gunakan capture() untuk menembakkan SATU bingkai pemicu
             session.stopRepeating()
             session.capture(previewRequestBuilder!!.build(), captureCallback, backgroundHandler)
 
-            // Safety-valve timeout (3 seconds): some devices never signal AE converged
+            // Batas waktu katup pengaman (3 detik): beberapa perangkat tidak pernah memberi sinyal AE memusat
             precaptureTimeoutHandler.postDelayed(precaptureTimeoutRunnable, 3000)
 
         } catch (e: CameraAccessException) {
-            Log.e(TAG, "Precapture trigger failed", e)
+            Log.e(TAG, "Pemicu pra-pengambilan gagal", e)
             unlockFocusAndResumePreview()
         }
     }
 
     /**
-     * Step 4: AE converged (or timed out). Fire the single TEMPLATE_STILL_CAPTURE request
-     * targeting the ImageReader surface → JPEG bytes arrive via onJpegAvailableListener.
+     * Langkah 4: AE memusat (atau waktu habis). Tembakkan permintaan TEMPLATE_STILL_CAPTURE tunggal
+     * yang menargetkan surface ImageReader → byte JPEG tiba melalui onJpegAvailableListener.
      */
     private fun captureStillPicture() {
         val cam = cameraDevice ?: return
         val session = captureSession ?: return
         captureState = CaptureState.WAITING_STILL_CAPTURE
-        statusTextView.text = "📷 Capturing photo..."
+        statusTextView.text = "📷 Menangkap foto..."
 
         try {
-            // 🆕 Use TEMPLATE_STILL_CAPTURE — highest quality ISP pipeline
+            // 🆕 Gunakan TEMPLATE_STILL_CAPTURE — pipeline ISP kualitas tertinggi
             val stillBuilder = cam.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
             stillBuilder.addTarget(imageReader.surface)
             stillBuilder.set(CaptureRequest.JPEG_ORIENTATION, jpegOrientation)
-            stillBuilder.set(CaptureRequest.JPEG_QUALITY, 95.toByte()) // 1–100 quality
+            stillBuilder.set(CaptureRequest.JPEG_QUALITY, 95.toByte()) // Kualitas 1–100
 
             val stillCallback = object : CameraCaptureSession.CaptureCallback() {
                 override fun onCaptureCompleted(
@@ -557,8 +558,8 @@ class MainActivity : AppCompatActivity() {
                     req: CaptureRequest,
                     res: TotalCaptureResult
                 ) {
-                    Log.d(TAG, "📨 Still capture metadata delivered")
-                    // Note: the actual JPEG bytes arrive via onJpegAvailableListener, not here.
+                    Log.d(TAG, "📨 Metadata pengambilan foto diam terkirim")
+                    // Catatan: byte JPEG yang sebenarnya tiba melalui onJpegAvailableListener, bukan di sini.
                 }
             }
 
@@ -566,21 +567,21 @@ class MainActivity : AppCompatActivity() {
             session.capture(stillBuilder.build(), stillCallback, backgroundHandler)
 
         } catch (e: CameraAccessException) {
-            Log.e(TAG, "Still capture failed", e)
+            Log.e(TAG, "Pengambilan foto diam gagal", e)
             unlockFocusAndResumePreview()
         }
     }
 
     /**
-     * Step 5: JPEG bytes available in ImageReader. Acquire latest Image, write its bytes
-     * to MediaStore (or legacy File), CLOSE THE IMAGE, then resume preview.
+     * Langkah 5: Byte JPEG tersedia di ImageReader. Ambil Image terbaru, tulis byte-nya
+     * ke MediaStore (atau File lama), TUTUP IMAGE, lalu lanjutkan pratinjau.
      */
     private val onJpegAvailableListener = ImageReader.OnImageAvailableListener { reader ->
         var image: Image? = null
         try {
             image = reader.acquireLatestImage()
             if (image == null) {
-                Log.w(TAG, "acquireLatestImage returned null — buffer dropped")
+                Log.w(TAG, "acquireLatestImage mengembalikan null — buffer dibuang")
                 return@OnImageAvailableListener
             }
             val buffer = image.planes[0].buffer
@@ -590,37 +591,37 @@ class MainActivity : AppCompatActivity() {
             val savedUri = savePhotoToStorage(bytes)
             captureState = CaptureState.PICTURE_SAVED
 
-            // Switch to main thread for UI updates / toasts
+            // Beralih ke thread utama untuk pembaruan UI / toast
             runOnUiThread {
                 shutterButton.isEnabled = true
                 if (savedUri != null) {
-                    statusTextView.text = "✅ Saved! Uri=$savedUri"
+                    statusTextView.text = "✅ Berhasil Disimpan! Uri=$savedUri"
                     Toast.makeText(
                         this@MainActivity,
-                        "Photo saved: $savedUri",
+                        "Foto disimpan: $savedUri",
                         Toast.LENGTH_LONG
                     ).show()
                 } else {
-                    statusTextView.text = "❌ Save failed"
+                    statusTextView.text = "❌ Gagal menyimpan"
                     Toast.makeText(
                         this@MainActivity,
-                        "Failed to save photo — check Logcat",
+                        "Gagal menyimpan foto — periksa Logcat",
                         Toast.LENGTH_LONG
                     ).show()
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "onJpegAvailable error", e)
+            Log.e(TAG, "Kesalahan onJpegAvailable", e)
         } finally {
-            image?.close() // ✅ ALWAYS CLOSE THE IMAGE — no exceptions!
+            image?.close() // ✅ SELALU TUTUP IMAGE — tidak ada pengecualian!
         }
 
-        // Step 6: Resume preview regardless of save success/failure
+        // Langkah 6: Lanjutkan pratinjau terlepas dari keberhasilan/kegagalan penyimpanan
         runOnUiThread { unlockFocusAndResumePreview() }
     }
 
     /**
-     * Step 6: Cancel AE precapture trigger, clear focus locks, restart repeating preview.
+     * Langkah 6: Batalkan pemicu AE pra-pengambilan, hapus kunci fokus, mulai kembali pratinjau berulang.
      */
     private fun unlockFocusAndResumePreview() {
         val session = captureSession ?: return
@@ -643,15 +644,15 @@ class MainActivity : AppCompatActivity() {
 
             if (statusTextView.text.startsWith("📸") ||
                 statusTextView.text.startsWith("📷")) {
-                statusTextView.text = "🎥 Preview — tap shutter to take photo"
+                statusTextView.text = "🎥 Pratinjau — ketuk rana untuk ambil foto"
             }
         } catch (e: CameraAccessException) {
-            Log.e(TAG, "Failed to resume preview after still capture", e)
+            Log.e(TAG, "Gagal melanjutkan pratinjau setelah pengambilan foto diam", e)
         }
     }
 
     // -------------------------------------------------------------------------
-    // 🆕 savePhotoToStorage: MediaStore (API 29+) + legacy File (API 28+)
+    // 🆕 savePhotoToStorage: MediaStore (API 29+) + File lama (API 28+)
     // -------------------------------------------------------------------------
     private fun savePhotoToStorage(jpegBytes: ByteArray): android.net.Uri? {
         val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
@@ -659,37 +660,37 @@ class MainActivity : AppCompatActivity() {
         val relativeDir = "${Environment.DIRECTORY_PICTURES}/Camera2Tutorial"
 
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            // ✅ Scoped Storage via MediaStore (no WRITE_EXTERNAL_STORAGE permission needed!)
+            // ✅ Scoped Storage melalui MediaStore (tidak perlu izin WRITE_EXTERNAL_STORAGE!)
             val values = ContentValues().apply {
                 put(MediaStore.Images.Media.DISPLAY_NAME, "$displayName.jpg")
                 put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
                 put(MediaStore.Images.Media.RELATIVE_PATH, relativeDir)
-                put(MediaStore.Images.Media.IS_PENDING, 1) // Mark as pending while writing
+                put(MediaStore.Images.Media.IS_PENDING, 1) // Tandai sebagai tertunda saat menulis
             }
             val resolver = contentResolver
             val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
                 ?: return null
             try {
                 resolver.openOutputStream(uri)?.use { os -> os.write(jpegBytes) }
-                // Clear the PENDING flag so gallery apps can see it now
+                // Hapus flag PENDING agar aplikasi galeri dapat melihatnya sekarang
                 values.clear()
                 values.put(MediaStore.Images.Media.IS_PENDING, 0)
                 resolver.update(uri, values, null, null)
-                Log.d(TAG, "✅ MediaStore saved: $uri")
+                Log.d(TAG, "✅ MediaStore berhasil menyimpan: $uri")
                 uri
             } catch (e: Exception) {
-                Log.e(TAG, "MediaStore write failed", e)
-                resolver.delete(uri, null, null) // Clean up half-written pending file
+                Log.e(TAG, "Penulisan MediaStore gagal", e)
+                resolver.delete(uri, null, null) // Bersihkan file tertunda yang setengah tertulis
                 null
             }
         } else {
-            // 🕰️ Legacy path: direct file write to public Pictures directory
+            // 🕰️ Jalur lama: penulisan file langsung ke direktori Pictures publik
             val dir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "Camera2Tutorial")
             if (!dir.exists()) dir.mkdirs()
             val file = File(dir, "$displayName.jpg")
             try {
                 FileOutputStream(file).use { os -> os.write(jpegBytes) }
-                // Index the file so gallery apps discover it immediately
+                // Indeks file agar aplikasi galeri segera menemukannya
                 val values = ContentValues().apply {
                     put(MediaStore.Images.Media.DATA, file.absolutePath)
                     put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
@@ -698,14 +699,14 @@ class MainActivity : AppCompatActivity() {
                 contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
                 android.net.Uri.fromFile(file)
             } catch (e: Exception) {
-                Log.e(TAG, "Legacy file write failed", e)
+                Log.e(TAG, "Penulisan file lama gagal", e)
                 null
             }
         }
     }
 
     // -------------------------------------------------------------------------
-    // Sizing + orientation helpers
+    // Pembantu ukuran + orientasi
     // -------------------------------------------------------------------------
     private fun choosePreviewSize(chars: CameraCharacteristics, vw: Int, vh: Int): Size {
         val map = chars[CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP]!!
@@ -722,8 +723,8 @@ class MainActivity : AppCompatActivity() {
         val map = chars[CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP]!!
         val choices = map.getOutputSizes(ImageFormat.JPEG).toList()
         val max = choices.maxByOrNull { it.width * it.height }!!
-        Log.d(TAG, "Max JPEG size selected: ${max.width}×${max.height} " +
-            "(from ${choices.size} sizes)")
+        Log.d(TAG, "Ukuran JPEG Maks dipilih: ${max.width}×${max.height} " +
+            "(dari ${choices.size} ukuran)")
         return max
     }
 
@@ -768,7 +769,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     // -------------------------------------------------------------------------
-    // Teardown
+    // Pembongkaran (Teardown)
     // -------------------------------------------------------------------------
     private fun closeEverything() {
         try {
@@ -781,7 +782,7 @@ class MainActivity : AppCompatActivity() {
             captureSession = null
             cameraDevice?.close(); cameraDevice = null
             if (this::imageReader.isInitialized) {
-                imageReader.close() // Important — frees the JPEG BufferQueue memory
+                imageReader.close() // Penting — membebaskan memori BufferQueue JPEG
             }
         } catch (_: InterruptedException) {
         } finally {
@@ -790,13 +791,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     // -------------------------------------------------------------------------
-    // Boilerplate permissions
+    // Izin boilerplate
     // -------------------------------------------------------------------------
     companion object {
         private const val TAG = "Camera2Tutorial"
         private const val REQUEST_CODE_PERMISSIONS = 10
         private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
-        // WRITE_EXTERNAL_STORAGE is only needed pre-Q for legacy file save path
+        // WRITE_EXTERNAL_STORAGE hanya diperlukan sebelum versi Q untuk jalur simpan file lama
         private val WRITE_EXTERNAL_IF_NEEDED =
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q)
                 arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE)
@@ -817,7 +818,7 @@ class MainActivity : AppCompatActivity() {
             if (allPermissionsGranted()) {
                 initializeCameraManager()
             } else {
-                Toast.makeText(this, "Permissions required", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "Izin diperlukan", Toast.LENGTH_LONG).show()
                 finish()
             }
         }
@@ -825,79 +826,79 @@ class MainActivity : AppCompatActivity() {
 }
 ```
 
-### Reading the Capture State Machine
+### Membaca Mesin Status Pengambilan Gambar
 
-Follow the `takePicture()` → `lockFocusAndFirePrecaptureTrigger()` → (AE converged or timeout) → `captureStillPicture()` → `onJpegAvailableListener` → `unlockFocusAndResumePreview()` call chain. Each step's transition is gated by `captureState`. Duplicate taps are ignored (the `if (captureState != IDLE) return` check at the top of `takePicture()`).
+Ikuti rantai panggilan `takePicture()` → `lockFocusAndFirePrecaptureTrigger()` → (AE memusat atau waktu habis) → `captureStillPicture()` → `onJpegAvailableListener` → `unlockFocusAndResumePreview()`. Transisi setiap langkah dikawal oleh `captureState`. Ketukan duplikat akan diabaikan (pemeriksaan `if (captureState != IDLE) return` di bagian atas `takePicture()`).
 
-Key specific details:
-- **`JPEG_ORIENTATION`**: Set in the still capture request. Gallery apps read the EXIF orientation tag from the JPEG header to rotate the displayed photo. Without this, landscape photos appear sideways even though the pixel data is correct.
-- **`JPEG_QUALITY = 95`**: Good balance between quality and file size. 100 is lossless in theory but produces 2–3× larger files with minimal visual gain; 80 produces visible compression artifacts in detailed textures.
-- **`IS_PENDING=1 → 0` pattern (API 29+)**: Tells MediaStore "don't let photo editors, gallery apps, or MTP hosts see this file until I'm done writing it." Prevents half-written corrupt files from appearing in Google Photos while the `OutputStream` write is in progress. Always clear the flag.
+Detail spesifik utama:
+- **`JPEG_ORIENTATION`**: Diatur dalam permintaan pengambilan foto diam. Aplikasi galeri membaca tag orientasi EXIF dari header JPEG untuk memutar foto yang ditampilkan. Tanpa ini, foto lanskap akan tampak miring meskipun data pikselnya benar.
+- **`JPEG_QUALITY = 95`**: Keseimbangan yang baik antara kualitas dan ukuran file. 100 secara teori tanpa kehilangan (lossless) tetapi menghasilkan file 2–3× lebih besar dengan keuntungan visual minimal; 80 menghasilkan artefak kompresi yang terlihat pada tekstur mendetail.
+- **Pola `IS_PENDING=1 → 0` (API 29+)**: Memberi tahu MediaStore "jangan izinkan editor foto, aplikasi galeri, atau host MTP melihat file ini sampai saya selesai menulisnya." Mencegah file korup yang setengah tertulis muncul di Google Photos saat penulisan `OutputStream` sedang berlangsung. Selalu hapus flag tersebut setelah selesai.
 
-## Verification: Running the Photo Capture Flow
+## Verifikasi: Menjalankan Alur Pengambilan Foto
 
-Install and launch the Chapter 9 app on a physical Android device (emulator cameras have weird AE state machines and are not representative). Verify each of the following checkpoint behaviors:
+Instal dan luncurkan aplikasi Bab 9 pada perangkat Android fisik (kamera emulator memiliki mesin status AE yang aneh dan tidak representatif). Verifikasi setiap perilaku titik pemeriksaan berikut:
 
-1. **Preview runs as before**. Status shows *🎥 Preview — tap shutter to take photo*. Shutter FAB is visible and clickable.
-2. **Tap shutter**. Status changes to *📸 Locking exposure...* → *📷 Capturing photo...* → *✅ Saved! Uri=content://media/external/images/media/12345*.
-3. **Preview freezes briefly** (~0.3–1.0 seconds) while AE converges and the still frame is processed. Then preview starts again. This brief freeze is correct and expected behavior.
-4. **Open the device's Gallery / Photos app**. Navigate to the **Pictures → Camera2Tutorial** album. You should see a thumbnail of the photo you took. Open it — it should be full resolution (e.g., 8160×6120 for a 50 MP sensor), correctly oriented, and properly exposed.
-5. **Open the photo in the Android Camera Parameters app's EXIF viewer** ([Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)). Check that the EXIF orientation tag matches the device's rotation at capture time, JPEG quality = 95, and the resolution matches `jpegSize` logged at session startup.
-6. **Rapidly tap shutter 10+ times**. The `captureState != IDLE` guard should swallow duplicate taps during the capture cycle; at the end you should have exactly as many saved photos as completed capture cycles.
+1. **Pratinjau berjalan seperti sebelumnya**. Status menunjukkan *🎥 Pratinjau — ketuk rana untuk ambil foto*. Tombol rana FAB terlihat dan dapat diklik.
+2. **Ketuk rana**. Status berubah menjadi *📸 Mengunci eksposur...* → *📷 Menangkap foto...* → *✅ Berhasil Disimpan! Uri=content://media/external/images/media/12345*.
+3. **Pratinjau membeku sejenak** (~0,3–1,0 detik) saat AE memusat dan bingkai diam diproses. Kemudian pratinjau dimulai lagi. Pembekuan singkat ini adalah perilaku yang benar dan diharapkan.
+4. **Buka aplikasi Galeri / Foto di perangkat**. Buka album **Pictures → Camera2Tutorial**. Anda seharusnya melihat thumbnail dari foto yang Anda ambil. Buka foto tersebut — foto harus memiliki resolusi penuh (misalnya, 8160×6120 untuk sensor 50 MP), orientasinya benar, dan eksposurnya pas.
+5. **Buka foto di penampil EXIF aplikasi Android Camera Parameters** ([Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)). Periksa apakah tag orientasi EXIF cocok dengan rotasi perangkat pada saat pengambilan, kualitas JPEG = 95, dan resolusinya cocok dengan `jpegSize` yang dicatat saat memulai sesi.
+6. **Ketuk rana dengan cepat 10+ kali**. Penjaga `captureState != IDLE` harus menelan ketukan duplikat selama siklus pengambilan; pada akhirnya Anda harus memiliki foto yang disimpan sebanyak siklus pengambilan yang berhasil diselesaikan.
 
-### Logcat Output Reference
+### Referensi Output Logcat
 
-A successful capture produces Logcat entries roughly in this order:
+Pengambilan gambar yang berhasil menghasilkan entri Logcat kira-kira dalam urutan ini:
 ```
-D/Camera2Tutorial: Max JPEG size selected: 8160×6120 (from 9 sizes)
-D/Camera2Tutorial: 📸 Locking exposure...
+D/Camera2Tutorial: Ukuran JPEG Maks dipilih: 8160×6120 (dari 9 ukuran)
+D/Camera2Tutorial: 📸 Mengunci eksposur...
 D/Camera2Tutorial: AE_STATE = CONTROL_AE_STATE_SEARCHING
 D/Camera2Tutorial: AE_STATE = CONTROL_AE_STATE_SEARCHING
 D/Camera2Tutorial: AE_STATE = CONTROL_AE_STATE_CONVERGED
-D/Camera2Tutorial: 📷 Capturing photo...
-D/Camera2Tutorial: 📨 Still capture metadata delivered
-D/Camera2Tutorial: ✅ MediaStore saved: content://media/external/images/media/9876
-D/Camera2Tutorial: 🎥 Preview — tap shutter to take photo
+D/Camera2Tutorial: 📷 Menangkap foto...
+D/Camera2Tutorial: 📨 Metadata pengambilan foto diam terkirim
+D/Camera2Tutorial: ✅ MediaStore berhasil menyimpan: content://media/external/images/media/9876
+D/Camera2Tutorial: 🎥 Pratinjau — ketuk rana untuk ambil foto
 ```
 
-## Troubleshooting Capture Failures
+## Pemecahan Masalah Kegagalan Pengambilan Gambar
 
-### captureStillPicture() never fires (stuck on Locking exposure...)
+### captureStillPicture() tidak pernah dipicu (macet di Mengunci eksposur...)
 
-The 3-second timeout should eventually fire and proceed — if even the timeout doesn't fire, the `precaptureTimeoutRunnable` was never posted. Double-check that `lockFocusAndFirePrecaptureTrigger()` calls `precaptureTimeoutHandler.postDelayed(precaptureTimeoutRunnable, 3000)`. If timeout fires every time but `AE_STATE` never appears converged, you may be on a LEGACY-level camera with broken AE state reporting. In that case, add a check: if the hardware level is LEGACY, skip the precapture trigger entirely and jump straight from `takePicture()` to `captureStillPicture()`.
+Waktu habis 3 detik pada akhirnya harus dipicu dan dilanjutkan — jika bahkan waktu habis pun tidak dipicu, `precaptureTimeoutRunnable` tidak pernah diposting. Periksa kembali apakah `lockFocusAndFirePrecaptureTrigger()` memanggil `precaptureTimeoutHandler.postDelayed(precaptureTimeoutRunnable, 3000)`. Jika waktu habis selalu dipicu tetapi `AE_STATE` tidak pernah tampak memusat (converged), Anda mungkin berada pada kamera tingkat LEGACY dengan pelaporan status AE yang rusak. Dalam hal ini, tambahkan pemeriksaan: jika tingkat perangkat keras adalah LEGACY, lewati pemicu pra-pengambilan sepenuhnya dan langsung lompat dari `takePicture()` ke `captureStillPicture()`.
 
-### Capture works once, then all subsequent captures never produce onImageAvailable
+### Pengambilan gambar berfungsi sekali, lalu semua pengambilan berikutnya tidak pernah menghasilkan onImageAvailable
 
-You leaked the `Image` by forgetting to call `image.close()`. The `maxImages = 2` pool is exhausted, so no new frames can be delivered until the app process is killed. Verify the `finally { image?.close() }` block in `onJpegAvailableListener`. As a debugging aid, log `imageReader.acquireLatestImage()` returning null — that's the telltale sign of a buffer leak.
+Anda membocorkan `Image` karena lupa memanggil `image.close()`. Pool `maxImages = 2` sudah habis, sehingga tidak ada bingkai baru yang dapat dikirimkan sampai proses aplikasi dimatikan. Verifikasi blok `finally { image?.close() }` di `onJpegAvailableListener`. Sebagai bantuan debug, catat jika `imageReader.acquireLatestImage()` mengembalikan null — itulah tanda pasti adanya kebocoran buffer.
 
-### Photo appears sideways in gallery
+### Foto tampak miring di galeri
 
-Your `computeJpegOrientation()` return value is wrong. Test it in all 4 device orientations (portrait, landscape left, reverse landscape, upside-down portrait) on both the back and front cameras. The front camera needs the orientation flipped (mirrored) because `LENS_FACING_FRONT` sensors are mirrored by convention.
+Nilai kembalian `computeJpegOrientation()` Anda salah. Uji dalam ke-4 orientasi perangkat (potret, lanskap kiri, lanskap terbalik, potret terbalik) pada kamera belakang dan depan. Kamera depan membutuhkan orientasi yang dibalik (dicerminkan) karena sensor `LENS_FACING_FRONT` dicerminkan menurut konvensi.
 
-### MediaStore throws SecurityException on API 29+
+### MediaStore melempar SecurityException pada API 29+
 
-You forgot to remove `WRITE_EXTERNAL_STORAGE` from the API 29+ permission list AND you're on a device with `requestLegacyExternalStorage=false`. On API 29+, `WRITE_EXTERNAL_STORAGE` grants **nothing** — only MediaStore Uris work. The `WRITE_EXTERNAL_IF_NEEDED` helper correctly omits the permission on Q+.
+Anda lupa menghapus `WRITE_EXTERNAL_STORAGE` dari daftar izin API 29+ DAN Anda berada di perangkat dengan `requestLegacyExternalStorage=false`. Pada API 29+, `WRITE_EXTERNAL_STORAGE` tidak memberikan **apa-apa** — hanya Uri MediaStore yang berfungsi. Pembantu `WRITE_EXTERNAL_IF_NEEDED` secara benar mengabaikan izin tersebut pada versi Q+.
 
-## Summary
+## Ringkasan
 
-Part II ends on a high note: your tutorial app is now a **fully functional camera application**. You implemented:
+Bagian II berakhir dengan nada tinggi: aplikasi tutorial Anda sekarang adalah **aplikasi kamera yang berfungsi penuh**. Anda telah mengimplementasikan:
 
-1. **ImageReader** as the CPU-accessible JPEG sink: correct width/height (max JPEG size), `ImageFormat.JPEG`, `maxImages = 2` buffer count, `OnImageAvailableListener` registration, and the inviolable rule to **always close the Image in a finally block** to prevent permanent buffer starvation.
-2. **The 6-state capture state machine**: `IDLE → WAITING_AE_PRECAPTURE → (converged/timeout) → WAITING_STILL_CAPTURE → PICTURE_SAVED → back to IDLE`, guarded by duplicate-tap suppression and a 3-second safety-valve timeout for devices with broken AE state reporting.
-3. **Precapture AE trigger flow**: `stopRepeating → session.capture(CONTROL_AE_PRECAPTURE_TRIGGER_START) → process AE_STATE in CaptureCallback until CONVERGED/FLASH_REQUIRED/LOCKED → fire still capture`.
-4. **TEMPLATE_STILL_CAPTURE + quality settings**: `JPEG_ORIENTATION` EXIF tag set based on sensor orientation + device rotation (front camera mirrored correctly), `JPEG_QUALITY = 95`.
-5. **Future-proof photo storage**: `MediaStore.Images.Media.EXTERNAL_CONTENT_URI` + `RELATIVE_PATH` + `IS_PENDING=1→0` pattern for Scoped Storage on Android 10+, with a fallback legacy `FileOutputStream` path to `Environment.DIRECTORY_PICTURES` on Android 9 and below, plus immediate MediaStore indexing so gallery apps see the new file right away.
-6. **Symmetric teardown**: `closeEverything()` stops repeating, aborts captures, closes session, closes device, closes `ImageReader` (critical to free 2× 20 MB JPEG buffers), all inside the `Semaphore(1)` critical section.
+1. **ImageReader** sebagai wastafel JPEG yang dapat diakses CPU: lebar/tinggi yang benar (ukuran JPEG maks), `ImageFormat.JPEG`, jumlah buffer `maxImages = 2`, pendaftaran `OnImageAvailableListener`, dan aturan yang tidak boleh dilanggar untuk **selalu menutup Image dalam blok finally** untuk mencegah kehabisan buffer permanen.
+2. **Mesin status pengambilan gambar 6-status**: `IDLE → WAITING_AE_PRECAPTURE → (memusat/waktu habis) → WAITING_STILL_CAPTURE → PICTURE_SAVED → kembali ke IDLE`, dijaga oleh penekanan ketukan duplikat dan batas waktu katup pengaman 3 detik untuk perangkat dengan pelaporan status AE yang rusak.
+3. **Alur pemicu AE pra-pengambilan**: `stopRepeating → session.capture(CONTROL_AE_PRECAPTURE_TRIGGER_START) → proses AE_STATE di CaptureCallback sampai CONVERGED/FLASH_REQUIRED/LOCKED → tembakkan pengambilan foto diam`.
+4. **TEMPLATE_STILL_CAPTURE + pengaturan kualitas**: Tag EXIF `JPEG_ORIENTATION` disetel berdasarkan orientasi sensor + rotasi perangkat (kamera depan dicerminkan dengan benar), `JPEG_QUALITY = 95`.
+5. **Penyimpanan foto masa depan**: Pola `MediaStore.Images.Media.EXTERNAL_CONTENT_URI` + `RELATIVE_PATH` + `IS_PENDING=1→0` untuk Scoped Storage pada Android 10+, dengan jalur cadangan `FileOutputStream` lama ke `Environment.DIRECTORY_PICTURES` pada Android 9 ke bawah, ditambah pengindeksan MediaStore segera agar aplikasi galeri langsung melihat file baru.
+6. **Pembongkaran simetris**: `closeEverything()` menghentikan pengulangan, membatalkan pengambilan gambar, menutup sesi, menutup perangkat, menutup `ImageReader` (kritis untuk membebaskan 2× buffer JPEG 20 MB), semuanya di dalam bagian kritis `Semaphore(1)`.
 
-The code in this chapter forms the baseline for any serious Camera2 still photography app. The Android Camera Parameters app ([GitHub](https://github.com/zoozooll/AndroidCameraParameters), [Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)) extends this state machine with 10+ additional states for AF trigger, AWB lock, multi-frame burst capture, RAW (DNG) output alongside JPEG, and manual per-frame ISO/exposure-time override — but every one of those features is an incremental addition to the same `ImageReader` + `CaptureCallback` + state machine pattern you now fully understand.
+Kode dalam bab ini membentuk dasar bagi aplikasi fotografi diam Camera2 yang serius. Aplikasi Android Camera Parameters ([GitHub](https://github.com/zoozooll/AndroidCameraParameters), [Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)) memperluas mesin status ini dengan 10+ status tambahan untuk pemicu AF, penguncian AWB, pengambilan burst multi-bingkai, output RAW (DNG) di samping JPEG, dan pengesampingan ISO/waktu eksposur manual per-bingkai — tetapi setiap fitur tersebut adalah tambahan bertahap pada pola `ImageReader` + `CaptureCallback` + mesin status yang sama yang sekarang sudah Anda pahami sepenuhnya.
 
-## What's Next (Looking Ahead to Part III)
+## Apa Selanjutnya (Melihat ke Depan ke Bagian III)
 
-This concludes **Part II: Your First Camera2 App**. In five chapters, you built a production-quality skeleton application with permission handling, threading, camera enumeration, open/close lifecycle, preview rendering, and JPEG still capture. If you stopped here and shipped this code, you'd already have a better camera app than many on the Play Store.
+Ini mengakhiri **Bagian II: Aplikasi Camera2 Pertama Anda**. Dalam lima bab, Anda telah membangun kerangka aplikasi berkualitas produksi dengan penanganan izin, threading, enumerasi kamera, siklus hidup buka/tutup, perenderan pratinjau, dan pengambilan foto diam JPEG. Jika Anda berhenti di sini dan merilis kode ini, Anda sudah memiliki aplikasi kamera yang lebih baik daripada banyak aplikasi di Play Store.
 
-But the Camera2 API's true power lies in what comes next. **Part III (Chapters 10–12)** dives deep into the internals you'll need for a professional camera application:
-- **Chapter 10: The CameraCharacteristics Encyclopedia** — every key family (SENSOR, LENS, SCALER, STATISTICS, CONTROL, INFO, REQUEST, SYNC), what they mean, and how to design feature flags around them.
-- **Chapter 11: The Camera2 Pipeline & HAL3 Architecture** — P1 vs P2 vs P3 nodes, reprocessing, the `CaptureRequest`/`CaptureResult` key duality, sync framework, and what `TEMPLATE_*` actually configures under the hood.
-- **Chapter 12: Capture Types, Bursts, and 3A in Depth** — repeating vs single-shot vs burst, ZSL reprocessing queues, AF/AE/AWB state machine transitions, manual controls (`LENS_FOCUS_DISTANCE`, `SENSOR_SENSITIVITY`/`SENSOR_EXPOSURE_TIME`), and the `CONTROL_CAPTURE_INTENT` taxonomy.
+Tetapi kekuatan sejati API Camera2 terletak pada apa yang akan datang berikutnya. **Bagian III (Bab 10–12)** menyelam jauh ke dalam bagian internal yang Anda butuhkan untuk aplikasi kamera profesional:
+- **Bab 10: Ensiklopedia CameraCharacteristics** — setiap keluarga kunci (SENSOR, LENS, SCALER, STATISTICS, CONTROL, INFO, REQUEST, SYNC), apa artinya, dan cara merancang flag fitur di sekitarnya.
+- **Bab 11: Pipeline Camera2 & Arsitektur HAL3** — simpul P1 vs P2 vs P3, pemrosesan ulang, dualitas kunci `CaptureRequest`/`CaptureResult`, kerangka kerja sinkronisasi, dan apa yang sebenarnya dikonfigurasi oleh `TEMPLATE_*` di balik layar.
+- **Bab 12: Jenis Pengambilan Gambar, Burst, dan 3A secara Mendalam** — berulang vs pengambilan tunggal vs burst, antrean pemrosesan ulang ZSL, transisi mesin status AF/AE/AWB, kontrol manual (`LENS_FOCUS_DISTANCE`, `SENSOR_SENSITIVITY`/`SENSOR_EXPOSURE_TIME`), dan taksonomi `CONTROL_CAPTURE_INTENT`.
 
-Until then, go take some photos with your Chapter 9 app. Explore a scene with mixed lighting (bright window + dark interior) and see how the precapture AE trigger adjusts exposure relative to preview. Compare the file size at `JPEG_QUALITY = 50` vs `95` vs `100`. Swap `chooseMaxJpegSize` for a 4K size and notice the speed difference. The best way to internalize this material is to see the real-world consequences of each parameter. Congratulations on building your first Camera2 camera — you've earned it.
+Sampai saat itu, silakan ambil beberapa foto dengan aplikasi Bab 9 Anda. Jelajahi adegan dengan pencahayaan campuran (jendela terang + interior gelap) dan lihat bagaimana pemicu AE pra-pengambilan menyesuaikan eksposur relatif terhadap pratinjau. Bandingkan ukuran file pada `JPEG_QUALITY = 50` vs `95` vs `100`. Ganti `chooseMaxJpegSize` dengan ukuran 4K dan perhatikan perbedaan kecepatannya. Cara terbaik untuk menginternalisasi materi ini adalah dengan melihat konsekuensi dunia nyata dari setiap parameter. Selamat telah membangun kamera Camera2 pertama Anda — Anda layak mendapatkannya.

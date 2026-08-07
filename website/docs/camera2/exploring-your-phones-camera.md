@@ -1,4 +1,4 @@
----
+﻿---
 sidebar_position: 4
 title: "Chapter 4: Explore Your Own Phone"
 description: Use the Android Camera Parameters companion app to inspect your own device. Learn to read Camera IDs, check Hardware Levels, enumerate cameras, inspect supported formats, frame rates, zoom ranges, and RAW capability.
@@ -71,10 +71,10 @@ Chapter 1 of this series introduced the five Camera2 Hardware Levels, ordered fr
 
 ```mermaid
 graph TD
-    A[LEGACY\n~2015 Old Phones\nCamera1 API Wrapper\nNo Manual Control] --> B[LIMITED\nMid-Range 2020+\n3A Works, Partial Manual\nPer-Frame Control Limited]
-    B --> C[FULL\nFlagships 2019+\nFull Manual Sensor Control\nPer-Frame Capture Settings]
-    C --> D[LEVEL_3\nPixel 7+, Samsung S23+\nRAW Re-processing\nMulti-Input Logical Cameras]
-    D --> E[EXTERNAL\nUSB OTG Webcams\nHot-Pluggable\nLimited Tuning]
+    A["LEGACY<br/>~2015 Old Phones<br/>Camera1 API Wrapper<br/>No Manual Control"] --> B["LIMITED<br/>Mid-Range 2020+<br/>3A Works, Partial Manual<br/>Per-Frame Control Limited"]
+    B --> C[FULL<br/>Flagships 2019+<br/>Full Manual Sensor Control<br/>Per-Frame Capture Settings]
+    C --> D[LEVEL_3<br/>Pixel 7+, Samsung S23+<br/>RAW Re-processing<br/>Multi-Input Logical Cameras]
+    D --> E[EXTERNAL<br/>USB OTG Webcams<br/>Hot-Pluggable<br/>Limited Tuning]
 ```
 
 Each level adds new capabilities and stricter performance guarantees:
@@ -203,15 +203,15 @@ Every value that the app displays is read from the same `CameraCharacteristics` 
 
 ```mermaid
 flowchart TD
-    A[Home Screen\nBottom Nav Tabs] --> B[Cameras / Overview Tab]
-    B --> C[Camera ID List\n0, 1, 2, 3, 4...]
+    A["Home Screen<br/>Bottom Nav Tabs"] --> B["Cameras / Overview Tab"]
+    B --> C[Camera ID List<br/>0, 1, 2, 3, 4...]
     C --> D[Camera Detail Screen]
-    D --> E[Overview Sub-Tab\nCharacteristics Summary]
-    D --> F[Formats Sub-Tab\nJPEG / YUV / PRIVATE / RAW]
-    D --> G[FPS / Preview Sub-Tab\nRanges + Live Preview Test]
-    D --> H[Zoom Sub-Tab\nMax Digital Zoom + Switch Points]
-    D --> I[RAW Sub-Tab\nRAW10 / RAW12 / RAW14 Check]
-    D --> J[Capabilities Sub-Tab\nAll Remaining Camera2 Features]
+    D --> E[Overview Sub-Tab<br/>Characteristics Summary]
+    D --> F[Formats Sub-Tab<br/>JPEG / YUV / PRIVATE / RAW]
+    D --> G[FPS / Preview Sub-Tab<br/>Ranges + Live Preview Test]
+    D --> H[Zoom Sub-Tab<br/>Max Digital Zoom + Switch Points]
+    D --> I[RAW Sub-Tab<br/>RAW10 / RAW12 / RAW14 Check]
+    D --> J[Capabilities Sub-Tab<br/>All Remaining Camera2 Features]
 ```
 
 ## Summary

@@ -1,75 +1,75 @@
 ---
 sidebar_position: 21
-title: "Chapter 21: HDR & Ultra HDR"
-description: "Implement HDR10 and HLG video via DynamicRangeProfiles, and Android 14 JPEG_R (Ultra HDR ISO 21496-1) still captures with SDR-primary + gain-map architecture for backward-compatible high dynamic range photos"
-keywords: [Android Camera2, HDR, Ultra HDR, HDR10, HLG, JPEG_R, ST.2084 PQ, Rec.2020, gain map, ISO 21496-1, DynamicRangeProfiles, CDD Performance Class 15]
+title: "Capítulo 21: HDR e Ultra HDR"
+description: "Implemente vídeo HDR10 e HLG via DynamicRangeProfiles, e capturas estáticas JPEG_R do Android 14 (Ultra HDR ISO 21496-1) com arquitetura SDR-principal + mapa de ganho para fotos de alto alcance dinâmico retrocompatíveis"
+keywords: [Android Camera2, HDR, Ultra HDR, HDR10, HLG, JPEG_R, ST.2084 PQ, Rec.2020, mapa de ganho, ISO 21496-1, DynamicRangeProfiles, CDD Performance Class 15]
 ---
 
-# Chapter 21: HDR & Ultra HDR
+# Capítulo 21: HDR e Ultra HDR
 
-Standard Dynamic Range (SDR) photography — 8-bit-per-channel sRGB encoded with a gamma 2.2 curve and mastered for 100-nit displays — was designed for 1990s CRTs. Modern smartphone sensors capture **10–14 stops of dynamic range** (1024:1 to 16384:1 scene contrast), but an 8-bit SDR JPEG can only render ~6 stops before either blowing out the highlights or crushing the shadows into noise. **High Dynamic Range (HDR)** formats solve this by storing scene radiance in 10+ bits per channel, using perceptually-uniform or scene-referred transfer functions, and targeting peak display luminosities of 1,000–10,000 nits instead of 100.
+A fotografia de Alcance Dinâmico Padrão (SDR) — sRGB de 8 bits por canal codificado com uma curva gama 2.2 e masterizado para monitores de 100 nits — foi projetada para os CRTs dos anos 90. Os sensores de smartphones modernos capturam **10 a 14 pontos (stops) de alcance dinâmico** (contraste de cena de 1024:1 a 16384:1), mas um JPEG SDR de 8 bits só consegue renderizar ~6 pontos antes de estourar os realces ou esmagar as sombras em ruído. Os formatos de **Alto Alcance Dinâmico (HDR)** resolvem isso armazenando a radiância da cena em 10 ou mais bits por canal, usando funções de transferência perceptualmente uniformes ou referenciadas à cena, e visando luminosidades de pico de exibição de 1.000 a 10.000 nits em vez de 100.
 
-This chapter covers three working HDR standards in Android Camera2:
-- **HDR10** (10-bit, ST.2084 PQ, Rec.2020, static metadata) for video
-- **HLG (Hybrid Log-Gamma)** (10-bit, SDR-backward-compatible, ARIB STD-B67) for broadcast and video
-- **JPEG_R / Ultra HDR** (Android 14 API 34+, ISO 21496-1) — the revolutionary still-photo format that embeds a secondary "gain map" inside a standard 8-bit SDR JPEG so legacy readers see a normal photo, while HDR displays locally boost highlights up to 8 stops
+Este capítulo cobre três padrões HDR funcionais no Android Camera2:
+- **HDR10** (10 bits, ST.2084 PQ, Rec.2020, metadados estáticos) para vídeo.
+- **HLG (Hybrid Log-Gamma)** (10 bits, retrocompatível com SDR, ARIB STD-B67) para transmissão e vídeo.
+- **JPEG_R / Ultra HDR** (Android 14 API 34+, ISO 21496-1) — o revolucionário formato de foto estática que incorpora um "mapa de ganho" secundário dentro de um JPEG SDR de 8 bits padrão para que leitores legados vejam uma foto normal, enquanto monitores HDR aumentam localmente os realces em até 8 pontos.
 
-All three are documented in the *Ultra HDR / JPEG_R* and *Dynamic Range* sections of the project research doc, which also specifies the Android CDD (Compatibility Definition Document) Performance Class 15 mandate that all 2024+ flagship devices must expose JPEG_R as an output format at maximum still size. You can verify HDR10, HLG, and JPEG_R support per camera ID in the [Android Camera Parameters](https://github.com/zoozooll/AndroidCameraParameters) app on the [Play Store](https://play.google.com/store/apps/details?id=com.zoozooll.cameraparameters), which enumerates every `DynamicRangeProfiles` key and reports whether `ImageFormat.JPEG_R` appears in `getOutputSizes()`.
+Todos os três estão documentados nas seções *Ultra HDR / JPEG_R* e *Dynamic Range* do documento de pesquisa do projeto, que também especifica o mandato da Classe de Desempenho 15 do CDD (Compatibility Definition Document) do Android, determinando que todos os dispositivos flagship de 2024+ devem expor o JPEG_R como um formato de saída no tamanho máximo de captura de foto. Você pode verificar o suporte a HDR10, HLG e JPEG_R por ID de câmera no aplicativo [Android Camera Parameters](https://github.com/zoozooll/AndroidCameraParameters) na [Play Store](https://play.google.com/store/apps/details?id=com.zoozooll.cameraparameters), que enumera cada chave de `DynamicRangeProfiles` e relata se o `ImageFormat.JPEG_R` aparece em `getOutputSizes()`.
 
-## Dynamic Range Fundamentals: Why 8 Bits Is Not Enough
+## Fundamentos do Alcance Dinâmico: Por Que 8 Bits Não São Suficientes
 
-Before diving into specific formats, define what "dynamic range" means for display vs capture:
+Antes de mergulhar em formatos específicos, vamos definir o que significa "alcance dinâmico" para exibição versus captura:
 
-| Metric | SDR (sRGB/BT.709) | HDR10 (BT.2100) | Human Vision |
+| Métrica | SDR (sRGB/BT.709) | HDR10 (BT.2100) | Visão Humana |
 |--------|-------------------|------------------|--------------|
-| **Bit depth** | 8 bits / channel (256 levels) | 10 bits / channel (1024 levels) | ~4.8 bits perceptual, but logarithmic |
-| **Peak luminance** | 100 nits (cd/m²) | 1,000+ nits peak (content-dependent) | ~20,000 nits (sun+sky) to ~0.001 nits (dark room) |
-| **Transfer function** | Gamma 2.2 or sRGB piece-wise | ST.2084 Perceptual Quantizer (PQ) | Logarithmic response (Weber-Fechner law) |
-| **Color gamut** | sRGB / BT.709 (~35% of visible) | Rec.2020 (~75% of visible) | Full visible spectrum |
-| **Contrast ratio (usable)** | ~6 stops (64:1) | ~10 stops (1024:1) minimum | ~14 stops (16384:1) in a single scene |
+| **Profundidade de bits** | 8 bits / canal (256 níveis) | 10 bits / canal (1024 níveis) | ~4,8 bits perceptuais, mas logarítmicos |
+| **Luminância de pico** | 100 nits (cd/m²) | 1.000+ nits de pico (dependente do conteúdo) | ~20.000 nits (sol+céu) a ~0,001 nits (sala escura) |
+| **Função de transferência** | Gama 2.2 ou sRGB por partes | ST.2084 Perceptual Quantizer (PQ) | Resposta logarítmica (lei de Weber-Fechner) |
+| **Gama de cores (Gamut)** | sRGB / BT.709 (~35% do visível) | Rec.2020 (~75% do visível) | Espectro visível completo |
+| **Taxa de contraste (utilizável)** | ~6 pontos (64:1) | ~10 pontos (1024:1) no mínimo | ~14 pontos (16384:1) em uma única cena |
 
-The gamma curve used by SDR was engineered to match 1990s CRT electron-gun nonlinearity, not the human visual system. The PQ (Perceptual Quantizer) curve used by HDR10 was standardized in 2014 by Dolby and the BBC under ST.2084, and is mathematically fit to the Barten model of human contrast sensitivity — so each of the 1,024 code values in 10-bit PQ represents a just-noticeable difference (JND) in brightness across the full 0–10,000 nit range.
+A curva gama usada pelo SDR foi projetada para corresponder à não linearidade do canhão de elétrons dos CRTs dos anos 90, não ao sistema visual humano. A curva PQ (Perceptual Quantizer) usada pelo HDR10 foi padronizada em 2014 pela Dolby e pela BBC sob a norma ST.2084, e é matematicamente ajustada ao modelo Barten de sensibilidade ao contraste humano — de modo que cada um dos 1.024 valores de código em PQ de 10 bits representa uma diferença apenas perceptível (JND) no brilho em toda a faixa de 0 a 10.000 nits.
 
 ```mermaid
 flowchart TD
-    subgraph SDRpath["SDR 8-bit Capture → Display Pipeline"]
-        S1["Sensor Linear\n14-bit RAW"] --> S2["Gamma 2.2 Curve\n(Destroys Shadow Detail)"]
-        S2 --> S3["8-bit Quantization\n(Only 22 codes for\n0–10% luminance)"]
-        S3 --> S4["sRGB Gamut Clipping\n(25% of colors lost)"]
-        S4 --> S5["Peak 100 nits\n(Sky/Sun Clip to White)"]
+    subgraph SDRpath["Caminho de Captura SDR 8-bit → Pipeline de Exibição"]
+        S1["Sensor Linear<br/>RAW de 14 bits"] --> S2["Curva Gama 2.2<br/>(Destrói detalhes das sombras)"]
+        S2 --> S3["Quantização de 8 bits<br/>(Apenas 22 códigos para<br/>0–10% de luminância)"]
+        S3 --> S4["Corte do Gamut sRGB<br/>(25% das cores perdidas)"]
+        S4 --> S5["Pico de 100 nits<br/>(Céu/Sol cortados para branco)"]
     end
 
-    subgraph HDRpath["HDR10 10-bit Capture → Display Pipeline"]
-        H1["Sensor Linear\n14-bit RAW"] --> H2["ST.2084 PQ Curve\n(Fits JND model)"]
-        H2 --> H3["10-bit Quantization\n(140 codes for\n0–10% luminance)"]
-        H3 --> H4["Rec.2020 Gamut\n(75% of visible colors)"]
-        H4 --> H5["Peak 1000+ nits\n(Sky Detail Preserved)"]
+    subgraph HDRpath["Caminho de Captura HDR10 10-bit → Pipeline de Exibição"]
+        H1["Sensor Linear<br/>RAW de 14 bits"] --> H2["Curva PQ ST.2084<br/>(Ajusta-se ao modelo JND)"]
+        H2 --> H3["Quantização de 10 bits<br/>(140 códigos para<br/>0–10% de luminância)"]
+        H3 --> H4["Gamut Rec.2020<br/>(75% das cores visíveis)"]
+        H4 --> H5["Pico de 1000+ nits<br/>(Detalhes do céu preservados)"]
     end
 
     style SDRpath fill:#ffeded,stroke:#b91c1c
     style HDRpath fill:#e8fff0,stroke:#15803d
 ```
 
-The Mermaid diagram above quantifies the two most important differences: SDR uses only ~22 8-bit codes for the bottom 10% of luminance (causing shadow banding when pulled up), while PQ allocates 140 10-bit codes to the same range. The PQ curve's perceptual uniformity is why 10-bit HDR looks smoother than 8-bit SDR even when down-sampled to 100 nits on an SDR display.
+O diagrama Mermaid acima quantifica as duas diferenças mais importantes: o SDR usa apenas ~22 códigos de 8 bits para os 10% inferiores de luminância (causando listras nas sombras quando aumentadas), enquanto o PQ aloca 140 códigos de 10 bits para a mesma faixa. A uniformidade perceptual da curva PQ é a razão pela qual o HDR de 10 bits parece mais suave do que o SDR de 8 bits, mesmo quando subamostrado para 100 nits em um monitor SDR.
 
-## HDR10 Video: 10-bit PQ + Rec.2020 + Static Metadata
+## Vídeo HDR10: PQ de 10 bits + Rec.2020 + Metadados Estáticos
 
-HDR10 is the baseline HDR video format — every 2021+ smartphone with an OLED display supports HDR10 playback, and every Snapdragon 865+ / Exynos 2100+ SoC supports HDR10 recording via Camera2. The format specifies:
+O HDR10 é o formato de vídeo HDR de linha de base — todo smartphone de 2021+ com tela OLED suporta a reprodução de HDR10, e todo SoC Snapdragon 865+ / Exynos 2100+ suporta a gravação de HDR10 via Camera2. O formato especifica:
 
-- **HEVC Main10 Profile** (H.265) encoding with 10-bit samples
-- **ST.2084 PQ** transfer function in place of gamma
-- **Rec.2020 (BT.2100)** color primaries (wide-gamut)
-- **Static metadata** (SMPTE ST 2086 / CTA-861.3) in the HEVC SEI message:
-  - `max_content_light_level` (MaxCLL): peak luminance of any single pixel, in nits
-  - `max_frame_average_light_level` (MaxFALL): average luminance of the brightest frame
-  - `display_primaries` and `white_point`: mastering display color volume
-  - `max_luminance` / `min_luminance`: mastering display peak and black level
+- Codificação **HEVC Main10 Profile** (H.265) com amostras de 10 bits.
+- Função de transferência **ST.2084 PQ** no lugar da gama.
+- Primárias de cor **Rec.2020 (BT.2100)** (ampla gama de cores).
+- **Metadados estáticos** (SMPTE ST 2086 / CTA-861.3) na mensagem HEVC SEI:
+  - `max_content_light_level` (MaxCLL): luminância de pico de qualquer pixel individual, em nits.
+  - `max_frame_average_light_level` (MaxFALL): luminância média do quadro mais brilhante.
+  - `display_primaries` e `white_point`: volume de cor do monitor de masterização.
+  - `max_luminance` / `min_luminance`: pico de luminância e nível de preto do monitor de masterização.
 
-Static metadata means exactly one set of values applies to the entire video duration. The dynamic metadata variant (HDR10+, Samsung's alternative to Dolby Vision) is not exposed through standard Camera2 — it requires vendor extensions — but HDR10 static metadata is universally supported via `DynamicRangeProfiles`.
+Metadados estáticos significam que exatamente um conjunto de valores se aplica a toda a duração do vídeo. A variante de metadados dinâmicos (HDR10+, alternativa da Samsung ao Dolby Vision) não é exposta através do Camera2 padrão — ela requer extensões do fabricante — mas os metadados estáticos HDR10 são universalmente suportados via `DynamicRangeProfiles`.
 
-### Querying HDR10 and HLG Support via DynamicRangeProfiles
+### Consultando o Suporte a HDR10 e HLG via DynamicRangeProfiles
 
-Android 13 (API 33) introduced `CameraCharacteristics.REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES` as a structured alternative to manually checking 10-bit format support in `StreamConfigurationMap`. Every output surface has a profile chosen at session creation time:
+O Android 13 (API 33) introduziu `CameraCharacteristics.REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES` como uma alternativa estruturada para verificar manualmente o suporte ao formato de 10 bits no `StreamConfigurationMap`. Cada superfície de saída tem um perfil escolhido no momento da criação da sessão:
 
 ```kotlin
 import android.hardware.camera2.CameraCharacteristics
@@ -97,8 +97,8 @@ fun enumerateHdrProfiles(
     return listOf(
         DynamicRangeProfiles.HDR10,
         DynamicRangeProfiles.HLG,
-        DynamicRangeProfiles.HDR10_PLUS, // Often null on non-Samsung devices
-        DynamicRangeProfiles.DOLBY_VISION_10B_HDR_OEM // Requires Dolby license
+        DynamicRangeProfiles.HDR10_PLUS, // Frequentemente nulo em dispositivos não-Samsung
+        DynamicRangeProfiles.DOLBY_VISION_10B_HDR_OEM // Requer licença Dolby
     ).mapNotNull { profile ->
         if (!profiles.isProfileSupported(profile)) return@mapNotNull null
 
@@ -113,11 +113,11 @@ fun enumerateHdrProfiles(
 }
 ```
 
-The `DynamicRangeProfiles.getProfileSupportedSizes(profile)` method returns the *intersection* of 10-bit-capable sizes and ISP HDR pipeline support. If `Size(3840, 2160)` (4K UHD) does not appear in `getProfileSupportedSizes(HDR10)`, then even if 4K SDR is supported, the HAL does not have enough ISP throughput for 4K HDR10 encoding (usually a 600-Mpixel/sec limit on Snapdragon 8-series). The Android Camera Parameters app renders this intersection table in the HDR tab so you can verify before writing session code.
+O método `DynamicRangeProfiles.getProfileSupportedSizes(profile)` retorna a *interseção* dos tamanhos compatíveis com 10 bits e o suporte ao pipeline HDR do ISP. Se o `Size(3840, 2160)` (4K UHD) não aparecer em `getProfileSupportedSizes(HDR10)`, então, mesmo que o 4K SDR seja suportado, o HAL não tem rendimento de ISP suficiente para codificação 4K HDR10 (geralmente um limite de 600 Mpixel/seg na série Snapdragon 8). O aplicativo Android Camera Parameters renderiza essa tabela de interseção na aba HDR para que você possa verificar antes de escrever o código da sessão.
 
-### Setting HDR10 on OutputConfiguration for Recording
+### Definindo HDR10 na OutputConfiguration para Gravação
 
-The dynamic range profile must be set **before the session is created** via `OutputConfiguration.setDynamicRangeProfile()`. Changing the profile mid-session requires tearing down and recreating the session.
+O perfil de alcance dinâmico deve ser definido **antes que a sessão seja criada** via `OutputConfiguration.setDynamicRangeProfile()`. Alterar o perfil no meio da sessão requer desmontar e recriar a sessão.
 
 ```kotlin
 import android.hardware.camera2.params.DynamicRangeProfiles
@@ -146,7 +146,7 @@ fun configureHdr10MediaCodec(width: Int, height: Int): MediaCodec {
     ).apply {
         setInteger(MediaFormat.KEY_COLOR_FORMAT,
             MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface)
-        setInteger(MediaFormat.KEY_BIT_RATE, 80_000_000) // 80 Mbps for 4K HDR10
+        setInteger(MediaFormat.KEY_BIT_RATE, 80_000_000) // 80 Mbps para 4K HDR10
         setInteger(MediaFormat.KEY_FRAME_RATE, 30)
         setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1)
         setInteger(MediaFormat.KEY_PROFILE,
@@ -164,70 +164,70 @@ fun configureHdr10MediaCodec(width: Int, height: Int): MediaCodec {
 }
 ```
 
-The three `COLOR_*` keys (`BT2020`, `ST2084`, `LIMITED`) combined with `HEVCProfileMain10` create a bit-exact HDR10 stream. If you omit `KEY_COLOR_TRANSFER` or set it to the wrong value (e.g. `COLOR_TRANSFER_GAMMA_2_2`), YouTube and other players will interpret the 10-bit stream as SDR and play it washed-out or oversaturated.
+As três chaves `COLOR_*` (`BT2020`, `ST2084`, `LIMITED`) combinadas com o `HEVCProfileMain10` criam um fluxo HDR10 exato em bits. Se você omitir o `KEY_COLOR_TRANSFER` ou defini-lo com o valor errado (ex: `COLOR_TRANSFER_GAMMA_2_2`), o YouTube e outros reprodutores interpretarão o fluxo de 10 bits como SDR e o reproduzirão de forma lavada ou supersaturada.
 
-## HLG (Hybrid Log-Gamma): SDR-Backward-Compatible Broadcast HDR
+## HLG (Hybrid Log-Gamma): HDR de Transmissão Retrocompatível com SDR
 
-HLG (standardized as ARIB STD-B67 by the BBC and NHK in 2015) was designed for live television, where you cannot know in advance whether the viewer has an HDR or SDR display. The innovation of HLG is a **piecewise hybrid transfer function**:
-- The bottom 50% of the code range is a standard gamma curve (matches SDR exactly)
-- The top 50% is a logarithmic curve (stores HDR highlight detail)
+O HLG (padronizado como ARIB STD-B67 pela BBC e NHK em 2015) foi projetado para televisão ao vivo, onde não se pode saber antecipadamente se o espectador possui uma tela HDR ou SDR. A inovação do HLG é uma **função de transferência híbrida por partes**:
+- Os 50% inferiores da faixa de código são uma curva gama padrão (corresponde exatamente ao SDR).
+- Os 50% superiores são uma curva logarítmica (armazena detalhes de realce HDR).
 
-This means an HLG video played on an SDR display looks identical to a correctly-tuned SDR gamma 2.2 video, while an HDR display "unlocks" the logarithmic upper half and renders highlights up to 1,000 nits without any metadata signaling. There is no explicit SDR→HDR tone mapping required.
+Isso significa que um vídeo HLG reproduzido em uma tela SDR parece idêntico a um vídeo gama 2.2 SDR corretamente ajustado, enquanto uma tela HDR "desbloqueia" a metade superior logarítmica e renderiza realces de até 1.000 nits sem qualquer sinalização de metadados. Não é necessário nenhum mapeamento de tons SDR→HDR explícito.
 
-For video use, HLG differs from HDR10 in three Camera2-relevant ways:
-1. **No static metadata required** — HLG is scene-referred, so the display derives peak brightness from the signal itself. This simplifies the MediaCodec configuration (no SEI insertion for MaxCLL/MaxFALL).
-2. **Different color-transfer constant** — use `MediaFormat.COLOR_TRANSFER_HLG` instead of `ST2084`.
-3. **`DynamicRangeProfiles.HLG`** check instead of `HDR10`.
+Para uso em vídeo, o HLG difere do HDR10 em três aspectos relevantes para o Camera2:
+1. **Nenhum metadado estático é necessário** — o HLG é referenciado à cena, então a tela deriva o brilho de pico do próprio sinal. Isso simplifica a configuração do MediaCodec (sem inserção de SEI para MaxCLL/MaxFALL).
+2. **Constante de transferência de cor diferente** — use `MediaFormat.COLOR_TRANSFER_HLG` em vez de `ST2084`.
+3. **Verificação de `DynamicRangeProfiles.HLG`** em vez de `HDR10`.
 
-All other API usage (OutputConfiguration.setDynamicRangeProfile, session creation, CaptureRequest) is identical to HDR10. The research doc notes that HLG is the preferred format for user-generated video shared to social platforms, because it renders correctly on both SDR and HDR displays without tone-mapping artifacts.
+Todo o restante do uso da API (OutputConfiguration.setDynamicRangeProfile, criação de sessão, CaptureRequest) é idêntico ao HDR10. O documento de pesquisa observa que o HLG é o formato preferido para vídeos gerados pelo usuário compartilhados em plataformas sociais, pois é renderizado corretamente em telas SDR e HDR sem artefatos de mapeamento de tons.
 
-## JPEG_R (Ultra HDR): ISO 21496-1 SDR + Embedded Gain Map
+## JPEG_R (Ultra HDR): SDR ISO 21496-1 + Mapa de Ganho Incorporado
 
-The biggest advance in mobile HDR photography since multi-frame HDR capture is **JPEG_R**, introduced in Android 14 (API 34) and codified as international standard **ISO 21496-1**. The format is backward-compatible by construction:
+O maior avanço na fotografia HDR móvel desde a captura HDR multi-quadro é o **JPEG_R**, introduzido no Android 14 (API 34) e codificado como o padrão internacional **ISO 21496-1**. O formato é retrocompatível por construção:
 
-> A JPEG_R file is a standard 8-bit SDR JPEG with a **secondary, smaller JPEG (the "gain map")** embedded in the `APP11` marker segment using the ISO 21496-1 container format. Legacy JPEG decoders ignore unrecognized APP markers and render only the 8-bit primary. HDR-aware decoders read both the primary and the gain map, and reconstruct the original linear HDR scene radiance by multiplying primary pixel values by exp2(gain_map_pixel × headroom_factor) on a per-pixel basis.
+> Um arquivo JPEG_R é um JPEG SDR de 8 bits padrão com um **JPEG secundário e menor (o "mapa de ganho")** incorporado no segmento marcador `APP11` usando o formato de contêiner ISO 21496-1. Decodificadores JPEG legados ignoram marcadores APP não reconhecidos e renderizam apenas o primário de 8 bits. Decodificadores cientes de HDR leem tanto o primário quanto o mapa de ganho, e reconstroem a radiância linear original da cena HDR multiplicando os valores dos pixels primários por exp2(pixel_mapa_ganho × fator_margem) em uma base por pixel.
 
-This "per-pixel boost" is what makes Ultra HDR *locally* HDR (unlike HDR10 static metadata, which applies one peak value globally). An ISO 21496-1 gain map at ¼ resolution (typical) can encode up to **8 stops of local highlight headroom** — enough to recover cloud detail in a sunset while keeping midtones at natural SDR luminance.
+Este "impulso por pixel" é o que torna o Ultra HDR *localmente* HDR (ao contrário dos metadados estáticos HDR10, que aplicam um valor de pico globalmente). Um mapa de ganho ISO 21496-1 com resolução de ¼ (típico) pode codificar até **8 pontos de margem de realce local** — o suficiente para recuperar detalhes de nuvens em um pôr do sol enquanto mantém os tons médios em uma luminância SDR natural.
 
-Android CDD Performance Class 15 mandates:
-- All devices advertising CDD PC-15 (2024+ flagships per the CDD spec table) **MUST** support `ImageFormat.JPEG_R` output at the maximum still-capture size.
-- Maximum still capture size for JPEG_R must be ≥ the maximum YUV size for that camera ID.
+A Classe de Desempenho 15 do CDD do Android exige:
+- Todos os dispositivos que anunciam CDD PC-15 (flagships de 2024+ conforme a tabela de especificações do CDD) **DEVEM** suportar a saída `ImageFormat.JPEG_R` no tamanho máximo de captura estática.
+- O tamanho máximo de captura estática para JPEG_R deve ser ≥ o tamanho máximo de YUV para aquele ID de câmera.
 
-The *Ultra HDR / JPEG_R* section of the research doc contains a full byte-level breakdown of the APP11 marker layout, but for the Camera2 API you only need to treat `ImageFormat.JPEG_R` as a single opaque output buffer — the HAL assembles the primary + gain map internally.
+A seção *Ultra HDR / JPEG_R* do documento de pesquisa contém um detalhamento completo em nível de byte do layout do marcador APP11, mas para a API Camera2 você só precisa tratar o `ImageFormat.JPEG_R` como um único buffer de saída opaco — o HAL monta o primário + mapa de ganho internamente.
 
 ```mermaid
 flowchart LR
-    subgraph FILE["JPEG_R (Ultra HDR) File Structure"]
+    subgraph FILE["Estrutura de Arquivo JPEG_R (Ultra HDR)"]
         direction TB
-        SOI["Start of Image (SOI) Marker"] --> PRIMARY["8-bit SDR JPEG Primary Image\n(sRGB, Gamma 2.2)\nFully Backward-Compatible!\nLegacy readers render this ONLY"]
-        PRIMARY --> APP0["APP0 JFIF Marker"]
-        APP0 --> APP11["APP11 Marker (ISO 21496-1 Container)"]
-        subgraph GAINMAP["APP11 Payload = Ultra HDR Metadata + Gain Map"]
-            GM1["HDR Version Tag (4 bytes)"]
-            GM2["Gain Map Headroom Factor\n(1 = 1 stop boost, 8 = 8 stops boost)"]
-            GM3["Gain Map JPEG (Embedded)\n¼ Resolution Typical\nPer-pixel HDR boost amount"]
-            GM4["Alternate Color Profile Optional\n(ICC Rec.2020)"]
+        SOI["Marcador Start of Image (SOI)"] --> PRIMARY["Imagem Primária JPEG SDR de 8 bits<br/>(sRGB, Gama 2.2)<br/>Totalmente Retrocompatível!<br/>Leitores legados renderizam APENAS isso"]
+        PRIMARY --> APP0["Marcador APP0 JFIF"]
+        APP0 --> APP11["Marcador APP11 (Contêiner ISO 21496-1)"]
+        subgraph GAINMAP["Carga Útil APP11 = Metadados Ultra HDR + Mapa de Ganho"]
+            GM1["Tag de Versão HDR (4 bytes)"]
+            GM2["Fator de Margem do Mapa de Ganho<br/>(1 = 1 ponto de impulso, 8 = 8 pontos de impulso)"]
+            GM3["JPEG do Mapa de Ganho (Incorporado)<br/>Resolução de ¼ Típica<br/>Quantidade de impulso HDR por pixel"]
+            GM4["Perfil de Cor Alternativo Opcional<br/>(ICC Rec.2020)"]
         end
         APP11 --> GAINMAP
-        GAINMAP --> EOI["End of Image (EOI) Marker"]
+        GAINMAP --> EOI["Marcador End of Image (EOI)"]
     end
 
-    subgraph RENDER["At Display Time (HDR-Aware Reader)"]
-        R1["Decode Primary JPEG (SDR)"] --> R2["Decode Gain Map JPEG"]
-        R2 --> R3["Display Engine:\nPer-Pixel Multiplication\nPrimary × exp2(gain × headroom)\n→ Linear HDR Radiance"]
-        R3 --> R4["HDR Panel Output:\nLocal Highlights up to\n1000 nits peak"]
+    subgraph RENDER["No Momento da Exibição (Leitor Ciente de HDR)"]
+        R1["Decodificar JPEG Primário (SDR)"] --> R2["Decodificar JPEG do Mapa de Ganho"]
+        R2 --> R3["Mecanismo de Exibição:<br/>Multiplicação por Pixel<br/>Primário × exp2(ganho × margem)<br/>→ Radiância HDR Linear"]
+        R3 --> R4["Saída do Painel HDR:<br/>Realces Locais até<br/>1000 nits de pico"]
     end
 
-    FILE -->|"HDR-Aware Decoder\nsees APP11"| RENDER
+    FILE -->|"Decodificador Ciente de HDR<br/>vê o APP11"| RENDER
 ```
 
-The critical detail in the Mermaid diagram: the PRIMARY JPEG is a fully valid 8-bit SDR photo, so even a 2010s-era JPEG library can render a correct-looking image. The HDR data is *additive*, not replacing the primary file — this is why JPEG_R files work seamlessly with every existing photo-sharing platform (Instagram, Google Photos, Messages) that doesn't yet have Ultra HDR decoders.
+O detalhe crítico no diagrama Mermaid: o JPEG PRIMÁRIO é uma foto SDR de 8 bits totalmente válida, de modo que até uma biblioteca JPEG dos anos 2010 pode renderizar uma imagem com aparência correta. Os dados HDR são *aditivos*, não substituem o arquivo primário — é por isso que os arquivos JPEG_R funcionam perfeitamente com todas as plataformas de compartilhamento de fotos existentes (Instagram, Google Fotos, Mensagens) que ainda não possuem decodificadores Ultra HDR.
 
-### Querying JPEG_R Support and Capturing Ultra HDR Stills
+### Consultando o Suporte a JPEG_R e Capturando Fotos Ultra HDR
 
-Capturing Ultra HDR stills is functionally identical to capturing standard JPEG, with two differences:
-1. Query `ImageFormat.JPEG_R` in `StreamConfigurationMap.getOutputSizes()` instead of `ImageFormat.JPEG`
-2. If you are using `DynamicRangeProfiles` (recommended), set the JPEG_R output's profile to `DynamicRangeProfiles.JPEG_R`
+Capturar fotos Ultra HDR é funcionalmente idêntico à captura de JPEG padrão, com duas diferenças:
+1. Consulte o `ImageFormat.JPEG_R` em `StreamConfigurationMap.getOutputSizes()` em vez de `ImageFormat.JPEG`.
+2. Se você estiver usando `DynamicRangeProfiles` (recomendado), defina o perfil da saída JPEG_R como `DynamicRangeProfiles.JPEG_R`.
 
 ```kotlin
 import android.graphics.ImageFormat
@@ -305,7 +305,7 @@ fun setupJpegRCapture(
                         CaptureRequest.CONTROL_MODE_USE_SCENE_MODE)
                     set(CaptureRequest.CONTROL_SCENE_MODE,
                         CaptureRequest.CONTROL_SCENE_MODE_HDR)
-                    // Trigger HAL multi-frame HDR fusion before JPEG_R encode
+                    // Dispara a fusão HDR multi-quadro do HAL antes da codificação JPEG_R
                 }
 
                 session.capture(stillBuilder.build(),
@@ -313,18 +313,18 @@ fun setupJpegRCapture(
             }
             override fun onConfigureFailed(
                 s: android.hardware.camera2.CameraCaptureSession
-            ) = Log.e(TAG, "JPEG_R session failed")
+            ) = Log.e(TAG, "Sessão JPEG_R falhou")
         }
     )
     cameraDevice.createCaptureSession(sessionConfig)
 }
 ```
 
-Setting `CONTROL_SCENE_MODE_HDR` alongside `TEMPLATE_STILL_CAPTURE` triggers the HAL's multi-frame HDR bracketing and fusion pipeline — typically 3 frames at -2 / 0 / +2 EV, aligned and merged before being split into the SDR primary + 8-stop gain map for ISO 21496-1 encoding. Omitting the scene mode still produces a valid JPEG_R file, but the gain map headroom will be limited to the sensor's native DR (~10 stops) instead of the computational fusion DR (~14–16 stops).
+Definir o `CONTROL_SCENE_MODE_HDR` junto com o `TEMPLATE_STILL_CAPTURE` aciona o pipeline de bracketing e fusão HDR multi-quadro do HAL — normalmente 3 quadros a -2 / 0 / +2 EV, alinhados e mesclados antes de serem divididos no primário SDR + mapa de ganho de 8 pontos para a codificação ISO 21496-1. Omitir o modo de cena ainda produz um arquivo JPEG_R válido, mas a margem do mapa de ganho será limitada ao DR nativo do sensor (~10 pontos) em vez do DR de fusão computacional (~14–16 pontos).
 
-### Receiving and Saving the JPEG_R Image
+### Recebendo e Salvando a Imagem JPEG_R
 
-The `OnImageAvailableListener` for JPEG_R is byte-identical to a JPEG listener — the HAL has already concatenated the primary + APP11 gain map into a single buffer:
+O `OnImageAvailableListener` para JPEG_R é idêntico em bytes a um listener JPEG — o HAL já concatenou o primário + o mapa de ganho APP11 em um único buffer:
 
 ```kotlin
 import java.io.File
@@ -345,32 +345,32 @@ inner class JpegRCaptureCallback : ImageReader.OnImageAvailableListener {
 }
 ```
 
-Saving as `.jpg` (not a custom extension) is critical for compatibility — legacy photo viewers look at the file extension before inspecting file contents, and a `.jpg` extension guarantees they'll attempt to decode the standard SDR primary before they ever see the APP11 marker.
+Salvar como `.jpg` (não uma extensão personalizada) é crítico para a compatibilidade — leitores de fotos legados olham para a extensão do arquivo antes de inspecionar o conteúdo do arquivo, e uma extensão `.jpg` garante que eles tentarão decodificar o primário SDR padrão antes mesmo de verem o marcador APP11.
 
-## HDR Format Comparison Summary
+## Resumo da Comparação de Formatos HDR
 
-| Criterion | HDR10 (Video) | HLG (Video) | JPEG_R / Ultra HDR (Still) |
+| Critério | HDR10 (Vídeo) | HLG (Vídeo) | JPEG_R / Ultra HDR (Foto) |
 |-----------|---------------|-------------|-----------------------------|
-| **Bit depth** | 10-bit HEVC Main10 | 10-bit HEVC Main10 | 8-bit primary + 8-bit gain map → net ~12 bits equivalent |
-| **Peak nits (content)** | 1,000–10,000 (static metadata) | 1,000 nits typical (scene-referred) | ~2,000 nits (8 stops × 8-bit headroom per ISO 21496-1) |
-| **Backward compatible** | No — SDR playback looks washed-out without tone mapping | **Yes** — SDR displays render the gamma half perfectly | **Yes** — legacy readers render only the 8-bit SDR primary |
-| **Dynamic range type** | Global (per-video static metadata) | Global (scene-referred, no metadata) | **Local (per-pixel gain map)** — can boost clouds without washing out skin |
-| **Camera2 API entry points** | `DynamicRangeProfiles.HDR10` + `MediaFormat.COLOR_TRANSFER_ST2084` | `DynamicRangeProfiles.HLG` + `MediaFormat.COLOR_TRANSFER_HLG` | `ImageFormat.JPEG_R` + `DynamicRangeProfiles.JPEG_R` |
-| **Android version** | API 33+ (DynamicRangeProfiles) | API 33+ | API 34+ (Android 14), CDD PC-15 mandate |
-| **Use case** | Cinematic HDR video for YouTube/Netflix | Live broadcast, social video UGC | HDR photography backward-compatible with every photo platform on earth |
+| **Profundidade de bits** | HEVC Main10 de 10 bits | HEVC Main10 de 10 bits | Primário de 8 bits + mapa de ganho de 8 bits → líquido ~12 bits equivalente |
+| **Nits de pico (conteúdo)** | 1.000–10.000 (metadados estáticos) | 1.000 nits típico (ref. à cena) | ~2.000 nits (8 pontos × 8 bits de margem por ISO 21496-1) |
+| **Retrocompatível** | Não — reprodução SDR parece lavada sem mapeamento de tons | **Sim** — telas SDR renderizam a metade gama perfeitamente | **Sim** — leitores legados renderizam apenas o primário SDR de 8 bits |
+| **Tipo de alcance dinâmico** | Global (metadados estáticos por vídeo) | Global (ref. à cena, sem metadados) | **Local (mapa de ganho por pixel)** — pode impulsionar nuvens sem lavar a pele |
+| **Pontos de entrada da API Camera2** | `DynamicRangeProfiles.HDR10` + `MediaFormat.COLOR_TRANSFER_ST2084` | `DynamicRangeProfiles.HLG` + `MediaFormat.COLOR_TRANSFER_HLG` | `ImageFormat.JPEG_R` + `DynamicRangeProfiles.JPEG_R` |
+| **Versão do Android** | API 33+ (DynamicRangeProfiles) | API 33+ | API 34+ (Android 14), mandato CDD PC-15 |
+| **Caso de uso** | Vídeo HDR cinematográfico para YouTube/Netflix | Transmissão ao vivo, vídeo social UGC | Fotografia HDR retrocompatível com todas as plataformas de fotos da Terra |
 
-## Summary
+## Resumo
 
-This chapter covered the three working HDR technologies available in Android Camera2:
+Este capítulo cobriu as três tecnologias HDR funcionais disponíveis no Android Camera2:
 
-- **Dynamic Range fundamentals**: SDR's 8-bit gamma and 100-nit peak cannot represent the 14 stops captured by modern sensors. PQ (HDR10) and HLG use perceptually-optimized 10-bit curves to fit the full sensor DR.
-- **HDR10 video** uses `DynamicRangeProfiles.HDR10` on the OutputConfiguration, HEVC Main10 encoding with `COLOR_TRANSFER_ST2084` (PQ), `COLOR_STANDARD_BT2020` primaries, and SMPTE ST 2086 static metadata.
-- **HLG video** uses `DynamicRangeProfiles.HLG`, `COLOR_TRANSFER_HLG`, and no static metadata. It is SDR-backward-compatible by design, making it ideal for broadcast and user-generated video.
-- **JPEG_R / Ultra HDR** (API 34+, ISO 21496-1, CDD PC-15 mandate) embeds a per-pixel gain map in the APP11 marker of a standard 8-bit SDR JPEG. Legacy decoders render the primary image; HDR decoders apply the gain map to get up to 8 stops of local highlight headroom.
-- The two Mermaid diagrams (SDR vs HDR pipelines, JPEG_R file structure) visualize the encoding and rendering paths.
+- **Fundamentos do Alcance Dinâmico**: A gama de 8 bits e o pico de 100 nits do SDR não podem representar os 14 pontos capturados pelos sensores modernos. PQ (HDR10) e HLG usam curvas de 10 bits otimizadas perceptualmente para se ajustarem ao DR total do sensor.
+- **Vídeo HDR10** usa `DynamicRangeProfiles.HDR10` na OutputConfiguration, codificação HEVC Main10 com `COLOR_TRANSFER_ST2084` (PQ), primárias `COLOR_STANDARD_BT2020` e metadados estáticos SMPTE ST 2086.
+- **Vídeo HLG** usa `DynamicRangeProfiles.HLG`, `COLOR_TRANSFER_HLG` e nenhum metadado estático. É retrocompatível com SDR por design, tornando-o ideal para transmissões e vídeos gerados por usuários.
+- **JPEG_R / Ultra HDR** (API 34+, ISO 21496-1, mandato CDD PC-15) incorpora um mapa de ganho por pixel no marcador APP11 de um JPEG SDR de 8 bits padrão. Decodificadores legados renderizam a imagem primária; decodificadores HDR aplicam o mapa de ganho para obter até 8 pontos de margem de realce local.
+- Os dois diagramas Mermaid (pipelines SDR vs. HDR, estrutura de arquivo JPEG_R) visualizam os caminhos de codificação e renderização.
 
-## What's Next
+## O Que Vem a Seguir
 
-In **Chapter 22: Camera Extensions**, we step outside the standard `CameraCaptureSession` into the world of OEM-accelerated computational photography via `CameraExtensionSession`. You'll learn to query `CameraExtensionCharacteristics.getSupportedExtensions()` for Night (multi-frame long-exposure merge), Bokeh (depth-inferred background blur / portrait mode), HDR (multi-exposure fusion), Face Retouch (ML skin smoothing), and Automatic (HAL-picked extension). The chapter includes a full portrait capture example using EXTENSION_BOKEH, explains `getEstimatedCaptureLatencyRangeMillis()` for UI progress spinners, and uses a Mermaid diagram to contrast the standard session pipeline with the Extension Session pipeline that offloads ML and fusion work to the vendor DSP.
+No **Capítulo 22: Extensões de Câmera**, saímos da `CameraCaptureSession` padrão para o mundo da fotografia computacional acelerada por OEM via `CameraExtensionSession`. Você aprenderá a consultar `CameraExtensionCharacteristics.getSupportedExtensions()` para Night (fusão de longa exposição multi-quadro), Bokeh (desfoque de fundo inferido por profundidade / modo retrato), HDR (fusão multi-exposição), Face Retouch (suavização de pele por ML) e Automatic (extensão escolhida pelo HAL). O capítulo inclui um exemplo completo de captura de retrato usando EXTENSION_BOKEH, explica o `getEstimatedCaptureLatencyRangeMillis()` para spinners de progresso na UI e usa um diagrama Mermaid para contrastar o pipeline de sessão padrão com o pipeline de Sessão de Extensão que delega o trabalho de ML e fusão para o DSP do fabricante.
 
-Verify which Camera Extensions your device supports per camera ID in the [Android Camera Parameters app](https://play.google.com/store/apps/details?id=com.zoozooll.cameraparameters) — the Extensions tab enumerates every `Extension` constant and its supported capture sizes. New device reports submitted to the [GitHub project](https://github.com/zoozooll/AndroidCameraParameters) help build a public database of OEM extension support.
+Verifique quais Extensões de Câmera seu dispositivo suporta por ID de câmera no aplicativo [Android Camera Parameters](https://play.google.com/store/apps/details?id=com.zoozooll.cameraparameters) — a aba Extensões enumera cada constante de `Extension` e seus tamanhos de captura suportados. Novos relatórios de dispositivos enviados para o [projeto do GitHub](https://github.com/zoozooll/AndroidCameraParameters) ajudam a construir um banco de dados público de suporte a extensões OEM.

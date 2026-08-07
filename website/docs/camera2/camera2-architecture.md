@@ -1,4 +1,4 @@
----
+﻿---
 sidebar_position: 28
 title: "Chapter 28: Camera2 Architecture"
 description: "The grand architecture finale of Camera2. Travel the full stack from your Kotlin app down through Binder IPC, the Framework, CameraService in native, Camera3Device, HAL3 with camera3_device_t, the V4L2 kernel driver, and finally the physical sensor, ISP, VCM lens and flash hardware. Includes the Treble HAL requirement, the LEGACY HAL1 wrapper, and Android 15's CameraDeviceSetup. Complete reader's journey map to layers."
@@ -212,12 +212,12 @@ Finally, electrons. Every layer above is code executing on the SoC. The hardware
 
 ```mermaid
 graph LR
-    LENS[Lens Group<br/>Glass elements<br/>~10–20mm focal length] --> VCM[VCM Voice Coil Motor<br/>I2C DAC → coil current →<br/>lens displacement ±50 µm<br/>Focus + OIS stabilization]
+    LENS["Lens Group<br/>Glass elements<br/>~10–20mm focal length"] --> VCM["VCM Voice Coil Motor<br/>I2C DAC → coil current →<br/>lens displacement ±50 µm<br/>Focus + OIS stabilization"]
     VCM --> SENSOR[CMOS Sensor Pixel Array<br/>Sony IMX / Samsung ISOCELL<br/>~12MP – 200MP<br/>rolling shutter: readout line-by-line<br/>Global shutter (rare) on industrial sensors]
     SENSOR -->|A/D converted 10/12/14-bit Bayer| CSI[MIPI CSI-2 PHY<br/>2/4/8 pairs<br/>up to 20 Gbps aggregate]
     CSI -->|SoC-internal interconnect| ISP[ISP — on SoC die<br/>Demosaic · CCM · NR · 3A stats · HDR merge<br/>often 1 TOPS+ of DNN for face/segmentation]
     ISP -->|Gralloc buffers → DRAM| CPU[CPU / GPU<br/>Your app's process reads them]
-    FLASH[Flash LED / Xenon<br/>I2C flash controller<br/>Strobe synced to sensor EXRST] --> SENSOR
+    FLASH["Flash LED / Xenon<br/>I2C flash controller<br/>Strobe synced to sensor EXRST"] --> SENSOR
 ```
 
 Each physical sub-system:

@@ -1,30 +1,30 @@
-﻿---
+---
 sidebar_position: 11
-title: "Chapter 11: Capture Types"
-description: Learn the three Camera2 capture types — one-shot (capture), burst (captureBurst), and repeating (setRepeatingRequest) — plus built-in templates (TEMPLATE_PREVIEW, TEMPLATE_STILL_CAPTURE, TEMPLATE_RECORD, and more).
-keywords: [Camera2 capture types, one-shot capture, burst capture, repeating request, captureBurst, setRepeatingRequest, TEMPLATE_PREVIEW, TEMPLATE_STILL_CAPTURE, camera templates]
+title: "Bab 11: Jenis Pengambilan Gambar"
+description: Pelajari tiga jenis pengambilan gambar Camera2 — satu kali (capture), burst (captureBurst), dan berulang (setRepeatingRequest) — ditambah template bawaan (TEMPLATE_PREVIEW, TEMPLATE_STILL_CAPTURE, TEMPLATE_RECORD, dan lainnya).
+keywords: [jenis pengambilan gambar Camera2, pengambilan satu kali, pengambilan burst, permintaan berulang, captureBurst, setRepeatingRequest, TEMPLATE_PREVIEW, TEMPLATE_STILL_CAPTURE, template kamera]
 ---
 
-## 11.1 Three Ways to Feed the Pipeline
+## 11.1 Tiga Cara Memberi Makan Pipeline
 
-In [Chapter 10](the-camera2-pipeline.md) you saw how requests travel through the Camera2 pipeline: from the Pending Queue to the In-Flight Queue to the HAL to your callback and output surfaces. But *how you submit* those requests matters enormously. Camera2 gives you three submission mechanisms, each with fundamentally different behavior:
+Dalam [Bab 10](the-camera2-pipeline.md) Anda telah melihat bagaimana permintaan melakukan perjalanan melalui pipeline Camera2: dari Antrean Tertunda ke Antrean In-Flight ke HAL hingga ke callback dan surface output Anda. Namun *bagaimana Anda mengirimkan* permintaan tersebut sangatlah penting. Camera2 memberi Anda tiga mekanisme pengiriman, masing-masing dengan perilaku yang berbeda secara fundamental:
 
-1. **One-shot** (`capture()`) — execute a single request once
-2. **Burst** (`captureBurst()`) — execute a list of requests contiguously, back-to-back
-3. **Repeating** (`setRepeatingRequest()`) — execute the same request continuously forever (or until interrupted)
+1. **Satu kali (One-shot)** (`capture()`) — mengeksekusi satu permintaan sebanyak satu kali
+2. **Burst** (`captureBurst()`) — mengeksekusi daftar permintaan secara berurutan, berturut-turut
+3. **Berulang (Repeating)** (`setRepeatingRequest()`) — mengeksekusi permintaan yang sama secara terus-menerus selamanya (atau sampai dihentikan)
 
-On top of those three submission modes, the framework provides six **capture templates** that pre-populate a `CaptureRequest.Builder` with sensible defaults for common use cases (preview, still capture, video recording, zero-shutter-lag, manual control, etc.).
+Di atas ketiga mode pengiriman tersebut, framework menyediakan enam **template pengambilan gambar** yang mengisi `CaptureRequest.Builder` dengan default yang masuk akal untuk kasus penggunaan umum (pratinjau, pengambilan foto diam, perekaman video, zero-shutter-lag, kontrol manual, dll.).
 
-By the end of this chapter you will know exactly when to use each capture type and template — including why preview always uses repeating requests, why burst is the only way to do exposure bracketing, and why still photos use one-shot even when a preview is running.
+Pada akhir bab ini, Anda akan tahu persis kapan harus menggunakan setiap jenis pengambilan gambar dan template — termasuk mengapa pratinjau selalu menggunakan permintaan berulang, mengapa burst adalah satu-satunya cara untuk melakukan bracketing eksposur, dan mengapa foto diam menggunakan satu kali pengambilan bahkan saat pratinjau sedang berjalan.
 
-The Android Camera Parameters app ([GitHub](https://github.com/zoozooll/AndroidCameraParameters), [Play Store](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)) demonstrates all three capture types in its **Capture Demo** tab. Flip between "Preview (Repeating)," "Single Photo (One-Shot)," and "Burst (3 Frames)" modes to see the callback behavior and timing differences live on your device.
+Aplikasi Android Camera Parameters ([GitHub](https://github.com/zoozooll/AndroidCameraParameters), [Play Store](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)) mendemonstrasikan ketiga jenis pengambilan gambar di tab **Capture Demo**-nya. Beralihlah di antara mode "Preview (Repeating)," "Single Photo (One-Shot)," dan "Burst (3 Frames)" untuk melihat perilaku callback dan perbedaan waktu secara langsung di perangkat Anda.
 
-## 11.2 One-Shot: capture()
+## 11.2 Satu Kali (One-Shot): capture()
 
-The simplest submission mode is **one-shot capture** via `CameraCaptureSession.capture()`. It does exactly what it says on the tin: submits a single `CaptureRequest` to the pipeline, executes it exactly once, and is done.
+Mode pengiriman yang paling sederhana adalah **pengambilan gambar satu kali** melalui `CameraCaptureSession.capture()`. Ia melakukan persis seperti namanya: mengirimkan satu `CaptureRequest` ke pipeline, mengeksekusinya tepat satu kali, dan selesai.
 
 ```kotlin
-// One-shot: capture a single still frame to JPEG ImageReader
+// Satu kali: ambil satu bingkai foto diam ke ImageReader JPEG
 fun captureStillPhoto() {
     val builder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
     builder.addTarget(jpegReader.surface)
@@ -41,92 +41,92 @@ fun captureStillPhoto() {
             result: TotalCaptureResult
         ) {
             super.onCaptureCompleted(session, request, result)
-            Log.d("Capture", "One-shot photo done. Frame #${result.frameNumber}")
+            Log.d("Capture", "Foto satu kali selesai. Bingkai #${result.frameNumber}")
         }
     }, backgroundHandler)
 }
 ```
 
-### When to Use One-Shot
+### Kapan Menggunakan Satu Kali (One-Shot)
 
-| Use Case | Why One-Shot? |
+| Kasus Penggunaan | Mengapa Satu Kali? |
 |----------|--------------|
-| Single still photograph | Execute exactly once per shutter click |
-| Single AF/AE trigger | Fire `CONTROL_AF_TRIGGER_START` for one tap-to-focus event |
-| Snapshot during video | Grab one high-res frame while a repeating video request is active |
-| Capture a single RAW frame | RAW + JPEG dual capture for one photo |
+| Foto diam tunggal | Mengeksekusi tepat satu kali per klik rana |
+| Pemicu AF/AE tunggal | Menembakkan `CONTROL_AF_TRIGGER_START` untuk satu kali ketukan-untuk-fokus |
+| Foto instan (snapshot) selama video | Mengambil satu bingkai resolusi tinggi saat permintaan video berulang sedang aktif |
+| Mengambil bingkai RAW tunggal | Pengambilan ganda RAW + JPEG untuk satu foto |
 
-### How One-Shot Interacts with the Repeating Preview
+### Bagaimana Satu Kali Berinteraksi dengan Pratinjau Berulang
 
-A critical design pattern in Camera2 is: **preview runs as a repeating request, and still photos are injected as one-shot requests**. The one-shot jumps ahead of the repeating request in the Pending Queue (as we discussed in Chapter 10's queue model), so it executes immediately. After the one-shot completes, the framework automatically resumes the repeating preview request — you don't need to resubmit it.
+Pola desain yang kritis dalam Camera2 adalah: **pratinjau berjalan sebagai permintaan berulang, dan foto diam dimasukkan sebagai permintaan satu kali**. Permintaan satu kali tersebut melompat ke depan permintaan berulang di Antrean Tertunda (seperti yang kita bahas dalam model antrean Bab 10), sehingga ia segera dieksekusi. Setelah permintaan satu kali selesai, framework secara otomatis melanjutkan permintaan pratinjau berulang — Anda tidak perlu mengirimkannya kembali.
 
 ```mermaid
 sequenceDiagram
     participant App
-    participant Queue as Pending Queue
+    participant Queue as Antrean Tertunda
     participant HAL
-    participant Prev as Preview Callback
-    participant Photo as Photo Callback
+    participant Prev as Callback Pratinjau
+    participant Photo as Callback Foto
 
     App->>Queue: setRepeatingRequest(PREVIEW_REQ)
-    loop Continuous preview
+    loop Pratinjau berkelanjutan
         Queue->>HAL: PREVIEW
-        HAL-->>Prev: onCaptureCompleted(preview result)
-        Note right of Prev: Frame 100, 101, 102...
+        HAL-->>Prev: onCaptureCompleted(hasil pratinjau)
+        Note right of Prev: Bingkai 100, 101, 102...
     end
 
-    Note over App: User taps shutter button
+    Note over App: Pengguna mengetuk tombol rana
     App->>Queue: capture(STILL_PHOTO_REQ)
-    Note over Queue: STILL_PHOTO jumps to HEAD of queue<br/>Repeating PREVIEW resumes after
+    Note over Queue: STILL_PHOTO melompat ke KEPALA antrean<br/>PREVIEW Berulang dilanjutkan setelahnya
 
-    Queue->>HAL: STILL_PHOTO (one-shot)
-    HAL-->>Photo: onCaptureCompleted(photo result)
-    Note right of Photo: Frame 103 — JPEG written
+    Queue->>HAL: STILL_PHOTO (satu kali)
+    HAL-->>Photo: onCaptureCompleted(hasil foto)
+    Note right of Photo: Bingkai 103 — JPEG ditulis
 
-    loop Preview auto-resumes (no app code needed)
+    loop Pratinjau otomatis dilanjutkan (tidak butuh kode aplikasi)
         Queue->>HAL: PREVIEW
-        HAL-->>Prev: onCaptureCompleted(preview result)
-        Note right of Prev: Frame 104, 105...
+        HAL-->>Prev: onCaptureCompleted(hasil pratinjau)
+        Note right of Prev: Bingkai 104, 105...
     end
 ```
 
 :::tip
-This auto-resume behavior is baked into the Camera2 framework. You never need to manually "restart preview" after a one-shot capture — the framework re-enqueues the repeating request for you.
+Perilaku lanjut otomatis ini sudah tertanam di dalam framework Camera2. Anda tidak perlu secara manual "memulai kembali pratinjau" setelah pengambilan foto satu kali — framework mengantrekan kembali permintaan berulang untuk Anda.
 :::
 
-### One-Shot Execution Flow
+### Alur Eksekusi Satu Kali
 
 ```mermaid
 flowchart LR
-    A["App calls session.capture(req)"] --> B["Request enqueued at HEAD of Pending Queue"]
-    B --> C["Bypasses repeating requests (highest priority)"]
-    C --> D["HAL processes single frame"]
-    D --> E["Image buffers delivered to target Surfaces"]
-    E --> F["onCaptureCompleted fires ONCE"]
-    F --> G["Framework auto-resumes repeating request (if set)"]
+    A["Aplikasi memanggil session.capture(req)"] --> B["Permintaan diantrekan di KEPALA Antrean Tertunda"]
+    B --> C["Melewati permintaan berulang (prioritas tertinggi)"]
+    C --> D["HAL memproses bingkai tunggal"]
+    D --> E["Buffer gambar dikirim ke Surface target"]
+    E --> F["onCaptureCompleted dipicu SATU KALI"]
+    F --> G["Framework melanjutkan otomatis permintaan berulang (jika ada)"]
 ```
 
 ## 11.3 Burst: captureBurst()
 
-Where `capture()` submits one request, `captureBurst()` submits a **`List&lt;CaptureRequest&gt;`** and guarantees that all N frames in the list execute **contiguously and in order, with no interleaving frames from other sources (including the repeating request)**.
+Jika `capture()` mengirimkan satu permintaan, `captureBurst()` mengirimkan sebuah **`List<CaptureRequest>`** dan menjamin bahwa semua N bingkai dalam daftar tersebut dieksekusi **secara berurutan tanpa celah, tanpa ada bingkai yang menyelingi dari sumber lain (termasuk permintaan berulang)**.
 
-This atomic, gap-free guarantee is what makes burst capture essential for:
+Jaminan atomis dan tanpa celah inilah yang membuat pengambilan gambar burst sangat penting untuk:
 
-- **Exposure bracketing** — Capture 3-5 frames at ±1EV, ±2EV, then merge them into HDR
-- **Focus bracketing** — Sweep through focus distances, then stack for depth-of-field effects
-- **Action / motion capture** — Shoot 10-30 frames of a fast-moving subject, then pick the sharpest
-- **Slow-motion video (high-speed)** — `createHighSpeedRequestList()` + constrained high-speed burst
-- **3A convergence sampling** — Fire AF/AE trigger, then burst until converged
+- **Bracketing eksposur** — Mengambil 3-5 bingkai pada ±1EV, ±2EV, lalu menggabungkannya menjadi HDR
+- **Bracketing fokus** — Menelusuri jarak fokus, lalu menumpuknya untuk efek depth-of-field
+- **Pengambilan gambar aksi / gerakan** — Memotret 10-30 bingkai dari subjek yang bergerak cepat, lalu memilih yang paling tajam
+- **Video gerak lambat (kecepatan tinggi)** — `createHighSpeedRequestList()` + burst kecepatan tinggi yang terbatas
+- **Sampling pemusatan 3A** — Menembakkan pemicu AF/AE, lalu melakukan burst hingga memusat
 
 ```kotlin
-// Burst: 3-frame exposure bracketing (-2EV, 0EV, +2EV)
+// Burst: bracketing eksposur 3-bingkai (-2EV, 0EV, +2EV)
 fun captureExposureBracket() {
     val baseIso = 100
-    val baseExposure = 10_000_000L  // 10ms = "0EV" baseline
+    val baseExposure = 10_000_000L  // 10ms = garis dasar "0EV"
 
     val burstList: MutableList<CaptureRequest> = mutableListOf()
 
-    // Frame 0: -2EV (4x shorter exposure = darker)
+    // Bingkai 0: -2EV (eksposur 4x lebih pendek = lebih gelap)
     burstList += cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE).apply {
         addTarget(jpegReader.surface)
         set(CaptureRequest.SENSOR_SENSITIVITY, baseIso)
@@ -134,7 +134,7 @@ fun captureExposureBracket() {
         set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
     }.build()
 
-    // Frame 1: 0EV (correct exposure)
+    // Bingkai 1: 0EV (eksposur benar)
     burstList += cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE).apply {
         addTarget(jpegReader.surface)
         set(CaptureRequest.SENSOR_SENSITIVITY, baseIso)
@@ -142,7 +142,7 @@ fun captureExposureBracket() {
         set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
     }.build()
 
-    // Frame 2: +2EV (4x longer exposure = brighter)
+    // Bingkai 2: +2EV (eksposur 4x lebih lama = lebih terang)
     burstList += cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE).apply {
         addTarget(jpegReader.surface)
         set(CaptureRequest.SENSOR_SENSITIVITY, baseIso)
@@ -160,57 +160,57 @@ fun captureExposureBracket() {
         ) {
             super.onCaptureCompleted(session, request, result)
             completedCount++
-            Log.d("Burst", "Burst frame $completedCount/${burstList.size} done. Frame #${result.frameNumber}")
+            Log.d("Burst", "Bingkai burst $completedCount/${burstList.size} selesai. Bingkai #${result.frameNumber}")
 
             if (completedCount == burstList.size) {
-                Log.d("Burst", "All $burstList.size bracketed frames captured!")
-                // TODO: Merge HDR, focus stack, or let user pick the best frame
+                Log.d("Burst", "Semua $burstList.size bingkai bracketing telah diambil!")
+                // TODO: Gabungkan HDR, tumpuk fokus, atau biarkan pengguna memilih bingkai terbaik
             }
         }
     }, backgroundHandler)
 }
 ```
 
-### The Contiguous Guarantee in Action
+### Jaminan Berurutan Beraksi
 
-The key property of burst is that **the entire list is enqueued atomically** — even if a `setRepeatingRequest()` is active, the N burst frames will all run back-to-back before the repeating request resumes. The repeating request is not interleaved between burst frames.
+Properti utama dari burst adalah bahwa **seluruh daftar diantrekan secara atomik** — bahkan jika `setRepeatingRequest()` aktif, ke-N bingkai burst semuanya akan berjalan berturut-turut sebelum permintaan berulang dilanjutkan. Permintaan berulang tidak disisipkan di antara bingkai burst.
 
 ```mermaid
 flowchart TB
-    subgraph QueueBefore ["Before Burst Submit"]
+    subgraph QueueBefore ["Sebelum Kirim Burst"]
         direction LR
-        R1["PREVIEW (repeating)"] --> R2["PREVIEW (repeating)"] --> R3["PREVIEW (repeating)"]
+        R1["PRATINJAU (berulang)"] --> R2["PRATINJAU (berulang)"] --> R3["PRATINJAU (berulang)"]
     end
 
-    subgraph Arrow ["app calls captureBurst([B1,B2,B3])"]
+    subgraph Arrow ["aplikasi memanggil captureBurst([B1,B2,B3])"]
         style Arrow fill:#fff3e0
     end
 
-    subgraph QueueAfter ["After Burst Submit (atomic enqueue)"]
+    subgraph QueueAfter ["Setelah Kirim Burst (antrean atomik)"]
         direction LR
-        B1["BURST FRAME 1"] --> B2["BURST FRAME 2"] --> B3["BURST FRAME 3"] --> R4["PREVIEW (repeating) resumes"] --> R5["PREVIEW"]
+        B1["BINGKAI BURST 1"] --> B2["BINGKAI BURST 2"] --> B3["BINGKAI BURST 3"] --> R4["PRATINJAU (berulang) dilanjutkan"] --> R5["PRATINJAU"]
     end
 
     QueueBefore --> Arrow --> QueueAfter
 
-    Note over B1,B3: No preview frames sneak in between!
+    Note over B1,B3: Tidak ada bingkai pratinjau yang menyelinap di antaranya!
 ```
 
-### Burst Size Limits
+### Batas Ukuran Burst
 
-The maximum burst size you can submit in a single `captureBurst()` call is determined by:
-- `CameraCharacteristics.REQUEST_MAX_NUM_OUTPUT_RAW` — for RAW outputs
-- `CameraCharacteristics.REQUEST_MAX_NUM_OUTPUT_PROC` — for processed (YUV/JPEG) outputs
-- Practical hardware bandwidth (4K bursts will be shorter than 1080p bursts)
+Ukuran burst maksimum yang dapat Anda kirimkan dalam satu panggilan `captureBurst()` ditentukan oleh:
+- `CameraCharacteristics.REQUEST_MAX_NUM_OUTPUT_RAW` — untuk output RAW
+- `CameraCharacteristics.REQUEST_MAX_NUM_OUTPUT_PROC` — untuk output yang diproses (YUV/JPEG)
+- Bandwidth perangkat keras praktis (burst 4K akan lebih pendek daripada burst 1080p)
 
-For typical FULL devices, processed JPEG bursts of 10-50 frames are fine. RAW bursts may be limited to 5-10 frames depending on sensor and memory.
+Untuk perangkat FULL tipikal, burst JPEG yang diproses sebanyak 10-50 bingkai masih oke. Burst RAW mungkin terbatas pada 5-10 bingkai tergantung pada sensor dan memori.
 
-### High-Speed Burst for Slow-Motion
+### Burst Kecepatan Tinggi untuk Gerak Lambat
 
-For slow-motion video, Camera2 provides `CameraDevice.createHighSpeedRequestList()` which converts a normal `CaptureRequest` into a list of burst requests suitable for high-speed, constrained-capture video (e.g., 120fps or 240fps). This is paired with `CameraCaptureSession.captureBurst()` and requires the `CONSTRAINED_HIGH_SPEED_VIDEO` capability:
+Untuk video gerak lambat, Camera2 menyediakan `CameraDevice.createHighSpeedRequestList()` yang mengubah satu `CaptureRequest` normal menjadi daftar permintaan burst yang cocok untuk video pengambilan gambar berkecepatan tinggi dan terbatas (misalnya, 120fps atau 240fps). Ini dipasangkan dengan `CameraCaptureSession.captureBurst()` dan membutuhkan kemampuan `CONSTRAINED_HIGH_SPEED_VIDEO`:
 
 ```kotlin
-// Burst: High-speed slow-motion (120fps)
+// Burst: Gerak lambat kecepatan tinggi (120fps)
 fun captureHighSpeedSlowMo() {
     val capabilities = characteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
     val supportsHighSpeed = capabilities?.contains(
@@ -218,29 +218,29 @@ fun captureHighSpeedSlowMo() {
     ) ?: false
 
     if (!supportsHighSpeed) {
-        Log.w("HighSpeed", "Device does not support constrained high-speed video")
+        Log.w("HighSpeed", "Perangkat tidak mendukung video kecepatan tinggi terbatas")
         return
     }
 
-    // Build a single base request (targeting the MediaRecorder Surface)
+    // Bangun satu permintaan dasar (menargetkan Surface MediaRecorder)
     val baseBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD)
     baseBuilder.addTarget(mediaRecorderSurface)
     val baseRequest = baseBuilder.build()
 
-    // Expand into high-speed burst list — framework optimizes for 120fps
+    // Perluas ke dalam daftar burst kecepatan tinggi — framework mengoptimalkan untuk 120fps
     val highSpeedBurst = cameraDevice.createHighSpeedRequestList(listOf(baseRequest))
 
-    // Submit the optimized burst list via captureBurst
+    // Kirimkan daftar burst yang dioptimalkan melalui captureBurst
     captureSession.captureBurst(highSpeedBurst, highSpeedCallback, backgroundHandler)
 }
 ```
 
-## 11.4 Repeating: setRepeatingRequest()
+## 11.4 Berulang (Repeating): setRepeatingRequest()
 
-The workhorse of Camera2 is the **repeating request**, submitted via `CameraCaptureSession.setRepeatingRequest()`. Instead of executing once, the framework re-enqueues *the same request* after every frame, forever — producing a continuous stream of frames at the hardware's native frame rate.
+Andalan dari Camera2 adalah **permintaan berulang**, yang dikirimkan melalui `CameraCaptureSession.setRepeatingRequest()`. Alih-alih dieksekusi sekali, framework akan mengantrekan kembali *permintaan yang sama* setelah setiap bingkai, selamanya — menghasilkan aliran bingkai terus-menerus pada frame rate asli perangkat keras.
 
 ```kotlin
-// Repeating: Start camera preview (30fps continuous stream)
+// Berulang: Mulai pratinjau kamera (aliran kontinu 30fps)
 fun startPreview() {
     val builder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
     builder.addTarget(previewSurface)
@@ -265,7 +265,7 @@ fun startPreview() {
                 frameCount++
                 val now = System.currentTimeMillis()
                 if (now - lastFpsLogMs > 1000) {
-                    Log.d("Preview", "Preview FPS: $frameCount")
+                    Log.d("Preview", "FPS Pratinjau: $frameCount")
                     frameCount = 0
                     lastFpsLogMs = now
                 }
@@ -276,55 +276,55 @@ fun startPreview() {
 }
 ```
 
-### Why Preview *Must* Use Repeating Requests
+### Mengapa Pratinjau *Harus* Menggunakan Permintaan Berulang
 
-If you tried to implement a 30fps preview using `capture()` called 30 times per second from a timer, you would:
-1. Waste CPU re-submitting identical requests every 33ms
-2. Accumulate drift if your timer is late
-3. Get frame gaps if one-shot callbacks block
-4. Fight with the framework's queue management
+Jika Anda mencoba mengimplementasikan pratinjau 30fps menggunakan `capture()` yang dipanggil 30 kali per detik dari timer, Anda akan:
+1. Membuang CPU untuk mengirimkan ulang permintaan yang identik setiap 33ms
+2. Mengalami penyimpangan (drift) jika timer Anda terlambat
+3. Mengalami celah bingkai jika callback satu kali memblokir
+4. Berbenturan dengan manajemen antrean framework
 
-The repeating request is handled entirely inside the framework/HAL. After each frame completes, the HAL automatically schedules the next exposure — no app-thread involvement. This produces smooth, gap-free preview with zero app CPU overhead.
+Permintaan berulang ditangani sepenuhnya di dalam framework/HAL. Setelah setiap bingkai selesai, HAL secara otomatis menjadwalkan eksposur berikutnya — tanpa melibatkan thread aplikasi. Ini menghasilkan pratinjau yang mulus dan tanpa celah dengan nol overhead CPU aplikasi.
 
 ```mermaid
 flowchart LR
-    subgraph RepeatingLoop ["Repeating Request Cycle (Framework-managed)"]
+    subgraph RepeatingLoop ["Siklus Permintaan Berulang (Dikelola framework)"]
         direction TB
-        S1["HAL finishes frame N"] --> S2["Framework auto-re-enqueues SAME request"]
-        S2 --> S3["HAL dequeues and exposes frame N+1"]
-        S3 --> S4["Repeat forever or until stopRepeating()"]
+        S1["HAL menyelesaikan bingkai N"] --> S2["Framework otomatis antrekan ulang permintaan yang SAMA"]
+        S2 --> S3["HAL mengambil dan mengekspos bingkai N+1"]
+        S3 --> S4["Ulangi selamanya atau sampai stopRepeating()"]
     end
 
     RepeatingLoop
 ```
 
-### Stopping Repeating Requests
+### Menghentikan Permintaan Berulang
 
-To stop the repeating stream, call `stopRepeating()`. This removes the repeating request from the queue but does not flush already-in-flight frames. Call `abortCaptures()` to forcibly flush everything (and trigger `onCaptureFailed` with `REASON_FLUSHED` for in-flight frames).
+Untuk menghentikan aliran berulang, panggil `stopRepeating()`. Ini akan menghapus permintaan berulang dari antrean tetapi tidak membatalkan bingkai yang sudah dalam proses (in-flight). Panggil `abortCaptures()` untuk membatalkan semuanya secara paksa (dan memicu `onCaptureFailed` dengan `REASON_FLUSHED` untuk bingkai-bingkai yang sedang diproses).
 
 ```kotlin
-// Temporarily pause preview
+// Menghentikan pratinjau sementara
 fun pausePreview() {
     captureSession.stopRepeating()
-    Log.d("Preview", "Repeating stopped. In-flight frames will still complete.")
+    Log.d("Preview", "Permintaan berulang dihentikan. Bingkai yang sedang diproses tetap akan selesai.")
 }
 
-// Emergency stop — drop everything right now
+// Berhenti darurat — batalkan semuanya sekarang juga
 fun emergencyStopAllCaptures() {
     captureSession.stopRepeating()
     captureSession.abortCaptures()
-    // All in-flight frames will fail with REASON_FLUSHED
+    // Semua bingkai yang sedang diproses akan gagal dengan REASON_FLUSHED
 }
 ```
 
-### Repeating Requests Are Also for Video Recording
+### Permintaan Berulang Juga untuk Perekaman Video
 
-In addition to preview, repeating requests are used for **video recording** (targeting a `MediaRecorder` or `MediaCodec` `Surface`) and **continuous image analysis** (targeting a low-res YUV `ImageReader` for face detection, ML inference, etc.).
+Selain pratinjau, permintaan berulang digunakan untuk **perekaman video** (menargetkan `Surface` `MediaRecorder` atau `MediaCodec`) dan **analisis gambar kontinu** (menargetkan `ImageReader` YUV resolusi rendah untuk deteksi wajah, inferensi ML, dll.).
 
-The pattern is always the same: set it once, let it stream, update the request parameters when you want to change settings (e.g., change digital zoom mid-stream by updating the crop region in a new repeating request).
+Polanya selalu sama: setel sekali, biarkan mengalir, perbarui parameter permintaan saat Anda ingin mengubah pengaturan (misalnya, mengubah zoom digital di tengah aliran dengan memperbarui wilayah pemotongan dalam permintaan berulang baru).
 
 ```kotlin
-// Repeating: Update zoom level live during preview/video
+// Berulang: Perbarui tingkat zoom secara langsung selama pratinjau/video
 fun updateDigitalZoom(cropRegion: Rect) {
     val builder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
     builder.addTarget(previewSurface)
@@ -332,25 +332,25 @@ fun updateDigitalZoom(cropRegion: Rect) {
     builder.set(CaptureRequest.SCALER_CROP_REGION, cropRegion)
     builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
 
-    // Replace the old repeating request with a new one (same targets, new crop)
+    // Ganti permintaan berulang lama dengan yang baru (target sama, crop baru)
     captureSession.setRepeatingRequest(builder.build(), currentCallback, backgroundHandler)
-    Log.d("Zoom", "Repeating request updated with crop ${cropRegion.width()}x${cropRegion.height()}")
+    Log.d("Zoom", "Permintaan berulang diperbarui dengan crop ${cropRegion.width()}x${cropRegion.height()}")
 }
 ```
 
-## 11.5 Capture Templates
+## 11.5 Template Pengambilan Gambar
 
-Every `CaptureRequest.Builder` starts from a **template**: you call `cameraDevice.createCaptureRequest(TEMPLATE_XXX)` and the framework populates the builder with hardware-optimized defaults for that use case. You then override only the specific settings you need.
+Setiap `CaptureRequest.Builder` dimulai dari sebuah **template**: Anda memanggil `cameraDevice.createCaptureRequest(TEMPLATE_XXX)` dan framework akan mengisi builder tersebut dengan default yang dioptimalkan perangkat keras untuk kasus penggunaan tersebut. Anda kemudian hanya perlu mengesampingkan pengaturan spesifik yang Anda butuhkan.
 
-Templates exist because a phone's camera pipeline has dozens of knobs (noise reduction strength, edge enhancement, tone curve, anti-banding mode, frame rate range, ...). Templates set sensible baselines so you don't have to configure every single one from scratch.
+Template ada karena pipeline kamera ponsel memiliki puluhan kenop (kekuatan pengurangan noise, peningkatan tepi, kurva nada, mode anti-banding, rentang frame rate, ...). Template menetapkan garis dasar yang masuk akal sehingga Anda tidak perlu mengonfigurasi setiap pengaturan dari nol.
 
 ```mermaid
 graph TD
-    TD["TEMPLATE_XXX Enum"] -->|"createCaptureRequest(TD)"| B["CaptureRequest.Builder (pre-populated with defaults)"]
-    B -->|"builder.set(X, Y) — override specific fields"| B2["Builder with your overrides"]
-    B2 -->|"builder.build()"| R["CaptureRequest (immutable)"]
+    TD["Enum TEMPLATE_XXX"] -->|"createCaptureRequest(TD)"| B["CaptureRequest.Builder (diisi dengan default)"]
+    B -->|"builder.set(X, Y) — ganti bidang tertentu"| B2["Builder dengan pengesampingan Anda"]
+    B2 -->|"builder.build()"| R["CaptureRequest (tidak dapat diubah)"]
 
-    subgraph TemplateDefinitions ["Six Templates"]
+    subgraph TemplateDefinitions ["Enam Template"]
         T1["TEMPLATE_PREVIEW"]
         T2["TEMPLATE_STILL_CAPTURE"]
         T3["TEMPLATE_RECORD"]
@@ -362,94 +362,94 @@ graph TD
     TemplateDefinitions --> TD
 ```
 
-### The Six Templates, What They Preconfigure, and When to Use Them
+### Keenam Template, Apa yang Dikonfigurasinya, dan Kapan Menggunakannya
 
-| Template | Use Case | Key Preconfigured Settings |
+| Template | Kasus Penggunaan | Pengaturan Utama yang Dikonfigurasi |
 |----------|----------|---------------------------|
-| `TEMPLATE_PREVIEW` | Live viewfinder / preview | Low-latency priority, 3A (AF/AE/AWB) in continuous auto, modest NR/sharpen, high frame rate (30fps). Trades minor quality for smoothness. |
-| `TEMPLATE_STILL_CAPTURE` | Single-shot photo | Max quality priority, AF in picture mode, full NR/sharpen, high-quality JPEG encoding, may lower frame rate to improve quality for that one frame. |
-| `TEMPLATE_RECORD` | Video recording | Stable frame rate (matches MediaRecorder output), continuous AF, audio-video sync timestamps, anti-banding enabled, medium NR — tuned for motion + compression. |
-| `TEMPLATE_VIDEO_SNAPSHOT` | High-res still *during* video recording | Like STILL_CAPTURE but preserves video frame settings — grabs a high-res photo without stopping the video recording stream. |
-| `TEMPLATE_ZERO_SHUTTER_LAG` | ZSL still capture (Chapter 14) | Builds a circular buffer of recent frames. When shutter is pressed, a *past* frame is returned for zero blackout. Requires burst capability and private reprocessing. |
-| `TEMPLATE_MANUAL` | Manual / pro controls | All 3A modes set to OFF by default so you can manually set sensor exposure, ISO, lens focus, and color correction gains without interference. Baseline for a pro-camera UI. |
+| `TEMPLATE_PREVIEW` | Jendela bidik / pratinjau langsung | Prioritas latensi rendah, 3A (AF/AE/AWB) dalam otomatis kontinu, NR/penajaman moderat, frame rate tinggi (30fps). Mengorbankan sedikit kualitas demi kelancaran. |
+| `TEMPLATE_STILL_CAPTURE` | Foto satu kali | Prioritas kualitas maksimal, AF dalam mode gambar, NR/penajaman penuh, pengkodean JPEG kualitas tinggi, mungkin menurunkan frame rate untuk meningkatkan kualitas bingkai tersebut. |
+| `TEMPLATE_RECORD` | Perekaman video | Frame rate stabil (cocok dengan output MediaRecorder), AF kontinu, stempel waktu sinkronisasi audio-video, anti-banding diaktifkan, NR sedang — disetel untuk gerakan + kompresi. |
+| `TEMPLATE_VIDEO_SNAPSHOT` | Foto resolusi tinggi *selama* video | Seperti STILL_CAPTURE tetapi menjaga pengaturan bingkai video — mengambil foto resolusi tinggi tanpa menghentikan aliran perekaman video. |
+| `TEMPLATE_ZERO_SHUTTER_LAG` | Pengambilan foto ZSL (Bab 14) | Membangun buffer melingkar bingkai terbaru. Saat rana ditekan, bingkai dari *masa lalu* dikembalikan untuk nol blackout. Butuh kemampuan burst dan pemrosesan ulang pribadi. |
+| `TEMPLATE_MANUAL` | Kontrol manual / pro | Semua mode 3A disetel ke OFF secara default sehingga Anda dapat mengatur eksposur sensor, ISO, fokus lensa, dan gain koreksi warna secara manual tanpa gangguan. Garis dasar untuk UI kamera pro. |
 
 ```kotlin
-// Template examples — see what happens when you start with each one
+// Contoh template — lihat apa yang terjadi saat Anda memulai dengan masing-masing
 
-// TEMPLATE_PREVIEW — smooth, low-latency
+// TEMPLATE_PREVIEW — halus, latensi rendah
 val previewBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
 val previewRequest = previewBuilder.build()
 Log.d("Template", "PREVIEW AF_MODE = ${previewRequest.get(CaptureRequest.CONTROL_AF_MODE)}")
-// ^ Typically CONTROL_AF_MODE_CONTINUOUS_PICTURE (always re-focusing)
+// ^ Biasanya CONTROL_AF_MODE_CONTINUOUS_PICTURE (selalu memfokuskan ulang)
 
-// TEMPLATE_STILL_CAPTURE — highest quality per frame
+// TEMPLATE_STILL_CAPTURE — kualitas tertinggi per bingkai
 val stillBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
 val stillRequest = stillBuilder.build()
 Log.d("Template", "STILL_CAPTURE JPEG_QUALITY = ${stillRequest.get(CaptureRequest.JPEG_QUALITY)}")
-// ^ Typically 100 (max quality encoding)
+// ^ Biasanya 100 (pengkodean kualitas maksimal)
 
-// TEMPLATE_MANUAL — all automatic controls disabled
+// TEMPLATE_MANUAL — semua kontrol otomatis dinonaktifkan
 val manualBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
 val manualRequest = manualBuilder.build()
 Log.d("Template", "MANUAL AE_MODE = ${manualRequest.get(CaptureRequest.CONTROL_AE_MODE)}")
 Log.d("Template", "MANUAL AF_MODE = ${manualRequest.get(CaptureRequest.CONTROL_AF_MODE)}")
 Log.d("Template", "MANUAL AWB_MODE = ${manualRequest.get(CaptureRequest.CONTROL_AWB_MODE)}")
-// ^ Typically AE_MODE_OFF, AF_MODE_OFF, AWB_MODE_OFF — manual from the start
+// ^ Biasanya AE_MODE_OFF, AF_MODE_OFF, AWB_MODE_OFF — manual sejak awal
 ```
 
 :::tip
-Always start with a template and override specific fields. Starting from `TEMPLATE_PREVIEW` and then overriding 2-3 settings (e.g., crop region for zoom, AE target bias for exposure compensation) is massively less error-prone than creating a request from an empty template (which isn't even possible — every `createCaptureRequest` requires a template).
+Selalu mulai dengan template dan ganti bidang tertentu. Memulai dari `TEMPLATE_PREVIEW` dan kemudian mengganti 2-3 pengaturan (misalnya, wilayah pemotongan untuk zoom, bias target AE untuk kompensasi eksposur) jauh lebih kecil risikonya terhadap kesalahan daripada membuat permintaan dari template kosong (yang bahkan tidak mungkin dilakukan — setiap `createCaptureRequest` membutuhkan template).
 :::
 
-## 11.6 Comparing the Three Capture Types
+## 11.6 Membandingkan Ketiga Jenis Pengambilan Gambar
 
-| Dimension | One-Shot `capture()` | Burst `captureBurst()` | Repeating `setRepeatingRequest()` |
+| Dimensi | Satu Kali `capture()` | Burst `captureBurst()` | Berulang `setRepeatingRequest()` |
 |-----------|---------------------|----------------------|---------------------------------|
-| **Execution** | Single request runs once | List of N requests runs contiguously | Same request runs every frame (auto re-enqueued) |
-| **Priority** | Highest — jumps to HEAD of Pending Queue | High — all N frames inserted atomically at HEAD | Lowest — one-shot/burst cut in front and repeating resumes after |
-| **Interruption** | Interrupts repeating; repeating resumes after | Interrupts repeating; entire burst completes before repeating resumes | Interrupted by any one-shot or burst; resumes automatically after |
-| **Queue Behavior** | Single request enqueued | N requests enqueued contiguously (no gaps) | One conceptual request re-enqueued each cycle |
-| **Typical Uses** | Single photo, single AF trigger, flash photo | Exposure bracketing, focus stacking, action burst, slow-motion, HDR | Preview, video recording, continuous ML analysis, live face detection |
-| **Result Callback** | `onCaptureCompleted` fires exactly once | `onCaptureCompleted` fires N times (once per burst frame) | `onCaptureCompleted` fires continuously for every frame (30-60x/sec) |
+| **Eksekusi** | Satu permintaan berjalan sekali | Daftar N permintaan berjalan berurutan | Permintaan yang sama berjalan setiap bingkai (otomatis diantrekan ulang) |
+| **Prioritas** | Tertinggi — melompat ke KEPALA Antrean Tertunda | Tinggi — semua N bingkai dimasukkan secara atomik di KEPALA | Terendah — satu kali/burst memotong di depan dan berulang dilanjutkan setelahnya |
+| **Interupsi** | Menyela permintaan berulang; berulang dilanjutkan setelahnya | Menyela permintaan berulang; seluruh burst selesai sebelum berulang dilanjutkan | Disela oleh setiap satu kali pengambilan atau burst; dilanjutkan otomatis setelahnya |
+| **Perilaku Antrean** | Satu permintaan diantrekan | N permintaan diantrekan berurutan (tanpa celah) | Satu permintaan konseptual diantrekan kembali setiap siklus |
+| **Kegunaan Tipikal** | Foto tunggal, pemicu AF tunggal, foto lampu kilat | Bracketing eksposur, penumpukan fokus, aksi burst, gerak lambat, HDR | Pratinjau, perekaman video, analisis ML kontinu, deteksi wajah langsung |
+| **Callback Hasil** | `onCaptureCompleted` dipicu tepat sekali | `onCaptureCompleted` dipicu N kali (sekali per bingkai burst) | `onCaptureCompleted` dipicu terus-menerus untuk setiap bingkai (30-60x/detik) |
 
 ```mermaid
 quadrantChart
-    title Capture Type Usage Patterns
-    x-axis ["Low Frame Count", "High Frame Count"]
-    y-axis ["Single Configuration", "Varying Per-Frame Config"]
-    quadrant-1 ["Burst: Exposure / Focus Bracketing"]
-    quadrant-2 ["Burst: High-Speed Slow-Mo"]
-    quadrant-3 ["One-Shot: Still Photo"]
-    quadrant-4 ["Repeating: Preview + Video"]
-    "Single JPEG capture": [0.15, 0.2]
-    "Tap-to-focus trigger": [0.1, 0.15]
-    "3-frame HDR bracket": [0.4, 0.75]
-    "7-frame focus stack": [0.45, 0.8]
-    "120fps slow-mo 2sec": [0.85, 0.25]
-    "CameraFinder preview 30fps": [0.9, 0.1]
-    "4K video recording": [0.88, 0.18]
+    title Pola Penggunaan Jenis Pengambilan Gambar
+    x-axis ["Jumlah Bingkai Rendah", "Jumlah Bingkai Tinggi"]
+    y-axis ["Konfigurasi Tunggal", "Konfigurasi Per-Bingkai Bervariasi"]
+    quadrant-1 ["Burst: Bracketing Eksposur / Fokus"]
+    quadrant-2 ["Burst: Gerak Lambat Kecepatan Tinggi"]
+    quadrant-3 ["Satu Kali: Foto Diam"]
+    quadrant-4 ["Berulang: Pratinjau + Video"]
+    "Pengambilan JPEG tunggal": [0.15, 0.2]
+    "Pemicu ketuk-untuk-fokus": [0.1, 0.15]
+    "Bracket HDR 3-bingkai": [0.4, 0.75]
+    "Tumpukan fokus 7-bingkai": [0.45, 0.8]
+    "Gerak lambat 120fps 2dtk": [0.85, 0.25]
+    "Pratinjau CameraFinder 30fps": [0.9, 0.1]
+    "Perekaman video 4K": [0.88, 0.18]
 ```
 
-## 11.7 Seeing Capture Types in the Android Camera Parameters App
+## 11.7 Melihat Jenis Pengambilan Gambar di Aplikasi Android Camera Parameters
 
-Open the Android Camera Parameters app ([GitHub](https://github.com/zoozooll/AndroidCameraParameters), [Play Store](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)) and navigate to the **Capture Demo** tab. The app exposes all three capture types side-by-side:
+Buka aplikasi Android Camera Parameters ([GitHub](https://github.com/zoozooll/AndroidCameraParameters), [Play Store](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)) dan buka tab **Capture Demo**. Aplikasi ini mengekspos ketiga jenis pengambilan gambar secara berdampingan:
 
-- Tap **Start Preview** to call `setRepeatingRequest(TEMPLATE_PREVIEW)` and see a live `CaptureCallback` log (frames 1, 2, 3, ... scrolling every ~33ms)
-- Tap **Take Photo** to inject a `capture(TEMPLATE_STILL_CAPTURE)` one-shot while preview is running. You'll see the callback count pause briefly for the high-quality frame, then resume seamlessly as repeating auto-resumes.
-- Tap **Burst 5 Frames** to call `captureBurst(List<CaptureRequest(5)>)`. Observe that exactly 5 frames complete back-to-back before the preview scroll continues — proving the contiguous guarantee.
+- Ketuk **Start Preview** untuk memanggil `setRepeatingRequest(TEMPLATE_PREVIEW)` dan lihat log `CaptureCallback` langsung (bingkai 1, 2, 3, ... bergulir setiap ~33ms)
+- Ketuk **Take Photo** untuk memasukkan satu kali pengambilan `capture(TEMPLATE_STILL_CAPTURE)` saat pratinjau sedang berjalan. Anda akan melihat hitungan callback berhenti sejenak untuk bingkai kualitas tinggi, lalu berlanjut mulus saat permintaan berulang dilanjutkan otomatis.
+- Ketuk **Burst 5 Frames** untuk memanggil `captureBurst(List<CaptureRequest(5)>)`. Amati bahwa tepat 5 bingkai selesai berturut-turut sebelum guliran pratinjau berlanjut — membuktikan jaminan urutan tanpa celah.
 
-You can also inspect `REQUEST_MAX_NUM_OUTPUT_RAW` and `REQUEST_MAX_NUM_OUTPUT_PROC` in the **Raw JSON** tab to see your device's burst size limits.
+Anda juga dapat memeriksa `REQUEST_MAX_NUM_OUTPUT_RAW` dan `REQUEST_MAX_NUM_OUTPUT_PROC` di tab **Raw JSON** untuk melihat batas ukuran burst perangkat Anda.
 
-## 11.8 Summary
+## 11.8 Ringkasan
 
-| Concept | Key Takeaway |
+| Konsep | Poin Penting |
 |---------|-------------|
-| **One-shot `capture()`** | Single request, runs once, highest priority. For still photos, AF triggers. Auto-resumes repeating after. |
-| **Burst `captureBurst()`** | List&lt;CaptureRequest&gt; runs contiguously, no interleaving. For bracketing, motion, slow-mo. Whole list jumps queue atomically. |
-| **Repeating `setRepeatingRequest()`** | One request streams continuously. Framework auto-re-enqueues. For preview, video, analysis. Lowest priority. |
-| **Templates** | Six baselines populate Builder with defaults. Start with TEMPLATE_PREVIEW/STILL_CAPTURE/RECORD/ZSL/MANUAL and override only what you need. |
-| **Interruption rules** | One-shot and burst *always* preempt repeating. Repeating auto-resumes after. Burst frames are never split apart. |
+| **Satu kali `capture()`** | Permintaan tunggal, berjalan sekali, prioritas tertinggi. Untuk foto diam, pemicu AF. Melanjutkan permintaan berulang secara otomatis setelahnya. |
+| **Burst `captureBurst()`** | Daftar `List<CaptureRequest>` berjalan berurutan, tanpa sela. Untuk bracketing, gerakan, gerak lambat. Seluruh daftar melompat ke antrean secara atomik. |
+| **Berulang `setRepeatingRequest()`** | Satu permintaan dialirkan terus-menerus. Framework otomatis antrekan ulang. Untuk pratinjau, video, analisis. Prioritas terendah. |
+| **Template** | Enam garis dasar mengisi Builder dengan default. Mulai dengan TEMPLATE_PREVIEW/STILL_CAPTURE/RECORD/ZSL/MANUAL dan ganti hanya yang Anda butuhkan. |
+| **Aturan Interupsi** | Satu kali dan burst *selalu* mendahului permintaan berulang. Permintaan berulang dilanjutkan otomatis setelahnya. Bingkai burst tidak pernah terpisah. |
 
-## What's Next
+## Apa Selanjutnya
 
-In [Chapter 12: CameraCharacteristics Deep Dive](cameracharacteristics-deep-dive.md), we'll dig into the static metadata object that describes *what your camera can even do* before you open it. We'll break down hardware levels (LEGACY → LIMITED → FULL → LEVEL_3 → EXTERNAL), the capability flag system (MANUAL_SENSOR, RAW, DEPTH_OUTPUT, etc.), and how to query all of it at runtime to write apps that work across 10,000+ Android device models.
+Dalam [Bab 12: Pembahasan Mendalam CameraCharacteristics](cameracharacteristics-deep-dive.md), kita akan menggali objek metadata statis yang menjelaskan *apa yang bahkan dapat dilakukan kamera Anda* sebelum Anda membukanya. Kita akan merinci tingkat perangkat keras (LEGACY → LIMITED → FULL → LEVEL_3 → EXTERNAL), sistem flag kemampuan (MANUAL_SENSOR, RAW, DEPTH_OUTPUT, dll.), dan cara menanyakan semuanya saat runtime untuk menulis aplikasi yang berfungsi di 10.000+ model perangkat Android.

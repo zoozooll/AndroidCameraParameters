@@ -1,161 +1,161 @@
 ---
 sidebar_position: 17
-title: "Chapter 17: The 3A Pipeline"
-description: Orchestrate Auto Exposure (AE), Auto Focus (AF), and Auto White Balance (AWB) into a reliable still-photography capture sequence. Learn the precapture trigger, flash modes, AE/AF state machines, and build production-quality Kotlin code that coordinates all three A's before every shot.
-keywords: [android camera2 3a pipeline, precapture trigger, CONTROL_AE_PRECAPTURE_TRIGGER, AE_STATE_PRECAPTURE, CONTROL_AF_TRIGGER_START, flash modes camera2, auto focus auto exposure auto white balance]
+title: "제17장: 3A 파이프라인"
+description: 자동 노출(AE), 자동 초점(AF), 자동 화이트 밸런스(AWB)를 조율하여 신뢰할 수 있는 스틸 사진 캡처 시퀀스를 구축하세요. 프리캡처 트리거, 플래시 모드, AE/AF 상태 머신을 배우고 촬영 전 세 가지 A를 조정하는 프로덕션 수준의 Kotlin 코드를 작성합니다.
+keywords: [안드로이드 camera2 3a 파이프라인, 프리캡처 트리거, CONTROL_AE_PRECAPTURE_TRIGGER, AE_STATE_PRECAPTURE, CONTROL_AF_TRIGGER_START, 플래시 모드 camera2, 자동 초점 자동 노출 자동 화이트 밸런스]
 ---
 
-# Chapter 17: The 3A Pipeline
+# 제17장: 3A 파이프라인
 
-We've studied **AE** (Auto Exposure, Chapter 13–14), **AF** (Auto Focus, Chapter 15), and **AWB** (Auto White Balance, Chapter 16) as independent systems. Real photography apps must coordinate all three before each shutter press — and the *order and timing* matter deeply.
+우리는 지금까지 **AE**(자동 노출, 13-14장), **AF**(자동 초점, 15장), **AWB**(자동 화이트 밸런스, 16장)를 독립적인 시스템으로 공부했습니다. 실제 사진 앱은 각 셔터를 누르기 전에 이 세 가지를 조화롭게 조정해야 하며, 그 *순서와 타이밍*이 매우 중요합니다.
 
-A naive implementation that fires `capture()` immediately when the user taps the shutter button produces inconsistent results: sometimes focus, sometimes not; sometimes flash fires, sometimes not; sometimes mid-sweep AWB gives a green-tinted photo. A reliable 3A pipeline eliminates all of that.
+사용자가 셔터 버튼을 누르자마자 즉시 `capture()`를 실행하는 단순한 구현은 일관성 없는 결과를 초래합니다. 어떤 때는 초점이 맞지 않고, 어떤 때는 플래시가 터지지 않으며, 어떤 때는 AWB 측정 중에 사진이 찍혀 초록색 색조가 도는 식입니다. 신뢰할 수 있는 3A 파이프라인은 이러한 문제를 모두 제거합니다.
 
-The 3A pipeline implementation in this chapter is identical to the flow used internally in the [Android Camera Parameters app](https://github.com/zoozooll/AndroidCameraParameters) and the sequence described in the Android Camera architecture research documents and CSDN articles on professional Camera2 development.
+이 장에서 다룰 3A 파이프라인 구현은 [Android Camera Parameters 앱](https://github.com/zoozooll/AndroidCameraParameters) 내부에서 사용되는 흐름 및 안드로이드 카메라 아키텍처 연구 문서와 전문가용 Camera2 개발에 관한 CSDN 아티클에서 설명하는 시퀀스와 동일합니다.
 
 ---
 
-## The Full 3A Orchestration Sequence (Overview)
+## 전체 3A 조정 시퀀스 (개요)
 
-Before diving into each subsystem, let's visualize the complete state flow. This is a real production sequence — not a simplification.
+각 하위 시스템을 자세히 살펴보기 전에 전체 상태 흐름을 시각화해 봅시다. 이것은 단순화된 것이 아닌 실제 프로덕션 시퀀스입니다.
 
 ```mermaid
 sequenceDiagram
-    actor User
+    actor User as 사용자
     participant App as CaptureController
     participant HAL as Camera2 HAL
-    participant AE as AE Engine
-    participant AF as AF Engine
-    participant AWB as AWB Engine
+    participant AE as AE 엔진
+    participant AF as AF 엔진
+    participant AWB as AWB 엔진
 
-    User->>App: Taps "Capture" button
-    App->>HAL: Set AF_MODE = AUTO (or MACRO)
+    User->>App: "촬영" 버튼 누름
+    App->>HAL: AF_MODE = AUTO (또는 MACRO) 설정
     App->>HAL: CONTROL_AF_TRIGGER = START
-    Note over HAL,AF: Focus scan starts
+    Note over HAL,AF: 초점 스캔 시작
 
-    loop Every preview frame
+    loop 매 미리보기 프레임마다
         HAL-->>App: CaptureResult
-        App->>App: Check AF_STATE
+        App->>App: AF_STATE 확인
     end
 
-    AF-->>HAL: AF lock achieved
+    AF-->>HAL: AF 잠금 성공
     HAL-->>App: AF_STATE = FOCUSED_LOCKED ✓
-    Note over App,AE: Focus stable → proceed to AE precapture
+    Note over App,AE: 초점 안정화 → AE 프리캡처로 진행
 
     App->>HAL: CONTROL_AE_PRECAPTURE_TRIGGER = START
-    Note over HAL,AE: Precapture metering sweep<br/>(if flash mode requires, fires<br/>a preflash for metering)
+    Note over HAL,AE: 프리캡처 측광 스캔<br/>(플래시 모드에 따라<br/>측광용 프리플래시 발광)
 
-    loop Every preview frame
+    loop 매 미리보기 프레임마다
         HAL-->>App: CaptureResult
-        App->>App: Check AE_STATE &amp; FLASH_STATE
+        App->>App: AE_STATE & FLASH_STATE 확인
     end
 
-    AE-->>HAL: AE converged; final exposure decided
-    HAL-->>App: AE_STATE = CONVERGED (+ FLASH_STATE = READY if needed) ✓
-    AWB-->>HAL: AWB_STATE = CONVERGED (usually already done)
-    Note over App: All 3A converged! SAFE TO CAPTURE
+    AE-->>HAL: AE 수렴; 최종 노출 결정
+    HAL-->>App: AE_STATE = CONVERGED (+ 필요 시 FLASH_STATE = READY) ✓
+    AWB-->>HAL: AWB_STATE = CONVERGED (보통 이미 완료됨)
+    Note over App: 모든 3A 수렴! 촬영 안전 상태
 
-    App->>HAL: Still Capture request (TEMPLATE_STILL_CAPTURE)
-    HAL->>HAL: Fire main flash if needed
-    HAL->>HAL: Expose sensor, read out frame
-    HAL-->>App: JPEG / RAW frame delivered via ImageReader
+    App->>HAL: 스틸 캡처 요청 (TEMPLATE_STILL_CAPTURE)
+    HAL->>HAL: 필요 시 메인 플래시 발광
+    HAL->>HAL: 센서 노출, 프레임 판독
+    HAL-->>App: ImageReader를 통해 JPEG / RAW 프레임 전달
 
     App->>HAL: CONTROL_AF_TRIGGER = CANCEL
     App->>HAL: CONTROL_AE_PRECAPTURE_TRIGGER = IDLE
-    App->>HAL: Restore AF_MODE = CONTINUOUS_PICTURE
-    Note over App,HAL: Cleanup: preview resumes normal auto
+    App->>HAL: AF_MODE = CONTINUOUS_PICTURE 복원
+    Note over App,HAL: 정리: 미리보기가 정상 자동으로 재개됨
 ```
 
-**Each step is blocking.** You do not move to step N+1 until the HAL confirms the state required at step N. Never skip steps — that's how you ship an app with intermittent soft focus, bad flash exposures, or blue-tinted photos.
+**각 단계는 블로킹(blocking) 방식으로 작동합니다.** HAL이 N단계에 필요한 상태를 확인할 때까지 N+1단계로 이동하지 않습니다. 단계를 건너뛰지 마세요. 단계를 건너뛰면 초점이 흐릿하거나, 플래시 노출이 잘못되거나, 파란색 색조가 도는 사진이 찍히는 앱을 만들게 됩니다.
 
 ---
 
-## AE (Auto Exposure) Deep-Dive
+## AE (자동 노출) 심층 분석
 
-AE is the most complex of the three A's because it encompasses not just shutter+ISO but **flash metering** and the **precapture trigger**.
+AE는 셔터+ISO뿐만 아니라 **플래시 측광**과 **프리캡처 트리거**를 포함하기 때문에 세 가지 A 중에서 가장 복잡합니다.
 
-### AE Modes: CONTROL_AE_MODE
+### AE 모드: CONTROL_AE_MODE
 
-| Mode | Behavior | Flash Support |
+| 모드 | 동작 | 플래시 지원 |
 |------|----------|--------------|
-| `OFF` | Fully manual (covered in Ch. 14) | None |
-| `ON` | Auto exposure, **flash disabled** (permanent off) | No |
-| `ON_AUTO_FLASH` | Auto exposure, **auto-flash decision** — HAL fires flash only in low light | Auto (most common default) |
-| `ON_ALWAYS_FLASH` | Auto exposure, **flash always fires** (fill flash for backlit portraits) | Always |
-| `ON_AUTO_FLASH_REDEYE` | Auto exposure + flash + red-eye reduction (fires a pre-flash sequence to clamp pupils) | Auto + redeye |
-| `ON_EXTERNAL_FLASH` | External camera accessory flash | External only (rare) |
+| `OFF` | 완전 수동 (14장에서 다룸) | 없음 |
+| `ON` | 자동 노출, **플래시 비활성화** (영구 꺼짐) | 아니요 |
+| `ON_AUTO_FLASH` | 자동 노출, **자동 플래시 결정** — 저조도에서만 발광 | 자동 (가장 일반적인 기본값) |
+| `ON_ALWAYS_FLASH` | 자동 노출, **플래시 항상 발광** (역광 인물 사진용 채우기 플래시) | 항상 |
+| `ON_AUTO_FLASH_REDEYE` | 자동 노출 + 플래시 + 적목 현상 제거 (동공 수축을 위해 프리플래시 시퀀스 발광) | 자동 + 적목 제거 |
+| `ON_EXTERNAL_FLASH` | 외부 카메라 액세서리 플래시 | 외부 전용 (드묾) |
 
-**The default for a normal camera app** is `ON_AUTO_FLASH`. Users expect the phone to "know" when to fire the flash.
+**일반적인 카메라 앱의 기본값**은 `ON_AUTO_FLASH`입니다. 사용자는 폰이 플래시를 터뜨려야 할 때를 "알아서" 결정하기를 기대합니다.
 
-### AE States & Precapture Trigger
+### AE 상태 및 프리캡처 트리거
 
-Like AF, AE reports its state via `CaptureResult.CONTROL_AE_STATE`:
+AF와 마찬가지로 AE도 `CaptureResult.CONTROL_AE_STATE`를 통해 상태를 보고합니다.
 
-| State | Meaning |
+| 상태 | 의미 |
 |-------|---------|
-| `INACTIVE` (0) | AE disabled or hasn't started |
-| `SEARCHING` (1) | Actively searching for correct exposure |
-| `CONVERGED` (2) | Exposure is stable. In flash modes, this means *ambient* exposure converged, but a preflash sweep hasn't happened yet. |
-| `LOCKED` (3) | Exposure explicitly locked via `CONTROL_AE_LOCK = true` |
-| `FLASH_REQUIRED` (4) | Converged on ambient, and HAL has decided **flash is needed** for correct shot |
-| `PRECAPTURE` (5) | **Key state.** The precapture sweep is running — HAL is metering (firing preflash pulses, if flash is needed) to calculate final capture exposure + flash power. |
+| `INACTIVE` (0) | AE가 비활성화되었거나 아직 시작되지 않음 |
+| `SEARCHING` (1) | 올바른 노출을 활발하게 찾는 중 |
+| `CONVERGED` (2) | 노출이 안정적임. 플래시 모드에서는 *주변* 노출은 수렴했지만 아직 프리플래시 스캔이 일어나지 않은 상태임. |
+| `LOCKED` (3) | `CONTROL_AE_LOCK = true`를 통해 노출이 명시적으로 잠김 |
+| `FLASH_REQUIRED` (4) | 주변 노출에 수렴했으며, HAL이 정확한 촬영을 위해 **플래시가 필요하다**고 결정함 |
+| `PRECAPTURE` (5) | **핵심 상태.** 프리캡처 스캔 실행 중 — HAL이 최종 캡처 노출 + 플래시 강도를 계산하기 위해 측광 중(필요 시 프리플래시 발광). |
 
-### Why the Precapture Trigger Matters
+### 프리캡처 트리거가 중요한 이유
 
-The AE engine running on preview frames is *approximate*. The preview pipeline uses smaller buffers, lower bit-depth processing, and doesn't account for the massive light contribution of a main flash firing at capture time.
+미리보기 프레임에서 실행되는 AE 엔진은 *근사치*입니다. 미리보기 파이프라인은 더 작은 버퍼와 더 낮은 비트 깊이 처리를 사용하며, 촬영 시 발광하는 메인 플래시의 막대한 빛 기여도를 고려하지 않습니다.
 
-`CONTROL_AE_PRECAPTURE_TRIGGER = START` tells the HAL:
+`CONTROL_AE_PRECAPTURE_TRIGGER = START`는 HAL에게 다음과 같이 말하는 것과 같습니다.
 
-> "I'm about to take a real still photo. Stop approximating. Run the full-precision metering pipeline. If I'm in an auto-flash mode, fire one or more low-power preflashes, measure the reflection, and calculate exact final shutter/ISO/flash-power for the capture."
+> "이제 진짜 스틸 사진을 찍을 거야. 근사치는 그만두고 정밀 측광 파이프라인을 실행해. 자동 플래시 모드라면 저전력 프리플래시를 한 번 이상 터뜨려서 반사광을 측정하고, 캡처를 위한 정확한 최종 셔터/ISO/플래시 강도를 계산해."
 
-**Skipping precapture = flash photos are randomly overexposed or underexposed.** The HAL simply didn't have a chance to meter for the flash in real time.
+**프리캡처를 건너뛰면 플래시 사진의 노출이 무작위로 과다하거나 부족하게 됩니다.** HAL이 실시간으로 플래시 측광을 할 기회가 없었기 때문입니다.
 
-### AE Regions (Spot Metering)
+### AE 영역 (스팟 측광)
 
-Just like `CONTROL_AF_REGIONS` for focus, `CONTROL_AE_REGIONS` specifies *where in the scene* to meter. A portrait tap-to-focus should simultaneously apply the same region to AE — the face gets both focus priority AND exposure priority, not metered based on the bright sky background.
+초점을 위한 `CONTROL_AF_REGIONS`와 마찬가지로, `CONTROL_AE_REGIONS`는 장면의 *어느 부분을* 측광할지 지정합니다. 인물 사진에서 터치로 초점을 잡을 때 동일한 영역을 AE에도 동시에 적용해야 합니다. 그래야 밝은 하늘 배경이 아닌 얼굴에 초점과 노출 우선순위가 모두 부여됩니다.
 
 ```kotlin
-// Use the SAME MeteringRectangle array for both AF and AE regions
+// AF와 AE 영역 모두에 동일한 MeteringRectangle 배열 사용
 val focusWeightedRegions = arrayOf(userTapRegion)
 builder.set(CaptureRequest.CONTROL_AF_REGIONS, focusWeightedRegions)
 builder.set(CaptureRequest.CONTROL_AE_REGIONS, focusWeightedRegions)
 ```
 
-**Weighting:** Each `MeteringRectangle` has a `weight` (0–1000). Regions with higher weight influence metering more. A "spot metering" mode uses one high-weight rectangle (1000). "Matrix / Evaluative" metering uses many low-weight rectangles spread across the frame.
+**가중치(Weighting):** 각 `MeteringRectangle`은 가중치(0-1000)를 가집니다. 가중치가 높은 영역이 측광에 더 많은 영향을 미칩니다. "스팟 측광" 모드는 하나의 높은 가중치 사각형(1000)을 사용합니다. "평균/평가" 측광은 프레임 전체에 분산된 여러 개의 낮은 가중치 사각형을 사용합니다.
 
 ---
 
-## AWB: The Silent Partner of the Trio
+## AWB: 트리오의 침묵하는 파트너
 
-AWB usually converges early and stays converged in most scenes — which is why it's often treated as an afterthought. But its contribution to color accuracy is critical, and it *can* still be searching when you're ready to capture.
+AWB는 대개 일찍 수렴하고 대부분의 장면에서 수렴된 상태를 유지하기 때문에 나중에 고려되는 경우가 많습니다. 하지만 색 정확도에 대한 기여도는 매우 중요하며, 촬영 준비가 되었을 때도 여전히 최적의 값을 찾고 있을 수 있습니다.
 
-### AWB States Recap
+### AWB 상태 요약
 
-| AWB State | Capture Decision |
+| AWB 상태 | 캡처 결정 |
 |-----------|------------------|
-| `INACTIVE` (AWB_MODE = OFF) | OK to proceed (manual gains) |
-| `SEARCHING` | **Wait.** Colors may still shift. Usually < 500ms after major scene change. |
-| `CONVERGED` | ✅ Perfect — proceed |
-| `LOCKED` | ✅ Also perfect — explicitly locked via `CONTROL_AWB_LOCK = true` |
+| `INACTIVE` (AWB_MODE = OFF) | 진행 가능 (수동 게인 사용) |
+| `SEARCHING` | **대기.** 색상이 여전히 변할 수 있음. 보통 장면이 크게 바뀐 후 500ms 이내에 수렴함. |
+| `CONVERGED` | ✅ 완벽함 — 진행 |
+| `LOCKED` | ✅ 역시 완벽함 — `CONTROL_AWB_LOCK = true`를 통해 명시적으로 잠김 |
 
-### Coupling AWB Lock with AE/AF Locks
+### AWB 잠금을 AE/AF 잠금과 결합하기
 
-For critical studio/product photography, lock all three *before* capture:
+중요한 스튜디오/제품 사진 촬영의 경우, 캡처 *전*에 세 가지를 모두 잠그세요.
 
 ```kotlin
-// In the still-capture request (not earlier — we want final converged values locked)
+// 스틸 캡처 요청에서 실행 (더 일찍 하면 안 됨 — 최종 수렴된 값을 잠그길 원함)
 builder.set(CaptureRequest.CONTROL_AWB_LOCK, true)
 builder.set(CaptureRequest.CONTROL_AE_LOCK, true)
-// AF stays locked because we triggered it earlier and haven't cancelled
+// AF는 아까 트리거했고 아직 취소하지 않았으므로 잠긴 상태 유지
 ```
 
-This guarantees the main capture reuses *exactly* the same color/wb profile that the final precapture metering frame used.
+이렇게 하면 메인 캡처가 최종 프리캡처 측광 프레임에서 사용된 것과 *정확히* 동일한 색상/WB 프로필을 재사용하도록 보장합니다.
 
 ---
 
-## Complete Production 3A Capture Controller (Kotlin)
+## 완전한 프로덕션 수준 3A 캡처 컨트롤러 (Kotlin)
 
-Now let's assemble it all into a reusable class. This implementation matches the orchestration flow in the Android Camera architecture research documents section on 3A Control Pipeline and the patterns recommended by the Android Camera CSDN series.
+이제 이 모든 것을 재사용 가능한 클래스로 조립해 보겠습니다. 이 구현은 안드로이드 카메라 아키텍처 연구 문서의 3A 제어 파이프라인 섹션에 있는 오케스트레이션 흐름 및 안드로이드 카메라 CSDN 시리즈에서 권장하는 패턴과 일치합니다.
 
 ```kotlin
 class ThreeACaptureController(
@@ -165,7 +165,7 @@ class ThreeACaptureController(
     private val jpegReaderSurface: Surface,
     private val mainHandler: Handler
 ) {
-    // ----------- Public API -----------
+    // ----------- 공개 API -----------
     interface CaptureListener {
         fun onCaptureStarted() {}
         fun onCaptureSuccess(jpegBytes: ByteArray)
@@ -173,8 +173,8 @@ class ThreeACaptureController(
     }
 
     /**
-     * Orchestrate the full 3A capture sequence:
-     *   AF Trigger → AF Locked → AE Precapture → AE Converged → Still Capture → Cleanup
+     * 전체 3A 캡처 시퀀스 조정:
+     *   AF 트리거 → AF 잠김 → AE 프리캡처 → AE 수렴 → 스틸 캡처 → 정리
      */
     fun captureStillPhoto(
         aeMode: Int = CameraMetadata.CONTROL_AE_MODE_ON_AUTO_FLASH,
@@ -185,15 +185,15 @@ class ThreeACaptureController(
         beginPhase1_AfTrigger(aeMode)
     }
 
-    // ----------- Internal state -----------
+    // ----------- 내부 상태 -----------
     private var listener: CaptureListener? = null
     private var timeoutRunnable: Runnable? = null
     private var phase: Int = 0
-    private lateinit var currentAeMode: Int
+    private var currentAeMode: Int = CameraMetadata.CONTROL_AE_MODE_ON_AUTO_FLASH
 
-    private val SESSION_TIMEOUT_MS = 3500L  // Budget phones need up to ~3s
+    private val SESSION_TIMEOUT_MS = 3500L  // 저가형 폰은 최대 약 3초 필요
 
-    // ---- PHASE 1: Trigger AF, wait for FOCUSED_LOCKED ----
+    // ---- 1단계: AF 트리거, FOCUSED_LOCKED 대기 ----
     private fun beginPhase1_AfTrigger(aeMode: Int) {
         currentAeMode = aeMode
         phase = 1
@@ -209,16 +209,16 @@ class ThreeACaptureController(
             set(CaptureRequest.CONTROL_AWB_MODE,
                 CameraMetadata.CONTROL_AWB_MODE_AUTO)
 
-            // Kick off one-shot AF scan
+            // 원샷 AF 스캔 시작
             set(CaptureRequest.CONTROL_AF_TRIGGER,
                 CameraMetadata.CONTROL_AF_TRIGGER_START)
         }
 
-        startTimeout("AF scan")
+        startTimeout("AF 스캔")
         captureSession.setRepeatingRequest(request.build(), captureCallback, mainHandler)
     }
 
-    // ---- PHASE 2: AF locked. Start AE precapture trigger ----
+    // ---- 2단계: AF 잠김. AE 프리캡처 트리거 시작 ----
     private fun beginPhase2_AePrecapture() {
         phase = 2
         val request = captureSession.device.createCaptureRequest(
@@ -226,14 +226,14 @@ class ThreeACaptureController(
         ).apply {
             addTarget(previewSurface)
 
-            // Keep AF locked — do NOT cancel AF trigger yet!
+            // AF 잠금 유지 — 아직 AF 트리거를 취소하지 마세요!
             set(CaptureRequest.CONTROL_AF_MODE,
                 CameraMetadata.CONTROL_AF_MODE_AUTO)
-            // AF_TRIGGER remains in START state from Phase 1
+            // AF_TRIGGER는 1단계의 START 상태로 유지됨
 
             set(CaptureRequest.CONTROL_AE_MODE, currentAeMode)
 
-            // ---- THE CRITICAL LINE: Run Precapture ----
+            // ---- 핵심 라인: 프리캡처 실행 ----
             set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER,
                 CameraMetadata.CONTROL_AE_PRECAPTURE_TRIGGER_START)
 
@@ -241,11 +241,11 @@ class ThreeACaptureController(
                 CameraMetadata.CONTROL_AWB_MODE_AUTO)
         }
 
-        restartTimeout("AE precapture")
+        restartTimeout("AE 프리캡처")
         captureSession.setRepeatingRequest(request.build(), captureCallback, mainHandler)
     }
 
-    // ---- PHASE 3: AE converged + AWB converged. Fire actual still capture. ----
+    // ---- 3단계: AE 수렴 + AWB 수렴. 실제 스틸 캡처 실행. ----
     private fun beginPhase3_StillCapture() {
         phase = 3
         cancelTimeout()
@@ -256,13 +256,13 @@ class ThreeACaptureController(
             addTarget(previewSurface)
             addTarget(jpegReaderSurface)
 
-            // Keep AF locked until AFTER capture completes
+            // 캡처가 완료될 때까지 AF 잠금 유지
             set(CaptureRequest.CONTROL_AF_MODE,
                 CameraMetadata.CONTROL_AF_MODE_AUTO)
 
             set(CaptureRequest.CONTROL_AE_MODE, currentAeMode)
 
-            // Lock both AE and AWB for the still capture to prevent last-frame drift
+            // 마지막 프레임의 드리프트를 방지하기 위해 스틸 캡처 시 AE와 AWB 모두 잠금
             set(CaptureRequest.CONTROL_AE_LOCK, true)
             set(CaptureRequest.CONTROL_AWB_LOCK, true)
 
@@ -270,7 +270,7 @@ class ThreeACaptureController(
                 CameraMetadata.CONTROL_AWB_MODE_AUTO)
 
             set(CaptureRequest.JPEG_QUALITY, 95)
-            // JPEG orientation: use Display rotation for correct final orientation
+            // JPEG 방향: 올바른 최종 방향을 위해 디스플레이 회전 사용
             val jpegOrient = computeJpegOrientation()
             set(CaptureRequest.JPEG_ORIENTATION, jpegOrient)
         }
@@ -282,14 +282,14 @@ class ThreeACaptureController(
                 result: TotalCaptureResult
             ) {
                 super.onCaptureCompleted(session, request, result)
-                // ImageReader OnImageAvailableListener will handle saving bytes to listener
-                // Now clean up: reset back to normal preview mode
+                // ImageReader OnImageAvailableListener가 바이트를 리스너에 저장하는 것을 처리함
+                // 이제 정리: 정상 미리보기 모드로 리셋
                 resetToContinuousPreview()
             }
         }, mainHandler)
     }
 
-    // ---- Cleanup: Resume normal continuous preview ----
+    // ---- 정리: 정상 연속 미리보기 재개 ----
     private fun resetToContinuousPreview() {
         phase = 0
         val request = captureSession.device.createCaptureRequest(
@@ -302,7 +302,7 @@ class ThreeACaptureController(
             set(CaptureRequest.CONTROL_AWB_MODE,
                 CameraMetadata.CONTROL_AWB_MODE_AUTO)
 
-            // Release all locks & cancel all triggers
+            // 모든 잠금 해제 및 트리거 취소
             set(CaptureRequest.CONTROL_AF_TRIGGER,
                 CameraMetadata.CONTROL_AF_TRIGGER_CANCEL)
             set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER,
@@ -313,7 +313,7 @@ class ThreeACaptureController(
         captureSession.setRepeatingRequest(request.build(), null, mainHandler)
     }
 
-    // ----------- Master Callback: Drives all 3 phases via state inspection -----------
+    // ----------- 마스터 콜백: 상태 검사를 통해 세 단계 모두 구동 -----------
     private val captureCallback = object : CameraCaptureSession.CaptureCallback() {
         override fun onCaptureCompleted(
             session: CameraCaptureSession,
@@ -326,22 +326,22 @@ class ThreeACaptureController(
 
             when (phase) {
                 1 -> {
-                    // ---- PHASE 1: Wait for AF lock ----
+                    // ---- 1단계: AF 잠금 대기 ----
                     when (afState) {
                         CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED -> {
-                            Log.d("3A", "✓ AF FOCUSED_LOCKED — moving to AE precapture")
+                            Log.d("3A", "✓ AF FOCUSED_LOCKED — AE 프리캡처로 이동")
                             beginPhase2_AePrecapture()
                         }
                         CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED -> {
-                            Log.w("3A", "⚠ AF NOT_FOCUSED_LOCKED — proceeding anyway (may be soft)")
+                            Log.w("3A", "⚠ AF NOT_FOCUSED_LOCKED — 그래도 진행 (핀트가 나갈 수 있음)")
                             beginPhase2_AePrecapture()
                         }
-                        // ACTIVE_SCAN / PASSIVE_SCAN → keep waiting
+                        // ACTIVE_SCAN / PASSIVE_SCAN → 계속 대기
                     }
                 }
                 2 -> {
-                    // ---- PHASE 2: Wait for AE to converge after precapture ----
-                    // Accept states that mean "AE is done with precapture and ready for capture"
+                    // ---- 2단계: 프리캡처 후 AE 수렴 대기 ----
+                    // "AE가 프리캡처를 완료하고 촬영 준비가 됨"을 의미하는 상태들 수용
                     val aeReady = (aeState == CaptureResult.CONTROL_AE_STATE_CONVERGED
                                 || aeState == CaptureResult.CONTROL_AE_STATE_LOCKED
                                 || aeState == CaptureResult.CONTROL_AE_STATE_FLASH_REQUIRED)
@@ -350,7 +350,7 @@ class ThreeACaptureController(
                                  || awbState == CaptureResult.CONTROL_AWB_STATE_INACTIVE)
 
                     if (aeReady && awbReady) {
-                        Log.d("3A", "✓ AE=$aeState, AWB=$awbState — firing capture")
+                        Log.d("3A", "✓ AE=$aeState, AWB=$awbState — 캡처 실행")
                         beginPhase3_StillCapture()
                     }
                 }
@@ -358,14 +358,14 @@ class ThreeACaptureController(
         }
     }
 
-    // ----------- Timeout protection: Never hang if HAL never converges -----------
+    // ----------- 타임아웃 보호: HAL이 수렴하지 않아도 멈춰있지 않도록 함 -----------
     private fun startTimeout(phaseName: String) {
         cancelTimeout()
         timeoutRunnable = Runnable {
-            Log.w("3A", "⏱ Timeout waiting for $phaseName — proceeding with best effort")
+            Log.w("3A", "⏱ $phaseName 대기 타임아웃 — 최선의 상태로 진행")
             when (phase) {
-                1 -> beginPhase2_AePrecapture()  // Proceed with best possible focus
-                2 -> beginPhase3_StillCapture()  // Proceed with best possible exposure
+                1 -> beginPhase2_AePrecapture()  // 가능한 최선의 초점으로 진행
+                2 -> beginPhase3_StillCapture()  // 가능한 최선의 노출로 진행
             }
         }
         mainHandler.postDelayed(timeoutRunnable!!, SESSION_TIMEOUT_MS)
@@ -376,22 +376,22 @@ class ThreeACaptureController(
         timeoutRunnable = null
     }
 
-    // ----------- Utility: Correct JPEG orientation based on display rotation -----------
+    // ----------- 유틸리티: 디스플레이 회전에 따른 올바른 JPEG 방향 계산 -----------
     private fun computeJpegOrientation(): Int {
         val sensorOrient = characteristics.get(
             CameraCharacteristics.SENSOR_ORIENTATION
         ) ?: 0
-        // Combine with Display.rotation (0, 90, 180, 270) from your Activity
-        // Typical impl: return (sensorOrient + displayRotationDegrees) % 360
-        return sensorOrient  // Simplified; wire to your display's rotation
+        // Activity의 Display.rotation (0, 90, 180, 270)과 결합
+        // 일반적인 구현: return (sensorOrient + displayRotationDegrees) % 360
+        return sensorOrient  // 단순화됨. 실제로는 디스플레이 회전과 연결하세요.
     }
 }
 ```
 
-### How to Use the Controller
+### 컨트롤러 사용 방법
 
 ```kotlin
-// Inside your CameraFragment's capture button click listener
+// CameraFragment의 캡처 버튼 클릭 리스너 내부
 val controller = ThreeACaptureController(
     characteristics = yourCameraCharacteristics,
     captureSession = yourActiveSession,
@@ -408,29 +408,29 @@ controller.captureStillPhoto(
             val file = File(requireContext().filesDir, "photo_${System.currentTimeMillis()}.jpg")
             file.writeBytes(jpegBytes)
             withContext(Dispatchers.Main) {
-                Toast.makeText(requireContext(), "Saved: ${file.name}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "저장됨: ${file.name}", Toast.LENGTH_SHORT).show()
             }
         }
     }
     override fun onCaptureError(reason: String) {
-        Toast.makeText(requireContext(), "Capture failed: $reason", Toast.LENGTH_LONG).show()
+        Toast.makeText(requireContext(), "캡처 실패: $reason", Toast.LENGTH_LONG).show()
     }
 }
 ```
 
-### Pairing with ImageReader
+### ImageReader와 페어링하기
 
-Don't forget the `OnImageAvailableListener` on your JPEG `ImageReader` to actually deliver `jpegBytes` to the listener. The controller above assumes you've already wired this:
+`jpegBytes`를 리스너에 실제로 전달하려면 JPEG `ImageReader`의 `OnImageAvailableListener`를 설정하는 것을 잊지 마세요. 위의 컨트롤러는 여러분이 이미 이 연결을 완료했다고 가정합니다.
 
 ```kotlin
-// Set this up when creating the ImageReader (see Capture Chapter)
+// ImageReader 생성 시 이를 설정하세요 (캡처 장 참조)
 jpegImageReader.setOnImageAvailableListener({ reader ->
     val image = reader.acquireLatestImage() ?: return@setOnImageAvailableListener
     image.use {
         val buffer = it.planes[0].buffer
         val bytes = ByteArray(buffer.remaining())
         buffer.get(bytes)
-        // Deliver bytes to your UI / file saver
+        // 바이트를 UI / 파일 세이버로 전달
         lastCaptureListener?.onCaptureSuccess(bytes)
     }
 }, mainHandler)
@@ -438,16 +438,16 @@ jpegImageReader.setOnImageAvailableListener({ reader ->
 
 ---
 
-## Flash-Specific Handling Nuances
+## 플래시 특화 처리의 미묘한 차이
 
-For `ON_AUTO_FLASH` / `ON_ALWAYS_FLASH` / `ON_AUTO_FLASH_REDEYE` modes, the precapture trigger runs preflash pulses. Two important considerations:
+`ON_AUTO_FLASH` / `ON_ALWAYS_FLASH` / `ON_AUTO_FLASH_REDEYE` 모드의 경우, 프리캡처 트리거가 프리플래시 펄스를 실행합니다. 두 가지 중요한 고려 사항이 있습니다.
 
-1. **Preflash pulse visibility:** Preflashes are *real flashes* — the user sees them as a low-brightness flash pulse before the main flash. Most modern camera UIs hide this with a "shutter button animation" or by darkening the preview.
+1. **프리플래시 펄스 가시성:** 프리플래시는 *실제 플래시*입니다. 사용자는 메인 플래시 전에 저휘도 플래시 펄스가 터지는 것을 보게 됩니다. 대부분의 현대적인 카메라 UI는 이를 "셔터 버튼 애니메이션"이나 미리보기 화면을 어둡게 처리하여 숨깁니다.
 
-2. **`FLASH_STATE` must READY:** In addition to `AE_STATE = CONVERGED`, verify `CaptureResult.FLASH_STATE = FLASH_STATE_READY` (or `FIRED`) for flash modes before capture. It's possible for AE to converge but the flash charging capacitor to still be ramping up.
+2. **`FLASH_STATE`가 READY여야 함:** `AE_STATE = CONVERGED` 외에도 플래시 모드에서는 캡처 전 `CaptureResult.FLASH_STATE = FLASH_STATE_READY` (또는 `FIRED`)인지 확인하세요. AE는 수렴했더라도 플래시 충전용 커패시터가 여전히 충전 중일 수 있습니다.
 
 ```kotlin
-// Enhanced aeReady check inside Phase 2 callback for flash modes:
+// 플래시 모드를 위한 2단계 콜백 내부의 개선된 aeReady 체크:
 val aeState = result.get(CaptureResult.CONTROL_AE_STATE)
 val flashState = result.get(CaptureResult.FLASH_STATE)
 
@@ -457,14 +457,14 @@ val flashModeWantsFlash = (currentAeMode == CameraMetadata.CONTROL_AE_MODE_ON_AL
 
 val aeReady = when {
     flashModeWantsFlash -> {
-        // HAL must have both AE converged AND flash ready to fire
+        // HAL은 AE 수렴과 발광 준비가 된 플래시를 모두 가지고 있어야 함
         (aeState == CaptureResult.CONTROL_AE_STATE_CONVERGED
          || aeState == CaptureResult.CONTROL_AE_STATE_FLASH_REQUIRED) &&
         (flashState == CaptureResult.FLASH_STATE_READY
          || flashState == CaptureResult.FLASH_STATE_FIRED)
     }
     else -> {
-        // No-flash mode: plain AE convergence is enough
+        // 플래시 없는 모드: 단순 AE 수렴으로 충분함
         (aeState == CaptureResult.CONTROL_AE_STATE_CONVERGED
          || aeState == CaptureResult.CONTROL_AE_STATE_LOCKED)
     }
@@ -473,83 +473,83 @@ val aeReady = when {
 
 ---
 
-## The 3A State Transition Machine (Summary Diagram)
+## 3A 상태 전이 머신 (요약 다이어그램)
 
-For quick reference when debugging, here's the combined state chart of AE, AF, and AWB showing the expected transitions during a successful capture.
+디버깅 시 빠른 참조를 위해, 성공적인 캡처 동안 예상되는 전이를 보여주는 AE, AF, AWB의 통합 상태 차트입니다.
 
 ```mermaid
 stateDiagram-v2
     direction LR
 
-    state "AF States" as AF {
+    state "AF 상태" as AF {
         [*] --> ACTIVE_SCAN: AF_TRIGGER = START
-        ACTIVE_SCAN --> FOCUSED_LOCKED: ✓ Focus found
-        ACTIVE_SCAN --> NOT_FOCUSED_LOCKED: ✗ Couldn't lock
-        FOCUSED_LOCKED --> [*]: Proceed to Phase 2
-        NOT_FOCUSED_LOCKED --> [*]: Proceed (best effort)
+        ACTIVE_SCAN --> FOCUSED_LOCKED: ✓ 초점 잡힘
+        ACTIVE_SCAN --> NOT_FOCUSED_LOCKED: ✗ 잠금 실패
+        FOCUSED_LOCKED --> [*]: 2단계로 진행
+        NOT_FOCUSED_LOCKED --> [*]: 진행 (최선)
     }
 
-    state "AE States" as AE {
-        [*] --> SEARCHING: Preview running
-        SEARCHING --> CONVERGED: Ambient stable
+    state "AE 상태" as AE {
+        [*] --> SEARCHING: 미리보기 실행 중
+        SEARCHING --> CONVERGED: 주변광 안정화
         CONVERGED --> PRECAPTURE: PRECAPTURE_TRIGGER = START
-        PRECAPTURE --> CONVERGED: Final exposure+flash computed
-        CONVERGED --> FLASH_REQUIRED: (auto-flash mode only)
-        CONVERGED --> [*]: Capture now
-        FLASH_REQUIRED --> [*]: Capture with flash now
+        PRECAPTURE --> CONVERGED: 최종 노출+플래시 계산됨
+        CONVERGED --> FLASH_REQUIRED: (자동 플래시 모드 전용)
+        CONVERGED --> [*]: 지금 캡처
+        FLASH_REQUIRED --> [*]: 지금 플래시와 함께 캡처
     }
 
-    state "AWB States" as AWB {
-        [*] --> SEARCHING: Major scene change
-        SEARCHING --> CONVERGED: Illuminant found
+    state "AWB 상태" as AWB {
+        [*] --> SEARCHING: 큰 장면 변화
+        SEARCHING --> CONVERGED: 광원 찾음
         CONVERGED --> LOCKED: AWB_LOCK = true
-        CONVERGED --> [*]: Capture OK
-        LOCKED --> [*]: Capture OK
+        CONVERGED --> [*]: 캡처 OK
+        LOCKED --> [*]: 캡처 OK
     }
 ```
 
-The global controller only proceeds to the still capture when the final "capture OK" state is reached simultaneously on all three sub-states.
+글로벌 컨트롤러는 세 가지 하위 상태 모두에서 최종 "캡처 OK" 상태에 동시에 도달했을 때만 스틸 캡처를 진행합니다.
 
 ---
 
-## Troubleshooting the 3A Pipeline
+## 3A 파이프라인 문제 해결
 
-| Symptom | Root Cause | Fix |
+| 증상 | 근본 원인 | 해결 방법 |
 |---------|-----------|-----|
-| Flash photos randomly under/over-exposed | Skipped `AE_PRECAPTURE_TRIGGER = START` | Always run precapture before still capture in any flash mode |
-| Every 5th–10th photo is slightly soft | Proceeded to capture before `FOCUSED_LOCKED` | Block on AF state (our controller does this) |
-| Camera hangs for seconds then crashes | No timeout; HAL stuck in SEARCHING forever | Add the 3500ms timeout + best-effort fallback as shown |
-| Flash fires but photo is still dark | Proceeded before `FLASH_STATE = READY` | Capacitor charging; add FLASH_STATE check in AE ready condition |
-| Portrait of backlit person is underexposed | AE metered the sky, not the face | Couple `CONTROL_AE_REGIONS` to same tap rectangle as `CONTROL_AF_REGIONS` |
-| 2° color tint shift between frames in burst | Forgot `AWB_LOCK = true` before capture burst | Lock AWB on the first converged frame; keep locked through burst |
-| Capture sequence is noticeably slow on budget phone | `TEMPLATE_STILL_CAPTURE` starts cold pipeline | Warm up with a dummy `TEMPLATE_PREVIEW` with identical AE/AF settings first |
+| 플래시 사진의 노출이 무작위로 과다/부족함 | `AE_PRECAPTURE_TRIGGER = START`를 건너뜀 | 플래시 모드에서는 스틸 캡처 전 항상 프리캡처 실행 |
+| 5-10장 중 한 장꼴로 초점이 약간 흐릿함 | `FOCUSED_LOCKED` 전에 캡처를 진행함 | AF 상태에서 블로킹 (우리의 컨트롤러가 이 작업을 수행함) |
+| 카메라가 몇 초간 멈췄다가 충돌함 | 타임아웃 없음. HAL이 영원히 SEARCHING에 머물러 있음 | 표시된 대로 3500ms 타임아웃 + 최선의 폴백 추가 |
+| 플래시는 터지지만 사진이 여전히 어두움 | `FLASH_STATE = READY` 전에 진행함 | 커패시터 충전 중. AE 준비 조건에 FLASH_STATE 확인 추가 |
+| 역광인 사람의 인물 사진 노출이 부족함 | AE가 얼굴이 아닌 하늘을 측광함 | `CONTROL_AE_REGIONS`를 `CONTROL_AF_REGIONS`와 동일한 탭 영역에 연결 |
+| 연속 촬영 프레임 간에 색조가 2° 정도 변함 | 촬영 시작 전 `AWB_LOCK = true`를 잊음 | 첫 번째 수렴된 프레임에서 AWB 잠금. 촬영 내내 잠금 유지 |
+| 저가형 폰에서 캡처 시퀀스가 눈에 띄게 느림 | `TEMPLATE_STILL_CAPTURE`가 콜드 파이프라인으로 시작함 | 동일한 AE/AF 설정의 더미 `TEMPLATE_PREVIEW`로 파이프라인 예열 |
 
 ---
 
-## Summary
+## 요약
 
-This chapter tied exposure, focus, and white balance together into a single, reliable **3A capture pipeline** — the exact sequence a professional camera app uses for every shutter press:
+이 장에서는 노출, 초점, 화이트 밸런스를 하나의 신뢰할 수 있는 **3A 캡처 파이프라인**으로 묶었습니다. 이는 전문가용 카메라 앱이 매번 셔터를 누를 때 사용하는 시퀀스와 정확히 일치합니다.
 
-1. **Phase 1 (AF):** Set `AF_MODE = AUTO` + `AF_TRIGGER = START`. Wait until `AF_STATE = FOCUSED_LOCKED` (or `NOT_FOCUSED_LOCKED` as fallback).
-2. **Phase 2 (AE Precapture):** Set `AE_PRECAPTURE_TRIGGER = START`. Wait for `AE_STATE = CONVERGED` / `FLASH_REQUIRED` AND `FLASH_STATE = READY` (if flash modes). Also require `AWB_STATE = CONVERGED`.
-3. **Phase 3 (Still Capture):** Submit `TEMPLATE_STILL_CAPTURE` with `AE_LOCK = true`, `AWB_LOCK = true`.
-4. **Phase 4 (Cleanup):** Cancel all triggers, release all locks, restore `AF_MODE = CONTINUOUS_PICTURE`.
+1. **1단계 (AF):** `AF_MODE = AUTO` + `AF_TRIGGER = START` 설정. `AF_STATE = FOCUSED_LOCKED` (또는 폴백으로 `NOT_FOCUSED_LOCKED`)가 될 때까지 대기.
+2. **2단계 (AE 프리캡처):** `AE_PRECAPTURE_TRIGGER = START` 설정. `AE_STATE = CONVERGED` / `FLASH_REQUIRED` 및 (플래시 모드인 경우) `FLASH_STATE = READY`가 될 때까지 대기. 또한 `AWB_STATE = CONVERGED`여야 함.
+3. **3단계 (스틸 캡처):** `AE_LOCK = true`, `AWB_LOCK = true`로 `TEMPLATE_STILL_CAPTURE` 제출.
+4. **4단계 (정리):** 모든 트리거 취소, 모든 잠금 해제, `AF_MODE = CONTINUOUS_PICTURE` 복원.
 
-Critical supporting concepts:
-- **AE modes:** `ON_AUTO_FLASH` is the sensible default for consumer apps
-- **AE regions** = spot metering; always pair with AF regions on tap-to-focus
-- **AWB converges fast** but always block on `CONVERGED` or `LOCKED` for color-critical work
-- **Timeouts are non-negotiable.** Budget phones and low-light can make AF/AE scan forever; always proceed with a best-effort fallback after ~3.5s.
+핵심 지원 개념:
+- **AE 모드:** `ON_AUTO_FLASH`는 일반 사용자 앱을 위한 합리적인 기본값입니다.
+- **AE 영역** = 스팟 측광. 터치 초점 시 항상 AF 영역과 쌍으로 구성하세요.
+- **AWB는 빠르게 수렴함** 하지만 색상이 중요한 작업의 경우 항상 `CONVERGED` 또는 `LOCKED`에서 블로킹하세요.
+- **타임아웃은 협상의 여지가 없습니다.** 저가형 폰과 저조도 환경에서는 AF/AE 스캔이 영원히 지속될 수 있습니다. 약 3.5초 후에 항상 최선의 폴백으로 진행하세요.
 
-## What's Next
+## 다음 단계
 
-Congratulations on completing the 3A Manual Photography module. You now understand — at a professional level — how to control:
+3A 수동 사진 모듈을 완료하신 것을 축하드립니다! 이제 여러분은 다음과 같은 기능들을 전문가 수준으로 제어하는 방법을 이해하게 되었습니다.
 
-- **Exposure (Ch. 13–14):** The exposure triangle, ISO + shutter, nanosecond conversions, manual override, long exposure, timelapse lock, bracketing
-- **Focus (Ch. 15):** AF modes, AF state machine, one-shot trigger-and-capture, manual focus diopters, hyperfocal presets, touch-to-focus regions
-- **Color (Ch. 16):** Color temperature, AWB presets, manual COLOR_CORRECTION_GAINS, 3×3 CCM transforms, Kelvin slider implementation
-- **Orchestration (Ch. 17):** The full 3A pipeline with precapture, flash-safe AE convergence, per-phase timeouts, lock/release cleanup
+- **노출 (13-14장):** 노출 삼각형, ISO + 셔터 속도, 나노초 변환, 수동 재정의, 장노출, 타임랩스 잠금, 브래키팅
+- **초점 (15장):** AF 모드, AF 상태 머신, 원샷 트리거 및 캡처, 수동 초점 디옵터, 과초점 거리 프리셋, 터치 초점 영역
+- **색상 (16장):** 색온도, AWB 프리셋, 수동 COLOR_CORRECTION_GAINS, 3×3 CCM 변환, 켈빈 슬라이더 구현
+- **오케스트레이션 (17장):** 프리캡처, 플래시 안전 AE 수렴, 단계별 타임아웃, 잠금/해제 정리를 포함한 전체 3A 파이프라인
 
-You can now build a complete pro-mode camera app that rivals the capabilities of the [Android Camera Parameters app](https://github.com/zoozooll/AndroidCameraParameters) itself!
+여러분은 이제 [Android Camera Parameters 앱](https://github.com/zoozooll/AndroidCameraParameters) 자체의 성능에 필적하는 완전한 프로 모드 카메라 앱을 구축할 수 있습니다!
 
-In the upcoming chapters, we shift gears from capture **control** to capture **quality** — covering RAW capture, DNG saving, multi-frame processing, HDR, and computational photography techniques that build on the 3A pipeline you now master.
+이어지는 장에서는 캡처 **제어**에서 캡처 **품질**로 초점을 옮깁니다. RAW 캡처, DNG 저장, 멀티 프레임 처리, HDR 및 여러분이 마스터한 3A 파이프라인을 기반으로 하는 계산 사진학 기법들을 다룰 예정입니다.

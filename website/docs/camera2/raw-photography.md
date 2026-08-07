@@ -1,4 +1,4 @@
----     
+﻿---     
 sidebar_position: 18
 title: "Chapter 18: RA W Photography"
 description: "Master RAW_SENSOR format, DNG file creation with DngCreator, Bayer patterns, and simultaneous RAW+JPEG capture in Android Camera2 API"
@@ -37,13 +37,13 @@ flowchart TD
         S6 --> S7[Gamma / Tone Mapping]
         S7 --> S8[Edge Enhancement]
         S8 --> S9[JPEG Compression]
-        S9 --> S10["8-bit sRGB JPEG\n(≈6 stops usable DR)"]
+        S9 --> S10["8-bit sRGB JPEG<br/>(≈6 stops usable DR)"]
     end
 
     subgraph RAW["RAW Path (No ISP Processing)"]
-        R1[Sensor RAW Data] --> R2["16-bit Linear Bayer Pattern\n(10–14 stops usable DR)"]
-        R2 --> R3["DngCreator Writes\nMetadata + Pixel Data"]
-        R3 --> R4[".dng File\nEditable in Lightroom/PS"]
+        R1[Sensor RAW Data] --> R2["16-bit Linear Bayer Pattern<br/>(10–14 stops usable DR)"]
+        R2 --> R3["DngCreator Writes<br/>Metadata + Pixel Data"]
+        R3 --> R4[".dng File<br/>Editable in Lightroom/PS"]
     end
 ```
 
@@ -80,7 +80,7 @@ graph LR
         P31["R,G,B"] --- P32["R,G,B"] --- P33["R,G,B"] --- P34["R,G,B"]
         P41["R,G,B"] --- P42["R,G,B"] --- P43["R,G,B"] --- P44["R,G,B"]
     end
-    CFA -->|"Demosaic Algorithm\n(bilinear, AHD, LMMSE, or ML-based)"| DEMO
+    CFA -->|"Demosaic Algorithm<br/>(bilinear, AHD, LMMSE, or ML-based)"| DEMO
 ```
 
 The demosaic block above (P11–P44) shows how each pixel is reconstructed: an `R` photosite uses its neighbor `G` and `B` values via interpolation, and vice versa. This interpolation is the single biggest source of image softening in the JPEG pipeline — and exactly why you want to do it yourself in post-production, where modern AI demosaicing (Lightroom's AI Enhance, Topaz DeNoise AI, etc.) can deliver sharper results than the smartphone's real-time hardware ISP.
@@ -325,21 +325,21 @@ The `pendingDngWrites` timestamp map solves a real concurrency problem: `Capture
 ```mermaid
 flowchart LR
     subgraph Standard["Standard JPEG Capture Pipeline (TAP → JPEG on Disk)"]
-        A[Sensor Exposure + Analog Gain] --> B[ISP Demosaic + Noise Reduction]
+        A["Sensor Exposure + Analog Gain"] --> B["ISP Demosaic + Noise Reduction"]
         B --> C[ISP Color Correction + Tone Mapping]
         C --> D[Hardware JPEG Encoder]
-        D --> E["8-bit sRGB JPEG\n(~3 MB for 12 MP)"]
+        D --> E["8-bit sRGB JPEG<br/>(~3 MB for 12 MP)"]
     end
 
     subgraph RawCapture["RAW + JPEG Simultaneous Capture Pipeline"]
-        F[Sensor Exposure + Analog Gain] --> G{Frame Buffer\nDuplicated in HAL}
-        G --> H["Path 1 → RAW_SENSOR\n16-bit Bayer\n(~48 MB for 12 MP)"]
-        G --> I["Path 2 → ISP Pipeline\n(demosaic, NR, color, tone)"]
+        F["Sensor Exposure + Analog Gain"] --> G{Frame Buffer<br/>Duplicated in HAL}
+        G --> H["Path 1 → RAW_SENSOR<br/>16-bit Bayer<br/>(~48 MB for 12 MP)"]
+        G --> I["Path 2 → ISP Pipeline<br/>(demosaic, NR, color, tone)"]
         I --> J[Hardware JPEG Encoder]
-        H --> K["ImageReader RAW Plane\n→ DngCreator"]
+        H --> K["ImageReader RAW Plane<br/>→ DngCreator"]
         J --> L["ImageReader JPEG Plane"]
-        K --> M["RAW .dng File\n(Editable, 14-bit DR)"]
-        L --> N["JPEG .jpg File\n(Instant preview)"]
+        K --> M["RAW .dng File<br/>(Editable, 14-bit DR)"]
+        L --> N["JPEG .jpg File<br/>(Instant preview)"]
     end
 ```
 

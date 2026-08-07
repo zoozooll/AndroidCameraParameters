@@ -1,46 +1,46 @@
 ---
 sidebar_position: 14
-title: "Chapter 14: Manual Exposure in Camera2"
-description: Take full creative control of exposure with the Android Camera2 API. Learn to disable auto-exposure, set manual ISO via SENSOR_SENSITIVITY, control shutter speed in nanoseconds with SENSOR_EXPOSURE_TIME, and build working Kotlin examples for timelapses, long exposures, and bracketing.
-keywords: [android camera2 manual exposure, SENSOR_SENSITIVITY, SENSOR_EXPOSURE_TIME, CONTROL_MODE_OFF, CONTROL_AE_MODE_OFF, exposure bracketing, long exposure camera2, timelapse camera2]
+title: "Kapitel 14: Manuelle Belichtung in Camera2"
+description: Übernehmen Sie die volle kreative Kontrolle über die Belichtung mit der Android Camera2 API. Lernen Sie, die Belichtungsautomatik zu deaktivieren, den manuellen ISO-Wert über SENSOR_SENSITIVITY einzustellen, die Verschlusszeit in Nanosekunden mit SENSOR_EXPOSURE_TIME zu steuern und bauen Sie funktionierende Kotlin-Beispiele für Zeitraffer, Langzeitbelichtungen und Belichtungsreihen.
+keywords: [Android Camera2 manuelle Belichtung, SENSOR_SENSITIVITY, SENSOR_EXPOSURE_TIME, CONTROL_MODE_OFF, CONTROL_AE_MODE_OFF, Belichtungsreihe, Langzeitbelichtung Camera2, Zeitraffer Camera2]
 ---
 
-# Chapter 14: Manual Exposure in Camera2
+# Kapitel 14: Manuelle Belichtung in Camera2
 
-With the photographic theory of Chapter 13 under your belt, it's time to translate concepts into code. In this chapter, you'll learn how to **completely take over** the camera's auto-exposure (AE) system and set the ISO and shutter speed manually with the Camera2 API.
+Mit der fotografischen Theorie aus Kapitel 13 im Gepäck ist es an der Zeit, Konzepte in Code zu übersetzen. In diesem Kapitel lernen Sie, wie Sie das automatische Belichtungssystem (AE) der Kamera **vollständig übernehmen** und den ISO-Wert sowie die Verschlusszeit mit der Camera2 API manuell einstellen.
 
-The [Android Camera Parameters app](https://github.com/zoozooll/AndroidCameraParameters) demonstrates every technique in this chapter — you can follow along live by switching to Manual mode in the app and adjusting the ISO and Shutter sliders to see real-time results.
+Die [App Android Camera Parameters](https://github.com/zoozooll/AndroidCameraParameters) demonstriert jede Technik in diesem Kapitel – Sie können live mitmachen, indem Sie in der App in den manuellen Modus wechseln und die Schieberegler für ISO und Verschlusszeit anpassen, um die Ergebnisse in Echtzeit zu sehen.
 
 ---
 
-## The Big Switch: From AUTO → MANUAL
+## Der große Wechsel: Von AUTO → MANUAL
 
-By default, every `CaptureRequest` you submit runs under the camera's built-in 3A auto-pipeline (Auto Exposure, Auto Focus, Auto White Balance). To go manual, you must **explicitly disable** the pipeline.
+Standardmäßig wird jeder von Ihnen übermittelte `CaptureRequest` über die integrierte 3A-Auto-Pipeline (Auto Exposure, Auto Focus, Auto White Balance) der Kamera ausgeführt. Um in den manuellen Modus zu wechseln, müssen Sie die Pipeline **explizit deaktivieren**.
 
-There are two levels of override:
+Es gibt zwei Ebenen der Überschreibung:
 
-| Level | Setting | What Happens |
+| Ebene | Einstellung | Was passiert |
 |-------|---------|-------------|
-| 1. Disable AE only | `CONTROL_AE_MODE = OFF` | ISO + shutter become manual; AF and AWB still auto-run |
-| 2. Disable entire 3A | `CONTROL_MODE = OFF` | **All** 3A algorithms halt; every 3A parameter must be set manually |
+| 1. Nur AE deaktivieren | `CONTROL_AE_MODE = OFF` | ISO + Verschlusszeit werden manuell eingestellt; AF und AWB laufen weiterhin automatisch |
+| 2. Gesamte 3A deaktivieren | `CONTROL_MODE = OFF` | **Alle** 3A-Algorithmen halten an; jeder 3A-Parameter muss manuell eingestellt werden |
 
-For reliable manual exposure, set **both**. Disabling only `CONTROL_AE_MODE` on some devices still leaves OEM post-processing "helping" behind the scenes. Setting `CONTROL_MODE = OFF` is the cleanest, most predictable path.
+Für eine zuverlässige manuelle Belichtung stellen Sie **beides** ein. Das Deaktivieren von nur `CONTROL_AE_MODE` lässt auf einigen Geräten immer noch eine OEM-Nachbearbeitung im Hintergrund "helfen". Das Einstellen von `CONTROL_MODE = OFF` ist der sauberste und am besten vorhersehbare Weg.
 
 ```mermaid
 stateDiagram-v2
-    [*] --> AUTO_MODE: Default Preview Starts
-    AUTO_MODE --> MANUAL_PREP: User toggles Manual Exposure
-    MANUAL_PREP --> VALIDATE_RANGES: Query SENSOR_INFO_EXPOSURE_TIME_RANGE
-    VALIDATE_RANGES --> BUILD_REQUEST: Clamp ISO &amp; Shutter to valid range
+    [*] --> AUTO_MODE: Standard-Vorschau startet
+    AUTO_MODE --> MANUAL_PREP: Benutzer schaltet manuelle Belichtung ein
+    MANUAL_PREP --> VALIDATE_RANGES: SENSOR_INFO_EXPOSURE_TIME_RANGE abfragen
+    VALIDATE_RANGES --> BUILD_REQUEST: ISO & Verschlusszeit auf gültigen Bereich begrenzen
     BUILD_REQUEST --> SUBMIT_REQUEST: set(CONTROL_MODE, OFF)
     SUBMIT_REQUEST --> APPLY_FRAME_1: CaptureSession.capture()
-    APPLY_FRAME_1 --> APPLY_FRAME_N: New values settle (~3–5 frames)
-    APPLY_FRAME_N --> LOCKED_EXPOSURE: Preview now runs at fixed values
-    LOCKED_EXPOSURE --> AUTO_MODE: User re-enables Auto
+    APPLY_FRAME_1 --> APPLY_FRAME_N: Neue Werte pendeln sich ein (~3–5 Frames)
+    APPLY_FRAME_N --> LOCKED_EXPOSURE: Vorschau läuft jetzt mit festen Werten
+    LOCKED_EXPOSURE --> AUTO_MODE: Benutzer schaltet Auto wieder ein
     note right of VALIDATE_RANGES
-        Always query hardware caps!
-        Shutter: 1/8000s to 10s typical
-        ISO: 100 to 6400 typical
+        Hardware-Fähigkeiten immer prüfen!
+        Verschluss: 1/8000 s bis 10 s typisch
+        ISO: 100 bis 6400 typisch
     end note
     note right of SUBMIT_REQUEST
         CONTROL_AE_MODE = OFF
@@ -49,24 +49,24 @@ stateDiagram-v2
     end note
 ```
 
-**Transition latency:** When you submit a manual capture request, the new ISO/shutter values do not appear on the *next* frame. CMOS sensors have pipeline latency — the *current* frame is already being exposed with the old settings. Expect **3–5 frames of transition** before values settle. The [Android Camera Parameters app](https://play.google.com/store/apps/details?id=com.minininja.cameraparams) explicitly waits for `CaptureResult` to confirm the requested values match the applied values before reporting "locked."
+**Übergangslatenz:** Wenn Sie eine manuelle Aufnahmeanforderung übermitteln, erscheinen die neuen ISO-/Verschlusswerte nicht im *nächsten* Frame. CMOS-Sensoren haben eine Pipeline-Latenz – der *aktuelle* Frame wird bereits mit den alten Einstellungen belichtet. Rechnen Sie mit **3–5 Frames Übergangszeit**, bevor sich die Werte stabilisiert haben. Die [App Android Camera Parameters](https://play.google.com/store/apps/details?id=com.minininja.cameraparams) wartet explizit darauf, dass der `CaptureResult` bestätigt, dass die angeforderten Werte mit den angewendeten Werten übereinstimmen, bevor sie "locked" meldet.
 
 ---
 
-## Manual Controls in Camera2 API
+## Manuelle Steuerungen in der Camera2 API
 
 ### SENSOR_SENSITIVITY (ISO)
 
-Camera2 expresses ISO as `CaptureRequest.SENSOR_SENSITIVITY` — an integer that directly maps to the ISO arithmetic scale. On most devices, this is a 1:1 mapping:
+Camera2 drückt den ISO-Wert als `CaptureRequest.SENSOR_SENSITIVITY` aus – eine Ganzzahl, die direkt der arithmetischen ISO-Skala entspricht. Auf den meisten Geräten ist dies eine 1:1-Abbildung:
 
-| Photographer's ISO | SENSOR_SENSITIVITY value |
+| ISO des Fotografen | SENSOR_SENSITIVITY Wert |
 |-------------------|--------------------------|
 | 100 | 100 |
 | 400 | 400 |
 | 3200 | 3200 |
 | 6400 | 6400 |
 
-**Always query the valid range.** Do not hardcode values:
+**Fragen Sie immer den gültigen Bereich ab.** Verwenden Sie keine fest codierten Werte:
 
 ```kotlin
 val sensorSensitivityRange = characteristics.get(
@@ -76,22 +76,22 @@ val minIso = sensorSensitivityRange?.lower ?: 100
 val maxIso = sensorSensitivityRange?.upper ?: 6400
 ```
 
-Some ultra-premium phones report a range like 50–12800, while budget devices may lock you to 100–3200. Values outside the range are clamped by the HAL — which defeats your manual-control purpose.
+Einige Ultra-Premium-Handys melden einen Bereich wie 50–12800, während Budget-Geräte Sie möglicherweise auf 100–3200 festlegen. Werte außerhalb des Bereichs werden vom HAL begrenzt – was den Zweck Ihrer manuellen Steuerung zunichtemacht.
 
-### SENSOR_EXPOSURE_TIME (Shutter in Nanoseconds)
+### SENSOR_EXPOSURE_TIME (Verschlusszeit in Nanosekunden)
 
-Here's the first "gotcha" that trips every new Camera2 developer: **shutter speed is stored as nanoseconds (ns), not seconds.** Humans think in 1/60s; the HAL thinks in 16666666 ns.
+Hier ist der erste Stolperstein, über den jeder neue Camera2-Entwickler stolpert: **Die Verschlusszeit wird in Nanosekunden (ns) gespeichert, nicht in Sekunden.** Menschen denken in 1/60 s; der HAL denkt in 16.666.666 ns.
 
-Converting between them is straightforward arithmetic:
+Die Umrechnung ist einfache Arithmetik:
 
 ```kotlin
-// Seconds → Nanoseconds (multiply by 1,000,000,000)
+// Sekunden → Nanosekunden (multipliziert mit 1.000.000.000)
 fun secondsToNs(seconds: Double): Long = (seconds * 1_000_000_000.0).toLong()
 
-// Nanoseconds → Seconds for user display
+// Nanosekunden → Sekunden für die Anzeige für den Benutzer
 fun nsToSeconds(ns: Long): Double = ns.toDouble() / 1_000_000_000.0
 
-// Human-friendly string formatter (e.g., "1/60s" or "2.5s")
+// Benutzerfreundlicher String-Formatierer (z. B. "1/60s" oder "2.5s")
 fun formatShutter(ns: Long): String {
     val seconds = nsToSeconds(ns)
     return when {
@@ -104,69 +104,69 @@ fun formatShutter(ns: Long): String {
 }
 ```
 
-**Common conversions for reference:**
+**Gängige Umrechnungen als Referenz:**
 
-| Human Shutter | Nanoseconds (ns) |
+| Menschliche Verschlusszeit | Nanosekunden (ns) |
 |--------------|-------------------|
-| 1/8000s | 125,000 |
-| 1/1000s | 1,000,000 |
-| 1/500s | 2,000,000 |
-| 1/120s (24fps 180° rule) | 8,333,333 |
-| 1/60s | 16,666,666 |
-| 1/30s | 33,333,333 |
-| 1/15s | 66,666,666 |
-| 1s | 1,000,000,000 |
-| 2s | 2,000,000,000 |
-| 10s | 10,000,000,000 |
-| 30s | 30,000,000,000 |
+| 1/8000 s | 125.000 |
+| 1/1000 s | 1.000.000 |
+| 1/500 s | 2.000.000 |
+| 1/120 s (24 fps 180°-Regel) | 8.333.333 |
+| 1/60 s | 16.666.666 |
+| 1/30 s | 33.333.333 |
+| 1/15 s | 66.666.666 |
+| 1 s | 1.000.000.000 |
+| 2 s | 2.000.000.000 |
+| 10 s | 10.000.000.000 |
+| 30 s | 30.000.000.000 |
 
-**Again, query the hardware range:**
+**Fragen Sie auch hier den Hardware-Bereich ab:**
 
 ```kotlin
 val exposureTimeRange = characteristics.get(
     CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE
 )
-val minShutterNs = exposureTimeRange?.lower ?: 1_000_000L   // 1/1000s floor
-val maxShutterNs = exposureTimeRange?.upper ?: 10_000_000_000L  // 10s ceiling
+val minShutterNs = exposureTimeRange?.lower ?: 1_000_000L   // 1/1000 s Minimum
+val maxShutterNs = exposureTimeRange?.upper ?: 10_000_000_000L  // 10 s Maximum
 ```
 
-On devices supporting ultra-long exposure (e.g., some Sony Xperia and Google Pixel models), `SENSOR_INFO_EXPOSURE_TIME_RANGE.upper` can exceed 30,000,000,000 ns (30s). Respect this limit — requests beyond the maximum are silently clamped.
+Auf Geräten, die Ultra-Langzeitbelichtungen unterstützen (z. B. einige Sony Xperia- und Google Pixel-Modelle), kann `SENSOR_INFO_EXPOSURE_TIME_RANGE.upper` 30.000.000.000 ns (30 s) überschreiten. Respektieren Sie diese Grenze – Anforderungen jenseits des Maximums werden stillschweigend begrenzt.
 
 ---
 
-## ⚠️ Critical: Manual Mode Quality Degradation
+## ⚠️ Kritisch: Qualitätsverlust im manuellen Modus
 
-**This is the most important warning in the chapter.** Do not skip it.
+**Dies ist die wichtigste Warnung in diesem Kapitel.** Überspringen Sie sie nicht.
 
-When you set `CONTROL_MODE = OFF` (full manual override), you are not just disabling the AE/AF/AWB *algorithms* — on nearly all Android devices, you are also **disabling the OEM's proprietary computational post-processing** that normally runs inside the 3A pipeline.
+Wenn Sie `CONTROL_MODE = OFF` einstellen (vollständige manuelle Überschreibung), deaktivieren Sie nicht nur die AE/AF/AWB-*Algorithmen* – auf fast allen Android-Geräten deaktivieren Sie auch die **proprietäre computergestützte Nachbearbeitung der OEMs**, die normalerweise innerhalb der 3A-Pipeline läuft.
 
-Specifically, research and HAL3 analysis reveals that disabling 3A typically turns off:
+Konkret zeigen Untersuchungen und HAL3-Analysen, dass das Deaktivieren der 3A-Funktion in der Regel Folgendes abschaltet:
 
-| Processing Step | AUTO Mode | MANUAL Mode (CONTROL_MODE = OFF) |
+| Verarbeitungsschritt | AUTO-Modus | Manueller Modus (CONTROL_MODE = OFF) |
 |-----------------|-----------|-----------------------------------|
-| Multi-frame noise reduction | ✓ Active — noise-reduced output | ✗ OFF — visible raw sensor noise |
-| Adaptive tone-mapping / HDR merge | ✓ Active — highlights + shadows recovered | ✗ OFF — single-frame curve only |
-| Local contrast enhancement (MiraVision, etc.) | ✓ Varies by scene | ✗ Flat generic curve |
-| Face metering / scene detection | ✓ Weights exposure to faces | ✗ Ignored |
-| Lens shading / vignetting correction | ✓ Calibrated per-lens | ✗ Often reduced or off |
+| Multi-Frame-Rauschunterdrückung | ✓ Aktiv — rauschreduzierte Ausgabe | ✗ AUS — sichtbares rohes Sensorrauschen |
+| Adaptives Tone-Mapping / HDR-Zusammenführung | ✓ Aktiv — Lichter + Schatten wiederhergestellt | ✗ AUS — nur Einzelbild-Kurve |
+| Lokale Kontrastanhebung (MiraVision usw.) | ✓ Variiert je nach Szene | ✗ Flache generische Kurve |
+| Belichtungsmessung auf Gesichter / Szenenerkennung | ✓ Gewichtet Belichtung auf Gesichter | ✗ Ignoriert |
+| Korrektur von Objektivschattierung / Vignettierung | ✓ Pro Objektiv kalibriert | ✗ Oft reduziert oder aus |
 
-**Result:** A manual-mode photo at ISO 3200 and 1/15s will look *visibly worse* (noisier, flatter contrast) than the same scene captured in AUTO mode with the *identical* ISO and shutter the HAL chose.
+**Das Ergebnis:** Ein Foto im manuellen Modus bei ISO 3200 und 1/15 s wird *sichtbar schlechter* aussehen (verrauschter, flacherer Kontrast) als dieselbe Szene, die im AUTO-Modus mit *identischem* ISO-Wert und identischer Verschlusszeit aufgenommen wurde, die der HAL gewählt hat.
 
-**What can you do?** Two realistic options:
+**Was können Sie tun?** Es gibt zwei realistische Optionen:
 
-1. **Post-process yourself.** Since you've disabled OEM processing, you can apply your own denoising (e.g., OpenCV bilateral filter, MediaPipe denoiser, or custom-trained CNN) in your processing pipeline. RAW capture (see later chapters) + custom RAW development gives maximum artistic control.
+1. **Führen Sie die Nachbearbeitung selbst durch.** Da Sie die OEM-Verarbeitung deaktiviert haben, können Sie Ihre eigene Rauschunterdrückung (z. B. OpenCV bilateraler Filter, MediaPipe-Denoiser oder ein selbst trainiertes CNN) in Ihrer Verarbeitungspipeline anwenden. Die RAW-Aufnahme (siehe spätere Kapitel) + eine benutzerdefinierte RAW-Entwicklung bietet maximale künstlerische Kontrolle.
 
-2. **Use manual AE overrides instead of CONTROL_MODE = OFF.** If you only need to *lock* specific values while keeping OEM processing enabled, try setting `CONTROL_AE_MODE = ON` but pin `SENSOR_SENSITIVITY` and `SENSOR_EXPOSURE_TIME` on a request-by-request basis. Support for this mixed-mode is device-dependent — test thoroughly.
+2. **Verwenden Sie manuelle AE-Überschreibungen anstelle von `CONTROL_MODE = OFF`.** Wenn Sie nur bestimmte Werte *festlegen* müssen, während die OEM-Verarbeitung aktiviert bleibt, versuchen Sie, `CONTROL_AE_MODE = ON` einzustellen, aber setzen Sie `SENSOR_SENSITIVITY` und `SENSOR_EXPOSURE_TIME` auf einer Anforderungs-Basis fest. Die Unterstützung für diesen Mischmodus ist geräteabhängig – testen Sie dies gründlich.
 
-The [Android Camera Parameters app](https://github.com/zoozooll/AndroidCameraParameters) has a toggle in the Manual panel that switches between both approaches and lets you visually compare the quality difference.
+Die [App Android Camera Parameters](https://github.com/zoozooll/AndroidCameraParameters) verfügt im Panel für manuelle Einstellungen über einen Umschalter, mit dem Sie zwischen beiden Ansätzen wechseln und den Qualitätsunterschied visuell vergleichen können.
 
 ---
 
-## Complete Example 1: Locked Exposure for Timelapse
+## Vollständiges Beispiel 1: Fixierte Belichtung für Zeitraffer
 
-A classic use case for manual exposure is **timelapse photography**. In AUTO mode, the camera subtly adjusts exposure from frame to frame as clouds move or light changes. The resulting video flickers horribly. Locking ISO + shutter eliminates this.
+Ein klassischer Anwendungsfall für die manuelle Belichtung ist die **Zeitrafferfotografie**. Im AUTO-Modus passt die Kamera die Belichtung subtil von Frame zu Frame an, wenn sich Wolken bewegen oder das Licht sich ändert. Das resultierende Video flimmert furchtbar. Das Fixieren von ISO + Verschlusszeit eliminiert dies.
 
-**Goal:** ISO 100, 1/60s (16,666,666 ns) — locked for every frame.
+**Ziel:** ISO 100, 1/60 s (16.666.666 ns) — fixiert für jeden Frame.
 
 ```kotlin
 class TimelapseManualExposure(
@@ -177,12 +177,12 @@ class TimelapseManualExposure(
 ) {
     companion object {
         private const val TARGET_ISO = 100
-        private const val TARGET_SHUTTER_NS = 16_666_666L // 1/60s
+        private const val TARGET_SHUTTER_NS = 16_666_666L // 1/60 s
     }
 
     fun captureTimelapseFrame(frameCallback: ImageReader.OnImageAvailableListener) {
         try {
-            // ---- STEP 1: Validate requested values are in hardware range ----
+            // ---- SCHRITT 1: Überprüfen, ob die angeforderten Werte im Hardware-Bereich liegen ----
             val isoRange = characteristics.get(
                 CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE
             )
@@ -198,27 +198,27 @@ class TimelapseManualExposure(
                 TARGET_SHUTTER_NS.coerceIn(it.lower, it.upper)
             } ?: TARGET_SHUTTER_NS
 
-            // ---- STEP 2: Build CaptureRequest with manual exposure ----
+            // ---- SCHRITT 2: CaptureRequest mit manueller Belichtung erstellen ----
             val requestBuilder = captureSession.device.createCaptureRequest(
                 CameraDevice.TEMPLATE_STILL_CAPTURE
             ).apply {
                 addTarget(previewSurface)
                 addTarget(imageReaderSurface)
 
-                // --- THE KEY LINES: Disable 3A and pin values ---
+                // --- DIE ENTSCHEIDENDEN ZEILEN: 3A deaktivieren und Werte festlegen ---
                 set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_OFF)
                 set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_OFF)
                 set(CaptureRequest.SENSOR_SENSITIVITY, clampedIso)
                 set(CaptureRequest.SENSOR_EXPOSURE_TIME, clampedShutter)
 
-                // Optional: Pin AWB to Daylight for consistent color too
+                // Optional: AWB ebenfalls auf Tageslicht fixieren für konsistente Farben
                 set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_DAYLIGHT)
 
-                // Still-capture JPEG quality
+                // JPEG-Qualität für die Standbildaufnahme
                 set(CaptureRequest.JPEG_QUALITY, 95)
             }
 
-            // ---- STEP 3: Submit the still capture ----
+            // ---- SCHRITT 3: Die Standbildaufnahme übermitteln ----
             captureSession.capture(
                 requestBuilder.build(),
                 object : CameraCaptureSession.CaptureCallback() {
@@ -227,35 +227,35 @@ class TimelapseManualExposure(
                         request: CaptureRequest,
                         result: TotalCaptureResult
                     ) {
-                        // Verify the HAL actually applied our values (it may clamp!)
+                        // Überprüfen, ob der HAL unsere Werte tatsächlich angewendet hat (er könnte sie begrenzen!)
                         val appliedIso = result.get(CaptureResult.SENSOR_SENSITIVITY)
                         val appliedShutter = result.get(CaptureResult.SENSOR_EXPOSURE_TIME)
-                        Log.d("Timelapse", "Applied: ISO=$appliedIso, Shutter=${formatShutter(appliedShutter!!)}")
+                        Log.d("Timelapse", "Angewendet: ISO=$appliedIso, Verschluss=${formatShutter(appliedShutter!!)}")
                     }
                 },
-                null // Run on current thread's Handler
+                null // Auf dem Handler des aktuellen Threads ausführen
             )
 
         } catch (e: CameraAccessException) {
-            Log.e("Timelapse", "Manual capture failed", e)
+            Log.e("Timelapse", "Manuelle Aufnahme fehlgeschlagen", e)
         }
     }
 }
 ```
 
-**Key points:**
+**Wichtige Punkte:**
 
-- Always use `coerceIn()` against the hardware ranges. If a budget phone min ISO is 120, your request for 100 silently becomes 120. `onCaptureCompleted()` confirms what was *actually* applied.
-- For a timelapse, submit this request every N seconds (e.g., every 5s for a 300× speedup at 30fps output).
-- Pinning `CONTROL_AWB_MODE_DAYLIGHT` is optional but recommended for timelapses — otherwise AWB may still subtly drift white balance between frames even when exposure is locked.
+- Verwenden Sie immer `coerceIn()` gegen die Hardware-Bereiche. Wenn der minimale ISO-Wert eines Budget-Handys 120 beträgt, wird Ihre Anforderung für 100 stillschweigend auf 120 geändert. `onCaptureCompleted()` bestätigt, was *tatsächlich* angewendet wurde.
+- Senden Sie für einen Zeitraffer diese Anforderung alle N Sekunden (z. B. alle 5 s für eine 300-fache Beschleunigung bei einer Ausgabe von 30 fps).
+- Das Festlegen von `CONTROL_AWB_MODE_DAYLIGHT` ist optional, wird aber für Zeitraffer empfohlen – andernfalls kann der AWB den Weißabgleich zwischen den Bildern immer noch subtil variieren, selbst wenn die Belichtung fest eingestellt ist.
 
 ---
 
-## Complete Example 2: Long Exposure for Night Photography
+## Vollständiges Beispiel 2: Langzeitbelichtung für Nachtfotografie
 
-**Goal:** ISO 3200, 2 seconds (2,000,000,000 ns) — smooth water trails, bright night sky.
+**Ziel:** ISO 3200, 2 Sekunden (2.000.000.000 ns) — weiche Wasserspuren, heller Nachthimmel.
 
-**Critical hardware requirement:** The device must support `SENSOR_INFO_EXPOSURE_TIME_RANGE.upper >= 2,000,000,000 ns`. Many mid-range phones max out at ~1/8s to 1s.
+**Kritische Hardware-Anforderung:** Das Gerät muss `SENSOR_INFO_EXPOSURE_TIME_RANGE.upper >= 2.000.000.000 ns` unterstützen. Viele Mittelklasse-Handys erreichen maximal ~1/8 s bis 1 s.
 
 ```kotlin
 class NightLongExposure(
@@ -263,20 +263,20 @@ class NightLongExposure(
     private val captureSession: CameraCaptureSession,
     private val previewSurface: Surface,
     private val jpegReaderSurface: Surface,
-    private val rawReaderSurface: Surface? // Optional RAW capture
+    private val rawReaderSurface: Surface? // Optionale RAW-Aufnahme
 ) {
     fun shootLongExposure(onPhotoSaved: (path: String) -> Unit) {
-        val shutterNs = 2_000_000_000L  // 2 seconds
+        val shutterNs = 2_000_000_000L  // 2 Sekunden
         val targetIso = 3200
 
-        // --- Validate the hardware can even do this ---
+        // --- Überprüfen, ob die Hardware das überhaupt kann ---
         val shutterRange = characteristics.get(
             CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE
         )
         if (shutterRange == null || shutterRange.upper < shutterNs) {
             throw UnsupportedOperationException(
-                "Device does not support 2s exposure. Max = " +
-                "${shutterRange?.upper?.let { nsToSeconds(it) } ?: "unknown"}s"
+                "Gerät unterstützt keine 2-s-Belichtung. Max = " +
+                "${shutterRange?.upper?.let { nsToSeconds(it) } ?: "unbekannt"}s"
             )
         }
 
@@ -285,20 +285,20 @@ class NightLongExposure(
         ).apply {
             addTarget(previewSurface)
             addTarget(jpegReaderSurface)
-            // If you configured a RAW-capable OutputConfiguration earlier:
+            // Wenn Sie zuvor eine RAW-fähige OutputConfiguration konfiguriert haben:
             rawReaderSurface?.let { addTarget(it) }
 
-            // Manual exposure override
+            // Manuelle Belichtungsüberschreibung
             set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_OFF)
             set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_OFF)
             set(CaptureRequest.SENSOR_SENSITIVITY, targetIso)
             set(CaptureRequest.SENSOR_EXPOSURE_TIME, shutterNs)
 
-            // --- Critical for long exposures ---
-            // Disable optical/digital video stabilization (they conflict >1s)
+            // --- Kritisch für Langzeitbelichtungen ---
+            // Optische/digitale Videostabilisierung deaktivieren (bei >1 s gibt es Konflikte)
             set(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE,
                 CameraMetadata.LENS_OPTICAL_STABILIZATION_MODE_OFF)
-            // No flash for long exposure shots
+            // Kein Blitz für Langzeitbelichtungen
             set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_OFF)
         }
 
@@ -311,8 +311,8 @@ class NightLongExposure(
                     timestamp: Long
                 ) {
                     super.onCaptureStarted(session, request, timestamp)
-                    // Notify UI: "Exposure started — hold very still for 2 seconds"
-                    Log.d("LongExposure", "Exposure started @ $timestamp")
+                    // UI benachrichtigen: "Belichtung gestartet — bitte 2 Sekunden lang ganz still halten"
+                    Log.d("LongExposure", "Belichtung gestartet bei $timestamp")
                 }
 
                 override fun onCaptureCompleted(
@@ -320,8 +320,8 @@ class NightLongExposure(
                     request: CaptureRequest,
                     result: TotalCaptureResult
                 ) {
-                    // ImageReader.OnImageAvailableListener fires separately to save the JPEG
-                    Log.d("LongExposure", "Long exposure capture complete")
+                    // ImageReader.OnImageAvailableListener wird separat ausgelöst, um das JPEG zu speichern
+                    Log.d("LongExposure", "Langzeitbelichtung abgeschlossen")
                 }
             },
             null
@@ -330,21 +330,21 @@ class NightLongExposure(
 }
 ```
 
-**Long exposure tips:**
+**Tipps für Langzeitbelichtungen:**
 
-1. **Turn off OIS.** Optical image stabilization in most lenses tries to compensate for camera shake *during* the exposure. For exposures >0.5s, the OIS actuators can saturate and cause visible drift. Disable it and use a tripod.
+1. **OIS ausschalten.** Die optische Bildstabilisierung in den meisten Objektiven versucht, Kamera-Wackler *während* der Belichtung auszugleichen. Bei Belichtungen > 0,5 s können die OIS-Aktoren in die Sättigung gehen und ein sichtbares Abwandern verursachen. Deaktivieren Sie diese Funktion und verwenden Sie ein Stativ.
 
-2. **Expect a freeze.** The camera will not output preview frames while a 2-second exposure is running. Your UI should show an explicit "EXPOSING…" indicator.
+2. **Mit einem Einfrieren rechnen.** Die Kamera wird keine Vorschau-Frames ausgeben, während eine 2-sekündige Belichtung läuft. Ihre UI sollte eine explizite Anzeige "BELICHTUNG LÄUFT…" zeigen.
 
-3. **RAW is better.** High ISO (3200) + long exposure produces thermal noise (the sensor warms up). Save a RAW frame and use a desktop RAW developer with frame averaging — or implement your own multi-frame long exposure by averaging 8 × 0.25s frames instead of 1 × 2s frame (reduces thermal noise dramatically).
+3. **RAW ist besser.** Hoher ISO-Wert (3200) + Langzeitbelichtung erzeugt thermisches Rauschen (der Sensor erwärmt sich). Speichern Sie ein RAW-Bild und verwenden Sie einen Desktop-RAW-Entwickler mit Frame-Mittelung – oder implementieren Sie Ihre eigene Multi-Frame-Langzeitbelichtung, indem Sie 8 × 0,25 s Frames statt 1 × 2 s Frame mitteln (reduziert thermisches Rauschen dramatisch).
 
 ---
 
-## Complete Example 3: 3-Shot Exposure Bracketing
+## Vollständiges Beispiel 3: Belichtungsreihe mit 3 Bildern
 
-**Goal:** Same ISO, 3 different exposures at −1 EV, 0 EV, +1 EV. The user later merges them into an HDR photo.
+**Ziel:** Gleicher ISO-Wert, 3 verschiedene Belichtungen bei −1 EV, 0 EV, +1 EV. Der Benutzer führt diese später zu einem HDR-Foto zusammen.
 
-From Chapter 13, we know each EV step doubles/halves light. At a fixed ISO, each EV step = multiply/divide shutter speed by 2.
+Aus Kapitel 13 wissen wir, dass jeder EV-Schritt das Licht verdoppelt/halbiert. Bei festem ISO-Wert bedeutet jeder EV-Schritt, die Verschlusszeit mit 2 zu multiplizieren/durch 2 zu dividieren.
 
 ```kotlin
 class ExposureBracketing(
@@ -368,7 +368,7 @@ class ExposureBracketing(
             CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE
         )
 
-        // Build bracket plan: multiply shutter by 2^(evStep)
+        // Belichtungsplan erstellen: Verschlusszeit mit 2^(evStep) multiplizieren
         val frames = listOf(-1.0, 0.0, +1.0).map { ev ->
             val multiplier = Math.pow(2.0, ev)
             val rawShutter = (baseShutterNs.toDouble() * multiplier).toLong()
@@ -383,7 +383,7 @@ class ExposureBracketing(
 
         Log.d("Bracket", "Plan: ${frames.map { "${it.label} ISO${it.iso} ${formatShutter(it.shutterNs)}" }}")
 
-        // Submit each frame as a burst using captureBurst() for atomicity
+        // Jedes Bild als Burst mit captureBurst() für Atomarität übermitteln
         val requestList = frames.map { frame ->
             captureSession.device.createCaptureRequest(
                 CameraDevice.TEMPLATE_STILL_CAPTURE
@@ -396,7 +396,7 @@ class ExposureBracketing(
                 set(CaptureRequest.SENSOR_SENSITIVITY, frame.iso)
                 set(CaptureRequest.SENSOR_EXPOSURE_TIME, frame.shutterNs)
 
-                // Tag each request so we can sort frames in the callback
+                // Jede Anforderung markieren, damit wir die Bilder im Callback sortieren können
                 setTag(frame.label)
             }.build()
         }
@@ -410,7 +410,7 @@ class ExposureBracketing(
                     result: TotalCaptureResult
                 ) {
                     val tag = request.tag as? String ?: "?"
-                    Log.d("Bracket", "$tag complete — ready for HDR merge")
+                    Log.d("Bracket", "$tag abgeschlossen — bereit für HDR-Zusammenführung")
                 }
             },
             null
@@ -419,48 +419,48 @@ class ExposureBracketing(
 }
 ```
 
-**Why `captureBurst()` instead of three separate `capture()` calls?** `captureBurst()` submits the entire list atomically. The HAL guarantees no other preview frames get interleaved, and focus/white-balance state won't drift between frames.
+**Warum `captureBurst()` statt drei separater `capture()`-Aufrufe?** `captureBurst()` übermittelt die gesamte Liste atomar. Der HAL garantiert, dass keine anderen Vorschau-Frames dazwischengeschoben werden und dass der Fokus- oder Weißabgleich-Zustand zwischen den Bildern nicht driftet.
 
-**Want 5 or 7 brackets?** Just change `listOf(-2.0, -1.0, 0.0, +1.0, +2.0)` — the math scales. Many professional HDR apps shoot 9 brackets for extreme dynamic range scenes.
+**Sie möchten 5 oder 7 Belichtungsstufen?** Ändern Sie einfach `listOf(-2.0, -1.0, 0.0, +1.0, +2.0)` — die Mathematik skaliert. Viele professionelle HDR-Apps nehmen 9 Belichtungsstufen für Szenen mit extremem Dynamikumfang auf.
 
-**Merge step:** Once you have the three JPEG (or RAW) frames, you can merge them using:
-- Android's built-in HDR pipeline via `CameraExtensionSession` (see HDR chapter)
-- A 3rd-party library like OpenCV's `createMergeDebevec()` / `createMergeRobertson()` for true exposure fusion
-- Google's Photo Sphere HDR library
+**Schritt der Zusammenführung:** Sobald Sie die drei JPEG- (oder RAW-) Bilder haben, können Sie sie wie folgt zusammenführen:
+- Über die integrierte HDR-Pipeline von Android über `CameraExtensionSession` (siehe HDR-Kapitel).
+- Mit einer Drittanbieter-Bibliothek wie OpenCVs `createMergeDebevec()` / `createMergeRobertson()` für eine echte Belichtungsfusion.
+- Über Googles Photo-Sphere-HDR-Bibliothek.
 
 ---
 
-## Troubleshooting Common Failures
+## Fehlerbehebung bei häufigen Fehlern
 
-| Problem | Likely Cause | Fix |
+| Problem | Wahrscheinliche Ursache | Lösung |
 |---------|-------------|-----|
-| Manual values seem ignored, still looks auto | `CONTROL_MODE` not set to OFF, or values clamped | Set both CONTROL_MODE and CONTROL_AE_MODE to OFF; verify applied values in `onCaptureCompleted()` |
-| 2s long exposure request errors immediately | Device can't do 2s exposure | Check `SENSOR_INFO_EXPOSURE_TIME_RANGE.upper`; reduce exposure time or use ISO bump instead |
-| Preview stutters or lags when switching manual | Too many `setRepeatingRequest()` calls | Use throttled slider listener (every 30–50 ms); only update repeating request, not still captures |
-| Long exposure photo is all black at ISO 100 2s | Scene actually needs more light at ISO 100 | Increase ISO or extend shutter; 2s ISO 100 = EV 0 baseline, not "night bright" |
-| Manual shots noisier than Auto at same ISO | OEM NR disabled by CONTROL_MODE = OFF | Expected behavior! See "Manual Mode Quality Degradation" section. Post-process, or use partial manual via AE_LOCK |
+| Manuelle Werte scheinen ignoriert zu werden, sieht immer noch nach Automatik aus | `CONTROL_MODE` nicht auf OFF gesetzt oder Werte wurden begrenzt | Setzen Sie sowohl CONTROL_MODE als auch CONTROL_AE_MODE auf OFF; überprüfen Sie die angewendeten Werte in `onCaptureCompleted()` |
+| Anforderung für 2-s-Langzeitbelichtung meldet sofort einen Fehler | Gerät unterstützt keine Belichtung von 2 s | Prüfen Sie `SENSOR_INFO_EXPOSURE_TIME_RANGE.upper`; verkürzen Sie die Belichtungszeit oder verwenden Sie stattdessen eine ISO-Erhöhung |
+| Vorschau stottert oder verzögert sich beim Umschalten auf manuell | Zu viele `setRepeatingRequest()`-Aufrufe | Verwenden Sie einen gedrosselten Slider-Listener (alle 30–50 ms); aktualisieren Sie nur die wiederholte Anforderung, nicht die Standbildaufnahmen |
+| Foto mit Langzeitbelichtung ist bei ISO 100 2 s komplett schwarz | Die Szene benötigt bei ISO 100 tatsächlich mehr Licht | Erhöhen Sie den ISO-Wert oder verlängern Sie die Verschlusszeit; 2 s bei ISO 100 ist die Basislinie für EV 0, nicht "nachthell" |
+| Manuelle Aufnahmen verrauschter als automatische bei gleichem ISO-Wert | OEM-Rauschunterdrückung durch CONTROL_MODE = OFF deaktiviert | Erwartetes Verhalten! Siehe Abschnitt "Qualitätsverlust im manuellen Modus". Führen Sie eine Nachbearbeitung durch oder verwenden Sie eine teilweise manuelle Steuerung über AE_LOCK |
 
 ---
 
-## Summary
+## Zusammenfassung
 
-You now have the tools to wrest full control of exposure from the Camera2 HAL:
+Sie verfügen nun über die Werkzeuge, um dem Camera2 HAL die volle Kontrolle über die Belichtung zu entziehen:
 
-- **Disable 3A pipeline** with `CONTROL_MODE = OFF` + `CONTROL_AE_MODE = OFF` for fully manual control
-- **Map ISO → `SENSOR_SENSITIVITY`** (1:1 mapping on most hardware; always query the range)
-- **Map seconds ↔ nanoseconds** for `SENSOR_EXPOSURE_TIME` with simple 10⁹ conversion
-- **Timelapse lock:** Fixed ISO 100 + 1/60s repeated for every frame = zero flicker
-- **Night long exposure:** ISO 3200 + 2s with OIS disabled = bright smooth night scene (on supported hardware)
-- **Exposure bracketing:** Same ISO, shutter ×0.5 / ×1 / ×2 via `captureBurst()` = ready-to-merge HDR input
-- **⚠️ Manual quality tradeoff:** Disabling 3A disables OEM noise reduction and tone-mapping — manual photos often look *worse* at identical ISO than Auto. Plan for post-processing.
+- **3A-Pipeline deaktivieren** mit `CONTROL_MODE = OFF` + `CONTROL_AE_MODE = OFF` für eine vollständig manuelle Steuerung.
+- **ISO-Wert auf `SENSOR_SENSITIVITY` abbilden** (1:1-Abbildung auf der meisten Hardware; fragen Sie immer den Bereich ab).
+- **Sekunden ↔ Nanosekunden abbilden** für `SENSOR_EXPOSURE_TIME` mit einer einfachen 10⁹-Umrechnung.
+- **Zeitraffer-Fixierung:** Fester ISO 100 + 1/60 s wiederholt für jeden Frame = null Flimmern.
+- **Nacht-Langzeitbelichtung:** ISO 3200 + 2 s mit deaktiviertem OIS = helle, glatte Nachtszene (auf unterstützter Hardware).
+- **Belichtungsreihe:** Gleicher ISO-Wert, Verschlusszeit ×0,5 / ×1 / ×2 über `captureBurst()` = Eingabe für HDR-Zusammenführung bereit.
+- **⚠️ Kompromiss bei manueller Qualität:** Das Deaktivieren der 3A deaktiviert die herstellerspezifische Rauschunterdrückung und das Tone-Mapping — manuelle Fotos sehen bei identischem ISO-Wert oft *schlechter* aus als automatische. Planen Sie eine Nachbearbeitung ein.
 
-## What's Next
+## Wie geht es weiter?
 
-Exposure controls *brightness*. **Focus controls sharpness.** In **Chapter 15: Focus**, we cover:
+Die Belichtung steuert die *Helligkeit*. **Der Fokus steuert die Schärfe.** In **Kapitel 15: Fokus** behandeln wir:
 
-- Auto Focus (AF) states and modes — how passive scan works, the difference between continuous picture vs. video
-- Manual focus with `LENS_FOCUS_DISTANCE` in diopters (0.0 = infinity, 10D = 0.1m)
-- Kotlin code for a one-shot AF trigger-and-capture sequence, and a manual-focus SeekBar slider
-- The AF state machine — when `CONTROL_AF_STATE_FOCUSED_LOCKED` actually fires, and how to wait for it
+- Zustände und Modi des Autofokus (AF) — wie die passive Suche funktioniert, der Unterschied zwischen Continuous Picture vs. Video.
+- Manueller Fokus mit `LENS_FOCUS_DISTANCE` in Dioptrien (0,0 = Unendlich, 10 D = 0,1 m).
+- Kotlin-Code für eine One-Shot-AF-Trigger-und-Aufnahme-Sequenz und einen SeekBar-Schieberegler für den manuellen Fokus.
+- Die AF-Zustandsmaschine — wann `CONTROL_AF_STATE_FOCUSED_LOCKED` tatsächlich ausgelöst wird und wie man darauf wartet.
 
-The blur stops here. (Pun very much intended.)
+Hier hört die Unschärfe auf. (Wortspiel absolut beabsichtigt.)

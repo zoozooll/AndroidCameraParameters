@@ -1,4 +1,4 @@
----
+﻿---
 sidebar_position: 2
 title: "Chapter 2: Understanding Smartphone Cameras"
 description: "Explore the camera module hardware inside every smartphone: the lens, image sensor, ISP processor, the difference between RAW and JPEG, multi-camera designs, and the complete journey from photons to a stored photo."
@@ -46,12 +46,12 @@ Here is how light travels through a typical 5-element wide-angle lens assembly:
 
 ```mermaid
 graph LR
-    A[Incoming Light Rays] --> B[Element 1\nAspherical\nConvex]
-    B --> C[Element 2\nConcave\nChromatic Correction]
-    C --> D[Element 3\nConvex]
-    D --> E[Element 4\nConcave\nDistortion Control]
-    E --> F[Element 5\nPlanoconvex]
-    F --> G[Focal Plane\nImage Sensor]
+    A["Incoming Light Rays"] --> B["Element 1<br/>Aspherical<br/>Convex"]
+    B --> C[Element 2<br/>Concave<br/>Chromatic Correction]
+    C --> D[Element 3<br/>Convex]
+    D --> E[Element 4<br/>Concave<br/>Distortion Control]
+    E --> F[Element 5<br/>Planoconvex]
+    F --> G[Focal Plane<br/>Image Sensor]
 ```
 
 ### Aperture
@@ -109,8 +109,8 @@ graph LR
         C1[R] --- C2[G] --- C3[R] --- C4[G]
         D1[G] --- D2[B] --- D3[G] --- D4[B]
     end
-    E[IR Cut Filter\nBlocks Infrared] --> F[Color Filter Array\nBayer RGGB Deposited on Glass]
-    F --> G[Silicon Photodiodes\nConvert Photons→Electrons]
+    E["IR Cut Filter<br/>Blocks Infrared"] --> F["Color Filter Array<br/>Bayer RGGB Deposited on Glass"]
+    F --> G[Silicon Photodiodes<br/>Convert Photons→Electrons]
 ```
 
 After readout, the sensor data is a mosaic of separate red, green, and blue values — not a full-color image yet. The step that fills in the missing color information for each pixel is called **demosaicing** (or debayering) and it is the first major computational step performed in the ISP.
@@ -140,15 +140,15 @@ The canonical ISP pipeline stages, in order, are:
 
 ```mermaid
 flowchart TD
-    A[Raw Bayer Data\nfrom Sensor] --> B[Hot Pixel Correction]
-    B --> C[Demosaic / Debayer\nBayer → Full RGB]
-    C --> D[Noise Reduction\nSpatial + Temporal]
-    D --> E[Lens Shading Correction\nFix Vignetting]
-    E --> F[Geometric Distortion\nCorrect Fisheye / Barrel]
-    F --> G[Color Correction Matrix\nsRGB / P3 Color Space]
-    G --> H[Tone Curve Adjustment\nGamma + S-Curve]
+    A["Raw Bayer Data<br/>from Sensor"] --> B["Hot Pixel Correction"]
+    B --> C[Demosaic / Debayer<br/>Bayer → Full RGB]
+    C --> D[Noise Reduction<br/>Spatial + Temporal]
+    D --> E[Lens Shading Correction<br/>Fix Vignetting]
+    E --> F[Geometric Distortion<br/>Correct Fisheye / Barrel]
+    F --> G[Color Correction Matrix<br/>sRGB / P3 Color Space]
+    G --> H[Tone Curve Adjustment<br/>Gamma + S-Curve]
     H --> I[Edge Enhancement / Sharpening]
-    I --> J[Final Processed Image\n→ JPEG Encoder / Display]
+    I --> J[Final Processed Image<br/>→ JPEG Encoder / Display]
 ```
 
 The ISP's processing quality is a major differentiator between phone manufacturers. Google, Samsung, Apple, and Xiaomi each tune their ISP pipelines with different artistic priorities: some favor natural colors, some oversaturated "punchy" output, some aggressive noise reduction vs retained detail. The Camera2 API gives you some control over individual ISP stage strengths (via the Android tonemap and color correction controls), but most of the detailed stage parameters are locked behind vendor proprietary APIs.
@@ -202,12 +202,12 @@ A typical 2026 flagship rear camera island contains:
 ```mermaid
 graph TB
     subgraph "Phone Rear Camera Island"
-        A[Rear Glass Cover]
+        A["Rear Glass Cover"]
     end
-    A --> B[Ultra-Wide Camera\n13mm eq / 120° FOV]
-    A --> C[Wide / Primary Camera\n24mm eq / f/1.6 + OIS]
-    A --> D[5× Periscope Telephoto\n120mm eq / Prism-Refracted]
-    A --> E[ToF Depth Sensor\nLaser Dot Projector]
+    A --> B[Ultra-Wide Camera<br/>13mm eq / 120° FOV]
+    A --> C[Wide / Primary Camera<br/>24mm eq / f/1.6 + OIS]
+    A --> D[5× Periscope Telephoto<br/>120mm eq / Prism-Refracted]
+    A --> E[ToF Depth Sensor<br/>Laser Dot Projector]
 ```
 
 When you perform a pinch-zoom gesture in the camera app, the HAL (Hardware Abstraction Layer) smoothly switches the active physical camera at pre-determined thresholds. For example, zooming from 0.5× to 1.0× fades from the ultra-wide to the wide. At 2.9× the app is still digitally cropping the wide camera. At 3.0×, the HAL switches the active source to the periscope telephoto camera. Between those zoom ratios, a sophisticated image-fusing algorithm uses both cameras simultaneously to maintain a seamless transition.

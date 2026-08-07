@@ -1,333 +1,126 @@
 ---
 sidebar_position: 27
-title: "Chapter 27: Camera Testing"
-description: "The complete Android camera testing guide. Understand Camera ITS (Image Test Suite), what OEMs validate before shipping (feature combinations, scene tests, sensor fusion), CTS Verifier manual tests, and how to write your own instrumentation tests with Mockito mocks and parameterized hardware-level tests that run on CI."
-keywords: [camera its, camera image test suite, cts camera, cts verifier, android camera testing, instrumentation test camera, mockito cameradevice, mock cameramanager, parameterized hardware level, sensor fusion test]
+title: "제27장: 카메라 테스트"
+description: "안드로이드 카메라 구현을 위한 테스트 전략을 수립하세요. 구글의 CTS(Compatibility Test Suite)와 ITS(Imaging Test Suite)가 HAL을 검증하는 방법, 기기별 특이사항 처리를 위한 테스트 하네스 구축, 그리고 실제 하드웨어 없이 CI에서 카메라 코드를 검증하기 위한 모킹(Mocking) 기법을 배웁니다."
+keywords: [안드로이드 카메라 테스트, CTS, ITS, 카메라 모킹, Camera2 테스트 하네스, 기기 호환성 테스트, Robolectric 카메라, 카메라 계측 테스트]
 ---
 
-# Chapter 27: Camera Testing
+# 제27장: 카메라 테스트
 
-## Summary
+## 요약
 
-You built a camera app. It works on your Pixel. It works on your Galaxy. Does it work on the $99 Android Go device with a `LEGACY` HAL whose vendor misimplemented `CONTROL_AF_TRIGGER_START` and returns every `SENSOR_EXPOSURE_TIME` in *microseconds* instead of nanoseconds?
+안드로이드 카메라 개발에서 가장 어려운 점은 코드를 작성하는 것이 아니라, 그 코드가 출시되어 수천 개의 다른 기기 모델에서 실행될 때 제대로 작동하는지 확인하는 것입니다. 한 제조사에서는 완벽하게 작동하는 `CaptureRequest`가 다른 제조사에서는 `onConfigureFailed`를 발생시키거나 조용히 프레임을 드롭할 수 있습니다.
 
-Testing camera software is a two-part problem: **OEM validation at the HAL level** (the tests Google *forces* every manufacturer to pass before a device can ship with Google Play) and **app-level testing on CI** (the tests you run against your own code without requiring physical camera hardware). This chapter covers both. First you will learn what Camera ITS (the Image Test Suite, part of CTS) actually validates on physical test rigs: stream combination enumeration, physical scene luminance linearity, and sensor/gyro timestamp fusion. Then you will learn how to write your own instrumentation tests using Mockito mocks for `CameraManager`/`CameraDevice`/`CaptureSession` so your entire camera stack runs on headless CI servers, plus a parameterized test pattern that asserts your code gracefully degrades on `LEGACY` hardware instead of crashing.
+이 장에서는 안드로이드 카메라 생태계를 지탱하는 테스트 인프라를 살펴봅니다. 먼저, 구글과 OEM이 폰을 출시하기 전에 통과해야 하는 **CTS(Compatibility Test Suite)**와 **ITS(Imaging Test Suite)**에 대해 배웁니다. 이를 통해 안드로이드가 카메라 하드웨어에 대해 어떤 보장을 하는지 이해할 수 있습니다. 그 다음, 여러분의 앱을 위한 실용적인 테스트 전략을 구축합니다. 실제 카메라 하드웨어를 추상화하여 CI(지속적 통합) 서버에서 로직을 테스트하는 방법, **Robolectric**과 커스텀 **Shadows**를 사용한 카메라 유닛 테스트, 그리고 실제 장치에서 `CameraCharacteristics` 데이터를 수집하여 엣지 케이스를 재현하는 기기별 테스트 하네스 구축 방법을 다룹니다.
 
-Use **Android Camera Parameters** ([Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams), [GitHub](https://github.com/zoozooll/AndroidCameraParameters)) as the reference tool to inspect the exact capabilities your tests should assert against — it surfaces every `CameraCharacteristics` key that ITS also validates on real rigs.
-
----
-
-## Part One: How OEMs Validate Cameras — Camera ITS and CTS
-
-Before a device can ship with Google Mobile Services (GMS), it must pass the Android Compatibility Test Suite (CTS). Camera CTS has two halves: programmatic CTS tests that run via `Tradefed`, and the Camera ITS (Image Test Suite) that requires a physical test lab with automated rigs.
-
-### Test Categories
-
-```mermaid
-graph TB
-    subgraph CTS[Android CTS — Camera Section]
-        direction TB
-        CTS_API[API Tests<br/>— CameraCharacteristics keys<br/>— isSessionConfigurationSupported<br/>— All use cases enumerate correctly]
-        CTS_FLOW[Flow Tests<br/>— open → close<br/>— open → session → capture → close<br/>— Rapid open/close stress]
-        CTS_V[CTS Verifier<br/>Manual on-device tests<br/>— Preview smoothness<br/>— Capture quality<br/>— Multi-camera switch]
-    end
-    subgraph ITS[Camera ITS — Image Test Suite]
-        direction TB
-        ITS_COMBI[test_feature_combination<br/>Stream permutations × FPS × HDR<br/>Thousands of calls to<br/>isSessionConfigurationSupported]
-        ITS_SCENE[Physical Scene Tests<br/>scene0 (uniform gray)<br/>scene1_1 (color checker)<br/>Automated tablet display → DUT]
-        ITS_FUSION[sensor_fusion test<br/>Gyro timestamps must align with<br/>SENSOR_TIMESTAMP in CaptureResult<br/>±1ms tolerance]
-        ITS_3A[3A Convergence tests<br/>AE/AF/AWB must converge within<br/>N frames under standard lighting]
-        ITS_HDR[HDR / Ultra HDR tests<br/>JPEG_R gainmap validity<br/>Dynamic range measurement]
-    end
-    CTS --> SHIP[(Ships if ALL pass)]
-    ITS --> SHIP
-
-    style ITS_COMBI fill:#d9e6f2
-    style ITS_SCENE fill:#d9f2e6
-    style ITS_FUSION fill:#f2d9e6
-    style CTS_API fill:#fff3cd
-    style CTS_V fill:#fff3cd
-```
-
-Everything in the diagram is required. If even *one* of these tests fails on a single camera ID, the device does not ship. That is why understanding ITS helps your app: it guarantees a baseline below which no HAL can fall, and it documents exactly what behaviors you can rely on.
-
-### The Camera ITS Test Rig Architecture
-
-A real Camera ITS lab looks like this:
-
-```mermaid
-graph LR
-    TC[Test Controller PC<br/>Linux + Tradefed CLI<br/>Runs python3 its/scripts]
-    TC -->|USB 3.x ADB| DUT[DUT Phone or Tablet<br/>Device Under Test<br/>Camera facing tablet display]
-    TC -->|USB 3.x| TPD[Tablet Display<br/>~10" calibrated 4K panel<br/>Runs ITS tabletd APK]
-    TC -->|GPIO / USB relay| LIGHT[Controlled Lighting<br/>CCT-tunable LED panels<br/>2700K-6500K ±2%]
-    TPD -->|projects scene0 / scene1_1<br/>via HDMI/Internal display| DUT_CAM[DUT Rear Camera Sensor]
-    DUT_CAM -->|captures frames over MIPI → HAL| DUT
-    DUT -->|DNG/JPEG + CaptureResults<br/>pulled via adb pull| TC
-    TC -->|runs numpy / scipy analysis<br/>luminance linearity, color error, sharpness| RESULT[(PASS / FAIL report + JSON)]
-```
-
-The key detail is the *closed loop*. The test controller knows *exactly* what pixel values it commanded the tablet display to show (e.g. a uniform gray at 50% intensity with a precisely known 6500K color temperature) and then verifies numerically that the DUT camera's output — both pixel luminance in the JPEG/DNG *and* the reported `SENSOR_EXPOSURE_TIME` × `SENSOR_SENSITIVITY` in the `CaptureResult` — matches the physical input to within allowed tolerances.
-
-#### `test_feature_combination`: The Enumeration Gauntlet
-
-The single biggest ITS test by runtime is `test_feature_combination`. It enumerates every legal stream size from `SCALER_STREAM_CONFIGURATION_MAP`, every format (`PRIV`, `YUV`, `JPEG`, `RAW_SENSOR`, `JPEG_R`, `DEPTH`), every FPS range from `CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES`, every output-surface *count* combination (1-output, 2-output, 3-output session configs), and every HDR mode flag — then calls `isSessionConfigurationSupported` on the resulting SessionConfiguration, captures one frame per supported config, and asserts the frame is not corrupted. The total number of combinations is often 30,000–100,000 per camera ID.
-
-For you as an app developer, the takeaway is simple: **if `isSessionConfigurationSupported` returns `true` on a CTS-passing device, that stream combination actually works, in both directions.** If it returns `false`, do not try it. Rely on this call before you fall back to smaller sizes. This is the exact same query CameraX uses internally in its resolution selector.
-
-#### Physical Scene Tests: Linearity of Exposure
-
-Scene0 and scene1_1 tests validate that the camera's *reported* exposure math matches its *measured* pixel output. The test rig projects a uniform gray field (scene0) of known luminance `L` onto the DUT. It then commands a sweep of N different `(SENSOR_EXPOSURE_TIME, SENSOR_SENSITIVITY)` pairs from the full available range, captures a DNG frame per pair, and computes the arithmetic mean pixel value `Y` across the sensor's active array.
-
-The assertion is strictly linear:
-
-```
-Y_i / (EXPOSURE_TIME_i × SENSITIVITY_i) = constant ± tolerance
-```
-
-across *all* captured pairs. If the product doubles, pixel luminance must double. If it halves, luminance must halve. Any deviation above ~1% in the midtones fails the test.
-
-Why this matters to you: it is the guarantee that your manual exposure slider (Chapter 14) produces mathematically predictable results on a CTS-compliant device. If your app computes the "next ISO/exposure pair" for a +1 EV step, the output image really will be one stop brighter. On non-CTS-compliant devices (imported gray-market phones, custom ROMs without CTS), this guarantee does not hold, and your manual exposure UI will appear broken.
-
-#### `sensor_fusion`: The Timestamp Fusion Test
-
-EIS (Electronic Image Stabilization) and AR tracking live or die by this test. While the DUT is recording a video, the test controller physically rotates the phone on a motorized gimbal at known angular velocity. Simultaneously, it polls the DUT's gyroscope sensor via `SensorManager` at 400Hz+ and the camera's `CaptureResult.SENSOR_TIMESTAMP` at 30/60fps.
-
-The pass condition: every gyro timestamp and every frame `SENSOR_TIMESTAMP` must be in the exact same `CLOCK_MONOTONIC` timebase, with gyro samples interpolated at the camera sample time matching the gimbal's commanded angular velocity to within ±0.1 rad/s and ±1ms.
-
-If this test fails, the HAL's timestamp source is wrong — typically it mixed `CLOCK_REALTIME` (wall time, which jumps during NTP sync) with `CLOCK_MONOTONIC` (steady, monotonic). Google rejects the device. For you, this means you can safely feed `CaptureResult.SENSOR_TIMESTAMP` directly into ARCore's camera image update call without applying any custom timestamp offset, on any GMS-certified device.
-
-### CTS Verifier: Manual User Tests
-
-Not everything can be automated. CTS Verifier is an on-device APK that a human QA tester uses for subjective tests:
-
-- **Preview smoothness:** 30 seconds of panning the device; tester scores perceived smoothness 1–5. (Objective telemetry is also captured via Choreographer dumpsys.)
-- **Capture quality:** 5 photos of standard scenes under standard lighting; tester compares against a gold-reference device.
-- **Multi-camera zoom transition:** While zooming continuously 0.5×–10×, there must be no visible pop, glitch, or black frame between physical camera switches.
-- **HDR/JPEG_R quality:** Side-by-side SDR and HDR captures are compared against known-good reference imagery.
-
-These are subjective, but the bar is public. If your app targets similar UX goals (smooth zoom transitions, HDR captures), you can replicate the same test procedures in your internal QA lab with the same scene0/scene1_1 tablet rig.
+여러분의 기기가 구글의 호환성 기준을 얼마나 잘 따르는지 확인하려면, [Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)에서 **Android Camera Parameters**를 설치하세요. 이 앱은 많은 CTS 체크 항목을 일반 사용자가 읽을 수 있는 보고서로 변환하여 보여줍니다.
 
 ---
 
-## Part Two: Testing Your Own App — Instrumentation and Mocking
+## 안드로이드 카메라 품질의 수호자: CTS와 ITS
 
-OEM tests validate the HAL. You need to validate *your* code. The canonical mistake teams make is requiring a real phone with a working camera on their CI server. Don't. With Mockito's `mock()` + `ArgumentCaptor`, every single Camera2 class — `CameraManager`, `CameraDevice`, `CameraCaptureSession`, `CaptureResult` — is an interface or a non-final class that mocks cleanly. You can run your entire camera pipeline on CI on a headless Linux x86 emulator with no camera hardware at all.
+안드로이드 앱 개발자로서 여러분은 구글이 이미 하드웨어 수준에서 많은 테스트를 수행했다는 사실을 알고 안심해도 됩니다. 모든 안드로이드 기기는 출시 전 두 가지 엄격한 테스트 제품군을 통과해야 합니다.
 
-### Example 1: Capture a "Frame" and Verify CaptureResult Contains Expected EXPOSURE_TIME (AndroidTest with Mockito)
+### 1. CTS (Compatibility Test Suite)
+
+CTS는 **API 계약**을 테스트합니다. `CameraDevice.open()`이 성공을 보고하면 실제로 장치가 열리는가? `SESSION_REGULAR` 세션에 2개의 YUV 스트림을 추가하면 HAL이 이를 거부하지 않는가? `SENSOR_EXPOSURE_TIME`을 설정하면 결과 메타데이터에 해당 값이 반영되는가?
+
+- **테스트 방식:** 자동화된 안드로이드 계측 테스트(Instrumentation tests).
+- **개발자에게 주는 의미:** CTS 덕분에 우리는 `CameraCharacteristics`에 명시된 기능이 실제로 작동할 것이라고 믿고 코드를 짤 수 있습니다. 예를 들어, 하드웨어 레벨이 `FULL`이라면 모든 `FULL` 레벨 API 호출이 에러 없이 작동함을 CTS가 보장합니다.
+
+### 2. ITS (Imaging Test Suite)
+
+CTS가 "코드가 돌아가는가"를 확인한다면, ITS는 **"사진이 잘 나오는가"**를 확인합니다. 이는 폰을 특수 제작된 "ITS 박스"(조명과 차트가 있는 통) 안에 넣고 수행하는 물리적 테스트입니다.
+
+- **체크 항목:** 색상 정확도(차트의 빨간색이 사진에서도 빨간색인가?), 노이즈 레벨, 렌즈 왜곡 보정 정도, 프레임 타임스탬프의 정밀도(지터 확인).
+- **개발자에게 주는 의미:** ITS 덕분에 서로 다른 제조사의 폰에서 찍은 사진들도 어느 정도 일관된 품질을 유지합니다. 특히 `CALIBRATED` 타임스탬프 동기화(20장 참고)는 ITS의 엄격한 검증을 통과해야만 선언할 수 있는 신뢰도 높은 데이터입니다.
+
+---
+
+## 앱 개발자를 위한 카메라 테스트 전략
+
+모든 기기를 직접 사서 테스트할 수는 없습니다. 따라서 계층화된 테스트 접근 방식이 필요합니다.
+
+### 1단계: 비즈니스 로직과 카메라 API 분리
+
+가장 흔한 실수는 `Fragment`나 `Activity` 안에 모든 카메라 코드를 넣는 것입니다. 대신 카메라 로직을 인터페이스 뒤로 숨기세요.
 
 ```kotlin
-// app/src/androidTest/java/com/example/camera/CameraCaptureTest.kt
-@RunWith(AndroidJUnit4::class)
-@SmallTest
-class CameraCaptureTest {
+interface CameraEngine {
+    fun openCamera(id: String)
+    fun setZoom(ratio: Float)
+    fun takePicture(callback: (ByteArray) -> Unit)
+}
+```
 
-    @Test
-    fun captureRequest_containsManualExposureTime_andResultEchoesIt() = runTest {
-        // ---- Arrange ----
-        val mockCameraManager = mock<CameraManager>()
-        val mockCameraDevice = mock<CameraDevice>()
-        val mockSession = mock<CameraCaptureSession>()
-        val mockSurface = mock<Surface>()
-        val testHandler = Handler(Looper.getMainLooper())
+이렇게 하면 실제 카메라 없이도 여러분의 UI가 줌 슬라이더 조작에 어떻게 반응하는지 테스트할 수 있습니다.
 
-        val expectedExposureNs = 16_666_666L // 1/60 s
-        val expectedIso = 400
+### 2단계: Robolectric과 ShadowCameraCharacteristics 사용하기
 
-        // Capture the StateCallback passed to openCamera
-        val deviceCallbackCaptor =
-            argumentCaptor<CameraDevice.StateCallback>()
-        whenever(mockCameraManager.openCamera(
-            anyString(), deviceCallbackCaptor.capture(), any()
-        )).thenAnswer { /* no-op; we fire callback manually */ }
+**Robolectric**은 JVM에서 안드로이드 코드를 실행할 수 있게 해줍니다. 하지만 원시 `CameraManager`는 JVM에서 항상 빈 결과를 반환합니다. 이를 해결하기 위해 실제 기기에서 수집한 `CameraCharacteristics` 데이터를 테스트에 주입하는 **Shadow**를 만들 수 있습니다.
 
-        // Capture the session state callback
-        val sessionCallbackCaptor =
-            argumentCaptor<CameraCaptureSession.StateCallback>()
-        whenever(mockCameraDevice.createCaptureSession(
-            anyList<Surface>(),
-            sessionCallbackCaptor.capture(),
-            any()
-        )).thenAnswer { /* no-op */ }
+**Android Camera Parameters** 앱의 장점 중 하나는 기기의 모든 메타데이터를 **JSON**으로 내보낼 수 있다는 점입니다. 픽셀 8의 JSON 데이터를 가져와서 유닛 테스트의 입력으로 넣으면, 실제 픽셀 8 하드웨어 없이도 여러분의 앱이 해당 기기의 해상도 목록을 어떻게 처리하는지 검증할 수 있습니다.
 
-        // Capture the CaptureCallback passed to capture()
-        val captureCallbackCaptor =
-            argumentCaptor<CameraCaptureSession.CaptureCallback>()
-        whenever(mockSession.capture(
-            any(), captureCallbackCaptor.capture(), any()
-        )).thenReturn(1)
+### 3단계: 가상 비디오 소스를 이용한 테스트
 
-        // Build the camera-under-test using your wrapper
-        val cameraWrapper = YourCameraWrapper(mockCameraManager, testHandler)
+에뮬레이터의 카메라는 매우 제한적입니다. 하지만 고정된 이미지를 보여주는 대신 비디오 파일을 스트리밍하도록 설정할 수 있습니다.
 
-        // ---- Act: fire the open → configure → capture chain ----
-        cameraWrapper.open("0")
-        // (Inside YourCameraWrapper.open() called
-        //  mockCameraManager.openCamera, which captured the callback.)
-        // Simulate HAL returning success:
-        deviceCallbackCaptor.lastValue.onOpened(mockCameraDevice)
+- **방법:** `adb push video.mp4 /data/local/tmp/` 명령을 사용하고 에뮬레이터 설정에서 카메라 소스를 해당 파일로 지정합니다.
+- **용도:** QR 코드 인식 로직이나 객체 감지 파이프라인이 움직이는 피사체를 대상으로 잘 작동하는지 테스트할 때 유용합니다.
 
-        cameraWrapper.createSession(listOf(mockSurface))
-        sessionCallbackCaptor.lastValue.onConfigured(mockSession)
+---
 
-        val requestBuilder: CaptureRequest.Builder =
-            mockCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
-        // (Your wrapper applies manual settings here)
-        requestBuilder.set(CaptureRequest.CONTROL_MODE,
-                           CaptureRequest.CONTROL_MODE_OFF)
-        requestBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME,
-                           expectedExposureNs)
-        requestBuilder.set(CaptureRequest.SENSOR_SENSITIVITY,
-                           expectedIso)
+## 기기별 특이사항(Quirk) 테스트 하네스 구축
 
-        val resultDeferred = async { cameraWrapper.capture(requestBuilder.build()) }
+Camera2 개발의 가장 큰 적은 "특이사항(Quirks)"입니다. 예를 들어 "특정 제조사의 폰은 60fps 녹화 중에 줌을 바꾸면 충돌한다"와 같은 현상입니다. 이를 위해 프로젝트 내에 **Quirk Database**와 연동된 테스트 케이스를 만드세요.
 
-        // ---- Assert 1: the CaptureRequest sent to the HAL had the right keys ----
-        val sentRequest: CaptureRequest = captureArg(mockSession, 0) {
-            capture(any(), any(), any())
-        }
-        assertThat(sentRequest[CaptureRequest.SENSOR_EXPOSURE_TIME])
-            .isEqualTo(expectedExposureNs)
-        assertThat(sentRequest[CaptureRequest.SENSOR_SENSITIVITY])
-            .isEqualTo(expectedIso)
-
-        // ---- Act 2: Simulate the HAL returning a CaptureResult ----
-        val mockResult = mock<TotalCaptureResult>().apply {
-            whenever(get(CaptureResult.SENSOR_EXPOSURE_TIME))
-                .thenReturn(expectedExposureNs)
-            whenever(get(CaptureResult.SENSOR_SENSITIVITY))
-                .thenReturn(expectedIso)
-            whenever(frameNumber).thenReturn(1L)
-        }
-        captureCallbackCaptor.lastValue
-            .onCaptureCompleted(mockSession, sentRequest, mockResult)
-
-        // ---- Assert 2: wrapper's returned capture result echoes exposure ----
-        val actual = resultDeferred.await()
-        assertThat(actual.exposureTimeNanos).isEqualTo(expectedExposureNs)
-        assertThat(actual.iso).isEqualTo(expectedIso)
+```kotlin
+@Test
+fun testZoomStabilityDuringRecording() {
+    // Android Camera Parameters JSON에서 수집한 Quirk 플래그 확인
+    if (DeviceQuirks.HAS_ZOOM_RECONFIG_BUG) {
+        // 이 기기에서는 줌 변경 시 세션을 재시작하지 않는지 검증
     }
 }
 ```
 
-The pattern is always the same:
-1. `argumentCaptor` the callback that would go to the HAL.
-2. Call your wrapper.
-3. Fire the callback's success method *as if the HAL responded*.
-4. Assert on both the inputs (what your wrapper sent to the HAL) and the outputs (what your wrapper handed back to the caller).
-
-This runs on an emulator with no camera. No hardware. No flakiness from lighting. 10,000 runs produce the same 10,000 passes.
-
-### Example 2: Parameterized Test — LEGACY Devices Must Gracefully Degrade, Never Crash
-
-Every production camera app must run on `LEGACY` HALs. The single most common bug is calling `CaptureRequest.CONTROL_MODE_OFF` on a `LEGACY` device: the HAL ignores it, but your wrapper interprets the resulting `CaptureResult.CONTROL_AE_STATE == SEARCHING` as a transient failure and tries to restart AE in an infinite loop, eventually ANRing.
-
-Parameterize your tests per `INFO_SUPPORTED_HARDWARE_LEVEL`:
-
-```kotlin
-@RunWith(Parameterized::class)
-class HardwareLevelGracefulDegradationTest(
-    private val hardwareLevel: Int,
-    private val hardwareLevelName: String
-) {
-    companion object {
-        @JvmStatic
-        @Parameterized.Parameters(name = "{1}")
-        fun data() = listOf(
-            arrayOf(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY,
-                    "LEGACY"),
-            arrayOf(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED,
-                    "LIMITED"),
-            arrayOf(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL,
-                    "FULL"),
-            arrayOf(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_3,
-                    "LEVEL_3"),
-        )
-    }
-
-    @Test
-    fun requestManualExposure_onAnyHardwareLevel_doesNotCrash_orHang() = runTest {
-        val mockCameraManager = mock<CameraManager>()
-        val mockChars = mock<CameraCharacteristics>()
-        whenever(mockChars.get<Int>(
-            CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL
-        )).thenReturn(hardwareLevel)
-        whenever(mockCameraManager.getCameraCharacteristics("0"))
-            .thenReturn(mockChars)
-
-        val wrapper = YourCameraWrapper(mockCameraManager, testHandler)
-        wrapper.open("0")
-        // ... (boilerplate session setup as before, omitted)
-
-        val job = launch {
-            wrapper.setManualExposure(iso = 400, exposureNs = 8_000_000L)
-        }
-
-        // No hang — must complete within timeout even on LEGACY
-        withTimeoutOrNull(2_000) { job.join() }
-            ?: fail("setManualExposure hung on $hardwareLevelName hardware")
-
-        // No exception leaked to uncaught
-        assertThat(job.isCancelled).isFalse()
-    }
-}
-```
-
-Run this against every new build. It takes 400ms. It catches the exact class of `LEGACY`-HAL hangs that would otherwise only show up in Play Console crash reports months later.
-
-### AndroidTest on Real Hardware: Sanity Capture That EXPOSURE_TIME Is Correct
-
-For nightly runs against a small farm of real phones, write a short AndroidTest that opens the *actual* camera, captures one RAW frame, and asserts that `CaptureResult.SENSOR_EXPOSURE_TIME` was within 5% of the requested value. This guards against HAL regressions on specific OS builds:
-
-```kotlin
-@RunWith(AndroidJUnit4::class)
-@RequiresDevice
-@LargeTest
-class RealHardwareCaptureSanityTest {
-
-    @Test
-    fun realCapture_exposureTimeIsWithin5PercentOfRequested() = runTest {
-        val context = InstrumentationRegistry.getInstrumentation().context
-        val camManager = context.getSystemService(Context.CAMERA_SERVICE)
-            as CameraManager
-        val chars = camManager.getCameraCharacteristics("0")
-        assumeTrue(
-            "Requires FULL or LEVEL_3 for manual exposure",
-            chars[CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL] in
-            setOf(
-                CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL,
-                CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_3,
-            )
-        )
-
-        // ... open camera, create ImageReader (PRIVATE or YUV) session, capture
-        // a single manual frame with a known exposure using the wrappers from
-        // Chapter 26 coroutines ...
-
-        val requestedNs = 10_000_000L // 1/100s
-        val result: TotalCaptureResult =
-            cameraWrapper.captureManualExposure(requestedNs, iso = 200)
-
-        val actualNs = result[CaptureResult.SENSOR_EXPOSURE_TIME]!!
-        val tolerancePct = abs(actualNs - requestedNs) * 100.0 / requestedNs
-        assertThat(tolerancePct)
-            .withFailMessage(
-                "Requested %d ns, got %d ns (%$.1f%% off >5%%)",
-                requestedNs, actualNs, tolerancePct
-            )
-            .isLessThan(5.0)
-    }
-}
-```
-
-This test is flaky by nature — it depends on real hardware. But it catches the exact class of vendor OTA updates that silently break manual exposure on flagship devices. Run it nightly on your 5–10 device farm; the signal is worth the noise.
+이러한 특이사항 데이터는 커뮤니티에서 공유되기도 합니다. **Jetpack CameraX** 라이브러리 내부에도 수백 개의 이러한 기기별 해결 방법(Workaround)이 포함되어 있는데, Camera2를 직접 사용한다면 이를 참고하여 여러분만의 테스트 세트를 구축해야 합니다.
 
 ---
 
-## Summary
+## 실전: 하드웨어 모킹(Mocking) 예제
 
-Camera testing divides into OEM validation and app validation. OEMs must pass CTS and Camera ITS, a physically-rigged test suite that enforces stream combination support (via thousands of `isSessionConfigurationSupported` calls), luminance linearity across the exposure × sensitivity plane, and sensor/gyro timestamp alignment for EIS and AR. Apps test via instrumentation: Mockito mocks every Camera2 class, `ArgumentCaptor` grabs HAL callbacks, you fire them manually, and you assert both request and result without touching real hardware — enabling CI runs on headless emulators. Parameterize your wrapper tests against every `INFO_SUPPORTED_HARDWARE_LEVEL` (especially `LEGACY`) to guarantee graceful degradation, and run a small suite of `@RequiresDevice @LargeTest` sanity captures against a real device farm to catch OTA regressions.
+테스트 코드에서 `CameraCaptureSession`을 모킹하여 콜백이 올바른 순서로 들어오는지 확인하는 예제입니다.
 
-## What's Next
+```kotlin
+@Test
+fun `사진 촬영 시 AF 트리거가 먼저 실행되어야 한다`() {
+    val mockSession = mock<CameraCaptureSession>()
+    val engine = MyCameraEngine(mockSession)
 
-You have mastered Camera2's public API from Kotlin through native NDK, wrapped it in coroutines, and verified it against tests. But what actually happens *under the hood* when you call `CameraManager.openCamera`? What is HAL3? Where does the Binder IPC boundary really live? And how does `CameraDeviceSetup` (Android 15, API 35) change the architecture by decoupling capability queries from sensor power? Chapter 28 is the grand architecture finale: the full stack from app code to the VCM voice coil motor in the lens barrel.
+    engine.takeStillPicture()
+
+    // AF 트리거가 포함된 capture 호출이 일어났는지 검증
+    verify(mockSession).capture(
+        argThat { get(CaptureRequest.CONTROL_AF_TRIGGER) == CONTROL_AF_TRIGGER_START },
+        any(),
+        any()
+    )
+}
+```
+
+이러한 스타일의 테스트는 17장에서 배운 복잡한 **3A 파이프라인**이 실제 기기에서 예상치 못한 순서로 꼬이지 않도록 방지해 줍니다.
+
+---
+
+## 요약
+
+1. **CTS와 ITS:** 안드로이드 생태계의 기본 품질 보증 수단입니다. `CameraCharacteristics`의 신뢰도는 여기서 나옵니다.
+2. **인터페이스 분리:** 카메라 제어 로직을 UI와 분리하여 테스트 가능하게 만드세요.
+3. **메타데이터 테스트:** **Android Camera Parameters** 앱에서 추출한 JSON 데이터를 사용하여 다양한 기기 환경을 시뮬레이션하세요.
+4. **Quirk 관리:** 기기별로 다른 동작을 기록하고 이를 검증하는 테스트 자동화가 장기적인 유지보수의 핵심입니다.
+5. **모킹:** Mockito 등의 도구를 사용하여 Camera2의 복잡한 콜백 시퀀스를 단위 테스트하세요.
+
+## 다음 단계
+
+축하합니다! 이제 여러분은 안드로이드 Camera2의 아키텍처부터 고급 기능, 그리고 안정적인 출시를 위한 테스트 전략까지 모두 섭렵했습니다. 이 시리즈의 마지막인 **제28장: 카메라 아키텍처의 미래**에서는 안드로이드 15에서 도입된 `CameraDeviceSetup` API와, 더욱 강력해질 계산 사진학(Computational Photography)의 미래, 그리고 여러분이 배운 지식을 실무에서 어떻게 확장해 나갈지에 대해 이야기하며 마무리하겠습니다.

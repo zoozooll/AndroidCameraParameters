@@ -1,66 +1,66 @@
-﻿---
+---
 sidebar_position: 22
-title: "Chapter 22: Camera Extensions"
-description: "Use CameraExtensionSession for OEM-accelerated computational photography: Night mode, Bokeh portrait mode, HDR extension, Face Retouch, and Automatic mode. Query CameraExtensionCharacteristics, manage latency, and contrast Standard vs Extension Session architecture."
-keywords: [Android Camera2, Camera Extensions, CameraExtensionSession, CameraExtensionCharacteristics, Night mode, Bokeh, portrait mode, EXTENSION_NIGHT, EXTENSION_BOKEH, EXTENSION_HDR, EXTENSION_FACE_RETOUCH, EXTENSION_AUTOMATIC, getEstimatedCaptureLatencyRangeMillis]
+title: "Capítulo 22: Extensiones de cámara"
+description: "Utilice CameraExtensionSession para la fotografía computacional acelerada por el fabricante: modo nocturno, modo retrato Bokeh, extensión HDR, retoque facial y modo automático. Consulte CameraExtensionCharacteristics, gestione la latencia y contraste la arquitectura de las sesiones estándar frente a las de extensión."
+keywords: [Android Camera2, extensiones de cámara, CameraExtensionSession, CameraExtensionCharacteristics, modo nocturno, Bokeh, modo retrato, EXTENSION_NIGHT, EXTENSION_BOKEH, EXTENSION_HDR, EXTENSION_FACE_RETOUCH, EXTENSION_AUTOMATIC, getEstimatedCaptureLatencyRangeMillis]
 ---
 
-# Chapter 22: Camera Extensions
+# Capítulo 22: Extensiones de cámara
 
-Implementing computational photography features like Night Mode, Portrait Bokeh, or Multi-Frame HDR from scratch requires ML-based depth inference, sub-pixel multi-frame alignment, tone-mapping operators, and hand-tuned DSP shaders — a 6–12 month engineering investment for a single feature. The **Camera Extensions API** (Android 12 API 31+, refined in API 33/34) solves this by exposing the OEM's *pre-built, hardware-accelerated computational pipelines* as five standard extension types. When you request `EXTENSION_BOKEH`, for example, you do not run any ML yourself — you hand the session configuration to the HAL, which invokes the same portrait-mode pipeline the stock camera app uses, running on the vendor's NPU/DSP/ISP accelerator blocks.
+Implementar desde cero funciones de fotografía computacional como el modo nocturno, el bokeh de retrato o el HDR multifotograma requiere inferencia de profundidad basada en ML, alineación multifotograma de subpíxeles, operadores de mapeo de tonos y sombreadores DSP ajustados a mano: una inversión de ingeniería de 6 a 12 meses para una sola función. La **API de extensiones de cámara** (Android 12 API 31+, refinada en API 33/34) soluciona esto exponiendo las *tuberías computacionales preconstruidas y aceleradas por hardware* de los fabricantes como cinco tipos de extensión estándar. Cuando solicita `EXTENSION_BOKEH`, por ejemplo, no ejecuta ningún ML usted mismo: entrega la configuración de la sesión a la HAL, que invoca la misma tubería de modo retrato que utiliza la aplicación de cámara estándar, ejecutándose en los bloques aceleradores NPU/DSP/ISP del proveedor.
 
-This chapter is based directly on the *Camera Extensions API* section of the project research document, which tabulates every extension constant, OEM support statistics from the field, and the latency/memory overhead of each extension on a 2023 flagship. The research doc also contains a complete walkthrough of `CameraExtensionSession.StateCallback` semantics (which differ subtly from standard `CameraCaptureSession` semantics). You can look up extension support per camera ID on any device using the [Android Camera Parameters](https://github.com/zoozooll/AndroidCameraParameters) app on the [Play Store](https://play.google.com/store/apps/details?id=com.zoozooll.cameraparameters): the Extensions tab calls `CameraExtensionCharacteristics.getSupportedExtensions()` on each physical and logical ID, then enumerates `getExtensionSupportedSizes()` for every supported extension.
+Este capítulo se basa directamente en la sección *Camera Extensions API* del documento de investigación del proyecto, que tabula cada constante de extensión, las estadísticas de soporte de los fabricantes en el campo y la sobrecarga de latencia/memoria de cada extensión en un insignia de 2023. El documento de investigación también contiene un recorrido completo por la semántica de `CameraExtensionSession.StateCallback` (que difiere sutilmente de la semántica estándar de `CameraCaptureSession`). Puede consultar el soporte de extensiones por ID de cámara en cualquier dispositivo mediante la aplicación [Android Camera Parameters](https://github.com/zoozooll/AndroidCameraParameters) en la [Play Store](https://play.google.com/store/apps/details?id=com.zoozooll.cameraparameters): la pestaña Extensions llama a `CameraExtensionCharacteristics.getSupportedExtensions()` en cada ID físico y lógico, y luego enumera `getExtensionSupportedSizes()` para cada extensión admitida.
 
-## The Five Standard Extensions (Per Research Doc Table)
+## Las cinco extensiones estándar (según la tabla del documento de investigación)
 
-All Camera Extensions use vendor-specific algorithms, but each maps to a well-defined user-facing intent and has a numeric constant in `CameraExtensionCharacteristics`:
+Todas las extensiones de cámara utilizan algoritmos específicos del fabricante, pero cada una se mapea a una intención bien definida orientada al usuario y tiene una constante numérica en `CameraExtensionCharacteristics`:
 
-| Extension Constant | Numeric Value | Algorithm Description (Research Doc) | Typical OEM Pipeline | Estimated Latency Range |
+| Constante de extensión | Valor numérico | Descripción del algoritmo (Doc. investigación) | Tubería típica de fabricante | Rango de latencia estimado |
 |---------------------|---------------|----------------------------------------|----------------------|-------------------------|
-| **`EXTENSION_NIGHT`** | 1 | **Multi-frame long-exposure temporal merge**. Captures 6–15 frames at 1–8× base exposure (up to 1 sec total), aligns them with optical-flow IMU-assisted sub-pixel registration, merges in linear space, applies temporal noise reduction (TNR), then tone-maps to sRGB. Suppresses 4–6× more low-light noise than a single frame. | Google: Night Sight; Samsung: Night Mode; Apple-equivalent: Night Mode | 2,500 ms – 8,000 ms (8–20 frames) |
-| **`EXTENSION_BOKEH`** | 2 | **Depth inference → synthetic background blur for portraits**. Runs a single-frame or stereo dual-lens segmentation network (DeeplabV3+, MiDaS, or OEM proprietary) to produce an alpha matte, then applies a lens-kernel-accurate Gaussian blur with correct circle-of-confusion falloff for f/1.4–f/2.8 synthetic aperture. Stock portrait mode. | Google: Portrait Mode; Samsung: Live Focus; Xiaomi: Portrait Bokeh | 600 ms – 2,000 ms |
-| **`EXTENSION_HDR`** | 4 | **Multi-frame exposure bracket fusion**. Captures 3–5 frames at -2, -1, 0, +1, +2 EV, aligns with homography + motion compensation, merges in linear space with ghost-removal for moving objects, then applies local Reinhard or ACES tone mapping. Expands DR by 2–3 stops vs single exposure. | Google: HDR+ Enhanced; Samsung: Scene Optimizer HDR | 500 ms – 2,500 ms |
-| **`EXTENSION_FACE_RETOUCH`** | 5 | **ML skin smoothing, blemish removal, skin-tone unification**. Runs a 68-point face landmark detector, segments skin regions, applies bilateral blur on 3 frequency bands (preserving pores vs smoothing blemishes), optionally whitens teeth and enlarges eyes. OEM-specific levels. | Samsung: Beauty Mode; Xiaomi: AI Beautify; OPPO: Selfie Beauty | 400 ms – 1,200 ms |
-| **`EXTENSION_AUTOMATIC`** | 6 | **HAL decides which extension to apply** based on scene classification (Lux level, scene type, face count, motion). Typical: Lux < 100 → Night; 1 face + 2m subject → Bokeh; backlit scene → HDR. Safe default for point-and-shoot apps. | OEM Scene Optimizer pipelines | 500 ms – 6,000 ms (varies by scene) |
+| **`EXTENSION_NIGHT`** | 1 | **Mezcla temporal multifotograma de larga exposición**. Captura de 6 a 15 fotogramas a una exposición base de 1 a 8x (hasta 1 s en total), los alinea con registro de subpíxeles asistido por IMU de flujo óptico, los mezcla en espacio lineal, aplica reducción de ruido temporal (TNR) y, a continuación, aplica el mapa de tonos a sRGB. Suprime entre 4 y 6 veces más ruido con poca luz que un único fotograma. | Google: Night Sight; Samsung: Modo Noche; Equivalente Apple: Modo Noche | 2.500 ms – 8.000 ms (8–20 fotogramas) |
+| **`EXTENSION_BOKEH`** | 2 | **Inferencia de profundidad → desenfoque de fondo sintético para retratos**. Ejecuta una red de segmentación de lente única o estéreo dual (DeeplabV3+, MiDaS o propiedad del fabricante) para producir una máscara alfa y, a continuación, aplica un desenfoque gaussiano preciso al núcleo de la lente con una caída del círculo de confusión correcta para una apertura sintética de f/1.4–f/2.8. Modo retrato estándar. | Google: Modo Retrato; Samsung: Live Focus; Xiaomi: Portrait Bokeh | 600 ms – 2.000 ms |
+| **`EXTENSION_HDR`** | 4 | **Fusión de bracketing de exposición multifotograma**. Captura de 3 a 5 fotogramas a -2, -1, 0, +1, +2 EV, los alinea con homografía + compensación de movimiento, los mezcla en espacio lineal con eliminación de fantasmas para objetos en movimiento y, a continuación, aplica un mapeo de tonos Reinhard o ACES local. Amplía el rango dinámico en 2 o 3 pasos frente a una única exposición. | Google: HDR+ Enhanced; Samsung: Scene Optimizer HDR | 500 ms – 2.500 ms |
+| **`EXTENSION_FACE_RETOUCH`** | 5 | **Suavizado de piel por ML, eliminación de imperfecciones, unificación del tono de piel**. Ejecuta un detector de puntos de referencia faciales de 68 puntos, segmenta las regiones de la piel, aplica un desenfoque bilateral en 3 bandas de frecuencia (preservando los poros frente al suavizado de imperfecciones), blanquea opcionalmente los dientes y agranda los ojos. Niveles específicos por fabricante. | Samsung: Beauty Mode; Xiaomi: AI Beautify; OPPO: Selfie Beauty | 400 ms – 1.200 ms |
+| **`EXTENSION_AUTOMATIC`** | 6 | **La HAL decide qué extensión aplicar** en función de la clasificación de la escena (nivel de Lux, tipo de escena, recuento de rostros, movimiento). Típico: Lux < 100 → Noche; 1 rostro + sujeto a 2 m → Bokeh; escena a contraluz → HDR. Valor predeterminado seguro para aplicaciones de apuntar y disparar. | Tuberías de optimizador de escenas de fabricantes | 500 ms – 6.000 ms (varía según la escena) |
 
-The numeric values 1, 2, 4, 5, 6 are intentionally non-contiguous — constants 0 and 3 were reserved during the API 31 preview period and later withdrawn. Do NOT invent constants; always use the `CameraExtensionCharacteristics` getter.
+Los valores numéricos 1, 2, 4, 5, 6 no son contiguos intencionadamente: las constantes 0 y 3 se reservaron durante el periodo de vista previa de la API 31 y se retiraron posteriormente. NO invente constantes; utilice siempre el captador de `CameraExtensionCharacteristics`.
 
-`EXTENSION_FACE_RETOUCH` is unique in that it is **subject to OEM content policies**. On Samsung devices, face retouch levels are capped for underage users via Play Protect age estimation. Always degrade gracefully if the extension is returned as supported but `capture()` returns fewer frames than requested.
+`EXTENSION_FACE_RETOUCH` es única en el sentido de que está **sujeta a las políticas de contenido del fabricante**. En los dispositivos Samsung, los niveles de retoque facial están limitados para los usuarios menores de edad mediante la estimación de edad de Play Protect. Degradación elegante siempre si la extensión se devuelve como compatible pero la `capture()` devuelve menos fotogramas de los solicitados.
 
-## Architectural Difference: Standard Session vs Extension Session
+## Diferencia arquitectónica: Sesión estándar frente a sesión de extensión
 
-The most important conceptual shift: a `CameraExtensionSession` does **not** route frames directly from the sensor ISP to your output surface. Instead, it routes frames through an **Extension-specific Intermediate Processing Pipeline (EIPP)** managed by the OEM, which typically buffers 6–20 frames in private vendor memory before emitting the final processed output.
+El cambio conceptual más importante: una `CameraExtensionSession` **no** encamina los fotogramas directamente desde el ISP del sensor a su superficie de salida. En su lugar, encamina los fotogramas a través de una **tubería de procesamiento intermedio específica de la extensión (EIPP)** gestionada por el fabricante, que normalmente almacena de 6 a 20 fotogramas en la memoria privada del proveedor antes de emitir la salida procesada final.
 
 ```mermaid
 flowchart LR
-    subgraph STANDARD["Standard CameraCaptureSession (Direct Pipeline)"]
+    subgraph STANDARD["CameraCaptureSession estándar (tubería directa)"]
         direction TB
-        S1["Sensor → ISP\n(Demosaic, NR, Color)"]
-        S2["Standard Surface Allocator\n(GPU / HAL Gralloc)"]
-        S3["App Output Surface\n(Preview, JPEG, MediaCodec)"]
+        S1["Sensor → ISP<br/>(Demosaic, NR, Color)"]
+        S2["Asignador de superficies estándar<br/>(GPU / HAL Gralloc)"]
+        S3["Superficie salida App<br/>(Preview, JPEG, MediaCodec)"]
         S1 --> S2 --> S3
-        SLAT["Latency: 1–2 frame intervals\n(33–66 ms at 30fps)"]
+        SLAT["Latencia: 1–2 intervalos fotograma<br/>(33–66 ms a 30 fps)"]
     end
 
-    subgraph EXTENSION["CameraExtensionSession (EIPP Pipeline)"]
+    subgraph EXTENSION["CameraExtensionSession (tubería EIPP)"]
         direction TB
-        E1["Sensor → ISP\n(RAW / Low-level YUV only)"]
-        E2["Frame Accumulation Buffer\n(6–20 frames in\nVendor Private Memory)"]
-        E3["Extension Intermediate\nProcessing Pipeline (EIPP)\nRuns on DSP / NPU / ISP:\nNight: Align + Merge + TNR\nBokeh: Segmentation + Blur\nHDR: Align + Merge + Tonemap"]
-        E4["Processed Output Surface\n(JPEG / YUV)"]
+        E1["Sensor → ISP<br/>(solo RAW / YUV nivel bajo)"]
+        E2["Búfer acumulación fotogramas<br/>(6–20 fotogramas en<br/>memoria privada proveedor)"]
+        E3["Tubería proc. intermedio extensión (EIPP)<br/>Se ejecuta en DSP / NPU / ISP:<br/>Noche: Alineación + Mezcla + TNR<br/>Bokeh: Segmentación + Desenfoque<br/>HDR: Alineación + Mezcla + Tonemap"]
+        E4["Superficie salida procesada<br/>(JPEG / YUV)"]
         E1 --> E2 --> E3 --> E4
-        ELAT["Latency: 500–8000 ms\n(frame count × base interval)"]
+        ELAT["Latencia: 500–8000 ms<br/>(nº fotogramas × intervalo base)"]
     end
 
     style STANDARD fill:#e6f7ff,stroke:#0369a1
     style EXTENSION fill:#fff7ed,stroke:#c2410c
 ```
 
-The Mermaid diagram quantifies the architectural tradeoff: Extension sessions produce pixel-perfect computational results (Night mode 6-stop noise suppression, Bokeh accurate bokeh falloff) at the cost of **20×–200× higher latency and 3×–10× higher memory usage**. You MUST not block the UI thread during extension capture, and you MUST use `getEstimatedCaptureLatencyRangeMillis()` to display a progress spinner so the user does not think your app froze.
+El diagrama de Mermaid cuantifica la compensación arquitectónica: las sesiones de extensión producen resultados computacionales perfectos a nivel de píxel (supresión de ruido de 6 pasos en el modo noche, degradado de bokeh preciso en el modo bokeh) a costa de una **latencia entre 20 y 200 veces superior y un uso de memoria entre 3 y 10 veces mayor**. NO DEBE bloquear el hilo de la interfaz de usuario durante la captura de la extensión, y DEBE utilizar `getEstimatedCaptureLatencyRangeMillis()` para mostrar un indicador de progreso para que el usuario no piense que la aplicación se ha congelado.
 
-## Querying Extension Support and Supported Sizes
+## Consulta del soporte de extensiones y tamaños admitidos
 
-Before creating an extension session, verify (a) the extension is supported on the camera ID, and (b) there is an overlap between your app's desired output size and the extension's supported sizes. Extensions rarely support maximum still size — for example, on a 50 MP Samsung GN5 sensor, `EXTENSION_NIGHT` caps at 12.5 MP (4:1 binning) because multi-frame merge of 50 MP × 15 frames would require 3 GB of temporary buffer space.
+Antes de crear una sesión de extensión, verifique (a) que la extensión es compatible con el ID de la cámara y (b) que existe un solapamiento entre el tamaño de salida deseado por su aplicación y los tamaños admitidos por la extensión. Las extensiones rara vez admiten el tamaño estático máximo: por ejemplo, en un sensor Samsung GN5 de 50 MP, `EXTENSION_NIGHT` tiene un límite de 12,5 MP (agrupamiento 4:1) porque la mezcla multifotograma de 50 MP × 15 fotogramas requeriría 3 GB de espacio de búfer temporal.
 
 ```kotlin
 import android.hardware.camera2.CameraExtensionCharacteristics
@@ -124,13 +124,13 @@ fun queryExtensions(
 }
 ```
 
-`getEstimatedCaptureLatencyRangeMillis(extension, size, format)` is the single most important UX method in the Extensions API. It returns a `Range&lt;Long&gt;` like `[2500, 6500]` for Night mode on a dim scene, which means the user will wait 2.5–6.5 seconds from shutter tap to processed JPEG. Always display a progress bar or "capturing…" dialog with a countdown that uses the lower bound as the optimistic time and the upper bound as the timeout. If the capture takes longer than the upper bound, show a "still processing — don't move the camera" secondary message.
+`getEstimatedCaptureLatencyRangeMillis(extension, size, format)` es el método de UX más importante de la API de extensiones. Devuelve un `Range<Long>` como `[2500, 6500]` para el modo noche en una escena tenue, lo que significa que el usuario esperará entre 2,5 y 6,5 segundos desde que pulsa el obturador hasta que obtiene el JPEG procesado. Muestre siempre una barra de progreso o un diálogo de "capturando..." con una cuenta atrás que utilice el límite inferior como tiempo optimista y el límite superior como tiempo de espera. Si la captura tarda más que el límite superior, muestre un mensaje secundario de "procesando todavía: no mueva la cámara".
 
-The Android Camera Parameters app uses this exact code to populate its Extensions tab — you can cross-reference your app's `supportedExtensions` list against the app's output to catch HAL bugs (some budget devices report `EXTENSION_HDR` as supported but return zero sizes, meaning the extension stub is present but disabled).
+La aplicación Android Camera Parameters utiliza exactamente este código para rellenar su pestaña Extensions: puede contrastar la lista `supportedExtensions` de su aplicación con la salida de la aplicación para detectar errores en la HAL (algunos dispositivos económicos informan que `EXTENSION_HDR` es compatible pero devuelven cero tamaños, lo que significa que el código de la extensión está presente pero desactivado).
 
-## Configuring ExtensionSessionConfiguration and Creating CameraExtensionSession
+## Configuración de ExtensionSessionConfiguration y creación de CameraExtensionSession
 
-Unlike a standard `createCaptureSession(outputs, callback, handler)`, extension sessions require a dedicated **`ExtensionSessionConfiguration`** wrapper that bundles the extension type, the output surfaces, and the state callback together. The example below configures a Bokeh (Portrait Mode) session with a 12 MP JPEG output and a preview Surface:
+A diferencia de una llamada estándar `createCaptureSession(outputs, callback, handler)`, las sesiones de extensión requieren un envoltorio **`ExtensionSessionConfiguration`** dedicado que agrupa el tipo de extensión, las superficies de salida y la retrollamada de estado. El ejemplo siguiente configura una sesión de Bokeh (modo retrato) con una salida JPEG de 12 MP y una superficie de vista previa:
 
 ```kotlin
 import android.content.Context
@@ -163,7 +163,7 @@ fun setupBokehExtensionSession(
         chosenJpegSize.width,
         chosenJpegSize.height,
         ImageFormat.JPEG,
-        2 // Extension sessions output only 1 final frame per capture
+        2 // Las sesiones de extensión solo emiten 1 fotograma final por captura
     )
 
     val jpegSurface: Surface = jpegImageReader!!.surface
@@ -181,9 +181,9 @@ fun setupBokehExtensionSession(
                 startBokehRepeatingPreview(session, previewSurface, backgroundHandler)
             }
             override fun onConfigureFailed(session: CameraExtensionSession) {
-                Log.e(TAG, "Bokeh Extension Session CONFIG FAILED. " +
-                      "Check: extension supported? size in supportedSizes? " +
-                      "surface count <= 2? preview size matches JPEG aspect?")
+                Log.e(TAG, "FALLO en la configuración de la sesión de extensión Bokeh. " +
+                      "Comprobar: ¿extensión admitida? ¿tamaño en supportedSizes? " +
+                      "¿recuento superficies <= 2? ¿tamaño vista previa coincide con aspecto JPEG?")
             }
             override fun onClosed(session: CameraExtensionSession) {
                 extensionSession = null
@@ -197,9 +197,9 @@ fun setupBokehExtensionSession(
 }
 ```
 
-The `onClosed` callback is subtly different from a standard session: a `CameraExtensionSession` can be closed **asynchronously by the system** if the OEM pipeline exhausts private buffer memory. Always null out the session reference and close ImageReaders in `onClosed` to avoid double-free crashes.
+La retrollamada `onClosed` es sutilmente diferente a la de una sesión estándar: el sistema puede cerrar una `CameraExtensionSession` de forma **asíncrona** si la tubería del fabricante agota la memoria del búfer privado. Ponga siempre a nulo la referencia de la sesión y cierre los ImageReader en `onClosed` para evitar fallos de doble liberación.
 
-After the session is configured, **start a repeating preview request** so the EIPP can run autofocus, autoexposure, and the bokeh segmentation network on the live viewfinder before the user taps the shutter:
+Una vez configurada la sesión, **inicie una solicitud de vista previa repetitiva** para que la EIPP pueda ejecutar el enfoque automático, la exposición automática y la red de segmentación de bokeh en el visor en vivo antes de que el usuario pulse el obturador:
 
 ```kotlin
 private fun startBokehRepeatingPreview(
@@ -220,9 +220,9 @@ private fun startBokehRepeatingPreview(
 }
 ```
 
-## Capturing a Bokeh Portrait Still and Managing Latency
+## Captura de una foto fija de retrato Bokeh y gestión de la latencia
 
-The capture path for extension output is **`session.capture(builder, callback, handler)`** — identical to the standard session API, but `CaptureCallback.onCaptureCompleted()` fires only once per processed output (not once per accumulated frame). The code below also shows how to use `getEstimatedCaptureLatencyRangeMillis()` to drive a UI progress spinner:
+La ruta de captura para la salida de la extensión es **`session.capture(builder, callback, handler)`**, idéntica a la API de sesión estándar, pero `CaptureCallback.onCaptureCompleted()` se dispara solo una vez por cada salida procesada (no una vez por cada fotograma acumulado). El código siguiente también muestra cómo usar `getEstimatedCaptureLatencyRangeMillis()` para dirigir un indicador de progreso de la interfaz de usuario:
 
 ```kotlin
 import android.app.ProgressDialog
@@ -250,7 +250,7 @@ fun captureBokehStill(
     val maxLatency = latencyRange?.upper ?: 2000L
 
     val progress = ProgressDialog(activity).apply {
-        setMessage("Capturing Portrait — hold still…")
+        setMessage("Capturando retrato: permanezca quieto…")
         isIndeterminate = false
         setProgressStyle(ProgressDialog.STYLE_HORIZONTAL)
         max = 100
@@ -264,7 +264,7 @@ fun captureBokehStill(
         }
         override fun onFinish() {
             if (progress.isShowing) {
-                progress.setMessage("Still processing… (taking longer than expected)")
+                progress.setMessage("Procesando todavía… (está tardando más de lo esperado)")
                 progress.isIndeterminate = true
             }
         }
@@ -278,8 +278,8 @@ fun captureBokehStill(
             CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
         set(CaptureRequest.CONTROL_AE_MODE,
             CaptureRequest.CONTROL_AE_MODE_ON)
-        // Bokeh extension internally sets synthetic aperture (f/1.4–f/2.8)
-        // No user-configurable aperture parameter exposed by API
+        // La extensión Bokeh establece internamente la apertura sintética (f/1.4–f/2.8)
+        // No hay parámetro de apertura configurable por el usuario expuesto por la API
     }
 
     val captureCallback = object : CameraExtensionSession.ExtensionCaptureCallback() {
@@ -290,7 +290,7 @@ fun captureBokehStill(
         ) {
             countdown.cancel()
             progress.dismiss()
-            // Process completed JPEG in jpegImageReader OnImageAvailableListener
+            // Procesar el JPEG completado en el OnImageAvailableListener de jpegImageReader
         }
 
         override fun onCaptureFailed(
@@ -300,7 +300,7 @@ fun captureBokehStill(
         ) {
             countdown.cancel()
             progress.dismiss()
-            Log.e(TAG, "Bokeh capture failed: reason=${failure.reason}")
+            Log.e(TAG, "Fallo en la captura Bokeh: razón=${failure.reason}")
         }
     }
 
@@ -308,82 +308,82 @@ fun captureBokehStill(
 }
 ```
 
-The countdown timer uses the *estimated* latency range, but the actual capture may be faster (brighter scenes require fewer accumulated frames for Night/Bokeh segmentation) or slower (face retouch on a scene with 12 faces + underage user policy gates). The "taking longer than expected" secondary message in `onFinish()` prevents users from force-closing the app when the OEM pipeline hits a slow path.
+El temporizador de cuenta atrás utiliza el rango de latencia *estimado*, pero la captura real puede ser más rápida (las escenas más brillantes requieren menos fotogramas acumulados para la segmentación de Noche/Bokeh) o más lenta (retoque facial en una escena con 12 rostros + filtros de política para usuarios menores de edad). El mensaje secundario "está tardando más de lo esperado" en `onFinish()` evita que los usuarios fuercen el cierre de la aplicación cuando la tubería del fabricante entra en una ruta lenta.
 
-On Night mode specifically, the research doc found that up to **30% of capture time is spent waiting for AE convergence** before frame accumulation starts. You can reduce Night mode latency by 500–1000 ms by pre-triggering `CONTROL_AE_PRECAPTURE_TRIGGER_START` 1–2 seconds before the user is expected to tap the shutter (e.g. as soon as the user switches to the Night Mode tab).
+Específicamente en el modo noche, el documento de investigación descubrió que hasta el **30% del tiempo de captura se dedica a esperar la convergencia de la AE** antes de que comience la acumulación de fotogramas. Puede reducir la latencia del modo noche en 500–1000 ms activando previamente `CONTROL_AE_PRECAPTURE_TRIGGER_START` 1 o 2 segundos antes de que se espere que el usuario pulse el obturador (p. ej., en cuanto el usuario cambie a la pestaña de modo nocturno).
 
-## Standard Session vs Extension Session: Detailed Architecture Mermaid
+## Sesión estándar frente a sesión de extensión: Mermaid de arquitectura detallada
 
 ```mermaid
 sequenceDiagram
-    participant U as User Taps Shutter
-    participant APP as App (Userspace)
+    participant U as Usuario pulsa obturador
+    participant APP as App (Espacio usuario)
     participant CAM as CameraService
     participant HAL as Camera HAL
-    participant EIPP as OEM EIPP (DSP/NPU)
-    participant ISP as ISP Pipeline
+    participant EIPP as EIPP de fabricante (DSP/NPU)
+    participant ISP as Tubería ISP
 
     rect rgb(230, 247, 255)
-        Note over APP,ISP: Standard Session (JPEG Capture, ~66 ms)
-        U->>APP: Tap (Standard)
+        Note over APP,ISP: Sesión estándar (Captura JPEG, ~66 ms)
+        U->>APP: Toque (Estándar)
         APP->>CAM: session.capture(builder)
         CAM->>HAL: dispatch_capture(request)
-        HAL->>ISP: Single Frame\nExpose + Demosaic + NR
-        ISP-->>HAL: Processed YUV Frame
-        HAL->>ISP: JPEG Encode
-        ISP-->>HAL: JPEG Bytes
+        HAL->>ISP: Un solo fotograma<br/>Exponer + Demosaic + NR
+        ISP-->>HAL: Fotograma YUV procesado
+        HAL->>ISP: Codificación JPEG
+        ISP-->>HAL: Bytes JPEG
         HAL-->>CAM: capture_completed
         CAM-->>APP: onCaptureCompleted + JPEG
     end
 
     rect rgb(255, 247, 237)
-        Note over APP,EIPP: Extension Session (EXTENSION_BOKEH, ~1200 ms)
-        U->>APP: Tap (Portrait)
+        Note over APP,EIPP: Sesión de extensión (EXTENSION_BOKEH, ~1200 ms)
+        U->>APP: Toque (Retrato)
         APP->>CAM: extSession.capture(builder)
         CAM->>HAL: ext_dispatch_capture(request, BOKEH)
-        HAL->>ISP: Capture 3 Frames\n(Exposure Averaging)
-        ISP-->>HAL: RAW / Low-YUV × 3
-        HAL->>EIPP: Submit Buffer Batch\nRun Segmentation + Blur
-        EIPP-->>EIPP: MiDaS Depth Inference\nBilateral Blur (20 passes)
-        EIPP-->>HAL: Alpha Matte + Blurred BG\nComposited YUV
-        HAL->>ISP: JPEG Encode Composite
-        ISP-->>HAL: JPEG Bytes
+        HAL->>ISP: Capturar 3 fotogramas<br/>(Promediado exposición)
+        ISP-->>HAL: RAW / YUV bajo × 3
+        HAL->>EIPP: Enviar lote de búferes<br/>Ejecutar segmentación + Desenfoque
+        EIPP-->>EIPP: Inferencia profundidad MiDaS<br/>Desenfoque bilateral (20 pasadas)
+        EIPP-->>HAL: Máscara alfa + Fondo desenfocado<br/>YUV compuesto
+        HAL->>ISP: Codificación JPEG compuesto
+        ISP-->>HAL: Bytes JPEG
         HAL-->>CAM: ext_capture_completed
         CAM-->>APP: onCaptureCompleted + JPEG
     end
 ```
 
-The sequence diagram drives home two non-obvious consequences of the EIPP architecture:
-1. The 3-frame capture + DSP segmentation step is **atomic and not cancellable**. Calling `session.abortCaptures()` during Night or Bokeh processing is a no-op — the HAL will silently ignore the abort and deliver the pending capture callback anyway. Never show a "Cancel" button during extension capture that calls `abortCaptures()`; use it only to dismiss the UI and ignore the next callback.
-2. The EIPP may consume **3–8 frames from the ISP** but `onCaptureCompleted` fires exactly **once**. There is no way to inspect the intermediate RAW or YUV buffers that went into the merge — extensions are intentionally a black-box output. If you need access to the intermediate frames for custom processing, implement the algorithm yourself using a standard session + RAW+YUV multi-frame capture (Chapters 18 and 23 cover the raw building blocks).
+El diagrama de secuencia pone de relieve dos consecuencias no obvias de la arquitectura EIPP:
+1. El paso de captura de 3 fotogramas + segmentación DSP es **atómico y no cancelable**. Llamar a `session.abortCaptures()` durante el procesamiento de Noche o Bokeh no tiene ningún efecto: la HAL ignorará silenciosamente el aborto y entregará la retrollamada de captura pendiente de todos modos. Nunca muestre un botón de "Cancelar" durante la captura de una extensión que llame a `abortCaptures()`; utilícelo solo para descartar la interfaz de usuario e ignorar la siguiente retrollamada.
+2. La EIPP puede consumir de **3 a 8 fotogramas del ISP**, pero `onCaptureCompleted` se dispara exactamente **una vez**. No hay forma de inspeccionar los búferes RAW o YUV intermedios que formaron parte de la mezcla: las extensiones son intencionadamente una salida de caja negra. Si necesita acceder a los fotogramas intermedios para un procesamiento personalizado, implemente el algoritmo usted mismo utilizando una sesión estándar + captura multifotograma RAW+YUV (los Capítulos 18 y 23 cubren los bloques de construcción básicos).
 
-## Practical Limitations and Common Pitfalls (From Research Doc)
+## Limitaciones prácticas y errores comunes (del documento de investigación)
 
-The *Camera Extensions API* section of the research doc lists the following field-observed limitations on 200+ device models tested:
+La sección *Camera Extensions API* del documento de investigación enumera las siguientes limitaciones observadas en el campo en más de 200 modelos de dispositivos probados:
 
-| Pitfall ID | Symptom | Root Cause | Workaround |
+| ID de error | Síntoma | Causa raíz | Solución |
 |------------|---------|------------|------------|
-| **EP-1** | `EXTENSION_NIGHT` supported but output is identical to standard JPEG. No noise reduction visible. | OEM enables extension constant but uses a 2-frame stub (for CDD compliance) instead of the real Night pipeline. Common on uncertified Android Go devices. | Compare `getEstimatedCaptureLatencyRangeMillis(EXTENSION_NIGHT, …)` upper bound. If it is < 1500 ms, the real pipeline is disabled; fall back to custom 6-frame merge. |
-| **EP-2** | `createExtensionSession(EXTENSION_BOKEH, ...)` → `onConfigureFailed` but `supportedExtensions` lists BOKEH. | Extension requires dual-physical-lens stereo depth but user opened a physical (not logical) camera ID. BOKEH often works only on the logical ID for seamless-fusion depth. | Retry opening the logical ID (the one with `getPhysicalCameraIds().size >= 2`). |
-| **EP-3** | Preview in EXTENSION_HDR is 15+ fps laggy, but standard preview is 60 fps. | EIPP runs the 3-frame HDR align+merge on *every preview frame* for a live-HDR viewfinder, overwhelming the DSP. | Use a separate standard session for preview, then tear it down and create an Extension session only for the 1-shot still capture. |
-| **EP-4** | `session.capture(EXTENSION_NIGHT, ...)` → throws `IllegalStateException` after 8th capture in a row. | Night pipeline allocates ~250 MB per capture in vendor RAM, and some OEMs have a per-process 2 GB cap that is hit after 8 captures without GC. | Call `System.gc()` + `Runtime.getRuntime().gc()` between captures. On 6 GB RAM devices, limit to 3 Night captures per session. |
-| **EP-5** | `getEstimatedCaptureLatencyRangeMillis(EXTENSION_AUTOMATIC, size, format)` returns `null`. | HAL cannot estimate latency for AUTOMATIC because the downstream extension choice is not known until scene classification runs. | Use 3000 ms as a conservative default; show an indeterminate progress spinner instead of a percentage bar. |
+| **EP-1** | `EXTENSION_NIGHT` compatible pero la salida es idéntica al JPEG estándar. No se aprecia reducción de ruido. | El fabricante activa la constante de extensión pero utiliza una simulación de 2 fotogramas (para cumplir con el CDD) en lugar de la tubería de noche real. Común en dispositivos Android Go no certificados. | Compare el límite superior de `getEstimatedCaptureLatencyRangeMillis(EXTENSION_NIGHT, …)`. Si es < 1500 ms, la tubería real está desactivada; recurra a una mezcla personalizada de 6 fotogramas. |
+| **EP-2** | `createExtensionSession(EXTENSION_BOKEH, ...)` → `onConfigureFailed` pero BOKEH aparece en `supportedExtensions`. | La extensión requiere profundidad estéreo de doble lente física, pero el usuario abrió un ID de cámara físico (no lógico). BOKEH suele funcionar solo en el ID lógico para obtener una profundidad de fusión perfecta. | Reintente abrir el ID lógico (el que tiene `getPhysicalCameraIds().size >= 2`). |
+| **EP-3** | La vista previa en EXTENSION_HDR tiene lag de más de 15 fps, pero la vista previa estándar es de 60 fps. | La EIPP ejecuta la alineación+mezcla HDR de 3 fotogramas en *cada fotograma de vista previa* para un visor HDR en vivo, saturando el DSP. | Utilice una sesión estándar independiente para la vista previa, luego desmóntela y cree una sesión de extensión solo para la captura de la foto fija. |
+| **EP-4** | `session.capture(EXTENSION_NIGHT, ...)` → lanza `IllegalStateException` tras la 8ª captura seguida. | La tubería de noche asigna unos 250 MB por captura en la RAM del proveedor, y algunos fabricantes tienen un límite de 2 GB por proceso que se alcanza tras 8 capturas sin recolector de basura (GC). | Llame a `System.gc()` + `Runtime.getRuntime().gc()` entre capturas. En dispositivos con 6 GB de RAM, limite a 3 capturas de noche por sesión. |
+| **EP-5** | `getEstimatedCaptureLatencyRangeMillis(EXTENSION_AUTOMATIC, size, format)` devuelve `null`. | La HAL no puede estimar la latencia para AUTOMATIC porque la elección de la extensión final no se conoce hasta que se ejecuta la clasificación de la escena. | Utilice 3000 ms como valor predeterminado conservador; muestre un indicador de progreso indeterminado en lugar de una barra de porcentaje. |
 
-The research doc's pitfall EP-2 (Bokeh failing on physical IDs) is the single most frequent bug filed against open-source camera apps on GitHub. Bokeh depends on dual-lens disparity matching on most flagships, so it is bound to the logical session that can simultaneously access both wide and tele sensors.
+El error EP-2 del documento de investigación (fallo de Bokeh en los ID físicos) es el error más frecuente registrado contra las aplicaciones de cámara de código abierto en GitHub. El bokeh depende del emparejamiento de disparidad de doble lente en la mayoría de los insignias, por lo que está vinculado a la sesión lógica que puede acceder simultáneamente a los sensores gran angular y teleobjetivo.
 
-## Summary
+## Resumen
 
-This chapter covered the Camera Extensions API (Android 12+, API 31–34) in full:
+Este capítulo ha cubierto la API de extensiones de cámara (Android 12+, API 31–34) al completo:
 
-- **5 standard extensions** (per research doc table): `EXTENSION_NIGHT` (multi-frame temporal merge, 2.5–8 s), `EXTENSION_BOKEH` (ML segmentation + synthetic blur, 0.6–2 s), `EXTENSION_HDR` (3–5 exposure bracket fusion, 0.5–2.5 s), `EXTENSION_FACE_RETOUCH` (ML skin smoothing, 0.4–1.2 s), `EXTENSION_AUTOMATIC` (HAL-picked, variable).
-- **CameraExtensionSession** routes frames through an OEM-managed Extension Intermediate Processing Pipeline (EIPP) on the DSP/NPU/ISP, trading 20×–200× higher latency for hardware-accelerated computational results.
-- **`CameraExtensionCharacteristics`** provides: `supportedExtensions`, `getExtensionSupportedSizes(ext, format)`, and `getEstimatedCaptureLatencyRangeMillis(ext, size, format)` for UX progress indication.
-- **`ExtensionSessionConfiguration`** is the required wrapper for `createExtensionSession()`; the `StateCallback.onClosed` may fire asynchronously if vendor memory is exhausted.
-- Two Mermaid diagrams (architecture comparison, sequence diagram) visualize the pipeline flow and latency differences.
-- Field-observed pitfalls (EP-1 through EP-5) and workarounds from the research doc's 200+ device field study.
+- **5 extensiones estándar** (según la tabla del doc. de investigación): `EXTENSION_NIGHT` (mezcla temporal multifotograma, 2,5–8 s), `EXTENSION_BOKEH` (segmentación ML + desenfoque sintético, 0,6–2 s), `EXTENSION_HDR` (fusión de bracketing de 3–5 exposiciones, 0,5–2,5 s), `EXTENSION_FACE_RETOUCH` (suavizado de piel por ML, 0,4–1,2 s), `EXTENSION_AUTOMATIC` (elegida por la HAL, variable).
+- **CameraExtensionSession** encamina los fotogramas a través de una tubería de procesamiento intermedio de extensión (EIPP) gestionada por el fabricante en el DSP/NPU/ISP, intercambiando una latencia entre 20 y 200 veces superior por resultados computacionales acelerados por hardware.
+- **`CameraExtensionCharacteristics`** proporciona: `supportedExtensions`, `getExtensionSupportedSizes(ext, format)` y `getEstimatedCaptureLatencyRangeMillis(ext, size, format)` para la indicación de progreso de la UX.
+- **`ExtensionSessionConfiguration`** es el envoltorio obligatorio para `createExtensionSession()`; la retrollamada `StateCallback.onClosed` puede dispararse de forma asíncrona si se agota la memoria del fabricante.
+- Dos diagramas de Mermaid (comparación de arquitectura, diagrama de secuencia) visualizan el flujo de la tubería y las diferencias de latencia.
+- Errores comunes observados en el campo (EP-1 a EP-5) y soluciones del estudio de campo de más de 200 dispositivos del documento de investigación.
 
-## What's Next
+## ¿Qué sigue?
 
-In **Chapter 23: Zero Shutter Lag & Reprocessing**, we close out the professional camera feature set with the most complex (and most satisfying) workflow in the Camera2 API: ZSL + InputConfiguration reprocessing. You will learn to run a high-resolution repeating preview into a circular YUV/PRIVATE ImageReader buffer tagged with `CONTROL_CAPTURE_INTENT_ZERO_SHUTTER_LAG`. When the user taps the shutter, instead of exposing a new frame (500 ms of rolling-shutter latency), you retrieve the *closest timestamped frame from the past*, feed it back into the HAL via `ImageWriter` + `InputConfiguration.createReprocessableCaptureSession()`, then run heavy `NOISE_REDUCTION_MODE_HIGH_QUALITY` + `EDGE_MODE_HIGH_QUALITY` ISP processing on the already-exposed pixel data. The chapter also covers `switchToOffline()` for background processing continuity when your app is sent to the background, and includes a flowchart-style Mermaid diagram of the full circular-buffer + reinjection workflow.
+En el **Capítulo 23: Retardo de obturación cero y reprocesamiento**, cerramos el conjunto de funciones de cámara profesional con el flujo de trabajo más complejo (y satisfactorio) de la API Camera2: ZSL + reprocesamiento de InputConfiguration. Aprenderá a ejecutar una vista previa repetitiva de alta resolución en un búfer circular de ImageReader YUV/PRIVATE etiquetado con `CONTROL_CAPTURE_INTENT_ZERO_SHUTTER_LAG`. Cuando el usuario toque el obturador, en lugar de exponer un nuevo fotograma (500 ms de latencia de obturador electrónico), recuperará el *fotograma con marca de tiempo más cercana del pasado*, lo inyectará de nuevo en la HAL a través de `ImageWriter` + `InputConfiguration.createReprocessableCaptureSession()`, y luego ejecutará un procesamiento ISP intenso con `NOISE_REDUCTION_MODE_HIGH_QUALITY` + `EDGE_MODE_HIGH_QUALITY` sobre los datos de los píxeles ya expuestos. El capítulo también cubre `switchToOffline()` para la continuidad del procesamiento en segundo plano cuando su aplicación pasa a segundo plano, e incluye un diagrama de Mermaid tipo diagrama de flujo del flujo de trabajo completo de búfer circular + reinyección.
 
-You can verify whether your device supports the mandatory ZSL prerequisites (`REQUEST_AVAILABLE_CAPABILITIES_PRIVATE_REPROCESSING` or `YUV_REPROCESSING`, or `INFO_SUPPORTED_HARDWARE_LEVEL_LEVEL_3`) by installing the [Android Camera Parameters app](https://play.google.com/store/apps/details?id=com.zoozooll.cameraparameters). The ZSL Support tab cross-references all required capabilities and shows a clear "ZSL Supported: YES/NO" badge. New device reports submitted to the [GitHub repository](https://github.com/zoozooll/AndroidCameraParameters) are welcome — ZSL support is one of the most requested feature checks by the developer community.
+Puede verificar si su dispositivo admite los requisitos previos obligatorios de ZSL (`REQUEST_AVAILABLE_CAPABILITIES_PRIVATE_REPROCESSING` o `YUV_REPROCESSING`, o `INFO_SUPPORTED_HARDWARE_LEVEL_LEVEL_3`) instalando la aplicación [Android Camera Parameters](https://play.google.com/store/apps/details?id=com.zoozooll.cameraparameters). La pestaña ZSL Support cruza todas las capacidades requeridas y muestra una insignia clara de "ZSL Supported: YES/NO". Los nuevos informes de dispositivos enviados al [repositorio de GitHub](https://github.com/zoozooll/AndroidCameraParameters) son bienvenidos: el soporte de ZSL es una de las comprobaciones de funciones más solicitadas por la comunidad de desarrolladores.

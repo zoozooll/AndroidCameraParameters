@@ -1,45 +1,45 @@
 ---
 sidebar_position: 27
-title: "Chapter 27: Camera Testing"
-description: "The complete Android camera testing guide. Understand Camera ITS (Image Test Suite), what OEMs validate before shipping (feature combinations, scene tests, sensor fusion), CTS Verifier manual tests, and how to write your own instrumentation tests with Mockito mocks and parameterized hardware-level tests that run on CI."
-keywords: [camera its, camera image test suite, cts camera, cts verifier, android camera testing, instrumentation test camera, mockito cameradevice, mock cameramanager, parameterized hardware level, sensor fusion test]
+title: "Capítulo 27: Pruebas de cámara"
+description: "La guía completa de pruebas de cámara en Android. Entienda Camera ITS (Image Test Suite), qué validan los fabricantes antes del envío (combinaciones de funciones, pruebas de escena, fusión de sensores), las pruebas manuales de CTS Verifier y cómo escribir sus propias pruebas de instrumentación con simulacros de Mockito y pruebas de nivel de hardware parametrizadas que se ejecutan en CI."
+keywords: [camera its, camera image test suite, cts camera, cts verifier, pruebas de cámara android, prueba de instrumentación cámara, mockito cameradevice, mock cameramanager, nivel hardware parametrizado, prueba fusión sensores]
 ---
 
-# Chapter 27: Camera Testing
+# Capítulo 27: Pruebas de cámara
 
-## Summary
+## Resumen
 
-You built a camera app. It works on your Pixel. It works on your Galaxy. Does it work on the $99 Android Go device with a `LEGACY` HAL whose vendor misimplemented `CONTROL_AF_TRIGGER_START` and returns every `SENSOR_EXPOSURE_TIME` in *microseconds* instead of nanoseconds?
+Ha construido una aplicación de cámara. Funciona en su Pixel. Funciona en su Galaxy. ¿Funciona en el dispositivo Android Go de 99 $ con una HAL `LEGACY` cuyo fabricante implementó mal el `CONTROL_AF_TRIGGER_START` y devuelve cada `SENSOR_EXPOSURE_TIME` en *microsegundos* en lugar de nanosegundos?
 
-Testing camera software is a two-part problem: **OEM validation at the HAL level** (the tests Google *forces* every manufacturer to pass before a device can ship with Google Play) and **app-level testing on CI** (the tests you run against your own code without requiring physical camera hardware). This chapter covers both. First you will learn what Camera ITS (the Image Test Suite, part of CTS) actually validates on physical test rigs: stream combination enumeration, physical scene luminance linearity, and sensor/gyro timestamp fusion. Then you will learn how to write your own instrumentation tests using Mockito mocks for `CameraManager`/`CameraDevice`/`CaptureSession` so your entire camera stack runs on headless CI servers, plus a parameterized test pattern that asserts your code gracefully degrades on `LEGACY` hardware instead of crashing.
+Probar el software de la cámara es un problema de dos partes: la **validación del fabricante a nivel de HAL** (las pruebas que Google *obliga* a pasar a cada fabricante antes de que un dispositivo pueda distribuirse con Google Play) y las **pruebas a nivel de aplicación en CI** (las pruebas que usted ejecuta contra su propio código sin necesidad de hardware de cámara físico). Este capítulo cubre ambas. Primero aprenderá qué valida realmente Camera ITS (Image Test Suite, parte de CTS) en los bancos de pruebas físicos: enumeración de combinaciones de flujos, linealidad de luminancia de escenas físicas y fusión de marcas de tiempo de sensor/giroscopio. Luego aprenderá a escribir sus propias pruebas de instrumentación utilizando simulacros (mocks) de Mockito para `CameraManager`/`CameraDevice`/`CaptureSession` de modo que toda su tubería de cámara se ejecute en servidores de CI sin cabeza (headless), además de un patrón de prueba parametrizado que afirma que su código se degrada con elegancia en el hardware `LEGACY` en lugar de fallar.
 
-Use **Android Camera Parameters** ([Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams), [GitHub](https://github.com/zoozooll/AndroidCameraParameters)) as the reference tool to inspect the exact capabilities your tests should assert against — it surfaces every `CameraCharacteristics` key that ITS also validates on real rigs.
+Use **Android Camera Parameters** ([Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams), [GitHub](https://github.com/zoozooll/AndroidCameraParameters)) como herramienta de referencia para inspeccionar las capacidades exactas contra las que deben validarse sus pruebas: muestra cada clave de `CameraCharacteristics` que ITS también valida en bancos de pruebas reales.
 
 ---
 
-## Part One: How OEMs Validate Cameras — Camera ITS and CTS
+## Primera parte: Cómo validan los fabricantes las cámaras: Camera ITS y CTS
 
-Before a device can ship with Google Mobile Services (GMS), it must pass the Android Compatibility Test Suite (CTS). Camera CTS has two halves: programmatic CTS tests that run via `Tradefed`, and the Camera ITS (Image Test Suite) that requires a physical test lab with automated rigs.
+Antes de que un dispositivo pueda distribuirse con los Servicios de Google Mobile (GMS), debe superar la Suite de Pruebas de Compatibilidad (CTS) de Android. El CTS de cámara tiene dos mitades: pruebas de CTS programáticas que se ejecutan a través de `Tradefed`, y el Camera ITS (Image Test Suite) que requiere un laboratorio de pruebas físico con bancos de pruebas automatizados.
 
-### Test Categories
+### Categorías de pruebas
 
 ```mermaid
 graph TB
-    subgraph CTS[Android CTS — Camera Section]
+    subgraph CTS[CTS de Android: sección de cámara]
         direction TB
-        CTS_API[API Tests<br/>— CameraCharacteristics keys<br/>— isSessionConfigurationSupported<br/>— All use cases enumerate correctly]
-        CTS_FLOW[Flow Tests<br/>— open → close<br/>— open → session → capture → close<br/>— Rapid open/close stress]
-        CTS_V[CTS Verifier<br/>Manual on-device tests<br/>— Preview smoothness<br/>— Capture quality<br/>— Multi-camera switch]
+        CTS_API[Pruebas de API<br/>— Claves de CameraCharacteristics<br/>— isSessionConfigurationSupported<br/>— Enumeración correcta de casos de uso]
+        CTS_FLOW[Pruebas de flujo<br/>— abrir → cerrar<br/>— abrir → sesión → capturar → cerrar<br/>— Estrés de apertura/cierre rápido]
+        CTS_V[CTS Verifier<br/>Pruebas manuales en el dispositivo<br/>— Fluidez de la vista previa<br/>— Calidad de la captura<br/>— Cambio entre cámaras múltiples]
     end
-    subgraph ITS[Camera ITS — Image Test Suite]
+    subgraph ITS[Camera ITS: Image Test Suite]
         direction TB
-        ITS_COMBI[test_feature_combination<br/>Stream permutations × FPS × HDR<br/>Thousands of calls to<br/>isSessionConfigurationSupported]
-        ITS_SCENE[Physical Scene Tests<br/>scene0 (uniform gray)<br/>scene1_1 (color checker)<br/>Automated tablet display → DUT]
-        ITS_FUSION[sensor_fusion test<br/>Gyro timestamps must align with<br/>SENSOR_TIMESTAMP in CaptureResult<br/>±1ms tolerance]
-        ITS_3A[3A Convergence tests<br/>AE/AF/AWB must converge within<br/>N frames under standard lighting]
-        ITS_HDR[HDR / Ultra HDR tests<br/>JPEG_R gainmap validity<br/>Dynamic range measurement]
+        ITS_COMBI[test_feature_combination<br/>Permutaciones de flujos × FPS × HDR<br/>Miles de llamadas a<br/>isSessionConfigurationSupported]
+        ITS_SCENE[Pruebas de escena física<br/>scene0 (gris uniforme)<br/>scene1_1 (tablero de color)<br/>Pantalla de tableta automatizada → DUT]
+        ITS_FUSION[Prueba sensor_fusion<br/>Marcas de tiempo del giro alineadas con<br/>SENSOR_TIMESTAMP en CaptureResult<br/>Tolerancia de ±1 ms]
+        ITS_3A[Pruebas de convergencia 3A<br/>AE/AF/AWB deben converger en<br/>N fotogramas bajo iluminación estándar]
+        ITS_HDR[Pruebas de HDR / Ultra HDR<br/>Validez del mapa de ganancia JPEG_R<br/>Medición del rango dinámico]
     end
-    CTS --> SHIP[(Ships if ALL pass)]
+    CTS --> SHIP[(Se distribuye si TODO pasa)]
     ITS --> SHIP
 
     style ITS_COMBI fill:#d9e6f2
@@ -49,72 +49,72 @@ graph TB
     style CTS_V fill:#fff3cd
 ```
 
-Everything in the diagram is required. If even *one* of these tests fails on a single camera ID, the device does not ship. That is why understanding ITS helps your app: it guarantees a baseline below which no HAL can fall, and it documents exactly what behaviors you can rely on.
+Todo lo que aparece en el diagrama es obligatorio. Si falla aunque sea *una* de estas pruebas en un único ID de cámara, el dispositivo no se distribuye. Por eso entender el ITS ayuda a su aplicación: garantiza un nivel base por debajo del cual ninguna HAL puede caer, y documenta exactamente en qué comportamientos puede confiar.
 
-### The Camera ITS Test Rig Architecture
+### Arquitectura del banco de pruebas Camera ITS
 
-A real Camera ITS lab looks like this:
+Un laboratorio real de Camera ITS tiene este aspecto:
 
 ```mermaid
 graph LR
-    TC[Test Controller PC<br/>Linux + Tradefed CLI<br/>Runs python3 its/scripts]
-    TC -->|USB 3.x ADB| DUT[DUT Phone or Tablet<br/>Device Under Test<br/>Camera facing tablet display]
-    TC -->|USB 3.x| TPD[Tablet Display<br/>~10" calibrated 4K panel<br/>Runs ITS tabletd APK]
-    TC -->|GPIO / USB relay| LIGHT[Controlled Lighting<br/>CCT-tunable LED panels<br/>2700K-6500K ±2%]
-    TPD -->|projects scene0 / scene1_1<br/>via HDMI/Internal display| DUT_CAM[DUT Rear Camera Sensor]
-    DUT_CAM -->|captures frames over MIPI → HAL| DUT
-    DUT -->|DNG/JPEG + CaptureResults<br/>pulled via adb pull| TC
-    TC -->|runs numpy / scipy analysis<br/>luminance linearity, color error, sharpness| RESULT[(PASS / FAIL report + JSON)]
+    TC["PC controlador de pruebas<br/>CLI de Linux + Tradefed<br/>Ejecuta scripts python3 its"]
+    TC -->|USB 3.x ADB| DUT[Teléfono o tableta DUT<br/>Dispositivo bajo prueba<br/>Cámara frente a pantalla tableta]
+    TC -->|USB 3.x| TPD[Pantalla de tableta<br/>Panel 4K calibrado de ~10\"<br/>Ejecuta APK tabletd ITS]
+    TC -->|GPIO / Relé USB| LIGHT[Iluminación controlada<br/>Paneles LED con CCT ajustable<br/>2700K-6500K ±2%]
+    TPD -->|proyecta scene0 / scene1_1<br/>vía HDMI / Pantalla interna| DUT_CAM[Sensor cámara trasera DUT]
+    DUT_CAM -->|captura fotogramas sobre MIPI → HAL| DUT
+    DUT -->|DNG/JPEG + CaptureResults<br/>obtenidos vía adb pull| TC
+    TC -->|ejecuta análisis numpy / scipy<br/>linealidad luminancia, error color, nitidez| RESULT[(Informe PASA / FALLA + JSON)]
 ```
 
-The key detail is the *closed loop*. The test controller knows *exactly* what pixel values it commanded the tablet display to show (e.g. a uniform gray at 50% intensity with a precisely known 6500K color temperature) and then verifies numerically that the DUT camera's output — both pixel luminance in the JPEG/DNG *and* the reported `SENSOR_EXPOSURE_TIME` × `SENSOR_SENSITIVITY` in the `CaptureResult` — matches the physical input to within allowed tolerances.
+El detalle clave es el *bucle cerrado*. El controlador de pruebas sabe *exactamente* qué valores de píxel ordenó mostrar a la pantalla de la tableta (por ejemplo, un gris uniforme al 50% de intensidad con una temperatura de color de 6500 K conocida con precisión) y luego verifica numéricamente que la salida de la cámara del DUT —tanto la luminancia de los píxeles en el JPEG/DNG *como* el `SENSOR_EXPOSURE_TIME` × `SENSOR_SENSITIVITY` informado en el `CaptureResult`— coincida con la entrada física dentro de las tolerancias permitidas.
 
-#### `test_feature_combination`: The Enumeration Gauntlet
+#### `test_feature_combination`: El calvario de la enumeración
 
-The single biggest ITS test by runtime is `test_feature_combination`. It enumerates every legal stream size from `SCALER_STREAM_CONFIGURATION_MAP`, every format (`PRIV`, `YUV`, `JPEG`, `RAW_SENSOR`, `JPEG_R`, `DEPTH`), every FPS range from `CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES`, every output-surface *count* combination (1-output, 2-output, 3-output session configs), and every HDR mode flag — then calls `isSessionConfigurationSupported` on the resulting SessionConfiguration, captures one frame per supported config, and asserts the frame is not corrupted. The total number of combinations is often 30,000–100,000 per camera ID.
+La prueba individual más larga del ITS por tiempo de ejecución es `test_feature_combination`. Enumera cada tamaño de flujo legal de `SCALER_STREAM_CONFIGURATION_MAP`, cada formato (`PRIV`, `YUV`, `JPEG`, `RAW_SENSOR`, `JPEG_R`, `DEPTH`), cada rango de FPS de `CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES`, cada combinación de *recuento* de superficies de salida (configuraciones de sesión de 1, 2 y 3 salidas) y cada bandera de modo HDR; a continuación, llama a `isSessionConfigurationSupported` sobre la SessionConfiguration resultante, captura un fotograma por cada configuración admitida y afirma que el fotograma no está dañado. El número total de combinaciones suele ser de 30.000 a 100.000 por ID de cámara.
 
-For you as an app developer, the takeaway is simple: **if `isSessionConfigurationSupported` returns `true` on a CTS-passing device, that stream combination actually works, in both directions.** If it returns `false`, do not try it. Rely on this call before you fall back to smaller sizes. This is the exact same query CameraX uses internally in its resolution selector.
+Para usted como desarrollador de aplicaciones, la conclusión es sencilla: **si `isSessionConfigurationSupported` devuelve `true` en un dispositivo que ha superado el CTS, esa combinación de flujos funciona realmente, en ambas direcciones.** Si devuelve `false`, no lo intente. Confíe en esta llamada antes de recurrir a tamaños más pequeños. Esta es la misma consulta que CameraX utiliza internamente en su selector de resolución.
 
-#### Physical Scene Tests: Linearity of Exposure
+#### Pruebas de escena física: Linealidad de la exposición
 
-Scene0 and scene1_1 tests validate that the camera's *reported* exposure math matches its *measured* pixel output. The test rig projects a uniform gray field (scene0) of known luminance `L` onto the DUT. It then commands a sweep of N different `(SENSOR_EXPOSURE_TIME, SENSOR_SENSITIVITY)` pairs from the full available range, captures a DNG frame per pair, and computes the arithmetic mean pixel value `Y` across the sensor's active array.
+Las pruebas scene0 y scene1_1 validan que las matemáticas de exposición *informadas* de la cámara coincidan con su salida de píxeles *medida*. El banco de pruebas proyecta un campo gris uniforme (scene0) de luminancia `L` conocida sobre el DUT. A continuación, ordena un barrido de N pares `(SENSOR_EXPOSURE_TIME, SENSOR_SENSITIVITY)` diferentes de todo el rango disponible, captura un fotograma DNG por par y calcula el valor de píxel medio aritmético `Y` en toda la matriz activa del sensor.
 
-The assertion is strictly linear:
+La afirmación es estrictamente lineal:
 
 ```
-Y_i / (EXPOSURE_TIME_i × SENSITIVITY_i) = constant ± tolerance
+Y_i / (EXPOSURE_TIME_i × SENSITIVITY_i) = constante ± tolerancia
 ```
 
-across *all* captured pairs. If the product doubles, pixel luminance must double. If it halves, luminance must halve. Any deviation above ~1% in the midtones fails the test.
+en *todos* los pares capturados. Si el producto se duplica, la luminancia del píxel debe duplicarse. Si se reduce a la mitad, la luminancia debe reducirse a la mitad. Cualquier desviación superior a ~1% en los medios tonos hace fallar la prueba.
 
-Why this matters to you: it is the guarantee that your manual exposure slider (Chapter 14) produces mathematically predictable results on a CTS-compliant device. If your app computes the "next ISO/exposure pair" for a +1 EV step, the output image really will be one stop brighter. On non-CTS-compliant devices (imported gray-market phones, custom ROMs without CTS), this guarantee does not hold, and your manual exposure UI will appear broken.
+Por qué esto es importante para usted: es la garantía de que su control deslizante de exposición manual (Capítulo 14) produzca resultados matemáticamente predecibles en un dispositivo compatible con CTS. Si su aplicación calcula el "siguiente par de ISO/exposición" para un paso de +1 EV, la imagen de salida realmente será un paso más brillante. En los dispositivos que no cumplen con el CTS (teléfonos importados del mercado gris, ROM personalizadas sin CTS), esta garantía no se mantiene y su interfaz de usuario de exposición manual parecerá rota.
 
-#### `sensor_fusion`: The Timestamp Fusion Test
+#### `sensor_fusion`: La prueba de fusión de marcas de tiempo
 
-EIS (Electronic Image Stabilization) and AR tracking live or die by this test. While the DUT is recording a video, the test controller physically rotates the phone on a motorized gimbal at known angular velocity. Simultaneously, it polls the DUT's gyroscope sensor via `SensorManager` at 400Hz+ and the camera's `CaptureResult.SENSOR_TIMESTAMP` at 30/60fps.
+La EIS (estabilización electrónica de imagen) y el seguimiento de AR viven o mueren por esta prueba. Mientras el DUT está grabando un video, el controlador de pruebas rota físicamente el teléfono en un cardán (gimbal) motorizado a una velocidad angular conocida. Simultáneamente, sondea el sensor giroscópico del DUT a través del `SensorManager` a más de 400 Hz y el `CaptureResult.SENSOR_TIMESTAMP` de la cámara a 30/60 fps.
 
-The pass condition: every gyro timestamp and every frame `SENSOR_TIMESTAMP` must be in the exact same `CLOCK_MONOTONIC` timebase, with gyro samples interpolated at the camera sample time matching the gimbal's commanded angular velocity to within ±0.1 rad/s and ±1ms.
+La condición de paso: cada marca de tiempo del giro y cada `SENSOR_TIMESTAMP` de fotograma deben estar en la misma base de tiempo `CLOCK_MONOTONIC`, con las muestras del giro interpoladas en el momento de la muestra de la cámara coincidiendo con la velocidad angular ordenada del cardán dentro de ±0,1 rad/s y ±1 ms.
 
-If this test fails, the HAL's timestamp source is wrong — typically it mixed `CLOCK_REALTIME` (wall time, which jumps during NTP sync) with `CLOCK_MONOTONIC` (steady, monotonic). Google rejects the device. For you, this means you can safely feed `CaptureResult.SENSOR_TIMESTAMP` directly into ARCore's camera image update call without applying any custom timestamp offset, on any GMS-certified device.
+Si esta prueba falla, la fuente de la marca de tiempo de la HAL es incorrecta; normalmente mezcló `CLOCK_REALTIME` (tiempo de muro, que salta durante la sincronización NTP) con `CLOCK_MONOTONIC` (constante, monótona). Google rechaza el dispositivo. Para usted, esto significa que puede alimentar con seguridad el `CaptureResult.SENSOR_TIMESTAMP` directamente en la llamada de actualización de la imagen de la cámara de ARCore sin aplicar ningún desplazamiento de marca de tiempo personalizado, en cualquier dispositivo certificado por GMS.
 
-### CTS Verifier: Manual User Tests
+### CTS Verifier: Pruebas manuales de usuario
 
-Not everything can be automated. CTS Verifier is an on-device APK that a human QA tester uses for subjective tests:
+No todo puede automatizarse. CTS Verifier es un APK en el dispositivo que un probador humano de control de calidad utiliza para pruebas subjetivas:
 
-- **Preview smoothness:** 30 seconds of panning the device; tester scores perceived smoothness 1–5. (Objective telemetry is also captured via Choreographer dumpsys.)
-- **Capture quality:** 5 photos of standard scenes under standard lighting; tester compares against a gold-reference device.
-- **Multi-camera zoom transition:** While zooming continuously 0.5×–10×, there must be no visible pop, glitch, or black frame between physical camera switches.
-- **HDR/JPEG_R quality:** Side-by-side SDR and HDR captures are compared against known-good reference imagery.
+- **Fluidez de la vista previa**: 30 segundos de barrido con el dispositivo; el probador puntúa la fluidez percibida de 1 a 5. (También se captura telemetría objetiva mediante volcados de Choreographer).
+- **Calidad de la captura**: 5 fotos de escenas estándar bajo iluminación estándar; el probador las compara con un dispositivo de referencia de oro.
+- **Transición de zoom multicámara**: al hacer zoom continuamente de 0,5x a 10x, no debe haber saltos, fallos ni fotogramas negros visibles entre los cambios de cámara física.
+- **Calidad de HDR/JPEG_R**: las capturas SDR y HDR en paralelo se comparan con imágenes de referencia de buen funcionamiento conocido.
 
-These are subjective, but the bar is public. If your app targets similar UX goals (smooth zoom transitions, HDR captures), you can replicate the same test procedures in your internal QA lab with the same scene0/scene1_1 tablet rig.
+Son subjetivas, pero el listón es público. Si su aplicación apunta a objetivos de UX similares (transiciones de zoom fluidas, capturas HDR), puede replicar los mismos procedimientos de prueba en su laboratorio interno de control de calidad con el mismo banco de pruebas de tableta para scene0/scene1_1.
 
 ---
 
-## Part Two: Testing Your Own App — Instrumentation and Mocking
+## Segunda parte: Probar su propia aplicación: instrumentación y simulacros
 
-OEM tests validate the HAL. You need to validate *your* code. The canonical mistake teams make is requiring a real phone with a working camera on their CI server. Don't. With Mockito's `mock()` + `ArgumentCaptor`, every single Camera2 class — `CameraManager`, `CameraDevice`, `CameraCaptureSession`, `CaptureResult` — is an interface or a non-final class that mocks cleanly. You can run your entire camera pipeline on CI on a headless Linux x86 emulator with no camera hardware at all.
+Las pruebas de los fabricantes validan la HAL. Usted necesita validar *su* código. El error canónico que cometen los equipos es requerir un teléfono real con una cámara que funcione en su servidor de CI. No lo haga. Con `mock()` + `ArgumentCaptor` de Mockito, cada clase de Camera2 —`CameraManager`, `CameraDevice`, `CameraCaptureSession`, `CaptureResult`— es una interfaz o una clase no final que se simula limpiamente. Puede ejecutar toda su tubería de cámara en CI en un emulador Linux x86 sin cabeza (headless) sin ningún hardware de cámara.
 
-### Example 1: Capture a "Frame" and Verify CaptureResult Contains Expected EXPOSURE_TIME (AndroidTest with Mockito)
+### Ejemplo 1: Capturar un "fotograma" y verificar que el CaptureResult contiene el EXPOSURE_TIME esperado (AndroidTest con Mockito)
 
 ```kotlin
 // app/src/androidTest/java/com/example/camera/CameraCaptureTest.kt
@@ -124,7 +124,7 @@ class CameraCaptureTest {
 
     @Test
     fun captureRequest_containsManualExposureTime_andResultEchoesIt() = runTest {
-        // ---- Arrange ----
+        // ---- Preparar ----
         val mockCameraManager = mock<CameraManager>()
         val mockCameraDevice = mock<CameraDevice>()
         val mockSession = mock<CameraCaptureSession>()
@@ -134,37 +134,37 @@ class CameraCaptureTest {
         val expectedExposureNs = 16_666_666L // 1/60 s
         val expectedIso = 400
 
-        // Capture the StateCallback passed to openCamera
+        // Capturar la StateCallback pasada a openCamera
         val deviceCallbackCaptor =
             argumentCaptor<CameraDevice.StateCallback>()
         whenever(mockCameraManager.openCamera(
             anyString(), deviceCallbackCaptor.capture(), any()
-        )).thenAnswer { /* no-op; we fire callback manually */ }
+        )).thenAnswer { /* nada: lanzamos la retrollamada manualmente */ }
 
-        // Capture the session state callback
+        // Capturar la retrollamada de estado de la sesión
         val sessionCallbackCaptor =
             argumentCaptor<CameraCaptureSession.StateCallback>()
         whenever(mockCameraDevice.createCaptureSession(
             anyList<Surface>(),
             sessionCallbackCaptor.capture(),
             any()
-        )).thenAnswer { /* no-op */ }
+        )).thenAnswer { /* nada */ }
 
-        // Capture the CaptureCallback passed to capture()
+        // Capturar la CaptureCallback pasada a capture()
         val captureCallbackCaptor =
             argumentCaptor<CameraCaptureSession.CaptureCallback>()
         whenever(mockSession.capture(
             any(), captureCallbackCaptor.capture(), any()
         )).thenReturn(1)
 
-        // Build the camera-under-test using your wrapper
+        // Construir la cámara bajo prueba usando su envoltorio
         val cameraWrapper = YourCameraWrapper(mockCameraManager, testHandler)
 
-        // ---- Act: fire the open → configure → capture chain ----
+        // ---- Actuar: lanzar la cadena abrir → configurar → capturar ----
         cameraWrapper.open("0")
-        // (Inside YourCameraWrapper.open() called
-        //  mockCameraManager.openCamera, which captured the callback.)
-        // Simulate HAL returning success:
+        // (Dentro de YourCameraWrapper.open() se llamó a
+        //  mockCameraManager.openCamera, que capturó la retrollamada).
+        // Simular que la HAL devuelve éxito:
         deviceCallbackCaptor.lastValue.onOpened(mockCameraDevice)
 
         cameraWrapper.createSession(listOf(mockSurface))
@@ -172,7 +172,7 @@ class CameraCaptureTest {
 
         val requestBuilder: CaptureRequest.Builder =
             mockCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
-        // (Your wrapper applies manual settings here)
+        // (Su envoltorio aplica los ajustes manuales aquí)
         requestBuilder.set(CaptureRequest.CONTROL_MODE,
                            CaptureRequest.CONTROL_MODE_OFF)
         requestBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME,
@@ -182,7 +182,7 @@ class CameraCaptureTest {
 
         val resultDeferred = async { cameraWrapper.capture(requestBuilder.build()) }
 
-        // ---- Assert 1: the CaptureRequest sent to the HAL had the right keys ----
+        // ---- Afirmar 1: la CaptureRequest enviada a la HAL tenía las claves correctas ----
         val sentRequest: CaptureRequest = captureArg(mockSession, 0) {
             capture(any(), any(), any())
         }
@@ -191,7 +191,7 @@ class CameraCaptureTest {
         assertThat(sentRequest[CaptureRequest.SENSOR_SENSITIVITY])
             .isEqualTo(expectedIso)
 
-        // ---- Act 2: Simulate the HAL returning a CaptureResult ----
+        // ---- Actuar 2: Simular que la HAL devuelve un CaptureResult ----
         val mockResult = mock<TotalCaptureResult>().apply {
             whenever(get(CaptureResult.SENSOR_EXPOSURE_TIME))
                 .thenReturn(expectedExposureNs)
@@ -202,7 +202,7 @@ class CameraCaptureTest {
         captureCallbackCaptor.lastValue
             .onCaptureCompleted(mockSession, sentRequest, mockResult)
 
-        // ---- Assert 2: wrapper's returned capture result echoes exposure ----
+        // ---- Afirmar 2: el resultado de captura devuelto por el envoltorio refleja la exposición ----
         val actual = resultDeferred.await()
         assertThat(actual.exposureTimeNanos).isEqualTo(expectedExposureNs)
         assertThat(actual.iso).isEqualTo(expectedIso)
@@ -210,19 +210,19 @@ class CameraCaptureTest {
 }
 ```
 
-The pattern is always the same:
-1. `argumentCaptor` the callback that would go to the HAL.
-2. Call your wrapper.
-3. Fire the callback's success method *as if the HAL responded*.
-4. Assert on both the inputs (what your wrapper sent to the HAL) and the outputs (what your wrapper handed back to the caller).
+El patrón es siempre el mismo:
+1. `argumentCaptor` para la retrollamada que iría a la HAL.
+2. Llamar a su envoltorio.
+3. Disparar el método de éxito de la retrollamada *como si la HAL hubiera respondido*.
+4. Afirmar tanto sobre las entradas (lo que su envoltorio envió a la HAL) como sobre las salidas (lo que su envoltorio entregó al llamante).
 
-This runs on an emulator with no camera. No hardware. No flakiness from lighting. 10,000 runs produce the same 10,000 passes.
+Esto se ejecuta en un emulador sin cámara. Sin hardware. Sin inestabilidad por la iluminación. 10.000 ejecuciones producen los mismos 10.000 éxitos.
 
-### Example 2: Parameterized Test — LEGACY Devices Must Gracefully Degrade, Never Crash
+### Ejemplo 2: Prueba parametrizada: los dispositivos LEGACY deben degradarse con elegancia, nunca fallar
 
-Every production camera app must run on `LEGACY` HALs. The single most common bug is calling `CaptureRequest.CONTROL_MODE_OFF` on a `LEGACY` device: the HAL ignores it, but your wrapper interprets the resulting `CaptureResult.CONTROL_AE_STATE == SEARCHING` as a transient failure and tries to restart AE in an infinite loop, eventually ANRing.
+Toda aplicación de cámara de producción debe funcionar en las HAL `LEGACY`. El error individual más común es llamar a `CaptureRequest.CONTROL_MODE_OFF` en un dispositivo `LEGACY`: la HAL lo ignora, pero su envoltorio interpreta el `CaptureResult.CONTROL_AE_STATE == SEARCHING` resultante como un fallo transitorio e intenta reiniciar la AE en un bucle infinito, provocando finalmente un ANR.
 
-Parameterize your tests per `INFO_SUPPORTED_HARDWARE_LEVEL`:
+Parametrice sus pruebas por `INFO_SUPPORTED_HARDWARE_LEVEL`:
 
 ```kotlin
 @RunWith(Parameterized::class)
@@ -257,27 +257,27 @@ class HardwareLevelGracefulDegradationTest(
 
         val wrapper = YourCameraWrapper(mockCameraManager, testHandler)
         wrapper.open("0")
-        // ... (boilerplate session setup as before, omitted)
+        // ... (configuración de sesión repetitiva como antes, omitida)
 
         val job = launch {
             wrapper.setManualExposure(iso = 400, exposureNs = 8_000_000L)
         }
 
-        // No hang — must complete within timeout even on LEGACY
+        // Sin bloqueo: debe completarse dentro del tiempo de espera incluso en LEGACY
         withTimeoutOrNull(2_000) { job.join() }
-            ?: fail("setManualExposure hung on $hardwareLevelName hardware")
+            ?: fail("setManualExposure se bloqueó en hardware $hardwareLevelName")
 
-        // No exception leaked to uncaught
+        // No se ha filtrado ninguna excepción a lo no capturado
         assertThat(job.isCancelled).isFalse()
     }
 }
 ```
 
-Run this against every new build. It takes 400ms. It catches the exact class of `LEGACY`-HAL hangs that would otherwise only show up in Play Console crash reports months later.
+Ejecute esto contra cada nueva compilación. Tarda 400 ms. Atrapa exactamente la clase de bloqueos de la HAL `LEGACY` que, de otro modo, solo aparecerían en los informes de fallos de la Play Console meses después.
 
-### AndroidTest on Real Hardware: Sanity Capture That EXPOSURE_TIME Is Correct
+### AndroidTest en hardware real: captura de cordura de que EXPOSURE_TIME es correcto
 
-For nightly runs against a small farm of real phones, write a short AndroidTest that opens the *actual* camera, captures one RAW frame, and asserts that `CaptureResult.SENSOR_EXPOSURE_TIME` was within 5% of the requested value. This guards against HAL regressions on specific OS builds:
+Para las ejecuciones nocturnas contra una pequeña granja de teléfonos reales, escriba una pequeña AndroidTest que abra la cámara *real*, capture un fotograma RAW y afirme que el `CaptureResult.SENSOR_EXPOSURE_TIME` estaba dentro de un margen del 5% del valor solicitado. Esto protege contra las regresiones de la HAL en compilaciones específicas del sistema operativo:
 
 ```kotlin
 @RunWith(AndroidJUnit4::class)
@@ -292,7 +292,7 @@ class RealHardwareCaptureSanityTest {
             as CameraManager
         val chars = camManager.getCameraCharacteristics("0")
         assumeTrue(
-            "Requires FULL or LEVEL_3 for manual exposure",
+            "Requiere FULL o LEVEL_3 para exposición manual",
             chars[CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL] in
             setOf(
                 CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL,
@@ -300,11 +300,11 @@ class RealHardwareCaptureSanityTest {
             )
         )
 
-        // ... open camera, create ImageReader (PRIVATE or YUV) session, capture
-        // a single manual frame with a known exposure using the wrappers from
-        // Chapter 26 coroutines ...
+        // ... abrir cámara, crear sesión de ImageReader (PRIVATE o YUV), capturar
+        // un único fotograma manual con una exposición conocida usando los envoltorios
+        // de las corrutinas del Capítulo 26 ...
 
-        val requestedNs = 10_000_000L // 1/100s
+        val requestedNs = 10_000_000L // 1/100 s
         val result: TotalCaptureResult =
             cameraWrapper.captureManualExposure(requestedNs, iso = 200)
 
@@ -312,7 +312,7 @@ class RealHardwareCaptureSanityTest {
         val tolerancePct = abs(actualNs - requestedNs) * 100.0 / requestedNs
         assertThat(tolerancePct)
             .withFailMessage(
-                "Requested %d ns, got %d ns (%$.1f%% off >5%%)",
+                "Solicitado %d ns, obtenido %d ns (%$.1f%% diferencia > 5%%)",
                 requestedNs, actualNs, tolerancePct
             )
             .isLessThan(5.0)
@@ -320,14 +320,14 @@ class RealHardwareCaptureSanityTest {
 }
 ```
 
-This test is flaky by nature — it depends on real hardware. But it catches the exact class of vendor OTA updates that silently break manual exposure on flagship devices. Run it nightly on your 5–10 device farm; the signal is worth the noise.
+Esta prueba es inestable por naturaleza: depende del hardware real. Pero atrapa exactamente el tipo de actualizaciones OTA de los fabricantes que rompen silenciosamente la exposición manual en los dispositivos insignia. Ejecútela cada noche en su granja de 5 a 10 dispositivos; la señal merece el ruido.
 
 ---
 
-## Summary
+## Resumen
 
-Camera testing divides into OEM validation and app validation. OEMs must pass CTS and Camera ITS, a physically-rigged test suite that enforces stream combination support (via thousands of `isSessionConfigurationSupported` calls), luminance linearity across the exposure × sensitivity plane, and sensor/gyro timestamp alignment for EIS and AR. Apps test via instrumentation: Mockito mocks every Camera2 class, `ArgumentCaptor` grabs HAL callbacks, you fire them manually, and you assert both request and result without touching real hardware — enabling CI runs on headless emulators. Parameterize your wrapper tests against every `INFO_SUPPORTED_HARDWARE_LEVEL` (especially `LEGACY`) to guarantee graceful degradation, and run a small suite of `@RequiresDevice @LargeTest` sanity captures against a real device farm to catch OTA regressions.
+Las pruebas de cámara se dividen en validación de OEM y validación de aplicación. Los OEM deben superar el CTS y el Camera ITS, un conjunto de pruebas con bancos de pruebas físicos que impone el soporte de combinaciones de flujos (mediante miles de llamadas a `isSessionConfigurationSupported`), la linealidad de luminancia en el plano exposición × sensibilidad y la alineación de marcas de tiempo de sensor/giroscopio para EIS y AR. Las aplicaciones prueban mediante instrumentación: Mockito simula cada clase de Camera2, `ArgumentCaptor` captura las retrollamadas de la HAL, usted las dispara manualmente y afirma tanto sobre la solicitud como sobre el resultado sin tocar el hardware real, lo que permite ejecuciones de CI en emuladores sin cabeza. Parametrice sus pruebas de envoltorios contra cada `INFO_SUPPORTED_HARDWARE_LEVEL` (especialmente `LEGACY`) para garantizar una degradación elegante, y ejecute un pequeño conjunto de capturas de cordura `@RequiresDevice @LargeTest` contra una granja de dispositivos reales para atrapar regresiones de las OTA.
 
-## What's Next
+## ¿Qué sigue?
 
-You have mastered Camera2's public API from Kotlin through native NDK, wrapped it in coroutines, and verified it against tests. But what actually happens *under the hood* when you call `CameraManager.openCamera`? What is HAL3? Where does the Binder IPC boundary really live? And how does `CameraDeviceSetup` (Android 15, API 35) change the architecture by decoupling capability queries from sensor power? Chapter 28 is the grand architecture finale: the full stack from app code to the VCM voice coil motor in the lens barrel.
+Ya domina la API pública de Camera2 desde Kotlin hasta el NDK nativo, la ha envuelto en corrutinas y la ha verificado contra pruebas. Pero, ¿qué sucede realmente *bajo el capó* cuando llama a `CameraManager.openCamera`? ¿Qué es HAL3? ¿Dónde vive realmente el límite de Binder IPC? ¿Y cómo cambia la arquitectura el `CameraDeviceSetup` (Android 15, API 35) al desacoplar las consultas de capacidad de la energía del sensor? El Capítulo 28 es el gran final de la arquitectura: toda la pila desde el código de la aplicación hasta el motor de bobina de voz VCM en el barril de la lente.

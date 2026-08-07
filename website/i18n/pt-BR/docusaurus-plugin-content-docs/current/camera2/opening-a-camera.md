@@ -1,151 +1,151 @@
 ---
 sidebar_position: 7
-title: "Chapter 7: Opening a Camera"
-description: Establish a live connection to a camera device using openCamera(). Master the CameraDevice lifecycle, implement StateCallback with onOpened/onDisconnected/onError, integrate open/close with Activity onPause/onResume, and handle every CameraAccessException error code with Semaphore-based concurrency control.
-keywords: [CameraDevice, StateCallback, openCamera, CameraAccessException, Semaphore concurrency]
+title: "Capítulo 7: Abrindo uma Câmera"
+description: Estabeleça uma conexão ao vivo com um dispositivo de câmera usando openCamera(). Domine o ciclo de vida do CameraDevice, implemente o StateCallback com onOpened/onDisconnected/onError, integre a abertura/fechamento com o onPause/onResume da Atividade e trate cada código de erro do CameraAccessException com controle de concorrência baseado em Semaphore.
+keywords: [CameraDevice, StateCallback, openCamera, CameraAccessException, concorrência Semaphore]
 ---
 
-You've enumerated all cameras on the device (Chapter 6), and you've identified the one you want to use — typically the back-facing camera with the highest hardware level. The next step is to **open** that camera: establish an active, low-level connection to the camera hardware so you can configure capture sessions and submit requests. Opening a camera is the point of no return where your app transitions from a passive observer of camera metadata to an active controller of real hardware.
+Você enumerou todas as câmeras no dispositivo (Capítulo 6) e identificou a que deseja usar — normalmente a câmera traseira com o maior nível de hardware. O próximo passo é **abrir** essa câmera: estabelecer uma conexão ativa de baixo nível com o hardware da câmera para que você possa configurar sessões de captura e enviar solicitações. Abrir uma câmera é o ponto sem retorno onde seu aplicativo transita de um observador passivo de metadados da câmera para um controlador ativo de hardware real.
 
-If you want to see production-grade camera open/close lifecycle code, study the **Android Camera Parameters** app on [GitHub](https://github.com/zoozooll/AndroidCameraParameters). Its `Camera2Controller` class encapsulates the entire `CameraDevice` lifecycle management, including error recovery, retry logic, and synchronous cleanup. The [Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams) version of the app has been installed on thousands of devices across hundreds of different OEMs, so the edge cases it handles are battle-tested in the real world.
+Se você quiser ver código de ciclo de vida de abertura/fechamento de câmera de nível de produção, estude o aplicativo **Android Camera Parameters** no [GitHub](https://github.com/zoozooll/AndroidCameraParameters). Sua classe `Camera2Controller` encapsula todo o gerenciamento do ciclo de vida do `CameraDevice`, incluindo recuperação de erros, lógica de repetição e limpeza síncrona. A versão do aplicativo na [Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams) foi instalada em milhares de dispositivos de centenas de diferentes fabricantes (OEMs), portanto, os casos extremos que ele trata são testados em batalha no mundo real.
 
-## What Is CameraDevice?
+## O Que É o CameraDevice?
 
-`CameraDevice` is the Camera2 class that represents **an active, open connection to a specific physical (or logical) camera on the device**. Before the camera is opened, you can only read its characteristics; once it's opened, you can:
-- Create `CameraCaptureSession`s (Chapter 8)
-- Submit `CaptureRequest`s (Chapters 8 and 9)
-- Read dynamic `CaptureResult` metadata as frames arrive
-- Flush pending requests, abort captures, and close the device
+`CameraDevice` é a classe da API Camera2 que representa **uma conexão aberta e ativa com uma câmera física (ou lógica) específica no dispositivo**. Antes de a câmera ser aberta, você só pode ler suas características; uma vez aberta, você pode:
+- Criar `CameraCaptureSession`s (Capítulo 8)
+- Enviar `CaptureRequest`s (Capítulos 8 e 9)
+- Ler metadados dinâmicos de `CaptureResult` conforme os quadros chegam
+- Limpar solicitações pendentes, abortar capturas e fechar o dispositivo
 
-A `CameraDevice` has two critical properties:
+Um `CameraDevice` possui duas propriedades críticas:
 
-1. **It is a single-user resource.** Only one app (and within your app, only one `CameraDevice` instance) can hold a given camera open at a time. If a higher-priority app (like an incoming phone call with video) needs the camera, your app will be forcibly disconnected.
-2. **It has a strict, callback-driven lifecycle.** You cannot new up a `CameraDevice` with a constructor. The only way to get one is via `CameraManager.openCamera()`, which delivers the instance asynchronously through a `StateCallback`. You must respect every state transition callback.
+1. **É um recurso de usuário único.** Apenas um aplicativo (e dentro do seu aplicativo, apenas uma instância de `CameraDevice`) pode manter uma determinada câmera aberta por vez. Se um aplicativo de maior prioridade (como uma chamada telefônica recebida com vídeo) precisar da câmera, seu aplicativo será desconectado à força.
+2. **Possui um ciclo de vida rigoroso orientado a callbacks.** Você não pode instanciar um `CameraDevice` com um construtor. A única maneira de obter um é via `CameraManager.openCamera()`, que entrega a instância de forma assíncrona através de um `StateCallback`. Você deve respeitar cada callback de transição de estado.
 
-The relationship between `CameraManager`, a camera ID, and the resulting `CameraDevice` is:
+A relação entre `CameraManager`, um ID de câmera e o `CameraDevice` resultante é:
 
 ```
 CameraManager.openCamera("0", callback, handler)
     │
-    ├── Async call → returns immediately
+    ├── Chamada assíncrona → retorna imediatamente
     │
-    └───── On background thread (via Handler) ────→ StateCallback.onOpened(cameraDevice)
+    └───── Na thread de fundo (via Handler) ────→ StateCallback.onOpened(cameraDevice)
                                                           │
                                                           ▼
-                                                  Now you can use cameraDevice to:
+                                                  Agora você pode usar o cameraDevice para:
                                                   • createCaptureSession(...)
                                                   • createCaptureRequest(...)
 ```
 
-## The StateCallback: CameraDevice's Lifecycle Machine
+## O StateCallback: A Máquina de Ciclo de Vida do CameraDevice
 
-`CameraDevice.StateCallback` is an abstract class with three methods you **must** implement. Every open camera will eventually trigger at least one of these callbacks (either `onOpened` followed later by `onDisconnected`/`onError`, or directly `onError` if opening fails). The camera cannot be used for capture until `onOpened` fires.
+`CameraDevice.StateCallback` é uma classe abstrata com três métodos que você **deve** implementar. Toda câmera aberta acabará disparando pelo menos um desses callbacks (ou `onOpened` seguido mais tarde por `onDisconnected`/`onError`, ou diretamente `onError` se a abertura falhar). A câmera não pode ser usada para captura até que `onOpened` seja disparado.
 
-### The Three StateCallback Methods
+### Os Três Métodos do StateCallback
 
-| Method | Called When | What To Do |
+| Método | Chamado Quando | O Que Fazer |
 |---|---|---|
-| `onOpened(camera: CameraDevice)` | The camera has successfully opened and is ready for use. | Store the `camera` reference in a property. Proceed to configure a capture session (Chapter 8). Release any Semaphore permit if you acquired one. |
-| `onDisconnected(camera: CameraDevice)` | The camera was taken away from your app (e.g., another higher-priority app opened it, the user went to a camera-hungry foreground app, or the device policy disabled it). | Call `camera.close()` immediately. Null out your stored reference. The camera cannot be reopened until your app regains the foreground (at which point `onResume` will retry). |
-| `onError(camera: CameraDevice, error: Int)` | A fatal error occurred during open or while the camera was active. The `error` parameter is one of the `ERROR_*` constants described below. | Call `camera.close()`. Null out the reference. Depending on the error code, either surface a user-facing error or retry with exponential backoff. Always release the Semaphore. |
+| `onOpened(camera: CameraDevice)` | A câmera foi aberta com sucesso e está pronta para uso. | Armazene a referência `camera` em uma propriedade. Prossiga para configurar uma sessão de captura (Capítulo 8). Libere qualquer permissão do Semaphore se você adquiriu uma. |
+| `onDisconnected(camera: CameraDevice)` | A câmera foi retirada do seu aplicativo (ex: outro aplicativo de maior prioridade abriu a câmera, o usuário mudou para um aplicativo em primeiro plano que consome câmera ou a política do dispositivo a desativou). | Chame `camera.close()` imediatamente. Anule sua referência armazenada. A câmera não poderá ser reaberta até que seu aplicativo recupere o primeiro plano (momento em que o `onResume` tentará novamente). |
+| `onError(camera: CameraDevice, error: Int)` | Ocorreu um erro fatal durante a abertura ou enquanto a câmera estava ativa. O parâmetro `error` é uma das constantes `ERROR_*` descritas abaixo. | Chame `camera.close()`. Anule a referência. Dependendo do código de erro, exiba uma mensagem de erro ao usuário ou tente novamente com um backoff exponencial. Sempre libere o Semaphore. |
 
-### The `onError` Error Codes
+### Os Códigos de Erro de `onError`
 
-The `error` integer in `onError` maps to five constants (defined in `CameraDevice.StateCallback`):
+O inteiro `error` em `onError` mapeia para cinco constantes (definidas em `CameraDevice.StateCallback`):
 
-| Constant | Value | Meaning | Recovery |
+| Constante | Valor | Significado | Recuperação |
 |---|---|---|---|
-| `ERROR_CAMERA_IN_USE` | `1` | The camera is already open by another app or by the system camera service. | Cannot recover automatically; wait for `onResume` when the user returns to your app and retry. |
-| `ERROR_MAX_CAMERAS_IN_USE` | `2` | The device has a limit on how many cameras can be open simultaneously; you've exceeded it by trying to open this camera (common on multi-camera flagships). | Close some other open `CameraDevice`s you may hold, then retry. On devices with hardware limits, typically only 2–3 cameras can be open at once. |
-| `ERROR_CAMERA_DISABLED` | `3` | The device policy (MDM, parental controls, kiosk mode) has disabled all cameras. | Surface a permanent error message to the user. Retrying will not help until the policy changes. |
-| `ERROR_CAMERA_DEVICE` | `4` | The camera hardware/firmware encountered an unrecoverable error. | Close the device. Notify the user. Retrying may help on some devices (for transient firmware glitches), so one or two retry attempts with backoff are reasonable. |
-| `ERROR_CAMERA_SERVICE` | `5` | The system-wide camera service itself has crashed. This is a platform-level failure, not your app's fault. | Close and null out everything. Typically the camera service will auto-restart within a few seconds; you can retry after a delay or wait for the next `onResume`. |
+| `ERROR_CAMERA_IN_USE` | `1` | A câmera já está aberta por outro aplicativo ou pelo serviço de câmera do sistema. | Não é possível recuperar automaticamente; aguarde pelo `onResume` quando o usuário retornar ao seu aplicativo e tente novamente. |
+| `ERROR_MAX_CAMERAS_IN_USE` | `2` | O dispositivo tem um limite de quantas câmeras podem ser abertas simultaneamente; você o excedeu ao tentar abrir esta câmera (comum em flagships com várias câmeras). | Feche outros `CameraDevice`s abertos que você possa possuir e tente novamente. Em dispositivos com limites de hardware, normalmente apenas 2 a 3 câmeras podem ser abertas ao mesmo tempo. |
+| `ERROR_CAMERA_DISABLED` | `3` | A política do dispositivo (MDM, controles parentais, modo quiosque) desativou todas as câmeras. | Exiba uma mensagem de erro permanente ao usuário. Tentar novamente não ajudará até que a política mude. |
+| `ERROR_CAMERA_DEVICE` | `4` | O hardware/firmware da câmera encontrou um erro irrecuperável. | Feche o dispositivo. Notifique o usuário. Tentar novamente pode ajudar em alguns dispositivos (para falhas transitórias de firmware), portanto, uma ou duas tentativas de repetição com backoff são razoáveis. |
+| `ERROR_CAMERA_SERVICE` | `5` | O próprio serviço de câmera de todo o sistema travou. Esta é uma falha no nível da plataforma, não culpa do seu aplicativo. | Feche e anule tudo. Normalmente, o serviço de câmera será reiniciado automaticamente em poucos segundos; você pode tentar novamente após um atraso ou esperar pelo próximo `onResume`. |
 
-The state diagram below captures every valid transition of a `CameraDevice` from the moment you call `openCamera()` to when you (or the system) close it:
+O diagrama de estados abaixo captura cada transição válida de um `CameraDevice` desde o momento em que você chama `openCamera()` até quando você (ou o sistema) o fecha:
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Idle : (camera closed / not yet open)
-    Idle --> Opening : call openCamera(cameraId)
+    [*] --> Idle : (câmera fechada / ainda não aberta)
+    Idle --> Opening : chamar openCamera(cameraId)
     Opening --> Opened : onOpened(camera) ✓
     Opening --> Error : onError(ERROR_*) ✗
     Opened --> ConfiguringSession : createCaptureSession()
     ConfiguringSession --> SessionReady : Session.onConfigured()
     SessionReady --> Streaming : setRepeatingRequest()
     Streaming --> SessionReady : stopRepeating()
-    SessionReady --> Opened : close session → no active session
+    SessionReady --> Opened : fechar sessão → nenhuma sessão ativa
     Opened --> Disconnected : onDisconnected()
-    Opened --> Error : onError(ERROR_*) during operation
+    Opened --> Error : onError(ERROR_*) durante operação
     Disconnected --> Closing : close()
     Error --> Closing : close()
-    Opened --> Closing : app calls close() (e.g., onPause)
-    Closing --> Idle : close() completes
+    Opened --> Closing : o app chama close() (ex: onPause)
+    Closing --> Idle : close() concluído
     Idle --> [*]
 
-    note right of Opening : Asynchronous — returns immediately
-    note right of Opened : ONLY usable state for capture
-    note right of Error : MUST call close() to release resources
-    note left of Disconnected : Camera was stolen by another app
+    note right of Opening : Assíncrona — retorna imediatamente
+    note right of Opened : ÚNICO estado utilizável para captura
+    note right of Error : DEVE chamar close() para liberar recursos
+    note left of Disconnected : A câmera foi "roubada" por outro app
 ```
 
-Important takeaways from the state diagram:
+Conclusões importantes do diagrama de estados:
 
-1. **Opened is the only operational state.** Before `onOpened` fires and after any error/disconnect, the `CameraDevice` reference must be considered unusable.
-2. **Close in every terminal state.** Regardless of whether you get `onError`, `onDisconnected`, or just decide to close proactively in `onPause`, **always call `close()`**. Failing to close a camera leads to leaks that prevent **any** app (including yours) from reopening it until the process dies or the system service restarts.
-3. **onError is terminal.** After `onError`, that specific `CameraDevice` instance is dead. Do not try to recover it; close it, then attempt a fresh `openCamera()` if you think the error was transient.
+1. **Opened é o único estado operacional.** Antes de `onOpened` disparar e após qualquer erro/desconexão, a referência `CameraDevice` deve ser considerada inutilizável.
+2. **Feche em cada estado terminal.** Independentemente de você receber `onError`, `onDisconnected` ou apenas decidir fechar proativamente no `onPause`, **sempre chame `close()`**. A falha ao fechar uma câmera leva a vazamentos que impedem que **qualquer** aplicativo (incluindo o seu) a reabra até que o processo morra ou o serviço do sistema seja reiniciado.
+3. **onError é terminal.** Após o `onError`, aquela instância específica do `CameraDevice` está morta. Não tente recuperá-la; feche-a e tente um novo `openCamera()` se você achar que o erro foi transitório.
 
-## Lifecycle Integration with Activity onPause/onResume
+## Integração do Ciclo de Vida com onPause/onResume da Atividade
 
-The Android Activity lifecycle is intrinsically linked to the `CameraDevice` lifecycle. Camera hardware is a shared, power-hungry resource; the system aggressively kills apps that hold cameras while in the background. The canonical rules are:
+O ciclo de vida da Activity do Android está intrinsecamente ligado ao ciclo de vida do `CameraDevice`. O hardware da câmera é um recurso compartilhado e que consome muita energia; o sistema encerra agressivamente os aplicativos que mantêm as câmeras enquanto estão em segundo plano. As regras canônicas são:
 
-### When to Open the Camera (onResume)
+### Quando Abrir a Câmera (onResume)
 
-In `onResume` (after starting the background thread, as we established in Chapter 5):
-1. Verify permissions are still granted (user could have revoked them in Settings while the app was backgrounded).
-2. If a `CameraDevice` is already open, you're good.
-3. If no `CameraDevice` is open, call `openCamera()` with the ID you selected in Chapter 6.
+No `onResume` (após iniciar a thread de fundo, como estabelecemos no Capítulo 5):
+1. Verifique se as permissões ainda estão concedidas (o usuário pode tê-las revogado nas Configurações enquanto o aplicativo estava em segundo plano).
+2. Se um `CameraDevice` já estiver aberto, você está pronto.
+3. Se nenhum `CameraDevice` estiver aberto, chame `openCamera()` com o ID que você selecionou no Capítulo 6.
 
-### When to Close the Camera (onPause)
+### Quando Fechar a Câmera (onPause)
 
-In `onPause` (before stopping the background thread):
-1. If a repeating request is active (preview running — Chapter 8), stop it with `cameraCaptureSession.stopRepeating()`.
-2. If an open capture session exists, close it with `cameraCaptureSession.close()`.
-3. Close the `CameraDevice` itself with `cameraDevice.close()`.
-4. Null out all three references (session, device, and the pending request builder).
-5. Then (and only then) stop the background thread.
+No `onPause` (antes de parar a thread de fundo):
+1. Se uma solicitação repetida estiver ativa (pré-visualização rodando — Capítulo 8), pare-a com `cameraCaptureSession.stopRepeating()`.
+2. Se existir uma sessão de captura aberta, feche-a com `cameraCaptureSession.close()`.
+3. Feche o próprio `CameraDevice` com `cameraDevice.close()`.
+4. Anule todas as três referências (sessão, dispositivo e o construtor de solicitação pendente).
+5. Então (e somente então) pare a thread de fundo.
 
-If you reverse any of this (for example, stop the thread **before** closing the camera), the callbacks that `close()` needs to run will have nowhere to execute, and you'll get deadlocks, ANRs, or `Handler ... sending message to a Handler on a dead thread` warnings in Logcat.
+Se você inverter qualquer parte disso (por exemplo, parar a thread **antes** de fechar a câmera), os callbacks que o `close()` precisa executar não terão onde rodar, e você terá travamentos (deadlocks), ANRs ou avisos de `Handler ... sending message to a Handler on a dead thread` no Logcat.
 
-## Concurrency Control with Semaphore
+## Controle de Concorrência com Semaphore
 
-There's a subtle race condition that trips up even experienced Camera2 developers: **what if the user rapidly switches between apps, causing `openCamera()` to be called again before the previous open's async callback has fired?**
+Existe uma condição de corrida sutil que confunde até mesmo desenvolvedores experientes do Camera2: **e se o usuário alternar rapidamente entre aplicativos, fazendo com que `openCamera()` seja chamado novamente antes que o callback assíncrono da abertura anterior tenha disparado?**
 
-You end up with two concurrent open attempts for the same camera. The system camera service may serve one and reject the other with `ERROR_CAMERA_IN_USE`, or it may disconnect the first one mid-open — either way, your callback code has to contend with stale references and double-close bugs.
+Você acaba com duas tentativas de abertura concorrentes para a mesma câmera. O serviço de câmera do sistema pode atender a uma e rejeitar a outra com `ERROR_CAMERA_IN_USE`, ou pode desconectar a primeira no meio da abertura — de qualquer forma, seu código de callback terá que lidar com referências obsoletas e bugs de fechamento duplo.
 
-The fix is a **`Semaphore`** initialized with 1 permit (a binary lock / mutex):
+A solução é um **`Semaphore`** inicializado com 1 permissão (um bloqueio binário / mutex):
 
-- Before calling `openCamera()`, acquire the permit. If acquisition times out, skip this open attempt (the previous one is still in flight).
-- In **every terminal callback** (`onOpened`, `onDisconnected`, `onError`), release the permit.
-- In `onPause`, after closing the camera, release the permit once more defensively if it was held.
+- Antes de chamar `openCamera()`, adquira a permissão. Se a aquisição expirar (timeout), ignore esta tentativa de abertura (a anterior ainda está em andamento).
+- Em **cada callback terminal** (`onOpened`, `onDisconnected`, `onError`), libere a permissão.
+- No `onPause`, após fechar a câmera, libere a permissão mais uma vez defensivamente se ela estiver sendo mantida.
 
-`Semaphore.tryAcquire(timeout, unit)` is the right method: it blocks for at most `timeout` milliseconds, then returns `false` if the permit couldn't be obtained. Never use the blocking `acquire()` without a timeout on the main thread — it can ANR.
+`Semaphore.tryAcquire(timeout, unit)` é o método correto: ele bloqueia por no máximo `timeout` milissegundos e retorna `false` se a permissão não pôde ser obtida. Nunca use o `acquire()` bloqueante sem um timeout na thread principal — isso pode causar um ANR.
 
-## Handling CameraAccessException
+## Tratando o CameraAccessException
 
-`CameraManager.openCamera()` throws a checked `CameraAccessException`. Unlike the error codes delivered via `StateCallback.onError` (which are post-open errors), these exceptions occur **during the open attempt itself** before a `CameraDevice` object even exists. The four most common reason codes:
+`CameraManager.openCamera()` lança uma exceção verificada `CameraAccessException`. Diferente dos códigos de erro entregues via `StateCallback.onError` (que são erros pós-abertura), estas exceções ocorrem **durante a própria tentativa de abertura**, antes mesmo de um objeto `CameraDevice` existir. Os quatro códigos de razão mais comuns:
 
-| Reason (from `e.reason`) | Meaning |
+| Razão (de `e.reason`) | Significado |
 |---|---|
-| `CAMERA_IN_USE` (`4`) | Same as the callback version — another app holds the camera. |
-| `MAX_CAMERAS_IN_USE` (`5`) | Hardware camera limit reached. |
-| `CAMERA_DISABLED` (`1`) | Policy-disabled (MDM / work profile). |
-| `CAMERA_ERROR` (`3`) | Catch-all hardware failure during open. |
+| `CAMERA_IN_USE` (`4`) | O mesmo que a versão do callback — outro aplicativo possui a câmera. |
+| `MAX_CAMERAS_IN_USE` (`5`) | Limite de hardware de câmeras atingido. |
+| `CAMERA_DISABLED` (`1`) | Desativado por política (MDM / perfil de trabalho). |
+| `CAMERA_ERROR` (`3`) | Falha genérica de hardware durante a abertura. |
 
-Always wrap `openCamera()` in a try/catch for `CameraAccessException` and also `IllegalArgumentException` (in case the camera ID was invalidated between Chapter 6's enumeration and now — e.g., an external USB cam was unplugged).
+Sempre envolva o `openCamera()` em um try/catch para `CameraAccessException` e também `IllegalArgumentException` (caso o ID da câmera tenha sido invalidado entre a enumeração do Capítulo 6 e agora — ex: uma câmera USB externa foi desconectada).
 
-## Complete Kotlin Code: Opening a Camera
+## Código Kotlin Completo: Abrindo uma Câmera
 
-Here is the full `MainActivity` code integrating everything from this chapter. We extend the Chapter 6 codebase with the `openCamera()` method, a full `StateCallback`, `Semaphore`-based concurrency control, Activity lifecycle integration, and exhaustive error handling.
+Aqui está o código completo do `MainActivity` integrando tudo deste capítulo. Estendemos a base de código do Capítulo 6 com o método `openCamera()`, um `StateCallback` completo, controle de concorrência baseado em `Semaphore`, integração com o ciclo de vida da Activity e tratamento exaustivo de erros.
 
 ```kotlin
 package com.example.camera2tutorial
@@ -175,13 +175,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var backgroundHandler: Handler
     private lateinit var cameraManager: CameraManager
 
-    // Preventing multiple concurrent camera opens
+    // Prevenindo múltiplas aberturas de câmera simultâneas
     private val cameraOpenCloseLock = Semaphore(1)
 
-    // The active opened camera device (nullable)
+    // O dispositivo de câmera aberto ativo (pode ser nulo)
     private var cameraDevice: CameraDevice? = null
 
-    // Selected camera ID (from Chapter 6's discovery step)
+    // ID da câmera selecionada (da etapa de descoberta do Capítulo 6)
     private var selectedCameraId: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -207,12 +207,12 @@ class MainActivity : AppCompatActivity() {
             if (!this::cameraManager.isInitialized) {
                 initializeCameraManager()
             }
-            // Permission OK but camera not open yet → open it now
+            // Permissão OK mas a câmera ainda não está aberta → abra-a agora
             if (cameraDevice == null && selectedCameraId != null) {
                 openCamera(selectedCameraId!!)
             }
         } else {
-            // User revoked permissions while app was backgrounded
+            // O usuário revogou permissões enquanto o app estava em segundo plano
             ActivityCompat.requestPermissions(
                 this,
                 REQUIRED_PERMISSIONS,
@@ -237,7 +237,7 @@ class MainActivity : AppCompatActivity() {
         try {
             backgroundThread.join(1000)
         } catch (e: InterruptedException) {
-            Log.e(TAG, "Interrupted while joining background thread", e)
+            Log.e(TAG, "Interrompido enquanto aguardava a finalização da thread de fundo", e)
         }
     }
 
@@ -246,7 +246,7 @@ class MainActivity : AppCompatActivity() {
         discoverCamerasAndSelectDefault()
     }
 
-    // ----------------- Chapter 6 (condensed): Discovery + selection -----------------
+    // ----------------- Capítulo 6 (condensado): Descoberta + seleção -----------------
     data class CameraInfo(val id: String, val lensFacing: Int?, val hardwareLevel: Int?)
 
     private fun discoverCamerasAndSelectDefault() {
@@ -260,69 +260,69 @@ class MainActivity : AppCompatActivity() {
                 chars.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL)
             )
         }
-        // Prefer back-facing camera with highest hardware level
+        // Preferir a câmera traseira com o maior nível de hardware
         val backCandidates = discovered.filter { it.lensFacing == CameraCharacteristics.LENS_FACING_BACK }
             .sortedByDescending { it.hardwareLevel ?: -1 } // LEVEL_3 > FULL > LIMITED > LEGACY
         val frontCandidates = discovered.filter { it.lensFacing == CameraCharacteristics.LENS_FACING_FRONT }
             .sortedByDescending { it.hardwareLevel ?: -1 }
 
         selectedCameraId = (backCandidates + frontCandidates).firstOrNull()?.id
-        Log.d(TAG, "Selected camera for open: ID=$selectedCameraId")
+        Log.d(TAG, "Câmera selecionada para abertura: ID=$selectedCameraId")
 
-        // On first launch, open immediately if thread is ready
+        // No primeiro lançamento, abrir imediatamente se a thread estiver pronta
         if (selectedCameraId != null && this::backgroundHandler.isInitialized) {
             openCamera(selectedCameraId!!)
         }
     }
 
     // -------------------------------------------------------------------------
-    // 🎯 CHAPTER 7 ADDITIONS: openCamera() + StateCallback + closeCamera()
+    // 🎯 ADIÇÕES DO CAPÍTULO 7: openCamera() + StateCallback + closeCamera()
     // -------------------------------------------------------------------------
     private val stateCallback = object : CameraDevice.StateCallback() {
 
         override fun onOpened(camera: CameraDevice) {
-            // Permit was acquired in openCamera(); release it now that open succeeded
+            // A permissão foi adquirida no openCamera(); libere-a agora que a abertura teve sucesso
             cameraOpenCloseLock.release()
             cameraDevice = camera
-            Log.d(TAG, "✅ Camera successfully opened: ID=${camera.id}")
+            Log.d(TAG, "✅ Câmera aberta com sucesso: ID=${camera.id}")
             Toast.makeText(
                 this@MainActivity,
-                "Camera ${camera.id} opened successfully!",
+                "Câmera ${camera.id} aberta com sucesso!",
                 Toast.LENGTH_SHORT
             ).show()
 
-            // TODO Chapter 8: Here we will create a CameraCaptureSession for preview.
-            // For now, celebrate the successful open — we have a live CameraDevice!
+            // TODO Capítulo 8: Aqui criaremos uma CameraCaptureSession para a pré-visualização.
+            // Por enquanto, celebre a abertura bem-sucedida — temos um CameraDevice ativo!
         }
 
         override fun onDisconnected(camera: CameraDevice) {
             cameraOpenCloseLock.release()
-            Log.w(TAG, "⚠️ Camera disconnected (stolen by another app): ID=${camera.id}")
+            Log.w(TAG, "⚠️ Câmera desconectada (roubada por outro app): ID=${camera.id}")
             cameraDevice?.close()
             cameraDevice = null
         }
 
         override fun onError(camera: CameraDevice, error: Int) {
             cameraOpenCloseLock.release()
-            Log.e(TAG, "❌ Camera error on ID=${camera.id}. Code=$error (${errorCodeToString(error)})")
+            Log.e(TAG, "❌ Erro na câmera com ID=${camera.id}. Código=$error (${errorCodeToString(error)})")
 
             cameraDevice?.close()
             cameraDevice = null
 
-            // Surface user-facing message depending on the error type
+            // Exibir mensagem ao usuário dependendo do tipo de erro
             val userMsg = when (error) {
                 ERROR_CAMERA_IN_USE ->
-                    "The camera is in use by another app. Close other camera apps and try again."
+                    "A câmera está em uso por outro aplicativo. Feche outros apps de câmera e tente novamente."
                 ERROR_MAX_CAMERAS_IN_USE ->
-                    "Too many cameras are open. This device limits how many cameras can run simultaneously."
+                    "Muitas câmeras abertas. Este dispositivo limita quantas câmeras podem rodar simultaneamente."
                 ERROR_CAMERA_DISABLED ->
-                    "The camera has been disabled by a device policy (parental controls, work profile, etc.)."
+                    "A câmera foi desativada por uma política de dispositivo (controles parentais, perfil de trabalho, etc.)."
                 ERROR_CAMERA_DEVICE ->
-                    "A camera hardware error occurred. Try restarting your device if this persists."
+                    "Ocorreu um erro de hardware na câmera. Tente reiniciar seu dispositivo se isso persistir."
                 ERROR_CAMERA_SERVICE ->
-                    "The system camera service crashed. Please try again in a moment."
+                    "O serviço de câmera do sistema travou. Por favor, tente novamente em um instante."
                 else ->
-                    "An unknown camera error occurred (code=$error)."
+                    "Ocorreu um erro desconhecido na câmera (código=$error)."
             }
             Toast.makeText(this@MainActivity, userMsg, Toast.LENGTH_LONG).show()
         }
@@ -332,72 +332,72 @@ class MainActivity : AppCompatActivity() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
             != PackageManager.PERMISSION_GRANTED
         ) {
-            Log.w(TAG, "openCamera skipped: CAMERA permission not granted")
+            Log.w(TAG, "openCamera ignorada: permissão CAMERA não concedida")
             return
         }
 
-        // ----- Acquire semaphore with timeout (2.5 seconds) to avoid blocking -----
+        // ----- Adquirir semaphore com timeout (2,5 segundos) para evitar bloqueio -----
         val acquired = try {
             cameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)
         } catch (e: InterruptedException) {
-            Log.e(TAG, "Interrupted while waiting to acquire camera open lock", e)
+            Log.e(TAG, "Interrompido enquanto aguardava adquirir a trava de abertura da câmera", e)
             false
         }
         if (!acquired) {
-            Log.e(TAG, "Timeout waiting for camera open lock — another open/close is in progress")
-            Toast.makeText(this, "Camera is busy. Please try again.", Toast.LENGTH_SHORT).show()
+            Log.e(TAG, "Timeout aguardando trava de abertura da câmera — outra abertura/fechamento está em progresso")
+            Toast.makeText(this, "A câmera está ocupada. Por favor, tente novamente.", Toast.LENGTH_SHORT).show()
             return
         }
 
         try {
-            Log.d(TAG, "Requesting camera open for ID=$cameraId")
+            Log.d(TAG, "Solicitando abertura de câmera para ID=$cameraId")
             cameraManager.openCamera(
-                cameraId,        // Which camera to open
-                stateCallback,   // Lifecycle callbacks (onOpened, onDisconnected, onError)
-                backgroundHandler// Thread/looper where callbacks run (NOT the main thread!)
+                cameraId,        // Qual câmera abrir
+                stateCallback,   // Callbacks de ciclo de vida (onOpened, onDisconnected, onError)
+                backgroundHandler// Thread/looper onde os callbacks rodam (NÃO a thread principal!)
             )
         } catch (e: CameraAccessException) {
-            Log.e(TAG, "CameraAccessException during openCamera. Reason=${e.reason}", e)
-            cameraOpenCloseLock.release() // Don't hold the permit if openCamera() threw
+            Log.e(TAG, "CameraAccessException durante openCamera. Razão=${e.reason}", e)
+            cameraOpenCloseLock.release() // Não mantenha a permissão se openCamera() lançou exceção
             val msg = when (e.reason) {
-                CameraAccessException.CAMERA_IN_USE -> "Camera is in use by another app."
-                CameraAccessException.MAX_CAMERAS_IN_USE -> "Too many cameras open right now."
-                CameraAccessException.CAMERA_DISABLED -> "Camera disabled by device policy."
-                CameraAccessException.CAMERA_ERROR -> "Camera hardware error during open."
-                else -> "Unknown CameraAccessException (reason=${e.reason})"
+                CameraAccessException.CAMERA_IN_USE -> "A câmera está em uso por outro aplicativo."
+                CameraAccessException.MAX_CAMERAS_IN_USE -> "Muitas câmeras abertas agora."
+                CameraAccessException.CAMERA_DISABLED -> "Câmera desativada pela política do dispositivo."
+                CameraAccessException.CAMERA_ERROR -> "Erro de hardware na câmera durante a abertura."
+                else -> "CameraAccessException desconhecida (razão=${e.reason})"
             }
             Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
         } catch (e: IllegalArgumentException) {
-            Log.e(TAG, "Invalid camera ID: $cameraId", e)
+            Log.e(TAG, "ID de câmera inválido: $cameraId", e)
             cameraOpenCloseLock.release()
-            Toast.makeText(this, "Requested camera no longer exists.", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "A câmera solicitada não existe mais.", Toast.LENGTH_LONG).show()
         } catch (e: SecurityException) {
-            Log.e(TAG, "SecurityException — camera permission revoked mid-call?", e)
+            Log.e(TAG, "SecurityException — permissão de câmera revogada no meio da chamada?", e)
             cameraOpenCloseLock.release()
         }
     }
 
     private fun closeCamera() {
         try {
-            // Block until we get the permit (close should always win the race)
+            // Bloqueia até obtermos a permissão (o fechamento deve sempre vencer a corrida)
             cameraOpenCloseLock.acquire()
 
-            // Chapter 8 TODO: close capture session first if it exists
+            // TODO Capítulo 8: fechar a sessão de captura primeiro se ela existir
             // captureSession?.close()
             // captureSession = null
 
             cameraDevice?.close()
             cameraDevice = null
-            Log.d(TAG, "🔒 Camera closed and all resources released")
+            Log.d(TAG, "🔒 Câmera fechada e todos os recursos liberados")
         } catch (e: InterruptedException) {
-            Log.e(TAG, "Interrupted while closing camera", e)
+            Log.e(TAG, "Interrompido enquanto fechava a câmera", e)
         } finally {
-            cameraOpenCloseLock.release() // Always release, even if close threw
+            cameraOpenCloseLock.release() // Sempre liberar, mesmo que o close tenha lançado exceção
         }
     }
 
     // -------------------------------------------------------------------------
-    // Helpers & permission plumbing
+    // Auxiliares e encanamento de permissões
     // -------------------------------------------------------------------------
     private fun errorCodeToString(error: Int): String = when (error) {
         CameraDevice.StateCallback.ERROR_CAMERA_IN_USE -> "ERROR_CAMERA_IN_USE"
@@ -430,7 +430,7 @@ class MainActivity : AppCompatActivity() {
             } else {
                 Toast.makeText(
                     this,
-                    "Camera permission is required to use this app.",
+                    "A permissão de câmera é necessária para usar este aplicativo.",
                     Toast.LENGTH_LONG
                 ).show()
                 finish()
@@ -440,85 +440,85 @@ class MainActivity : AppCompatActivity() {
 }
 ```
 
-### Deep Dive into the Semaphore Logic
+### Mergulho Profundo na Lógica do Semaphore
 
-The `Semaphore(1)` pattern in the code above prevents three specific bug classes:
+O padrão `Semaphore(1)` no código acima evita três classes de bugs específicos:
 
-1. **Double-open race (onResume + onCreate both triggering openCamera)**: Only one of them will acquire the permit; the other times out and bails out cleanly.
-2. **Open-vs-close race (user taps home while open is in flight)**: `closeCamera()` in `onPause` blocks on `acquire()` (no timeout — close is always allowed to wait) until the in-flight open either succeeds or times out. The permit is then re-released in the finally block.
-3. **Forgotten permit leak in error paths**: Every path out of `openCamera()` (happy path via `onOpened`, error via `onError`, exception catch blocks) releases the permit. If any path forgets, the next `openCamera` will permanently time out — the defensive release in `closeCamera`'s finally block is the safety net.
+1. **Corrida de abertura dupla (onResume + onCreate disparando openCamera simultaneamente)**: Apenas uma delas adquirirá a permissão; a outra expirará o tempo de espera e sairá de forma limpa.
+2. **Corrida de abrir versus fechar (o usuário toca no home enquanto a abertura está em andamento)**: `closeCamera()` no `onPause` bloqueia no `acquire()` (sem timeout — o fechamento sempre tem permissão para esperar) até que a abertura em andamento tenha sucesso ou expire. A permissão é então liberada novamente no bloco finally.
+3. **Vazamento de permissão esquecida em caminhos de erro**: Cada caminho de saída de `openCamera()` (caminho de sucesso via `onOpened`, erro via `onError`, blocos catch de exceção) libera a permissão. Se algum caminho esquecer, a próxima `openCamera` expirará permanentemente — a liberação defensiva no bloco finally do `closeCamera` é a rede de segurança.
 
-### Why `backgroundHandler` Is Passed to `openCamera`
+### Por Que o `backgroundHandler` É Passado para `openCamera`
 
-The third argument to `CameraManager.openCamera()` is the optional `Handler` that specifies which thread's `Looper` should execute the `StateCallback`. Passing `null` means the main thread's handler is used — which is exactly what we warned against in Chapter 5. By passing `backgroundHandler`, we ensure that:
-- `onOpened`, `onDisconnected`, and `onError` all run on the dedicated `Camera2Background` thread.
-- Any heavy work (like `createCaptureSession` in Chapter 8) that we kick off from within `onOpened` also runs off the main thread, preventing UI jank.
+O terceiro argumento de `CameraManager.openCamera()` é o `Handler` opcional que especifica qual `Looper` de thread deve executar o `StateCallback`. Passar `null` significa que o handler da thread principal é usado — que é exatamente o que desaconselhamos no Capítulo 5. Ao passar o `backgroundHandler`, garantimos que:
+- `onOpened`, `onDisconnected` e `onError` rodem todos na thread dedicada `Camera2Background`.
+- Qualquer trabalho pesado (como o `createCaptureSession` no Capítulo 8) que iniciarmos de dentro do `onOpened` também rode fora da thread principal, evitando travamentos na interface.
 
-## Verification: What to Expect When Running
+## Verificação: O Que Esperar ao Rodar
 
-When you run the Chapter 7 code on a physical device:
+Ao rodar o código do Capítulo 7 em um dispositivo físico:
 
-1. **First launch (after granting permissions)**:
-   - Logcat shows `Selected camera for open: ID=0` → `Requesting camera open for ID=0` → a short pause → `✅ Camera successfully opened: ID=0`.
-   - A Toast confirms: *"Camera 0 opened successfully!"*
-   - At this point, the camera hardware is active. If you hold the phone, you may feel the camera module warm up slightly after a few seconds (it's powered on but not yet producing frames).
+1. **Primeiro lançamento (após conceder permissões)**:
+   - O Logcat mostra `Câmera selecionada para abertura: ID=0` → `Solicitando abertura de câmera para ID=0` → uma pequena pausa → `✅ Câmera aberta com sucesso: ID=0`.
+   - Um Toast confirma: *"Câmera 0 aberta com sucesso!"*
+   - Neste ponto, o hardware da câmera está ativo. Se você segurar o telefone, poderá sentir o módulo da câmera aquecer ligeiramente após alguns segundos (ele está ligado, mas ainda não produzindo quadros).
 
-2. **Press the Home button (sends app to background)**:
-   - `onPause` fires → `🔒 Camera closed and all resources released` in Logcat.
-   - The camera has been cleanly closed. The system can now hand it to another app.
+2. **Pressione o botão Home (envia o app para o segundo plano)**:
+   - `onPause` dispara → `🔒 Câmera fechada e todos os recursos liberados` no Logcat.
+   - A câmera foi fechada de forma limpa. O sistema agora pode entregá-la para outro aplicativo.
 
-3. **Return to the app**:
-   - `onResume` fires → thread starts → `openCamera` is called again → `✅ Camera successfully opened` again.
-   - This round-trip (open → close → open) must be instantaneous and reliable. Test it 10+ times rapidly to ensure no ANRs.
+3. **Retorne ao aplicativo**:
+   - `onResume` dispara → a thread inicia → `openCamera` é chamada novamente → `✅ Câmera aberta com sucesso` novamente.
+   - Esta viagem de ida e volta (abrir → fechar → abrir) deve ser instantânea e confiável. Teste-a mais de 10 vezes rapidamente para garantir que não haja ANRs.
 
-4. **Stress test: open another camera app while yours is running**:
-   - While your app shows the "Camera opened" Toast, press Home, launch the built-in Camera app, then return to yours.
-   - When you leave your app, your `closeCamera()` runs cleanly. If the stock camera stays open while you try to return to yours, you'll see `onDisconnected` or `ERROR_CAMERA_IN_USE` — these are **correct and expected behaviors**, not bugs. Your app handles them gracefully.
+4. **Teste de estresse: abra outro app de câmera enquanto o seu está rodando**:
+   - Enquanto seu app mostra o Toast "Câmera aberta", pressione Home, inicie o app de Câmera nativo e retorne ao seu.
+   - Quando você sai do seu app, seu `closeCamera()` roda de forma limpa. Se a câmera nativa permanecer aberta enquanto você tenta retornar ao seu, você verá `onDisconnected` ou `ERROR_CAMERA_IN_USE` — estes são **comportamentos corretos e esperados**, não bugs. Seu app lida com eles graciosamente.
 
-The Android Camera Parameters app's release build ([Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)) includes automated ANR tests that cycle `open/close` 1,000 times in a row on every major device family; the `Semaphore(1)` + `tryAcquire` pattern described here is exactly what passes those tests without a single ANR or deadlock.
+A build de lançamento do aplicativo Android Camera Parameters ([Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)) inclui testes automatizados de ANR que realizam o ciclo de `abrir/fechar` 1.000 vezes seguidas em cada família principal de dispositivos; o padrão `Semaphore(1)` + `tryAcquire` descrito aqui é exatamente o que faz esses testes passarem sem um único ANR ou travamento.
 
-## Troubleshooting Common Open Failures
+## Solução de Problemas Comuns de Falha na Abertura
 
-### `onError` with `ERROR_CAMERA_IN_USE` fires on every attempt
+### `onError` com `ERROR_CAMERA_IN_USE` dispara em cada tentativa
 
-Most commonly this happens when:
-- You are using an emulator with AVD camera set to `Webcam0` and another desktop app (Zoom, Teams, OBS, the built-in Camera app) is using the laptop's webcam. Close all desktop webcam consumers and retry.
-- Your own app has a leaked `CameraDevice` from a previous install cycle. Uninstall/reinstall the app (which kills the process) or reboot the device.
-- Some custom ROMs have a known bug where the system camera service holds a leaked reference; only a device reboot fixes it.
+Geralmente isso acontece quando:
+- Você está usando um emulador com a câmera AVD configurada como `Webcam0` e outro aplicativo de desktop (Zoom, Teams, OBS, o app de Câmera nativo) está usando a webcam do notebook. Feche todos os consumidores da webcam no desktop e tente novamente.
+- Seu próprio app tem um `CameraDevice` vazado de um ciclo de instalação anterior. Desinstale/reinstale o app (o que mata o processo) ou reinicie o dispositivo.
+- Algumas ROMs personalizadas têm um bug conhecido onde o serviço de câmera do sistema mantém uma referência vazada; apenas uma reinicialização do dispositivo resolve.
 
-### `tryAcquire` times out on every `openCamera`
+### `tryAcquire` expira em cada `openCamera`
 
-This means the permit is never being released. Audit every path:
-1. Does every `catch` block in `openCamera` release the permit?
-2. Do all three callbacks (`onOpened`, `onDisconnected`, `onError`) release?
-3. Is `closeCamera`'s `finally` block releasing?
+Isso significa que a permissão nunca está sendo liberada. Audite cada caminho:
+1. Cada bloco `catch` no `openCamera` libera a permissão?
+2. Todos os três callbacks (`onOpened`, `onDisconnected`, `onError`) liberam?
+3. O bloco `finally` do `closeCamera` está liberando?
 
-Add `Log.d` lines immediately before and after every `acquire`/`release` call, paired with `cameraOpenCloseLock.availablePermits` to watch the permit count. The count should always be `1` when the camera is closed and `0` when an open is in progress.
+Adicione linhas de `Log.d` imediatamente antes e depois de cada chamada `acquire`/`release`, pareadas com `cameraOpenCloseLock.availablePermits` para observar a contagem de permissões. A contagem deve ser sempre `1` quando a câmera estiver fechada e `0` quando uma abertura estiver em andamento.
 
-### `Handler sending message to a Handler on a dead thread` after onPause
+### `Handler sending message to a Handler on a dead thread` após o onPause
 
-This occurs when you call `stopBackgroundThread()` **before** `closeCamera()`. In the correct order from the code above, `closeCamera()` runs first (while the thread is still alive), then `stopBackgroundThread()`. If your code reverses this, swap them back.
+Isso ocorre quando você chama `stopBackgroundThread()` **antes** de `closeCamera()`. Na ordem correta do código acima, `closeCamera()` roda primeiro (enquanto a thread ainda está viva), depois `stopBackgroundThread()`. Se o seu código inverteu isso, troque-os de volta.
 
-## Summary
+## Resumo
 
-In this chapter, you took the critical step of powering on the camera hardware and holding a live, open `CameraDevice` object. You learned:
+Neste capítulo, você deu o passo crítico de ligar o hardware da câmera e manter um objeto `CameraDevice` vivo e aberto. Você aprendeu:
 
-1. **What CameraDevice Represents**: An active connection to a specific camera hardware unit, with the exclusive right to submit capture requests to it.
-2. **StateCallback and Its Three Methods**: `onOpened` (camera is usable), `onDisconnected` (camera was stolen — close immediately), `onError` (fatal error — close and surface appropriate user message for each of the 5 error codes).
-3. **Activity Lifecycle Integration**: The canonical rules for when to open (`onResume`, after thread start, after permission re-check) and when to close (`onPause`, before thread stop, close session → close device → null references → stop thread).
-4. **Semaphore Concurrency Control**: How a `Semaphore(1)` with `tryAcquire(2500ms)` prevents the double-open race, the open-vs-close race, and forgotten-permit leaks; how the permit is released in every terminal path (callbacks + catches + close's finally).
-5. **CameraAccessException Handling**: The four exception reasons (`CAMERA_IN_USE`, `MAX_CAMERAS_IN_USE`, `CAMERA_DISABLED`, `CAMERA_ERROR`) and how to present each one to the user in plain language.
+1. **O Que o CameraDevice Representa**: Uma conexão ativa com uma unidade física de hardware de câmera, com o direito exclusivo de enviar solicitações de captura a ela.
+2. **StateCallback e Seus Três Métodos**: `onOpened` (a câmera está utilizável), `onDisconnected` (a câmera foi roubada — feche imediatamente), `onError` (erro fatal — feche e exiba a mensagem de usuário apropriada para cada um dos 5 códigos de erro).
+3. **Integração com o Ciclo de Vida da Activity**: As regras canônicas de quando abrir (`onResume`, após o início da thread, após a re-verificação de permissão) e quando fechar (`onPause`, antes da parada da thread, fechar sessão → fechar dispositivo → anular referências → parar thread).
+4. **Controle de Concorrência com Semaphore**: Como um `Semaphore(1)` com `tryAcquire(2500ms)` evita a corrida de abertura dupla, a corrida abrir-vs-fechar e vazamentos de permissões esquecidas; como a permissão é liberada em cada caminho terminal (callbacks + catches + finally do close).
+5. **Tratamento de CameraAccessException**: Os quatro motivos de exceção (`CAMERA_IN_USE`, `MAX_CAMERAS_IN_USE`, `CAMERA_DISABLED`, `CAMERA_ERROR`) e como apresentar cada um deles ao usuário em linguagem clara.
 
-The `openCamera()` + `StateCallback` + `closeCamera()` trinity is the backbone of every production Camera2 app. Master this pattern, and the hardest operational part of Camera2 is behind you.
+A trindade `openCamera()` + `StateCallback` + `closeCamera()` é a espinha dorsal de todo aplicativo Camera2 de produção. Domine este padrão e a parte operacional mais difícil do Camera2 estará para trás.
 
-## What's Next
+## O Que Vem a Seguir
 
-An open `CameraDevice` is necessary but not sufficient for seeing what the camera sees. To actually render pixels on the screen, we need to feed frames into a display surface. In **Chapter 8: Showing Camera Preview**, you will:
+Um `CameraDevice` aberto é necessário, mas não suficiente para ver o que a câmera vê. Para realmente renderizar pixels na tela, precisamos alimentar os quadros em uma superfície de exibição. No **Capítulo 8: Mostrando a Pré-visualização da Câmera**, você irá:
 
-- Understand the concept of a `Surface` as an image-destination buffer queue.
-- Set up a `TextureView` with `SurfaceTextureListener` to create a display Surface.
-- Use `Matrix` math in `configureTransform` to fix the preview aspect ratio and correct sensor orientation.
-- Build a `TEMPLATE_PREVIEW` `CaptureRequest.Builder`, add the TextureView's `Surface` as a target, and create a `CameraCaptureSession`.
-- Call `setRepeatingRequest` in the session's `onConfigured` callback to start continuous preview frames.
+- Entender o conceito de uma `Surface` como uma fila de buffers de destino de imagem.
+- Configurar um `TextureView` com `SurfaceTextureListener` para criar uma Surface de exibição.
+- Usar matemática de `Matrix` no `configureTransform` para corrigir a proporção da pré-visualização e a orientação do sensor.
+- Construir um `CaptureRequest.Builder` com `TEMPLATE_PREVIEW`, adicionar a `Surface` do TextureView como alvo e criar uma `CameraCaptureSession`.
+- Chamar `setRepeatingRequest` no callback `onConfigured` da sessão para iniciar os quadros contínuos de pré-visualização.
 
-By the end of Chapter 8, you will finally see a live camera preview on the screen — the rewarding payoff for all the infrastructure work of Chapters 5–7!
+Ao final do Capítulo 8, você finalmente verá uma pré-visualização da câmera ao vivo na tela — a recompensa gratificante por todo o trabalho de infraestrutura dos Capítulos 5 a 7!

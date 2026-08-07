@@ -1,223 +1,223 @@
 ---
 sidebar_position: 4
-title: "Chapter 4: Explore Your Own Phone"
-description: Use the Android Camera Parameters companion app to inspect your own device. Learn to read Camera IDs, check Hardware Levels, enumerate cameras, inspect supported formats, frame rates, zoom ranges, and RAW capability.
-keywords: [Android Camera Parameters, explore camera, camera hardware level, camera capabilities, camera IDs]
+title: "Capítulo 4: Explore a Câmera do Seu Próprio Celular"
+description: Use o aplicativo complementar Android Camera Parameters para inspecionar seu próprio dispositivo. Aprenda a ler os IDs das câmeras, verificar os Níveis de Hardware, enumerar câmeras, inspecionar formatos suportados, taxas de quadros, faixas de zoom e capacidade RAW.
+keywords: [Android Camera Parameters, explorar câmera, nível de hardware da câmera, capacidades da câmera, IDs da câmera]
 ---
 
-# Chapter 4: Explore Your Own Phone
+# Capítulo 4: Explore a Câmera do Seu Próprio Celular
 
-This is where your app becomes important. Chapters 2 and 3 gave you a theoretical understanding of camera hardware and modern computational photography features. This chapter is hands-on and device-specific. You will install the **Android Camera Parameters** companion app on your own phone, launch it, and systematically inspect exactly what your hardware can and cannot do — writing down the answers as you go.
+É aqui que seu aplicativo se torna importante. Os Capítulos 2 e 3 forneceram a você uma compreensão teórica do hardware da câmera e dos recursos modernos da fotografia computacional. Este capítulo é prático e específico para o dispositivo. Você instalará o aplicativo complementar **Android Camera Parameters** no seu próprio celular, irá iniciá-lo e inspecionará sistematicamente o que exatamente seu hardware pode e não pode fazer — anotando as respostas à medida que avança.
 
-The information you discover in this chapter is not academic trivia. The Camera2 API exposes capabilities on a per-device, per-camera basis. A feature that works perfectly on your personal Pixel 10 may silently fail (or degrade to a no-op, or worse, crash) on a mid-range 2023 Samsung A-series because that device's HAL simply does not implement the required capability. Before you write a single line of Camera2 API code in Part II of this series, you must know what your own test device is capable of.
+As informações que você descobrir neste capítulo não são curiosidades acadêmicas. A API Camera2 expõe recursos por dispositivo e por câmera. Um recurso que funciona perfeitamente no seu Pixel 10 pessoal pode falhar silenciosamente (ou degradar para uma operação nula, ou pior, travar) em um Samsung série A intermediário de 2023 porque o HAL daquele dispositivo simplesmente não implementa o recurso necessário. Antes de escrever uma única linha de código da API Camera2 na Parte II desta série, você deve saber do que seu próprio dispositivo de teste é capaz.
 
-By the end of this chapter you will have written down, for your specific phone: a complete list of Camera IDs with their facing directions and hardware levels; which output formats each camera supports; the maximum JPEG resolution; the highest slow-motion FPS range; the maximum digital zoom and the physical-camera zoom switch thresholds; and whether your primary camera supports RAW output.
+Ao final deste capítulo, você terá anotado, para seu celular específico: uma lista completa de IDs de Câmera com suas direções e níveis de hardware; quais formatos de saída cada câmera suporta; a resolução máxima de JPEG; a maior faixa de FPS em câmera lenta; o zoom digital máximo e os limites de troca de câmera física; e se sua câmera principal suporta saída RAW.
 
-## Installing the Android Camera Parameters App
+## Instalando o Aplicativo Android Camera Parameters
 
-Two installation options are available. Choose whichever you prefer.
+Duas opções de instalação estão disponíveis. Escolha a que preferir.
 
-### Option A — Build from Source
+### Opção A — Compilar a Partir do Código-Fonte
 
-If you are an Android developer and already have Android Studio installed, this option gives you the ability to browse the companion app's source code (see the final section of this chapter) and even modify it to inspect additional Camera2 characteristics that interest you.
+Se você é um desenvolvedor Android e já tem o Android Studio instalado, esta opção oferece a capacidade de navegar pelo código-fonte do aplicativo complementar (veja a última seção deste capítulo) e até mesmo modificá-lo para inspecionar características adicionais do Camera2 que lhe interessem.
 
-1. Clone the GitHub repository:
+1. Clone o repositório do GitHub:
    `https://github.com/zoozooll/AndroidCameraParameters`
-2. Open the project in Android Studio Iguana (2023.2.1) or newer. The Gradle sync will complete automatically; the project targets Android SDK 34 (Android 14) with a `minSdkVersion` of 21 (Android 5.0 Lollipop), so it will run on essentially any phone you are likely to own.
-3. Enable USB Debugging on your phone. Go to **Settings → About Phone → Build Number** and tap the Build Number entry 7 times. A toast will appear reading "You are now a developer." Return to the main Settings screen, enter **Developer Options**, and toggle **USB Debugging** on.
-4. Connect your phone to your computer via a USB-C cable. On the phone, accept the "Allow USB debugging from this computer?" prompt and check "Always allow from this computer" to avoid the dialog in the future.
-5. Select the **app** Run Configuration from the dropdown at the top of Android Studio (the default Run Configuration is usually named `app`). Ensure your connected phone appears as the target device in the device dropdown.
-6. Click the green **Run** button (the triangular play icon) or press **Shift + F10**. Android Studio will compile the app, install the APK onto your phone via ADB, and launch it automatically.
+2. Abra o projeto no Android Studio Iguana (2023.2.1) ou mais recente. A sincronização do Gradle será concluída automaticamente; o projeto visa o Android SDK 34 (Android 14) com um `minSdkVersion` de 21 (Android 5.0 Lollipop), portanto ele rodará em essencialmente qualquer celular que você provavelmente possua.
+3. Ative a Depuração USB no seu celular. Vá em **Configurações → Sobre o Telefone → Número da Versão** e toque na entrada Número da Versão 7 vezes. Um toast aparecerá dizendo "Você agora é um desenvolvedor". Volte para a tela principal de Configurações, entre em **Opções do Desenvolvedor** e ative a **Depuração USB**.
+4. Conecte seu celular ao computador via um cabo USB-C. No celular, aceite o aviso "Permitir depuração USB a partir deste computador?" e marque "Sempre permitir deste computador" para evitar o diálogo no futuro.
+5. Selecione a Configuração de Execução **app** no menu suspenso no topo do Android Studio (a Configuração de Execução padrão geralmente se chama `app`). Certifique-se de que seu celular conectado apareça como o dispositivo de destino no menu suspenso de dispositivos.
+6. Clique no botão verde **Run** (o ícone triangular de play) ou pressione **Shift + F10**. O Android Studio compilará o aplicativo, instalará o APK no seu celular via ADB e o iniciará automaticamente.
 
-### Option B — Install from Google Play
+### Opção B — Instalar a Partir do Google Play
 
-If you simply want to run the app without compiling it, or if you want to test its behavior on multiple end-user devices without configuring each for ADB, use the Play Store build.
+Se você simplesmente deseja rodar o aplicativo sem compilá-lo, ou se deseja testar seu comportamento em vários dispositivos de usuários finais sem configurar cada um para o ADB, use a build da Play Store.
 
-Open the Google Play Store on your Android phone and navigate to:
+Abra a Google Play Store no seu celular Android e navegue para:
 
 `https://play.google.com/store/apps/details?id=com.minininja.cameraparams`
 
-Tap **Install**. The app is free and contains no ads, no in-app purchases, and no trackers. It requires only the `CAMERA` permission (to query the camera characteristics and open a preview surface) and the optional `RECORD_AUDIO` permission (never used in the current build, but reserved for a future video-recording test activity). The `ACCESS_FINE_LOCATION` permission is optional and only requested if you want to tag the sample captures with GPS metadata in the preview tab.
+Toque em **Instalar**. O aplicativo é gratuito e não contém anúncios, compras no app ou rastreadores. Ele exige apenas a permissão `CAMERA` (para consultar as características da câmera e abrir uma superfície de pré-visualização) e a permissão opcional `RECORD_AUDIO` (nunca usada na build atual, mas reservada para uma futura atividade de teste de gravação de vídeo). A permissão `ACCESS_FINE_LOCATION` é opcional e só é solicitada se você quiser marcar as capturas de amostra com metadados GPS na aba de pré-visualização.
 
-Launch the app after installation completes. On first launch, grant the **Camera** permission when the system permission dialog appears. The app will not function without this permission, as Android's security model requires a runtime permission grant even for *querying* the characteristics of the camera — you cannot even enumerate Camera IDs without the `CAMERA` permission being granted.
+Inicie o aplicativo após a conclusão da instalação. No primeiro lançamento, conceda a permissão de **Câmera** quando o diálogo de permissão do sistema aparecer. O aplicativo não funcionará sem esta permissão, pois o modelo de segurança do Android exige uma concessão de permissão em tempo de execução até mesmo para *consultar* as características da câmera — você não pode sequer enumerar os IDs de Câmera sem que a permissão `CAMERA` seja concedida.
 
-## Camera IDs
+## IDs de Câmera
 
-Look at the app's home screen. The first (and default) tab at the bottom is labeled **Cameras** (sometimes called **Overview** depending on which build variant you are running). The header at the top of this tab reads **All Camera IDs**.
+Observe a tela inicial do aplicativo. A primeira (e padrão) aba na parte inferior é rotulada como **Cameras** (às vezes chamada de **Overview**, dependendo da variante da build que você está rodando). O cabeçalho no topo desta aba diz **All Camera IDs**.
 
-Every individual camera on an Android device — every rear camera, the front camera, any logical multi-camera fusion device, and any external USB OTG webcam — is assigned a unique string identifier called the **Camera ID**. Camera IDs are almost always simple decimal integers: `"0"`, `"1"`, `"2"`, `"3"`, and sometimes `"4"`, `"5"` on devices with many cameras. On rare devices (some external webcams, and the emulator's fake cameras) you may see Camera IDs like `"camera@0"` or `"0@external"`, but plain integers are by far the most common format.
+Cada câmera individual em um dispositivo Android — cada câmera traseira, a câmera frontal, qualquer dispositivo de fusão de multicâmera lógica e qualquer webcam USB OTG externa — recebe um identificador de string único chamado **ID de Câmera**. Os IDs de câmera são quase sempre inteiros decimais simples: `"0"`, `"1"`, `"2"`, `"3"`, e às vezes `"4"`, `"5"` em dispositivos com muitas câmeras. Em dispositivos raros (algumas webcams externas e as câmeras falsas do emulador), você pode ver IDs de Câmera como `"camera@0"` ou `"0@external"`, mas inteiros simples são, de longe, o formato mais comum.
 
-Each row in the All Camera IDs list shows three pieces of information, left to right:
+Cada linha na lista Todos os IDs de Câmera mostra três informações, da esquerda para a direita:
 
-1. The Camera ID number itself, displayed as a large bold chip.
-2. The **LENS_FACING** direction: one of `BACK` (rear-facing camera, away from the screen), `FRONT` (selfie camera, facing the user), or `EXTERNAL` (USB webcam / OTG camera).
-3. The **Hardware Level** of that camera: a colored chip showing `LEGACY`, `LIMITED`, `FULL`, `LEVEL_3`, or `EXTERNAL`. This maps directly to the Camera2 API's `INFO_SUPPORTED_HARDWARE_LEVEL` characteristic described in Chapter 1 of this series.
+1. O próprio número do ID da Câmera, exibido como um grande chip em negrito.
+2. A direção **LENS_FACING**: uma entre `BACK` (câmera traseira, voltada para longe da tela), `FRONT` (câmera de selfie, voltada para o usuário) ou `EXTERNAL` (webcam USB / câmera OTG).
+3. O **Nível de Hardware** daquela câmera: um chip colorido mostrando `LEGACY`, `LIMITED`, `FULL`, `LEVEL_3` ou `EXTERNAL`. Isso mapeia diretamente para a característica `INFO_SUPPORTED_HARDWARE_LEVEL` da API Camera2 descrita no Capítulo 1 desta série.
 
-As a concrete example, a Galaxy S26 Ultra typically reports **5 Camera IDs**:
+Como um exemplo concreto, um Galaxy S26 Ultra normalmente relata **5 IDs de Câmera**:
 
-- **ID 0**: BACK (rear wide / primary 24mm camera), Hardware Level = **FULL**
-- **ID 1**: FRONT (selfie camera), Hardware Level = **LIMITED**
-- **ID 2**: BACK (rear ultra-wide 0.5× camera), Hardware Level = **FULL**
-- **ID 3**: BACK (rear 5× periscope telephoto camera), Hardware Level = **FULL**
-- **ID 4**: BACK (logical multi-camera ID representing the fused combination of IDs 0 + 2 + 3, managed by the HAL for seamless zoom), Hardware Level = **FULL**
+- **ID 0**: BACK (traseira wide / câmera principal de 24mm), Nível de Hardware = **FULL**
+- **ID 1**: FRONT (câmera de selfie), Nível de Hardware = **LIMITED**
+- **ID 2**: BACK (traseira ultra-wide de 0.5×), Nível de Hardware = **FULL**
+- **ID 3**: BACK (traseira telefoto periscópica de 5×), Nível de Hardware = **FULL**
+- **ID 4**: BACK (ID de multicâmera lógica representando a combinação fundida dos IDs 0 + 2 + 3, gerenciada pelo HAL para zoom contínuo), Nível de Hardware = **FULL**
 
-A mid-range phone (e.g., a Samsung A54 5G) might report only 3 Camera IDs: wide rear, ultra-wide rear, and front. A 2016-era budget phone might report only 2: rear and front.
+Um celular intermediário (ex: um Samsung A54 5G) pode relatar apenas 3 IDs de Câmera: traseira wide, traseira ultra-wide e frontal. Um celular econômico da era de 2016 pode relatar apenas 2: traseira e frontal.
 
-**Task for your device:** Write down the complete list of Camera IDs your phone reports. For each ID, note its LENS_FACING (Back / Front / External) and its Hardware Level chip color/label. Count the total number of cameras. If you see a Camera ID whose purpose is not obvious (e.g., an additional rear-facing ID that does not correspond to any obvious lens bump on the back of the phone), keep it in mind — those are often ToF depth sensors, macro cameras, or the logical multi-camera fusion device.
+**Tarefa para o seu dispositivo:** Anote a lista completa de IDs de Câmera que seu celular relata. Para cada ID, observe sua LENS_FACING (Traseira / Frontal / Externa) e a cor/rótulo do chip de Nível de Hardware. Conte o número total de câmeras. Se você vir um ID de Câmera cujo propósito não é óbvio (ex: um ID traseiro adicional que não corresponde a nenhuma saliência de lente óbvia na parte de trás do celular), mantenha-o em mente — esses costumam ser sensores de profundidade ToF, câmeras macro ou o dispositivo de fusão de multicâmera lógica.
 
-## Hardware Levels
+## Níveis de Hardware
 
-Chapter 1 of this series introduced the five Camera2 Hardware Levels, ordered from least capable to most capable: **LEGACY → LIMITED → FULL → LEVEL_3 → EXTERNAL**. This section refreshes that hierarchy and then asks you to inspect each camera's level using the app.
+O Capítulo 1 desta série introduziu os cinco Níveis de Hardware do Camera2, ordenados do menos capaz ao mais capaz: **LEGACY → LIMITED → FULL → LEVEL_3 → EXTERNAL**. Esta seção refresca essa hierarquia e, em seguida, solicita que você inspecione o nível de cada câmera usando o aplicativo.
 
 ```mermaid
 graph TD
-    A[LEGACY\n~2015 Old Phones\nCamera1 API Wrapper\nNo Manual Control] --> B[LIMITED\nMid-Range 2020+\n3A Works, Partial Manual\nPer-Frame Control Limited]
-    B --> C[FULL\nFlagships 2019+\nFull Manual Sensor Control\nPer-Frame Capture Settings]
-    C --> D[LEVEL_3\nPixel 7+, Samsung S23+\nRAW Re-processing\nMulti-Input Logical Cameras]
-    D --> E[EXTERNAL\nUSB OTG Webcams\nHot-Pluggable\nLimited Tuning]
+    A["LEGACY<br/>~2015 Celulares Antigos<br/>Wrapper da API Camera1<br/>Sem Controle Manual"] --> B["LIMITED<br/>Intermediários 2020+<br/>3A Funciona, Manual Parcial<br/>Controle por Quadro Limitado"]
+    B --> C[FULL<br/>Flagships 2019+<br/>Controle Manual Total do Sensor<br/>Configurações de Captura por Quadro]
+    C --> D[LEVEL_3<br/>Pixel 7+, Samsung S23+<br/>Reprocessamento de RAW<br/>Câmeras Lógicas Multi-Entrada]
+    D --> E[EXTERNAL<br/>Webcams USB OTG<br/>Hot-Pluggable<br/>Ajuste Limitado]
 ```
 
-Each level adds new capabilities and stricter performance guarantees:
+Cada nível adiciona novas capacidades e garantias de desempenho mais rigorosas:
 
-- **LEGACY**: The Camera2 API is implemented as a thin shim on top of the deprecated `android.hardware.Camera` (Camera1) API. Almost nothing works reliably — no manual exposure, no per-frame control, no RAW support. You can safely ignore LEGACY devices in 2026; essentially no active-use phones still report this.
-- **LIMITED**: The most common Hardware Level for mid-range phones and for front-facing cameras on all tiers of phone. The 3A (Auto-Exposure, Auto-Focus, Auto-White-Balance) algorithms run correctly, basic YUV and JPEG output works, but most manual sensor controls are not available (no manual shutter speed below the AE floor, no manual gain control, no per-frame capture settings updates faster than 3–5 frames latency).
-- **FULL**: The gold standard level for flagships. Every Camera2 API feature is guaranteed to work: full manual control of sensor exposure time and analog gain per individual frame, frame rate guaranteed to be honored, burst capture at 30+ fps with different settings per frame, YUV reprocessing, basic DNG RAW output. If the primary rear camera on your phone reports FULL, you can implement every feature in this tutorial series.
-- **LEVEL_3**: The highest tier, introduced with the Pixel 7 and Samsung S23 families in 2022/2023. Adds guaranteed RAW reprocessing input streams (you can feed a previously-captured DNG back into the ISP and re-run the pipeline with different tone mapping or color matrices), multi-resolution YUV output streams, and guaranteed logical multi-camera fusion support.
-- **EXTERNAL**: For USB OTG webcams and HDMI capture dongles plugged in via USB-C. The API surface is identical but no factory calibration data exists (no OTP-stored lens shading maps, no per-module color correction matrices), so the quality of EXTERNAL cameras is hit-or-miss.
+- **LEGACY**: A API Camera2 é implementada como um shim fino sobre a API `android.hardware.Camera` (Camera1) descontinuada. Quase nada funciona de forma confiável — sem exposição manual, sem controle por quadro, sem suporte a RAW. Você pode ignorar com segurança os dispositivos LEGACY em 2026; essencialmente nenhum celular em uso ativo ainda relata isso.
+- **LIMITED**: O Nível de Hardware mais comum para celulares intermediários e para câmeras frontais em todos os níveis de celulares. Os algoritmos 3A (Exposição Automática, Foco Automático, Balanço de Branco Automático) rodam corretamente, a saída básica de YUV e JPEG funciona, mas a maioria dos controles manuais do sensor não está disponível (sem velocidade de obturador manual abaixo do piso do AE, sem controle manual de ganho, sem atualizações de configurações de captura por quadro com latência menor que 3 a 5 quadros).
+- **FULL**: O nível padrão ouro para flagships. Todos os recursos da API Camera2 têm garantia de funcionamento: controle manual total do tempo de exposição do sensor e ganho analógico por quadro individual, taxa de quadros com garantia de ser respeitada, captura sequencial a 30+ fps com configurações diferentes por quadro, reprocessamento YUV, saída RAW DNG básica. Se a câmera traseira principal do seu celular relata FULL, você pode implementar todos os recursos desta série de tutoriais.
+- **LEVEL_3**: O nível mais alto, introduzido com as famílias Pixel 7 e Samsung S23 em 2022/2023. Adiciona fluxos de entrada de reprocessamento RAW garantidos (você pode alimentar um DNG capturado anteriormente de volta no ISP e rodar novamente o pipeline com diferentes mapeamentos de tons ou matrizes de cores), fluxos de saída YUV de multi-resolução e suporte garantido à fusão de multicâmera lógica.
+- **EXTERNAL**: Para webcams USB OTG e dongles de captura HDMI conectados via USB-C. A superfície da API é idêntica, mas não existem dados de calibração de fábrica (sem mapas de sombreamento de lente armazenados em OTP, sem matrizes de correção de cor por módulo), portanto a qualidade das câmeras EXTERNAL é variável.
 
-**How to inspect in the app:** Tap the **Hardware Level** chip next to any Camera ID in the list. A bottom-sheet dialog will pop up showing the full `INFO_SUPPORTED_HARDWARE_LEVEL` description for that camera, along with a bullet-point list of which key features are guaranteed (or not guaranteed) at that level.
+**Como inspecionar no aplicativo:** Toque no chip **Hardware Level** ao lado de qualquer ID de Câmera na lista. Um diálogo de folha inferior aparecerá mostrando a descrição completa de `INFO_SUPPORTED_HARDWARE_LEVEL` para aquela câmera, juntamente com uma lista com marcadores de quais recursos principais são garantidos (ou não garantidos) naquele nível.
 
-**Task for your device:** For your primary rear-facing camera (usually ID 0), confirm which Hardware Level it reports. For your front-facing camera, confirm its level. Then ask yourself this question and think about the answer before reading on: **Why do front-facing cameras almost universally report LIMITED instead of FULL?**
+**Tarefa para o seu dispositivo:** Para sua câmera traseira principal (geralmente o ID 0), confirme qual Nível de Hardware ela relata. Para sua câmera frontal, confirme o nível dela. Em seguida, faça a si mesmo esta pergunta e pense na resposta antes de prosseguir com a leitura: **Por que as câmeras frontais relatam quase universalmente LIMITED em vez de FULL?**
 
-The answer is that front cameras are usually lower-cost, simpler sensors. The 3A algorithm runs reliably on them (after all, selfies need auto-exposure and auto-white-balance to produce acceptable output), but manual sensor control is less of a product priority for selfies. No one pays a premium for manual 1/1000s shutter speed on their 13MP selfie camera. HAL vendors therefore optimize their LIMITED-level implementation for the selfie use case and never implement the additional testing and validation required to pass the FULL-level Camera2 CTS (Compatibility Test Suite) tests.
+A resposta é que as câmeras frontais costumam ser sensores mais simples e de menor custo. O algoritmo 3A roda de forma confiável nelas (afinal, selfies precisam de exposição e balanço de branco automáticos para produzir resultados aceitáveis), mas o controle manual do sensor é menos prioritário para selfies. Ninguém paga um prêmio por velocidade de obturador manual de 1/1000s em sua câmera de selfie de 13MP. Os fornecedores de HAL, portanto, otimizam sua implementação de nível LIMITED para o caso de uso de selfie e nunca implementam os testes e validações adicionais necessários para passar nos testes Camera2 CTS (Compatibility Test Suite) de nível FULL.
 
-## Available Cameras: Facing Directions
+## Câmeras Disponíveis: Direções de Lente
 
-Android defines three possible values for the `LENS_FACING` camera characteristic. The app provides a filter toggle bar at the top of the Cameras tab to switch between them: **All · Back · Front · External**.
+O Android define três valores possíveis para a característica de câmera `LENS_FACING`. O aplicativo fornece uma barra de alternância de filtros no topo da aba Cameras para alternar entre eles: **All · Back · Front · External**.
 
-- **BACK**: The camera on the rear of the phone, pointing away from the screen. Any rear ultra-wide, wide, telephoto, periscope, macro, or ToF sensor reports `LENS_FACING_BACK`. This is the camera your app will use 90% of the time.
-- **FRONT**: The selfie camera, pointing toward the user when the screen is facing them. Note that the preview image from the front camera is usually horizontally mirrored (flipped left-to-right) by the default camera app to match what the user sees in a mirror, but the actual pixel data written to JPEG files is not mirrored unless your app explicitly does so.
-- **EXTERNAL**: A USB OTG webcam, USB endoscope, USB HDMI capture card, or other hot-pluggable video input device connected via USB-C. One of the most underrated features of the Camera2 API is that EXTERNAL cameras are exposed through *exactly the same code path* as internal cameras. A well-written Camera2 app will enumerate and use a USB webcam automatically without any USB-specific code, as long as the phone's USB-C port supports USB Video Class (UVC) gadget mode in host mode.
+- **BACK**: A câmera na parte traseira do celular, apontando para longe da tela. Qualquer ultra-wide, wide, telefoto, periscópica, macro ou sensor ToF traseiro relata `LENS_FACING_BACK`. Esta é a câmera que seu aplicativo usará 90% do tempo.
+- **FRONT**: A câmera de selfie, apontando para o usuário quando a tela está voltada para ele. Observe que a imagem de pré-visualização da câmera frontal é geralmente espelhada horizontalmente (invertida da esquerda para a direita) pelo aplicativo de câmera padrão para corresponder ao que o usuário vê em um espelho, mas os dados de pixel reais gravados nos arquivos JPEG não são espelhados, a menos que seu aplicativo o faça explicitamente.
+- **EXTERNAL**: Uma webcam USB OTG, endoscópio USB, placa de captura HDMI USB ou outro dispositivo de entrada de vídeo hot-pluggable conectado via USB-C. Um dos recursos mais subestimados da API Camera2 é que as câmeras EXTERNAL são expostas através do *exatamente mesmo caminho de código* que as câmeras internas. Um aplicativo Camera2 bem escrito enumerará e usará uma webcam USB automaticamente sem qualquer código específico para USB, desde que a porta USB-C do celular suporte o modo gadget USB Video Class (UVC) em modo host.
 
-**Task for your device:** Use the filter toggles to switch between Back, Front, and External. Count how many cameras fall into each category. Does your phone list any EXTERNAL cameras right now? Almost certainly not — unless you have a USB webcam plugged in. If you happen to own a USB webcam or a USB endoscope, plug it into the phone now via a USB-C OTG adapter and tap the **Refresh** button in the app's top-right menu. You should see a new Camera ID appear with LENS_FACING = EXTERNAL. Open the Preview tab for that external camera — if everything works, you will see a live preview from the webcam, using the exact same Camera2 API code path that opened the internal rear camera 30 seconds earlier.
+**Tarefa para o seu dispositivo:** Use os filtros para alternar entre Traseira (Back), Frontal (Front) e Externa (External). Conte quantas câmeras se encaixam em cada categoria. Seu celular lista alguma câmera EXTERNAL no momento? Quase certamente não — a menos que você tenha uma webcam USB conectada. Se você possui uma webcam USB ou um endoscópio USB, conecte-o ao celular agora via um adaptador USB-C OTG e toque no botão **Refresh** no menu superior direito do aplicativo. Você deverá ver um novo ID de Câmera aparecer com LENS_FACING = EXTERNAL. Abra a aba Preview para essa câmera externa — se tudo funcionar, você verá uma pré-visualização ao vivo da webcam, usando o exato mesmo caminho de código da API Camera2 que abriu a câmera traseira interna 30 segundos antes.
 
-## Supported Output Formats
+## Formatos de Saída Suportados
 
-Every Camera2 camera device advertises a list of supported **output formats** and, for each format, a list of supported resolution/size pairs. The Camera2 API will reject any capture request that tries to target a format/size combination that the camera does not advertise.
+Cada câmera Camera2 anuncia uma lista de **formatos de saída** suportados e, para cada formato, uma lista de pares de resolução/tamanho suportados. A API Camera2 rejeitará qualquer solicitação de captura que tente visar uma combinação de formato/tamanho que a câmera não anuncie.
 
-The app exposes this information in the camera detail screen. To reach it, tap on any Camera ID row in the Cameras tab. You will be taken to a detail screen with multiple swipeable sub-tabs: **Overview · Formats · FPS · Zoom · RAW · Capabilities**. Swipe (or tap the tab bar) to the **Formats** tab.
+O aplicativo expõe essas informações na tela de detalhes da câmera. Para alcançá-la, toque em qualquer linha de ID de Câmera na aba Cameras. Você será levado a uma tela de detalhes com várias abas deslizáveis: **Overview · Formats · FPS · Zoom · RAW · Capabilities**. Deslize (ou toque na barra de abas) para a aba **Formats**.
 
-There are dozens of possible `ImageFormat` constants in the Android SDK, but these **5 formats** account for 99% of real-world Camera2 app usage. The app lists them at the top of the Formats tab with plain-language descriptions:
+Existem dezenas de possíveis constantes `ImageFormat` no SDK do Android, mas estes **5 formatos** respondem por 99% do uso real de aplicativos Camera2. O aplicativo os lista no topo da aba Formats com descrições em linguagem clara:
 
-1. **JPEG**: Normal processed photos you email, post to social media, or share via messaging. 8-bit YCbCr 4:2:0 color, ISP-processed (all 8 stages from Chapter 2 applied), lossy DCT-compressed. Small file size. This is the default and most common still-capture output.
-2. **YUV_420_888**: The universal uncompressed format for on-device processing. 8-bit Y (luminance) plane plus 8-bit Cb and Cr (chroma) planes, subsampled 2:1 horizontally. Used for face detection, QR code scanning, barcode scanning, machine learning inference (TensorFlow Lite, PyTorch Mobile), custom image processing before re-encoding to JPEG, and as the input to the MediaCodec video encoder for video recording.
-3. **PRIVATE**: The opaque zero-copy format used exclusively for high-speed preview to the display. The actual pixel layout is vendor-specific and hidden from the app (hence "private"). PRIVATE Surfaces (typically a `SurfaceView`, `TextureView`, or `ImageReader` with `PRIV` usage flags) skip all CPU-accessible copies and go directly from the ISP output to the display compositor. This is the only format that guarantees 60 fps or 120 fps full-resolution preview on modern flagships.
-4. **RAW_SENSOR**: Unprocessed Bayer-mosaic data directly from the sensor, before any ISP stage runs. Bit depth varies by sensor: RAW10 (10 bits per sample), RAW12 (12 bits), or RAW14 (14 bits). Written to DNG (Digital Negative) files for desktop post-production in Adobe Lightroom, Capture One, or Darktable. Only cameras at Hardware Level FULL or higher support RAW output; LIMITED and LEGACY cameras never do.
-5. **JPEG_R**: Ultra HDR format, introduced in Android 14. A standard 8-bit JPEG primary image (backwards-compatible with every viewer) plus an embedded 10-bit gain map that HDR-capable viewers (Android 14 System Gallery, Chrome 120+, Adobe Lightroom 7+, Apple iOS 18 Photos) can use to reconstruct the full 10-bit HDR luminance range on an HDR10 or Dolby Vision display. Only 2023+ flagship phones support JPEG_R output.
+1. **JPEG**: Fotos processadas normais que você envia por e-mail, posta em redes sociais ou compartilha por mensagens. Cor YCbCr 4:2:0 de 8 bits, processada pelo ISP (todos os 8 estágios do Capítulo 2 aplicados), compactada com perdas DCT. Tamanho de arquivo pequeno. Este é o padrão e a saída de captura estática mais comum.
+2. **YUV_420_888**: O formato universal não compactado para processamento no dispositivo. Plano Y (luminância) de 8 bits mais planos Cb e Cr (croma) de 8 bits, subamostrados em 2:1 horizontalmente. Usado para detecção facial, digitalização de códigos QR, digitalização de códigos de barras, inferência de aprendizado de máquina (TensorFlow Lite, PyTorch Mobile), processamento de imagem personalizado antes de recodificar para JPEG e como entrada para o codificador de vídeo MediaCodec para gravação de vídeo.
+3. **PRIVATE**: O formato opaco de cópia zero usado exclusivamente para pré-visualização de alta velocidade na tela. O layout de pixel real é específico do fabricante e oculto do aplicativo (daí o nome "private"). Superfícies PRIVATE (tipicamente uma `SurfaceView`, `TextureView` ou `ImageReader` com flags de uso `PRIV`) ignoram todas as cópias acessíveis pela CPU e vão diretamente da saída do ISP para o compositor da tela. Este é o único formato que garante 60 fps ou 120 fps de pré-visualização em resolução total em flagships modernos.
+4. **RAW_SENSOR**: Dados de mosaico Bayer não processados vindos diretamente do sensor, antes de qualquer estágio do ISP rodar. A profundidade de bits varia por sensor: RAW10 (10 bits por amostra), RAW12 (12 bits) ou RAW14 (14 bits). Gravado em arquivos DNG (Digital Negative) para pós-produção em desktop no Adobe Lightroom, Capture One ou Darktable. Apenas câmeras no Nível de Hardware FULL ou superior suportam saída RAW; câmeras LIMITED e LEGACY nunca suportam.
+5. **JPEG_R**: Formato Ultra HDR, introduzido no Android 14. Uma imagem primária JPEG de 8 bits padrão (retrocompatível com todos os visualizadores) mais um mapa de ganho de 10 bits incorporado que visualizadores cientes de HDR (Galeria do Sistema Android 14, Chrome 120+, Adobe Lightroom 7+, Fotos do Apple iOS 18) podem usar para reconstruir a faixa completa de luminância HDR de 10 bits em uma tela HDR10 ou Dolby Vision. Apenas celulares flagship de 2023+ suportam a saída JPEG_R.
 
-**Task for your device:** Tap on your primary rear camera (ID 0) in the app, swipe to the **Formats** tab. The app displays every output format supported by that camera, and under each format, a list of every supported resolution sorted from largest (top) to smallest (bottom). Write down:
+**Tarefa para o seu dispositivo:** Toque na sua câmera traseira principal (ID 0) no aplicativo e deslize para a aba **Formats**. O aplicativo exibe todos os formatos de saída suportados por essa câmera e, sob cada formato, uma lista de cada resolução suportada ordenada da maior (topo) para a menor (fundo). Anote:
 
-- Which of the 5 formats listed above (JPEG, YUV_420_888, PRIVATE, RAW_SENSOR, JPEG_R) are present for your primary camera?
-- What is the **maximum JPEG resolution**? This will almost always be close to (but not necessarily exactly equal to) the sensor's active array pixel dimensions. A 48MP sensor might list 8000×6000 (48MP full), 4000×3000 (12MP binned), 1920×1080 (2MP), and 1280×720 (1MP) as JPEG sizes.
-- Is RAW_SENSOR present? If yes, note that your phone supports DNG RAW capture; we will use this capability in Chapter 18.
-- Is JPEG_R (Ultra HDR) present? This tells you whether your device's ISP is capable of outputting gain-map HDR stills.
+- Qual dos 5 formatos listados acima (JPEG, YUV_420_888, PRIVATE, RAW_SENSOR, JPEG_R) está presente na sua câmera principal?
+- Qual é a **resolução máxima de JPEG**? Ela será quase sempre próxima (mas não necessariamente exatamente igual) às dimensões de pixel do active array do sensor. Um sensor de 48MP pode listar 8000×6000 (48MP total), 4000×3000 (12MP binned), 1920×1080 (2MP) e 1280×720 (1MP) como tamanhos JPEG.
+- O formato RAW_SENSOR está presente? Se sim, observe que seu celular suporta a captura RAW DNG; usaremos esta capacidade no Capítulo 18.
+- O formato JPEG_R (Ultra HDR) está presente? Isso informa se o ISP do seu dispositivo é capaz de produzir fotos estáticas HDR com mapa de ganho.
 
-Repeat the exercise for your front-facing camera and (if present) your ultra-wide and telephoto rear cameras.
+Repita o exercício para sua câmera frontal e (se presentes) suas câmeras traseiras ultra-wide e telefoto.
 
-## FPS (Frames Per Second) Ranges
+## Faixas de FPS (Quadros Por Segundo)
 
-Swipe to the **FPS / Preview** tab in the camera detail screen. The Camera2 API does not report "the maximum FPS" of a camera as a single number. Instead, every camera reports a list of **FPS ranges**, each written as `[minimum_fps, maximum_fps]`. The camera HAL guarantees that, if your app configures a session with that FPS range, the sensor's auto-exposure algorithm will choose an exposure time that keeps the actual frame rate between those two bounds.
+Deslize para a aba **FPS / Preview** na tela de detalhes da câmera. A API Camera2 não relata "o FPS máximo" de uma câmera como um único número. Em vez disso, cada câmera relata uma lista de **faixas de FPS**, cada uma escrita como `[fps_mínimo, fps_máximo]`. O HAL da câmera garante que, se seu aplicativo configurar uma sessão com essa faixa de FPS, o algoritmo de exposição automática do sensor escolherá um tempo de exposição que mantenha a taxa de quadros real entre esses dois limites.
 
-Typical entries you will see on a modern phone:
+Entradas típicas que você verá em um celular moderno:
 
-- `[15, 30]`: Normal adaptive preview. The AE algorithm is free to drop the frame rate to 15 fps in very dark scenes when exposure times get long. This is the default for almost all still-camera preview use cases.
-- `[30, 30]`: Fixed 30 fps. AE will never exceed an exposure time longer than 1/30th of a second; if the scene is too dark, the analog gain is boosted instead. Used for standard 30 fps video recording.
-- `[60, 60]`: Fixed 60 fps. Smooth preview for gaming camera use cases or 60 fps video recording. Requires the sensor to have a rolling readout fast enough to sustain 60 full frames per second.
-- `[120, 120]`: Fixed 120 fps for 4× slow-motion video capture. Usually only available at reduced resolution (1080p or lower).
-- `[240, 240]`: Fixed 240 fps for 8× slow-motion video. Almost always only available at 720p resolution.
-- `[960, 960]`: Fixed 960 fps for 32× ultra-slow motion. Extremely rare; only a handful of Sony Xperia and top-tier Samsung Galaxy flagships support this, and only for a very short (0.2–0.3 second) pre-recorded burst at 720p.
+- `[15, 30]`: Pré-visualização adaptativa normal. O algoritmo AE está livre para baixar a taxa de quadros para 15 fps em cenas muito escuras quando os tempos de exposição ficam longos. Este é o padrão para quase todos os casos de uso de pré-visualização de câmera estática.
+- `[30, 30]`: 30 fps fixos. O AE nunca excederá um tempo de exposição maior que 1/30 de segundo; se a cena estiver muito escura, o ganho analógico é aumentado em vez disso. Usado para gravação de vídeo padrão de 30 fps.
+- `[60, 60]`: 60 fps fixos. Pré-visualização suave para casos de uso de câmera em jogos ou gravação de vídeo a 60 fps. Requer que o sensor tenha uma leitura de rolagem rápida o suficiente para sustentar 60 quadros completos por segundo.
+- `[120, 120]`: 120 fps fixos para captura de vídeo em câmera lenta de 4×. Geralmente disponível apenas em resolução reduzida (1080p ou menor).
+- `[240, 240]`: 240 fps fixos para vídeo em câmera lenta de 8×. Quase sempre disponível apenas em resolução de 720p.
+- `[960, 960]`: 960 fps fixos para câmera ultra lenta de 32×. Extremamente raro; apenas alguns flagships Sony Xperia e Samsung Galaxy topo de linha suportam isso, e apenas por uma rajada pré-gravada muito curta (0,2 a 0,3 segundos) em 720p.
 
-The app displays every supported FPS range in a scrollable list. Below the list is a preview test card: tap **Start 60fps Preview Test** and the app will open a fixed-60fps preview stream and display a running FPS counter in the corner so you can verify that 60fps is actually achievable on your device.
+O aplicativo exibe cada faixa de FPS suportada em uma lista rolável. Abaixo da lista há um cartão de teste de pré-visualização: toque em **Start 60fps Preview Test** e o aplicativo abrirá um fluxo de pré-visualização de 60 fps fixos e exibirá um contador de FPS rodando no canto para que você possa verificar se os 60 fps são realmente alcançáveis no seu dispositivo.
 
-**Task for your device:** For your primary rear camera, write down the complete list of supported FPS ranges. Answer these questions:
+**Tarefa para o seu dispositivo:** Para sua câmera traseira principal, anote a lista completa de faixas de FPS suportadas. Responda estas perguntas:
 
-- Is `[60, 60]` present? Your phone supports smooth 60fps preview.
-- Is `[120, 120]` present? Your phone supports 4× slow-motion.
-- Is `[240, 240]` present? Your phone supports 8× slow-motion.
-- Is `[960, 960]` present? If yes, your phone is a top-tier flagship — enjoy the ultra-slow-mo!
+- A faixa `[60, 60]` está presente? Seu celular suporta pré-visualização suave de 60 fps.
+- A faixa `[120, 120]` está presente? Seu celular suporta câmera lenta de 4×.
+- A faixa `[240, 240]` está presente? Seu celular suporta câmera lenta de 8×.
+- A faixa `[960, 960]` está presente? Se sim, seu celular é um flagship de alto nível — aproveite a ultra câmera lenta!
 
-Now compare the list for your front-facing camera. The front camera's FPS list is almost always shorter: it rarely has 240fps or 960fps entries, and sometimes it lacks 60fps as well.
+Agora compare a lista para sua câmera frontal. A lista de FPS da câmera frontal é quase sempre mais curta: raramente possui as entradas de 240 fps ou 960 fps, e às vezes carece até da de 60 fps.
 
-## Zoom Ranges and Camera Switch Points
+## Faixas de Zoom e Pontos de Troca de Câmera
 
-Swipe to the **Zoom** tab in the camera detail screen. This tab exposes the zoom capabilities of the camera.
+Deslize para a aba **Zoom** na tela de detalhes da câmera. Esta aba expõe as capacidades de zoom da câmera.
 
-The first number you will see is labeled **SCALER_AVAILABLE_MAX_DIGITAL_ZOOM**. This is a floating-point value like `10.0` or `20.0` or `100.0`, representing the maximum *digital* zoom ratio the HAL supports for this camera. A value of 10.0 means you can crop the center 1/10th of the sensor's pixels (linearly — 1/10 of the width and 1/10 of the height = 1% of the total pixel count) and still get a valid output stream. Note that digital zoom beyond ~2× produces visibly soft, pixelated output; the marketing "100× Space Zoom" on Samsung flagships is 10× optical (periscope) × 10× digital, and at 100× the image is essentially just 1% of the sensor's pixels upscaled with AI sharpening.
+O primeiro número que você verá é rotulado como **SCALER_AVAILABLE_MAX_DIGITAL_ZOOM**. Este é um valor de ponto flutuante como `10.0`, `20.0` ou `100.0`, representando a proporção máxima de zoom *digital* que o HAL suporta para esta câmera. Um valor de 10.0 significa que você pode cortar o 1/10 central dos pixels do sensor (linearmente — 1/10 da largura e 1/10 da altura = 1% da contagem total de pixels) e ainda obter um fluxo de saída válido. Note que o zoom digital além de ~2× produz uma saída visivelmente suave e pixelizada; o marketing "100× Space Zoom" nos flagships da Samsung é 10× óptico (periscópica) × 10× digital, e a 100× a imagem é essencialmente apenas 1% dos pixels do sensor ampliado com nitidez de IA.
 
-For **logical multi-camera devices** (e.g., Galaxy S26 Ultra Camera ID 4 which fuses the wide, ultra-wide, and periscope telephoto), the Zoom tab also displays a diagram of the **optical zoom ratios** and the HAL-managed camera switch points. Here is a representative example from a Galaxy S26 Ultra:
+Para **dispositivos de multicâmera lógica** (ex: Galaxy S26 Ultra ID de Câmera 4 que funde a wide, ultra-wide e telefoto periscópica), a aba Zoom também exibe um diagrama das **proporções de zoom óptico** e os pontos de troca de câmera gerenciados pelo HAL. Aqui está um exemplo representativo de um Galaxy S26 Ultra:
 
-- **0.5×** : Active camera = Ultra-Wide (ID 2). Below 0.7×, the output is 100% ultra-wide sensor.
-- **0.7× → 0.9×** : Fusion zone. HAL captures both the ultra-wide and the wide camera simultaneously, aligns them, and cross-fades the output. The user sees no jump.
-- **1.0× (default)** : Active camera = Wide / Primary (ID 0). This is the camera used for 80% of everyday photos.
-- **1.1× → 2.9×** : Digital crop of the wide sensor. Quality gradually degrades as zoom increases.
-- **2.9× → 3.1×** : Fusion zone. HAL cross-fades from digitally-cropped wide to the native 3× periscope telephoto sensor.
-- **3.0×** : Active camera = 3× Telephoto (if present), or start of periscope crop.
-- **5.0× → 9.9×** : Digital crop of the 5× periscope sensor (ID 3).
-- **10.0×** : Native 10× periscope output (if the periscope supports it).
-- **10.1× → 30.0×** : Digital crop of the 10× periscope output. At 30× you are looking at 1/900th of the original sensor area upscaled — impressive marketing, but not photographically useful for most purposes.
+- **0.5×** : Câmera ativa = Ultra-Wide (ID 2). Abaixo de 0.7×, a saída é 100% do sensor ultra-wide.
+- **0.7× → 0.9×** : Zona de fusão. O HAL captura tanto a ultra-wide quanto a wide simultaneamente, alinha-as e faz o cross-fade na saída. O usuário não percebe o salto.
+- **1.0× (padrão)** : Câmera ativa = Wide / Principal (ID 0). Esta é a câmera usada para 80% das fotos do dia a dia.
+- **1.1× → 2.9×** : Corte digital do sensor wide. A qualidade degrada gradualmente conforme o zoom aumenta.
+- **2.9× → 3.1×** : Zona de fusão. O HAL faz o cross-fade da wide cortada digitalmente para o sensor telefoto periscópico nativo de 3×.
+- **3.0×** : Câmera ativa = Telefoto de 3× (se presente) ou início do corte da periscópica.
+- **5.0× → 9.9×** : Corte digital do sensor periscópico de 5× (ID 3).
+- **10.0×** : Saída periscópica nativa de 10× (se a periscópica suportar).
+- **10.1× → 30.0×** : Corte digital da saída periscópica de 10×. A 30× você está olhando para 1/900 da área original do sensor ampliada — marketing impressionante, mas não muito útil fotograficamente para a maioria dos propósitos.
 
-The app has an interactive test for this. Return to the camera detail screen's **Preview** tab. You will see a live camera preview and a zoom ratio slider at the bottom of the screen.
+O aplicativo possui um teste interativo para isso. Volte para a aba **Preview** da tela de detalhes da câmera. Você verá uma pré-visualização ao vivo da câmera e um seletor de proporção de zoom na parte inferior da tela.
 
-**Task for your device:** Perform a slow, steady pinch-zoom gesture on the Preview surface, or drag the zoom slider smoothly from its minimum (left) to its maximum (right) position. Watch the zoom ratio number label. As you pass specific thresholds (0.5×, 1.0×, 3.0×, 5.0×, 10.0×), you will notice the preview image briefly "jump" in field of view, sharpness, and sometimes color tone — those jumps are the HAL switching the active physical camera behind the logical multi-camera device. Write down the zoom switch points you observe. Those specific thresholds are the ratios at which you, as a Camera2 API developer, will want to switch your capture requests between the individual physical camera IDs if you want maximum image quality instead of HAL-managed digital cropping.
+**Tarefa para o seu dispositivo:** Realize um gesto de pinça para zoom lento e constante na superfície de Preview, ou arraste o seletor de zoom suavemente de sua posição mínima (esquerda) para a máxima (direita). Observe o rótulo numérico da proporção de zoom. À medida que você passa por limites específicos (0.5×, 1.0×, 3.0×, 5.0×, 10.0×), você notará que a imagem da pré-visualização dá um rápido "pulo" no campo de visão, nitidez e às vezes no tom da cor — esses pulos são o HAL trocando a câmera física ativa por trás do dispositivo de multicâmera lógica. Anote os pontos de troca de zoom que você observar. Esses limites específicos são as proporções nas quais você, como desenvolvedor da API Camera2, desejará trocar suas solicitações de captura entre os IDs de câmera física individuais se desejar a qualidade máxima de imagem em vez do corte digital gerenciado pelo HAL.
 
-## RAW Support
+## Suporte a RAW
 
-Return to the **Formats** tab. In the top-right corner of the tab bar is a filter toggle: **All / Processed / RAW**. Tap **RAW** to filter the format list to only RAW formats.
+Volte para a aba **Formats**. No canto superior direito da barra de abas há uma alternância de filtros: **All / Processed / RAW**. Toque em **RAW** para filtrar a lista de formatos apenas para formatos RAW.
 
-If RAW_SENSOR is supported for this camera, the app will list all available RAW variants. The most common RAW bit-depths on Android in 2026:
+Se o RAW_SENSOR for suportado para esta câmera, o aplicativo listará todas as variantes de RAW disponíveis. As profundidades de bits de RAW mais comuns no Android em 2026:
 
-- **RAW10**: 10 bits per sample. Most common on mid-range phones and on ultra-wide / telephoto cameras of flagships. 1,024 distinct levels per Bayer channel.
-- **RAW12**: 12 bits per sample. The default for primary wide cameras on flagships. 4,096 levels per channel. Excellent editing headroom.
-- **RAW14**: 14 bits per sample. Very rare; only on professional-grade phones like the Sony Xperia Pro-I or the Xiaomi 13 Ultra's 1-inch sensor. 16,384 levels per channel. Matches the editing latitude of many APS-C DSLRs.
-- **RAW_SENSOR**: The generic token that maps to the device's default RAW bit-depth. You can always request `RAW_SENSOR` format and the HAL will substitute the appropriate bit-depth variant for you.
+- **RAW10**: 10 bits por amostra. Mais comum em celulares intermediários e nas câmeras ultra-wide / telefoto de flagships. 1.024 níveis distintos por canal Bayer.
+- **RAW12**: 12 bits por amostra. O padrão para as câmeras wide principais em flagships. 4.096 níveis por canal. Excelente margem de edição.
+- **RAW14**: 14 bits por amostra. Muito raro; apenas em celulares de nível profissional como o Sony Xperia Pro-I ou o sensor de 1 polegada do Xiaomi 13 Ultra. 16.384 níveis por canal. Iguala a latitude de edição de muitas DSLRs APS-C.
+- **RAW_SENSOR**: O token genérico que mapeia para a profundidade de bits RAW padrão do dispositivo. Você pode sempre solicitar o formato `RAW_SENSOR` e o HAL substituirá pela variante de profundidade de bits apropriada para você.
 
-The DNG files output from `RAW_SENSOR` streams also embed the per-module factory calibration data: the color filter array pattern, the color matrix mapping sensor-native RGB to D65 illuminant XYZ, the neutral color point, the black level per channel, and the white level per channel. All of this metadata is required by desktop RAW editors to interpret the otherwise-uninterpretable Bayer mosaic data.
+Os arquivos DNG produzidos a partir de fluxos `RAW_SENSOR` também incorporam os dados de calibração de fábrica por módulo: o padrão da matriz de filtros de cor, a matriz de cor que mapeia o RGB nativo do sensor para o XYZ do iluminante D65, o ponto de cor neutra, o nível de preto por canal e o nível de branco por canal. Todos esses metadados são exigidos pelos editores RAW de desktop para interpretar os dados do mosaico Bayer, que de outra forma seriam interpretáveis.
 
-**Task for your device:** Is RAW_SENSOR present for your primary rear camera? If yes, which bit-depth variants are listed? Write down the answer. In Chapter 18 of this series you will learn how to open a RAW output stream, capture a DNG file, and write it with proper EXIF and metadata to your app's storage. If RAW is not supported (common for front-facing cameras and for mid-range LIMITED devices), then RAW capture in your own Camera2 app will simply not be possible on that camera, and you should design your app to hide the "Shoot RAW" UI option gracefully when the capability is missing.
+**Tarefa para o seu dispositivo:** O RAW_SENSOR está presente na sua câmera traseira principal? Se sim, quais variantes de profundidade de bits são listadas? Anote a resposta. No Capítulo 18 desta série, você aprenderá como abrir um fluxo de saída RAW, capturar um arquivo DNG e gravá-lo com os devidos EXIF e metadados no armazenamento do seu aplicativo. Se o RAW não for suportado (comum em câmeras frontais e em dispositivos LIMITED intermediários), a captura RAW no seu próprio aplicativo Camera2 simplesmente não será possível naquela câmera, e você deve projetar seu aplicativo para ocultar graciosamente a opção de UI "Fotografar em RAW" quando o recurso estiver ausente.
 
-## Source Code
+## Código-Fonte
 
-The **Android Camera Parameters** companion app is 100% open source. The GitHub repository lives at:
+O aplicativo complementar **Android Camera Parameters** é 100% de código aberto. O repositório no GitHub vive em:
 
 `https://github.com/zoozooll/AndroidCameraParameters`
 
-If you followed Option A and built the app from source, you already have the code on your machine. If you installed from Google Play, you can clone the repo at any time to see how the app queries each of the values you just inspected. Browse the source and you will find:
+Se você seguiu a Opção A e compilou o aplicativo a partir do código-fonte, você já tem o código na sua máquina. Se instalou a partir da Google Play, você pode clonar o repositório a qualquer momento para ver como o aplicativo consulta cada um dos valores que você acabou de inspecionar. Navegue pelo código e você encontrará:
 
-- How the app uses `CameraManager.getCameraIdList()` to enumerate all Camera IDs.
-- How it reads `CameraCharacteristics.LENS_FACING` and `INFO_SUPPORTED_HARDWARE_LEVEL` to populate the chips on the main Cameras tab.
-- How it queries `SCALER_STREAM_CONFIGURATION_MAP` to enumerate every supported format and resolution, and how it filters the resulting list for the Formats and RAW tabs.
-- How it reads `CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES` to build the FPS range list.
-- How it queries `SCALER_AVAILABLE_MAX_DIGITAL_ZOOM` and `SCALER_AVAILABLE_ZOOM_RATIOS` to build the zoom switch point diagram and the interactive preview zoom slider.
+- Como o aplicativo usa o `CameraManager.getCameraIdList()` para enumerar todos os IDs de Câmera.
+- Como ele lê o `CameraCharacteristics.LENS_FACING` e o `INFO_SUPPORTED_HARDWARE_LEVEL` para preencher os chips na aba principal Cameras.
+- Como ele consulta o `SCALER_STREAM_CONFIGURATION_MAP` para enumerar cada formato e resolução suportados, e como ele filtra a lista resultante para as abas Formats e RAW.
+- Como ele lê o `CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES` para construir a lista de faixas de FPS.
+- Como ele consulta o `SCALER_AVAILABLE_MAX_DIGITAL_ZOOM` e o `SCALER_AVAILABLE_ZOOM_RATIOS` para construir o diagrama de pontos de troca de zoom e o seletor de zoom interativo da pré-visualização.
 
-Every value that the app displays is read from the same `CameraCharacteristics` map that your own Camera2 API code will query from Chapter 5 onward. The companion app is, in effect, a visual reference implementation for the first few chapters of Part II of this tutorial series.
+Cada valor que o aplicativo exibe é lido do mesmo mapa de `CameraCharacteristics` que seu próprio código da API Camera2 consultará a partir do Capítulo 5 em diante. O aplicativo complementar é, na verdade, uma implementação de referência visual para os primeiros capítulos da Parte II desta série de tutoriais.
 
 ```mermaid
 flowchart TD
-    A[Home Screen\nBottom Nav Tabs] --> B[Cameras / Overview Tab]
-    B --> C[Camera ID List\n0, 1, 2, 3, 4...]
-    C --> D[Camera Detail Screen]
-    D --> E[Overview Sub-Tab\nCharacteristics Summary]
-    D --> F[Formats Sub-Tab\nJPEG / YUV / PRIVATE / RAW]
-    D --> G[FPS / Preview Sub-Tab\nRanges + Live Preview Test]
-    D --> H[Zoom Sub-Tab\nMax Digital Zoom + Switch Points]
-    D --> I[RAW Sub-Tab\nRAW10 / RAW12 / RAW14 Check]
-    D --> J[Capabilities Sub-Tab\nAll Remaining Camera2 Features]
+    A["Tela Inicial<br/>Abas de Navegação Inferior"] --> B["Aba Cameras / Overview"]
+    B --> C[Lista de IDs de Câmera<br/>0, 1, 2, 3, 4...]
+    C --> D[Tela de Detalhes da Câmera]
+    D --> E[Sub-aba Overview<br/>Resumo das Características]
+    D --> F[Sub-aba Formats<br/>JPEG / YUV / PRIVATE / RAW]
+    D --> G[Sub-aba FPS / Preview<br/>Faixas + Teste de Preview ao Vivo]
+    D --> H[Sub-aba Zoom<br/>Zoom Digital Máx + Pontos de Troca]
+    D --> I[Sub-aba RAW<br/>Verificação RAW10 / RAW12 / RAW14]
+    D --> J[Sub-aba Capabilities<br/>Todos os Outros Recursos do Camera2]
 ```
 
-## Summary
+## Resumo
 
-In this hands-on chapter you installed the Android Camera Parameters companion app on your own Android phone (either by compiling from the GitHub source `https://github.com/zoozooll/AndroidCameraParameters` or by installing from Google Play at `https://play.google.com/store/apps/details?id=com.minininja.cameraparams`). You enumerated every Camera ID on your device and recorded each one's LENS_FACING (Back / Front / External) and its Hardware Level (LEGACY → LIMITED → FULL → LEVEL_3 → EXTERNAL), and you learned why front-facing cameras almost always report LIMITED instead of FULL. You used the facing filter to see the breakdown of Back vs Front vs External cameras, and (if you had a USB webcam handy) you verified that the Camera2 API enumerates USB OTG cameras through exactly the same code path as internal cameras. You inspected each camera's supported output formats (JPEG, YUV_420_888, PRIVATE, RAW_SENSOR, JPEG_R Ultra HDR) and wrote down the maximum JPEG resolution and whether RAW and Ultra HDR are supported. You enumerated the FPS ranges for each camera and learned which slow-motion speeds your phone can capture. You explored the zoom slider and identified the HAL-managed switch points where the active physical camera changes during a pinch-zoom. Finally, you confirmed whether your primary camera supports RAW_SENSOR output and at what bit-depths, and you were invited to browse the companion app's open-source code to see exactly how each of these values is read from the Camera2 API.
+Neste capítulo prático, você instalou o aplicativo complementar Android Camera Parameters no seu próprio celular Android (seja compilando a partir do código-fonte no GitHub `https://github.com/zoozooll/AndroidCameraParameters` ou instalando pela Google Play em `https://play.google.com/store/apps/details?id=com.minininja.cameraparams`). Você enumerou cada ID de Câmera no seu dispositivo e registrou a LENS_FACING de cada um (Traseira / Frontal / Externa) e seu Nível de Hardware (LEGACY → LIMITED → FULL → LEVEL_3 → EXTERNAL), e aprendeu por que as câmeras frontais quase universalmente relatam LIMITED em vez de FULL. Você usou o filtro de direção para ver a divisão entre câmeras Traseiras vs. Frontais vs. Externas e (se você tivesse uma webcam USB à mão) verificou que a API Camera2 enumera câmeras USB OTG através do exatamente mesmo caminho de código que as câmeras internas. Você inspecionou os formatos de saída suportados de cada câmera (JPEG, YUV_420_888, PRIVATE, RAW_SENSOR, JPEG_R Ultra HDR) e anotou a resolução máxima de JPEG e se o RAW e o Ultra HDR são suportados. Você enumerou as faixas de FPS para cada câmera e aprendeu quais velocidades de câmera lenta seu celular pode capturar. Você explorou o seletor de zoom e identificou os pontos de troca gerenciados pelo HAL onde a câmera física ativa muda durante uma pinça para zoom. Por fim, você confirmou se sua câmera principal suporta a saída RAW_SENSOR e em quais profundidades de bits, e foi convidado a navegar pelo código-fonte aberto do aplicativo complementar para ver exatamente como cada um desses valores é lido a partir da API Camera2.
 
-## What's Next
+## O Que Vem a Seguir
 
-Part I of this series is now complete. You have the hardware foundations (Chapter 2), the computational photography feature vocabulary (Chapter 3), and a device-specific capability map for your own phone (Chapter 4). Part II begins in Chapter 5 with your first Camera2 API code: opening a `CameraManager`, enumerating `CameraCharacteristics` programmatically, opening a `CameraDevice`, creating a `CaptureSession`, and firing your first repeating preview request to a `TextureView` — a live camera preview on the screen, written from scratch in 100 lines of Kotlin.
+A Parte I desta série está agora completa. Você tem as bases de hardware (Capítulo 2), o vocabulário de recursos da fotografia computacional (Capítulo 3) e um mapa de recursos específico do dispositivo para seu próprio celular (Capítulo 4). A Parte II começa no Capítulo 5 com seu primeiro código da API Camera2: abrindo um `CameraManager`, enumerando `CameraCharacteristics` programaticamente, abrindo um `CameraDevice`, criando uma `CaptureSession` e disparando sua primeira solicitação de pré-visualização repetida para um `TextureView` — uma pré-visualização ao vivo da câmera na tela, escrita do zero em 100 linhas de Kotlin.

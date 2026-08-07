@@ -1,262 +1,262 @@
 ---
 sidebar_position: 2
-title: "Chapter 2: Understanding Smartphone Cameras"
-description: "Explore the camera module hardware inside every smartphone: the lens, image sensor, ISP processor, the difference between RAW and JPEG, multi-camera designs, and the complete journey from photons to a stored photo."
-keywords: [smartphone camera, camera module, camera lens, image sensor, ISP, RAW vs JPEG, multi-camera]
+title: "Kapitel 2: Smartphone-Kameras verstehen"
+description: "Erkunden Sie die Hardware des Kameramoduls in jedem Smartphone: das Objektiv, den Bildsensor, den ISP-Prozessor, den Unterschied zwischen RAW und JPEG, Multi-Kamera-Designs und den vollständigen Weg von den Photonen zum gespeicherten Foto."
+keywords: [Smartphone-Kamera, Kameramodul, Kameraobjektiv, Bildsensor, ISP, RAW vs. JPEG, Multi-Kamera]
 ---
 
-# Chapter 2: Understanding Smartphone Cameras
+# Kapitel 2: Smartphone-Kameras verstehen
 
-Before writing a single line of Camera2 API code, you must understand the physical hardware that your code will be commanding. A smartphone camera is not just "a lens pointed at a sensor." It is a tightly integrated, sealed, precision-engineered assembly containing optics, actuators, filters, semiconductors, and high-speed data buses. This chapter explains every component from the glass that first catches light to the flash memory chip where your final photo is stored.
+Bevor Sie eine einzige Zeile Camera2-API-Code schreiben, müssen Sie die physische Hardware verstehen, die Ihr Code befehligen wird. Eine Smartphone-Kamera ist nicht nur "ein Objektiv, das auf einen Sensor gerichtet ist". Es handelt sich um eine eng integrierte, versiegelte und präzisionsgefertigte Baugruppe, die Optik, Aktoren, Filter, Halbleiter und Hochgeschwindigkeits-Datenbusse enthält. Dieses Kapitel erklärt jede Komponente, vom Glas, das das Licht zuerst einfängt, bis hin zum Flash-Speicher-Chip, auf dem Ihr fertiges Foto gespeichert wird.
 
-The goal of this chapter is to build a mental model of the camera pipeline as a physical system. When later chapters ask you to configure a capture request with `CONTROL_AE_TARGET_FPS_RANGE` or `SENSOR_SENSITIVITY`, you will understand exactly which piece of hardware those parameters affect and why the values matter.
+Das Ziel dieses Kapitels ist es, ein mentales Modell der Kamera-Pipeline als physisches System aufzubauen. Wenn Sie in späteren Kapiteln eine Aufnahmeanforderung mit `CONTROL_AE_TARGET_FPS_RANGE` oder `SENSOR_SENSITIVITY` konfigurieren, werden Sie genau verstehen, welches Hardwareteil diese Parameter beeinflussen und warum die Werte wichtig sind.
 
-## The Camera Module: A Sealed Optical Assembly
+## Das Kameramodul: Eine versiegelte optische Baugruppe
 
-When you look at the back of a modern flagship phone — imagine a Pixel 10 or Galaxy S26 Ultra — you see a raised rectangular island protruding 2 to 4 millimeters from the rear glass. That island is not a single camera. One rectangular island houses three separate circular modules: the largest at the bottom is the primary wide, a smaller one above it is the 3× periscope telephoto, and the medium-sized one to the left is the 0.5× ultra-wide. Each circular "bump" within that island is a complete, independent camera module.
+Wenn Sie auf die Rückseite eines modernen Flaggschiff-Telefons schauen — stellen Sie sich ein Pixel 10 oder Galaxy S26 Ultra vor —, sehen Sie eine hervorstehende rechteckige Insel, die 2 bis 4 Millimeter aus dem Rückglas herausragt. Diese Insel ist nicht eine einzelne Kamera. Eine rechteckige Insel beherbergt drei separate kreisförmige Module: Das größte ganz unten ist das primäre Weitwinkelobjektiv, ein kleineres darüber das 3-fache Periskop-Teleobjektiv und das mittelgroße links davon das 0,5-fache Ultraweitwinkelobjektiv. Jede kreisförmige "Wölbung" innerhalb dieser Insel ist ein eigenständiges, unabhängiges Kameramodul.
 
-A camera module is a hermetically sealed unit manufactured in a dust-free clean room. It contains, stacked in order from the outside world inward:
+Ein Kameramodul ist eine hermetisch versiegelte Einheit, die in einem staubfreien Reinraum gefertigt wird. Es enthält, in der Reihenfolge von der Außenwelt nach innen gestapelt:
 
-1. **Protective cover glass**: A scratch-resistant sapphire or Gorilla Glass window that seals the module and keeps dust out.
-2. **Lens barrel**: A cylindrical stack of 4 to 6 individual glass (or sometimes plastic aspheric) lens elements, held in precise alignment by thin plastic spacers.
-3. **Voice Coil Motor (VCM)**: An electromagnetic actuator that moves the entire lens barrel forward or backward along the optical axis by fractions of a millimeter to achieve autofocus. Some premium VCMs can also shift the lens perpendicular to the axis for optical image stabilization (OIS).
-4. **Infrared (IR) cut filter**: A thin, coated glass wafer placed directly in front of the sensor. It blocks infrared light (which the silicon sensor is sensitive to but the human eye is not) so that recorded colors match what humans perceive.
-5. **Sensor die**: The silicon CMOS image sensor chip itself, wire-bonded to a substrate. The active pixel array faces upward toward the lens.
-6. **Flexible Printed Circuit (FPC)**: A thin, bendable ribbon cable that carries power, ground, control signals (I2C), and high-speed image data (MIPI CSI-2) from the module to the phone's mainboard.
-7. **Board-to-board connector**: A tiny, high-density plug at the end of the FPC that snaps into a mating receptacle on the phone's main PCB.
+1. **Schutzglas**: Ein kratzfestes Fenster aus Saphirglas oder Gorilla Glass, das das Modul versiegelt und Staub fernhält.
+2. **Objektivtubus**: Ein zylindrischer Stapel aus 4 bis 6 einzelnen Glas- (oder manchmal Kunststoff-Asphären-) Linsenelementen, die durch dünne Kunststoff-Abstandshalter präzise ausgerichtet werden.
+3. **Voice Coil Motor (VCM)**: Ein elektromagnetischer Aktor, der den gesamten Objektivtubus entlang der optischen Achse um Bruchteile eines Millimeters vor- oder zurückbewegt, um den Autofokus zu realisieren. Einige hochwertige VCMs können das Objektiv auch senkrecht zur Achse verschieben, um eine optische Bildstabilisierung (OIS) zu erreichen.
+4. **Infrarot-(IR-)Sperrfilter**: Ein dünnes, beschichtetes Glasplättchen, das direkt vor dem Sensor platziert ist. Es blockiert Infrarotlicht (für das der Siliziumsensor empfindlich ist, das menschliche Auge jedoch nicht), damit die aufgezeichneten Farben dem entsprechen, was Menschen wahrnehmen.
+5. **Sensor-Die**: Der Silizium-CMOS-Bildsensorchip selbst, der auf ein Substrat gebondet ist. Das aktive Pixel-Array zeigt nach oben zum Objektiv.
+6. **Flexible Leiterplatte (FPC)**: Ein dünnes, biegsames Flachbandkabel, das Strom, Masse, Steuersignale (I2C) und Hochgeschwindigkeits-Bilddaten (MIPI CSI-2) vom Modul zur Hauptplatine des Telefons überträgt.
+7. **Board-to-Board-Steckverbinder**: Ein winziger, hochdichter Stecker am Ende der FPC, der in eine passende Buchse auf der Hauptplatine des Telefons einrastet.
 
-The entire assembly — from cover glass to connector — is typically 5 to 8 millimeters thick for a conventional rear camera, and 10 to 14 millimeters long (inside the phone, oriented horizontally) for a periscope telephoto. The modules are calibrated individually at the factory: lens alignment, sensor tilt, color shading, and autofocus infinity position are all measured and stored in one-time-programmable (OTP) memory on the module itself. The Camera2 API reads this calibration data at device boot so your app does not have to account for unit-to-unit manufacturing variation.
+Die gesamte Baugruppe — vom Schutzglas bis zum Stecker — ist bei einer herkömmlichen Rückkamera typischerweise 5 bis 8 Millimeter dick und bei einem Periskop-Teleobjektiv (im Inneren des Telefons, horizontal ausgerichtet) 10 bis 14 Millimeter lang. Die Module werden im Werk einzeln kalibriert: Linsenausrichtung, Sensorkippung, Farbschattierung und die Autofokus-Unendlichkeitsposition werden gemessen und in einem einmalig programmierbaren Speicher (OTP) auf dem Modul selbst gespeichert. Die Camera2-API liest diese Kalibrierungsdaten beim Systemstart aus, sodass Ihre App Fertigungstoleranzen zwischen den Geräten nicht berücksichtigen muss.
 
-## The Lens: Focal Length, Aperture, and Stabilization
+## Das Objektiv: Brennweite, Blende und Stabilisierung
 
-The lens is the first component that light encounters. Its job is to bend incoming light rays so they converge into a sharp image exactly on the plane of the image sensor.
+Das Objektiv ist die erste Komponente, auf die das Licht trifft. Seine Aufgabe ist es, eintreffende Lichtstrahlen so zu brechen, dass sie genau auf der Ebene des Bildsensors zu einem scharfen Bild zusammenlaufen.
 
-### Focal Length and Full-Frame Equivalence
+### Brennweite und Kleinbildäquivalent
 
-Focal length determines the field of view (how much of the scene fits in the frame) and magnification (how large distant subjects appear). Smartphone camera specs always advertise **full-frame equivalent focal lengths**. This is a convention that normalizes across different sensor sizes so consumers can compare apples to apples. A full-frame sensor is the 36mm × 24mm size historically used in 35mm film SLR cameras.
+Die Brennweite bestimmt den Bildwinkel (wie viel von der Szene ins Bild passt) und die Vergrößerung (wie groß entfernte Motive erscheinen). Smartphone-Kameraspezifikationen werben immer mit **kleinbildäquivalenten Brennweiten**. Dies ist eine Konvention, die verschiedene Sensorgrößen normiert, damit Verbraucher Vergleiche anstellen können. Ein Vollformatsensor (Kleinbild) hat die Größe 36 mm × 24 mm, wie er historisch in 35-mm-Film-SLR-Kameras verwendet wurde.
 
-Common full-frame equivalent focal lengths on smartphones:
+Gängige kleinbildäquivalente Brennweiten bei Smartphones:
 
-- **10–18mm (Ultra-wide)**: 100° to 130° diagonal field of view. Used for landscapes, architecture, group selfies, and close-up macro shots.
-- **22–28mm (Wide / Primary)**: The default "normal" camera on every phone. ~75° field of view, similar to human peripheral vision but flatter.
-- **45–80mm (Telephoto, 2× to 3×)**: Narrow 30° to 50° field of view. Used for portraits (natural-looking face proportions, less perspective distortion) and general zoom.
-- **100–240mm (Periscope telephoto, 5× to 10×)**: 10° to 25° field of view. The prism-bent periscope design allows long focal lengths without making the phone 2 centimeters thick.
+- **10–18 mm (Ultraweitwinkel)**: 100° bis 130° diagonaler Bildwinkel. Wird für Landschaften, Architektur, Gruppen-Selfies und Makro-Nahaufnahmen verwendet.
+- **22–28 mm (Weitwinkel / Primär)**: Die Standard-Kamera an jedem Telefon. ~75° Bildwinkel, ähnlich dem peripheren Sehen des Menschen, aber flacher.
+- **45–80 mm (Tele, 2- bis 3-fach)**: Schmaler Bildwinkel von 30° bis 50°. Wird für Porträts (natürlich wirkende Gesichtsproportionen, weniger perspektivische Verzerrung) und allgemeinen Zoom verwendet.
+- **100–240 mm (Periskop-Tele, 5- bis 10-fach)**: Enger Bildwinkel von 10° bis 25°. Das prismengefaltete Periskop-Design ermöglicht lange Brennweiten, ohne das Telefon 2 Zentimeter dick zu machen.
 
-Here is how light travels through a typical 5-element wide-angle lens assembly:
+Hier sehen Sie, wie das Licht durch eine typische 5-Element-Weitwinkel-Objektivbaugruppe wandert:
 
 ```mermaid
 graph LR
-    A[Incoming Light Rays] --> B[Element 1\nAspherical\nConvex]
-    B --> C[Element 2\nConcave\nChromatic Correction]
-    C --> D[Element 3\nConvex]
-    D --> E[Element 4\nConcave\nDistortion Control]
-    E --> F[Element 5\nPlanoconvex]
-    F --> G[Focal Plane\nImage Sensor]
+    A["Eintreffende Lichtstrahlen"] --> B["Element 1<br/>Asphärisch<br/>Konvex"]
+    B --> C[Element 2<br/>Konkav<br/>Chromatische Korrektur]
+    C --> D[Element 3<br/>Konvex]
+    D --> E[Element 4<br/>Konkav<br/>Verzeichnungskontrolle]
+    E --> F[Element 5<br/>Plan-Konvex]
+    F --> G[Brennebene<br/>Bildsensor]
 ```
 
-### Aperture
+### Blende
 
-The aperture is the size of the opening through which light passes inside the lens. It is described as an **f-number** (or f-stop): the focal length divided by the diameter of the aperture. A **smaller f-number means a wider hole, which means more light** reaches the sensor.
+Die Blende ist die Größe der Öffnung, durch die das Licht im Inneren des Objektivs tritt. Sie wird als **Blenden-Zahl** (oder f-Zahl) angegeben: die Brennweite geteilt durch den Durchmesser der Blende. Eine **kleinere Blenden-Zahl bedeutet eine größere Öffnung, was wiederum bedeutet, dass mehr Licht** den Sensor erreicht.
 
-- f/1.4 to f/1.8: Very wide aperture. Typical flagship primary cameras. Excellent in low light.
-- f/2.0 to f/2.4: Moderate aperture. Typical ultra-wide and telephoto cameras on most phones.
-- f/2.8 to f/4.0: Narrow aperture. Found on lower-cost front cameras and some periscope modules.
+- f/1.4 bis f/1.8: Sehr große Blende. Typische Hauptkameras bei Flaggschiffen. Exzellent bei wenig Licht.
+- f/2.0 bis f/2.4: Moderate Blende. Typische Ultraweitwinkel- und Telekameras an den meisten Telefonen.
+- f/2.8 bis f/4.0: Kleine Blende. Zu finden bei kostengünstigeren Frontkameras und einigen Periskop-Modulen.
 
-The aperture is usually fixed in smartphone cameras. A few 2020-era Samsung flagships featured a **variable aperture mechanism** with a dual-diaphragm that could mechanically switch between f/1.5 and f/2.4. This is extremely rare today because VCM-based focus and multi-frame computational HDR have made variable aperture unnecessary for most use cases.
+Die Blende ist bei Smartphone-Kameras in der Regel fest eingestellt. Einige Flaggschiffe von Samsung aus dem Jahr 2020 verfügten über einen **variablen Blendenmechanismus** mit einer Doppelmembran, die mechanisch zwischen f/1.5 und f/2.4 umschalten konnte. Dies ist heute extrem selten, da VCM-basierter Fokus und Multi-Frame-Computational-HDR eine variable Blende für die meisten Anwendungsfälle überflüssig gemacht haben.
 
-### Optical Image Stabilization (OIS)
+### Optische Bildstabilisierung (OIS)
 
-When you hold a phone, your hands naturally shake by tiny angular amounts — on the order of 0.1° to 0.5° at 1/30th of a second. Over a long enough exposure, this shake causes the entire image to blur. **Optical Image Stabilization (OIS)** solves this problem by physically moving either the lens barrel (lens-shift OIS) or the sensor die itself (sensor-shift OIS) to counteract the detected motion. A tiny gyroscope inside the camera module (or shared from the phone's main IMU) measures angular velocity 1,000 to 8,000 times per second, and the OIS actuator moves the optics accordingly. OIS can typically compensate for 3 to 5 stops of handshake, meaning an exposure that would have required 1/60s to stay sharp can now be shot at 1/8s or 1/4s with equal sharpness.
+Wenn Sie ein Telefon halten, zittern Ihre Hände natürlicherweise um winzige Winkelbeträge — in der Größenordnung von 0,1° bis 0,5° bei einer 1/30 Sekunde. Bei einer ausreichend langen Belichtungszeit führt dieses Zittern dazu, dass das gesamte Bild unscharf wird. Die **optische Bildstabilisierung (OIS)** löst dieses Problem, indem sie entweder den Objektivtubus (Lens-Shift OIS) oder den Sensor-Die selbst (Sensor-Shift OIS) physisch bewegt, um der erkannten Bewegung entgegenzuwirken. Ein winziges Gyroskop im Kameramodul (oder gemeinsam mit der Haupt-IMU des Telefons genutzt) misst die Winkelgeschwindigkeit 1.000 bis 8.000 Mal pro Sekunde, und der OIS-Aktor bewegt die Optik entsprechend. OIS kann typischerweise 3 bis 5 Blendenstufen Handzittern kompensieren, was bedeutet, dass eine Aufnahme, die 1/60 s erfordert hätte, um scharf zu bleiben, nun bei 1/8 s oder 1/4 s mit gleicher Schärfe aufgenommen werden kann.
 
-## The Image Sensor: Where Light Becomes Electricity
+## Der Bildsensor: Wo Licht zu Elektrizität wird
 
-The image sensor is a silicon chip containing millions of individual light detectors called **photodiodes**, arranged in a precise rectangular grid. Every smartphone sensor today is a **CMOS (Complementary Metal-Oxide-Semiconductor)** type.
+Der Bildsensor ist ein Siliziumchip mit Millionen von einzelnen Lichtdetektoren, den sogenannten **Fotodioden**, die in einem präzisen rechteckigen Raster angeordnet sind. Jeder Smartphone-Sensor ist heute ein **CMOS-Typ (Complementary Metal-Oxide-Semiconductor)**.
 
-### Pixel Size and Megapixels
+### Pixelgröße und Megapixel
 
-Each individual photodiode + readout circuit is called a **pixel**. The physical size of each pixel (measured in micrometers, μm) is arguably more important than the total megapixel count. A larger pixel captures more photons per unit time, which means less shot noise and better low-light performance.
+Jede einzelne Fotodiode mit Ausleseschaltkreis wird als **Pixel** bezeichnet. Die physische Größe jedes Pixels (gemessen in Mikrometern, μm) ist wohl wichtiger als die Gesamtzahl der Megapixel. Ein größeres Pixel fängt mehr Photonen pro Zeiteinheit ein, was weniger Schrotrauschen und eine bessere Leistung bei wenig Licht bedeutet.
 
-Common pixel sizes in 2026 smartphones:
+Gängige Pixelgrößen in Smartphones des Jahres 2026:
 
-- **0.6μm to 0.8μm**: Very small pixels. Used in 108MP to 200MP high-resolution sensors. These rely entirely on pixel binning for acceptable noise.
-- **1.0μm to 1.2μm**: Mid-size. Used in 48MP to 64MP sensors with default 4:1 binning to 12MP–16MP output.
-- **2.0μm to 2.4μm**: Large "flagship" pixels. Used in dedicated 12MP–16MP sensors (Google Pixel, iPhone Pro) or as the binned output of 48MP sensors in "high quality" mode.
+- **0,6 μm bis 0,8 μm**: Sehr kleine Pixel. Werden in hochauflösenden Sensoren mit 108 MP bis 200 MP verwendet. Diese verlassen sich für ein akzeptables Rauschverhalten vollständig auf Pixel Binning.
+- **1,0 μm bis 1,2 μm**: Mittlere Größe. Werden in Sensoren mit 48 MP bis 64 MP verwendet, mit standardmäßigem 4:1-Binning auf 12 MP–16 MP Ausgabe.
+- **2,0 μm bis 2,4 μm**: Große "Flaggschiff"-Pixel. Werden in dedizierten 12-MP–16-MP-Sensoren (Google Pixel, iPhone Pro) oder als gebinnte Ausgabe von 48-MP-Sensoren im Modus "hohe Qualität" verwendet.
 
-Pixel binning is the technique of combining the charge from adjacent 2×2 (or 3×3, or 4×4) pixels into a single "super pixel" during readout. A 48MP sensor with 0.8μm individual pixels, when binned 4-to-1, behaves like a 12MP sensor with 1.6μm effective pixels — dramatically improving signal-to-noise ratio. The Camera2 API exposes both the full-resolution raw mode and the default binned mode as separate stream configurations.
+Pixel Binning ist die Technik, bei der die Ladung benachbarter 2×2 (oder 3×3 oder 4×4) Pixel während des Auslesens zu einem einzigen "Super-Pixel" kombiniert wird. Ein 48-MP-Sensor mit 0,8 μm Einzelpixeln verhält sich bei einem 4-zu-1-Binning wie ein 12-MP-Sensor mit 1,6 μm effektiven Pixeln — was das Signal-Rausch-Verhältnis drastisch verbessert. Die Camera2-API legt sowohl den Modus mit voller Auflösung (Raw) als auch den Standard-Binning-Modus als separate Stream-Konfigurationen offen.
 
-The megapixel count math is straightforward: a 48MP sensor has an active array of approximately 8,000 × 6,000 photodiodes = 48,000,000 individual light sensors.
+Die Rechnung für die Megapixelzahl ist einfach: Ein 48-MP-Sensor hat ein aktives Array von etwa 8.000 × 6.000 Fotodioden = 48.000.000 einzelne Lichtsensoren.
 
-### Sensor Size Classifications
+### Klassifizierungen der Sensorgröße
 
-Sensor size follows a legacy inch-based notation dating back to 1950s Vidicon television tubes. The format is "1/X inch" where X is the divisor; smaller X means a larger sensor:
+Die Sensorgröße folgt einer alten, auf Zoll basierenden Notation, die auf Vidicon-Fernsehröhren der 1950er Jahre zurückgeht. Das Format ist "1/X Zoll", wobei X der Divisor ist; ein kleineres X bedeutet einen größeren Sensor:
 
-- 1/3.06" to 1/2.55": Small sensors, typical for front cameras and budget ultra-wides (~5MP to 13MP).
-- 1/1.7" to 1/1.3": Large mobile sensors, flagships primary cameras (48MP, 50MP, 108MP).
-- 1-inch (Type 1): Very large for a phone. Found in the Xiaomi 13 Ultra, Sharp Aquos R series, and Sony Xperia Pro-I. Approximately 13.2mm × 8.8mm active area — approaching the size of some Micro Four Thirds cameras.
+- 1/3,06" bis 1/2,55": Kleine Sensoren, typisch für Frontkameras und günstige Ultraweitwinkel-Objektive (~5 MP bis 13 MP).
+- 1/1,7" bis 1/1,3": Große mobile Sensoren, Hauptkameras bei Flaggschiffen (48 MP, 50 MP, 108 MP).
+- 1-Zoll (Typ 1): Sehr groß für ein Telefon. Zu finden im Xiaomi 13 Ultra, in der Sharp Aquos R-Serie und im Sony Xperia Pro-I. Etwa 13,2 mm × 8,8 mm aktive Fläche — das nähert sich der Größe einiger Micro-Four-Thirds-Kameras an.
 
-A larger sensor, given equal megapixel count, always has larger individual pixels. That is why the "one-inch sensor" phones produce noticeably better low-light photos.
+Ein größerer Sensor hat bei gleicher Megapixelzahl immer größere Einzelpixel. Deshalb machen Telefone mit "Ein-Zoll-Sensoren" spürbar bessere Fotos bei wenig Licht.
 
-### The Bayer Color Filter Array (CFA)
+### Das Bayer-Farbfilter-Array (CFA)
 
-A raw silicon photodiode is colorblind — it only measures total photon intensity, not wavelength. To record color, manufacturers deposit a tiny **color filter** on top of each individual pixel. The almost-universal pattern is the **Bayer RGGB filter array**: 50% green pixels, 25% red, and 25% blue, arranged in a repeating 2×2 tile. The human eye is more sensitive to green light, so doubling the green sampling improves perceived luminance resolution and noise performance.
+Eine reine Silizium-Fotodiode ist farbenblind — sie misst nur die gesamte Photonenintensität, nicht die Wellenlänge. Um Farben aufzuzeichnen, bringen die Hersteller einen winzigen **Farbfilter** über jedem einzelnen Pixel an. Das fast universelle Muster ist das **Bayer-RGGB-Filterarray**: 50 % grüne Pixel, 25 % rote und 25 % blaue, angeordnet in einer sich wiederholenden 2×2-Kachel. Das menschliche Auge ist empfindlicher für grünes Licht, daher verbessert die Verdoppelung der Grünabtastung die wahrgenommene Luminanzauflösung und das Rauschverhalten.
 
 ```mermaid
 graph LR
-    subgraph "4x4 Bayer Pattern (RGGB)"
+    subgraph "4x4 Bayer-Muster (RGGB)"
         direction TB
         A1[R] --- A2[G] --- A3[R] --- A4[G]
         B1[G] --- B2[B] --- B3[G] --- B4[B]
         C1[R] --- C2[G] --- C3[R] --- C4[G]
         D1[G] --- D2[B] --- D3[G] --- D4[B]
     end
-    E[IR Cut Filter\nBlocks Infrared] --> F[Color Filter Array\nBayer RGGB Deposited on Glass]
-    F --> G[Silicon Photodiodes\nConvert Photons→Electrons]
+    E["IR-Sperrfilter<br/>Blockiert Infrarot"] --> F["Farbfilter-Array<br/>Bayer-RGGB auf Glas aufgedampft"]
+    F --> G[Silizium-Fotodioden<br/>Wandeln Photonen → Elektronen um]
 ```
 
-After readout, the sensor data is a mosaic of separate red, green, and blue values — not a full-color image yet. The step that fills in the missing color information for each pixel is called **demosaicing** (or debayering) and it is the first major computational step performed in the ISP.
+Nach dem Auslesen sind die Sensordaten ein Mosaik aus einzelnen Rot-, Grün- und Blauwerten — noch kein vollfarbiges Bild. Der Schritt, der die fehlenden Farbinformationen für jedes Pixel ergänzt, wird **Demosaicing** (oder Debayering) genannt und ist der erste große computergestützte Schritt, der im ISP durchgeführt wird.
 
-### Rolling Shutter vs Global Shutter
+### Rolling Shutter vs. Global Shutter
 
-Nearly every smartphone image sensor uses a **rolling shutter**. The sensor does not expose or read all pixels at once. Instead, it exposes and reads the pixel array row by row, from top to bottom, one horizontal line at a time. A typical 48MP sensor rolling readout takes approximately 15 to 25 milliseconds for a full-frame capture.
+Fast jeder Smartphone-Bildsensor verwendet einen **Rolling Shutter**. Der Sensor belichtet oder liest nicht alle Pixel gleichzeitig aus. Stattdessen belichtet und liest er das Pixel-Array Zeile für Zeile, von oben nach unten, eine horizontale Linie nach der anderen aus. Ein typisches Auslesen eines 48-MP-Sensors per Rolling Shutter dauert etwa 15 bis 25 Millisekunden für ein Vollbild.
 
-Rolling shutter produces characteristic distortions on very fast-moving subjects: a spinning airplane propeller or a ceiling fan appears bent or wavy; the top and bottom of a vertically-panned building lean in opposite directions (the "jello effect" in video). Global shutter sensors, by contrast, expose every pixel simultaneously and read them all at once after the exposure ends. Global shutter is used in machine vision, action cameras, and some specialized front-facing IR face-unlock sensors, but the global shutter pixel design has lower light sensitivity and higher cost, so it is not used in main smartphone cameras.
+Der Rolling Shutter erzeugt charakteristische Verzerrungen bei sich sehr schnell bewegenden Objekten: Ein rotierender Flugzeugpropeller oder ein Deckenventilator erscheint gebogen oder wellenförmig; der obere und der untere Teil eines vertikal geschwenkten Gebäudes lehnen sich in entgegengesetzte Richtungen (der "Wackelpudding-Effekt" bei Videos). Global-Shutter-Sensoren hingegen belichten jedes Pixel gleichzeitig und lesen sie alle auf einmal aus, nachdem die Belichtung beendet ist. Global Shutter wird in der maschinellen Bildverarbeitung, bei Action-Kameras und einigen speziellen IR-Sensoren für den Face-Unlock an der Vorderseite verwendet, aber das Global-Shutter-Pixeldesign hat eine geringere Lichtempfindlichkeit und höhere Kosten, weshalb es in Smartphone-Hauptkameras nicht verwendet wird.
 
-## The ISP: Image Signal Processor
+## Der ISP: Image Signal Processor
 
-The **ISP (Image Signal Processor)** is a dedicated hardware block (either a separate chip or, more commonly today, an integrated part of the main SoC alongside the CPU and GPU) whose sole job is to transform the raw, mosaic'd, noisy, distorted data streaming off the sensor into a visually pleasing color image.
+Der **ISP (Image Signal Processor)** ist ein dedizierter Hardwareblock (entweder ein separater Chip oder heute meist ein integrierter Teil des Haupt-SoC neben CPU und GPU), dessen einzige Aufgabe darin besteht, die rohen, mosaikartigen, verrauschten und verzerrten Daten, die vom Sensor kommen, in ein visuell ansprechendes Farbbild zu verwandeln.
 
-The ISP runs a fixed, hardwired pipeline of image processing stages at extremely high throughput. A modern 48MP sensor running at 30 frames per second sends 1.44 billion pixels per second to the ISP. The ISP must process every single pixel through all stages in under 33 milliseconds per frame to keep up.
+Der ISP durchläuft eine feste, fest verdrahtete Pipeline von Bildverarbeitungsstufen mit extrem hohem Durchsatz. Ein moderner 48-MP-Sensor, der mit 30 Bildern pro Sekunde läuft, sendet 1,44 Milliarden Pixel pro Sekunde an den ISP. Der ISP muss jedes einzelne Pixel in weniger als 33 Millisekunden pro Frame durch alle Stufen verarbeiten, um Schritt zu halten.
 
-The canonical ISP pipeline stages, in order, are:
+Die kanonischen ISP-Pipeline-Stufen sind in dieser Reihenfolge:
 
-1. **Hot Pixel Correction**: Factory-calibrated "stuck" pixels (always bright or always dark) are replaced with interpolated values from neighbors.
-2. **Demosaic / Debayer**: The Bayer RGGB mosaic is converted into a full RGB image by estimating the missing two color channels at each pixel location from surrounding pixels using edge-aware interpolation algorithms.
-3. **Noise Reduction (Temporal + Spatial)**: Random shot noise and sensor read noise are suppressed. Spatial NR blurs flat regions while preserving edges. Temporal NR merges information from previous video frames (if available) for even cleaner results.
-4. **Lens Shading Correction (Vignetting Correction)**: The corners of the image are naturally darker because light must pass through the lens at a steeper angle. The ISP applies a per-pixel digital gain ramp, brighter at the corners, to flatten the illumination. Calibration data for this ramp is stored in the module's OTP.
-5. **Geometric Distortion Correction**: Ultra-wide and fisheye lenses produce barrel distortion (straight lines bow outward). The ISP remaps pixel coordinates using a stored polynomial lens model to produce a rectilinear image where straight lines actually appear straight. This step inherently crops 5–10% of the outer pixel ring.
-6. **Color Correction Matrix (CCM)**: The raw sensor RGB spectral response does not match the human eye's trichromatic response. A 3×3 matrix multiplication converts sensor-native RGB into standard sRGB or DCI-P3 color space. The CCM coefficients are tuned per-module per-illuminant (daylight, tungsten, fluorescent).
-7. **Tone Curve Adjustment**: A non-linear S-shaped tone mapping curve is applied to the linear RGB data to compress the high-dynamic-range sensor signal into the low-dynamic-range output (typically 8-bit sRGB gamma-encoded). This step is what makes the image "pop" — contrast increases in the midtones, highlights are rolled off, shadows are lifted.
-8. **Edge Enhancement / Sharpening**: A subtle unsharp mask is applied to recover high-frequency detail softened by the noise reduction and optical low-pass filter. The sharpening amount is carefully controlled to avoid introducing halos.
+1. **Hot-Pixel-Korrektur**: Werkskalibrierte "hängende" Pixel (immer hell oder immer dunkel) werden durch interpolierte Werte der Nachbarn ersetzt.
+2. **Demosaic / Debayer**: Das Bayer-RGGB-Mosaik wird in ein vollständiges RGB-Bild umgewandelt, indem die fehlenden zwei Farbkanäle an jeder Pixelposition aus den umgebenden Pixeln mittels kantenbewusster Interpolationsalgorithmen geschätzt werden.
+3. **Rauschunterdrückung (Temporär + Räumlich)**: Zufälliges Schrotrauschen und Sensorausleserauschen werden unterdrückt. Die räumliche Rauschunterdrückung (Spatial NR) zeichnet flache Regionen weich, während Kanten erhalten bleiben. Die temporäre Rauschunterdrückung (Temporal NR) führt Informationen aus vorherigen Videoframes zusammen (falls verfügbar), um noch sauberere Ergebnisse zu erzielen.
+4. **Korrektur der Objektivschattierung (Vignettierungskorrektur)**: Die Ecken des Bildes sind von Natur aus dunkler, da das Licht in einem steileren Winkel durch das Objektiv treten muss. Der ISP wendet eine digitale Gain-Rampe pro Pixel an, die an den Ecken heller ist, um die Ausleuchtung zu ebnen. Die Kalibrierungsdaten für diese Rampe sind im OTP des Moduls gespeichert.
+5. **Korrektur geometrischer Verzeichnungen**: Ultraweitwinkel- und Fischaugenobjektive erzeugen eine Tonnenverzeichnung (gerade Linien wölben sich nach außen). Der ISP ordnet die Pixelkoordinaten anhand eines gespeicherten polynomialen Linsenmodells neu zu, um ein rektilineares Bild zu erzeugen, auf dem gerade Linien auch wirklich gerade erscheinen. Dieser Schritt beschneidet zwangsläufig 5–10 % des äußeren Pixelrings.
+6. **Farbkorrekturmatrix (CCM)**: Das RGB-Spektrum des rohen Sensors entspricht nicht der trichromatischen Antwort des menschlichen Auges. Eine 3×3-Matrixmultiplikation wandelt sensor-natives RGB in den Standard-sRGB- oder DCI-P3-Farbraum um. Die CCM-Koeffizienten werden pro Modul und pro Lichtquelle (Tageslicht, Kunstlicht, Leuchtstofflampe) abgestimmt.
+7. **Anpassung der Tone-Curve**: Eine nichtlineare S-förmige Tone-Mapping-Kurve wird auf die linearen RGB-Daten angewendet, um das Sensorsignal mit hohem Dynamikumfang in den Ausgang mit niedrigem Dynamikumfang zu komprimieren (typischerweise 8-Bit sRGB Gamma-kodiert). Dieser Schritt verleiht dem Bild seine "Brillanz" — der Kontrast in den Mitteltönen steigt, Lichter werden abgemildert, Schatten werden angehoben.
+8. **Kantenanhebung / Schärfen**: Ein subtiler Unscharf-Maskierungs-Filter wird angewendet, um hochfrequente Details wiederherzustellen, die durch die Rauschunterdrückung und den optischen Tiefpassfilter weichgezeichnet wurden. Die Stärke der Schärfung wird sorgfältig kontrolliert, um Halos zu vermeiden.
 
 ```mermaid
 flowchart TD
-    A[Raw Bayer Data\nfrom Sensor] --> B[Hot Pixel Correction]
-    B --> C[Demosaic / Debayer\nBayer → Full RGB]
-    C --> D[Noise Reduction\nSpatial + Temporal]
-    D --> E[Lens Shading Correction\nFix Vignetting]
-    E --> F[Geometric Distortion\nCorrect Fisheye / Barrel]
-    F --> G[Color Correction Matrix\nsRGB / P3 Color Space]
-    G --> H[Tone Curve Adjustment\nGamma + S-Curve]
-    H --> I[Edge Enhancement / Sharpening]
-    I --> J[Final Processed Image\n→ JPEG Encoder / Display]
+    A["Rohe Bayer-Daten<br/>vom Sensor"] --> B["Hot-Pixel-Korrektur"]
+    B --> C[Demosaic / Debayer<br/>Bayer → Voll-RGB]
+    C --> D[Rauschunterdrückung<br/>Räumlich + Temporär]
+    D --> E[Objektivschattierungskorrektur<br/>Vignettierung beheben]
+    E --> F[Geometrische Verzeichnung<br/>Fischauge / Tonne korrigieren]
+    F --> G[Farbkorrekturmatrix<br/>sRGB / P3-Farbraum]
+    G --> H[Anpassung der Tone-Curve<br/>Gamma + S-Kurve]
+    H --> I[Kantenanhebung / Schärfen]
+    I --> J[Finales verarbeitetes Bild<br/>→ JPEG-Encoder / Display]
 ```
 
-The ISP's processing quality is a major differentiator between phone manufacturers. Google, Samsung, Apple, and Xiaomi each tune their ISP pipelines with different artistic priorities: some favor natural colors, some oversaturated "punchy" output, some aggressive noise reduction vs retained detail. The Camera2 API gives you some control over individual ISP stage strengths (via the Android tonemap and color correction controls), but most of the detailed stage parameters are locked behind vendor proprietary APIs.
+Die Verarbeitungsqualität des ISP ist ein wichtiges Unterscheidungsmerkmal zwischen den Telefonherstellern. Google, Samsung, Apple und Xiaomi stimmen ihre ISP-Pipelines mit unterschiedlichen künstlerischen Prioritäten ab: Einige bevorzugen natürliche Farben, andere übersättigte, kontrastreiche Ausgaben, einige eine aggressive Rauschunterdrückung gegenüber erhaltenen Details. Die Camera2-API gibt Ihnen eine gewisse Kontrolle über die Stärke einzelner ISP-Stufen (über die Android-Steuerungen für Tonemap und Farbkorrektur), aber die meisten detaillierten Stufenparameter sind hinter herstellerspezifischen proprietären APIs gesperrt.
 
-## RAW vs JPEG: Two Paths from Sensor to Storage
+## RAW vs. JPEG: Zwei Wege vom Sensor zum Speicher
 
-The ISP pipeline above produces a processed image. But the Camera2 API also allows you to bypass the ISP entirely and read the raw sensor data directly. This is the critical distinction between RAW and JPEG output.
+Die oben beschriebene ISP-Pipeline erzeugt ein verarbeitetes Bild. Die Camera2-API ermöglicht es Ihnen jedoch auch, den ISP vollständig zu umgehen und die rohen Sensordaten direkt auszulesen. Dies ist die entscheidende Unterscheidung zwischen RAW- und JPEG-Ausgabe.
 
-### RAW Format
+### RAW-Format
 
-A **RAW file** (on Android this means a DNG file, Digital Negative) contains exactly what the sensor measured before any ISP processing runs. It is a 10-bit, 12-bit, or 14-bit per pixel Bayer mosaic — still in the original RGGB pattern, still with vignetting, still with noise, still linear. The RAW file also contains metadata tags specifying the exact color filter array pattern, the sensor's color profile, black level, white level, and the lens model.
+Eine **RAW-Datei** (unter Android bedeutet dies eine DNG-Datei, Digital Negative) enthält genau das, was der Sensor gemessen hat, bevor eine ISP-Verarbeitung erfolgt ist. Es handelt sich um ein 10-Bit-, 12-Bit- oder 14-Bit-Bayer-Mosaik pro Pixel — immer noch im ursprünglichen RGGB-Muster, immer noch mit Vignettierung, immer noch mit Rauschen, immer noch linear. Die RAW-Datei enthält außerdem Metadaten-Tags, die das genaue Farbfilter-Array-Muster, das Farbprofil des Sensors, den Schwarzpunkt, den Weißpunkt und das Objektivmodell angeben.
 
-- **Bit depth**: RAW10 = 10 bits per channel = 1,024 levels. RAW12 = 4,096 levels. RAW14 = 16,384 levels. Compare this to JPEG's 8 bits = 256 levels.
-- **File size**: 20–40 MB per 48MP photo. Uncompressed or near-lossless compressed.
-- **Use case**: Professional post-production editing. The extra stops of headroom allow an editor to "rescue" overexposed highlights (by 2 to 3 stops of EV) or lift underexposed shadows without banding.
+- **Bittiefe**: RAW10 = 10 Bit pro Kanal = 1.024 Stufen. RAW12 = 4.096 Stufen. RAW14 = 16.384 Stufen. Vergleichen Sie dies mit den 8 Bit von JPEG = 256 Stufen.
+- **Dateigröße**: 20–40 MB pro 48-MP-Foto. Unkomprimiert oder nahezu verlustfrei komprimiert.
+- **Anwendungsfall**: Professionelle Nachbearbeitung. Die zusätzlichen Blendenstufen Spielraum ermöglichen es einem Bildbearbeiter, überbelichtete Lichter (um 2 bis 3 EV-Stufen) zu "retten" oder unterbelichtete Schatten ohne Streifenbildung (Banding) anzuheben.
 
-### JPEG Format
+### JPEG-Format
 
-A **JPEG file** is the fully-cooked output of the ISP. Every single one of the 8 ISP stages above has already been applied to the pixel data. Then the image is converted from RGB to YCbCr 4:2:0 chroma-subsampled color space and compressed with a lossy Discrete Cosine Transform algorithm at roughly a 10:1 to 20:1 compression ratio.
+Eine **JPEG-Datei** ist die vollständig "fertige" Ausgabe des ISP. Jede einzelne der 8 oben genannten ISP-Stufen wurde bereits auf die Pixeldaten angewendet. Dann wird das Bild von RGB in den YCbCr 4:2:0 Farbraum mit Chroma-Subsampling umgewandelt und mit einem verlustbehafteten Diskrete-Kosinustransformations-Algorithmus bei einem Kompressionsverhältnis von etwa 10:1 bis 20:1 komprimiert.
 
-- **Bit depth**: Always 8 bits per channel = 256 levels per color.
-- **File size**: 2–5 MB for a 12MP–48MP photo, depending on JPEG quality level.
-- **Use case**: Instant sharing, social media, any workflow where the photo is "done" as shot. Adjustments in a mobile editor degrade the image quickly because only 256 levels remain.
+- **Bittiefe**: Immer 8 Bit pro Kanal = 256 Stufen pro Farbe.
+- **Dateigröße**: 2–5 MB für ein 12-MP- bis 48-MP-Foto, abhängig von der JPEG-Qualitätsstufe.
+- **Anwendungsfall**: Sofortiges Teilen, soziale Medien, jeder Workflow, bei dem das Foto direkt "fertig" sein soll. Anpassungen in einem mobilen Editor verschlechtern das Bild schnell, da nur noch 256 Stufen übrig sind.
 
-### Comparison Table: RAW vs JPEG
+### Vergleichstabelle: RAW vs. JPEG
 
-| Feature | RAW (DNG) | JPEG |
+| Merkmal | RAW (DNG) | JPEG |
 |---------|-----------|------|
-| ISP Processing Applied | None — all stages skipped | All 8 stages applied and irreversible |
-| Color Depth | 10–14 bit (1,024–16,384 levels) | 8 bit (256 levels) |
-| White Balance | Tagged in metadata, fully changeable in post | Baked into pixels — minor edits only |
-| Exposure Latitude | ±2 to 3 stops recoverable | ±1/2 stop at best before banding |
-| File Size (48MP) | 25–40 MB | 3–6 MB |
-| Color Space | Sensor-native linear RGB | sRGB or Display P3 gamma-encoded |
-| Sharpening / Noise Reduction | None — editor's choice | Applied; can't be undone |
-| Typical Workflow | Adobe Lightroom / Capture One workflow | Direct share to Instagram / Messages |
+| Angewandte ISP-Verarbeitung | Keine — alle Stufen übersprungen | Alle 8 Stufen angewendet und irreversibel |
+| Farbtiefe | 10–14 Bit (1.024–16.384 Stufen) | 8 Bit (256 Stufen) |
+| Weißabgleich | In Metadaten markiert, nachträglich voll änderbar | In Pixel eingebrannt — nur geringe Korrekturen |
+| Belichtungsspielraum | ±2 bis 3 Blendenstufen rettbar | Max. ±1/2 Blendenstufe vor Banding |
+| Dateigröße (48 MP) | 25–40 MB | 3–6 MB |
+| Farbraum | Sensor-natives lineares RGB | sRGB oder Display P3 Gamma-kodiert |
+| Schärfung / Rauschunterdrückung | Keine — Entscheidung des Bearbeiters | Angewendet; kann nicht rückgängig gemacht werden |
+| Typischer Workflow | Adobe Lightroom / Capture One | Direktes Teilen auf Instagram / Messenger |
 
-## Multi-Camera Phones: Why Not One Giant Zoom Lens?
+## Multi-Kamera-Handys: Warum nicht ein riesiges Zoomobjektiv?
 
-A traditional point-and-shoot camera uses a single zoom lens with moving internal groups that continuously change focal length from wide to telephoto. Why can't a smartphone do the same? Physics. A 10× zoom lens that covers 24mm–240mm full-frame equivalent with a constant f/2.8 aperture requires an optical path roughly 5 centimeters (2 inches) long. A smartphone is, at most, 0.9 centimeters thick. The math simply does not fit.
+Eine herkömmliche Point-and-Shoot-Kamera verwendet ein einzelnes Zoomobjektiv mit beweglichen internen Gruppen, die die Brennweite kontinuierlich von Weitwinkel bis Tele verändern. Warum kann ein Smartphone das nicht? Die Physik sagt Nein. Ein 10-fach-Zoomobjektiv, das 24 mm–240 mm kleinbildäquivalent mit einer konstanten Blende von f/2.8 abdeckt, erfordert einen optischen Pfad von etwa 5 Zentimetern Länge. Ein Smartphone ist höchstens 0,9 Zentimeter dick. Die Mathematik geht einfach nicht auf.
 
-The smartphone industry solved this not with a zoom lens, but with **multiple fixed-focal-length cameras**, each optimized for a different purpose, and a "smooth zoom" computational system that fades from one camera to the next at specific zoom ratios.
+Die Smartphone-Industrie löste dies nicht mit einem Zoomobjektiv, sondern mit **mehreren Kameras mit fester Brennweite**, die jeweils für einen anderen Zweck optimiert sind, und einem computergestützten System für "sanftes Zoomen", das bei bestimmten Zoomverhältnissen von einer Kamera zur nächsten überblendet.
 
-A typical 2026 flagship rear camera island contains:
+Eine typische Rückkamera-Insel eines Flaggschiffs aus dem Jahr 2026 enthält:
 
-1. **Ultra-Wide (0.5× zoom, ~13mm eq, ~120° FOV)**: Short focal length, large depth of field. Ideal for landscapes, architecture, group shots, and close-focus macro when repositioned via software.
-2. **Wide / Primary (1× zoom, ~24mm eq, ~75° FOV)**: The default. The largest sensor, the widest aperture, the best OIS. Used for 80% of everyday photos.
-3. **Telephoto / Periscope (3× to 10× optical, ~72mm to ~240mm eq)**: A conventional telephoto lens (3×) sits directly above its sensor. A periscope telephoto (5×, 10×) uses a 45° prism near the phone's edge to reflect light 90°, so the lens barrel runs horizontally inside the phone's body rather than vertically through its thickness.
-4. **ToF / Depth Sensor**: A near-infrared laser dot projector (or, on iPhones, a structured-light LiDAR scanner) that pulses 30,000+ IR dots onto the scene and measures their round-trip time to produce a per-pixel depth map. Used for accurate portrait bokeh, augmented reality occlusion, and fast autofocus in low light.
+1. **Ultraweitwinkel (0,5-facher Zoom, ~13 mm Äquiv., ~120° FOV)**: Kurze Brennweite, große Schärfentiefen. Ideal für Landschaften, Architektur, Gruppenaufnahmen und Makro-Nahaufnahmen bei softwaregestützter Neupositionierung.
+2. **Weitwinkel / Primär (1-facher Zoom, ~24 mm Äquiv., ~75° FOV)**: Der Standard. Der größte Sensor, die größte Blende, das beste OIS. Wird für 80 % der alltäglichen Fotos verwendet.
+3. **Tele / Periskop (3- bis 10-facher optischer Zoom, ~72 mm bis ~240 mm Äquiv.)**: Ein herkömmliches Telemodul (3-fach) sitzt direkt über seinem Sensor. Ein Periskop-Tele (5-fach, 10-fach) nutzt ein 45°-Prisma am Rand des Telefons, um das Licht um 90° umzulenken, sodass der Objektivtubus horizontal im Gehäuse des Telefons verläuft und nicht vertikal durch dessen Dicke.
+4. **ToF / Tiefensensor**: Ein Nahinfrarot-Laserpunktprojektor (oder bei iPhones ein LiDAR-Scanner), der über 30.000 IR-Punkte auf die Szene pulst und deren Laufzeit misst, um eine Tiefenkarte pro Pixel zu erstellen. Wird für präzises Porträt-Bokeh, Augmented-Reality-Verdeckung und schnellen Autofokus bei wenig Licht verwendet.
 
 ```mermaid
 graph TB
-    subgraph "Phone Rear Camera Island"
-        A[Rear Glass Cover]
+    subgraph "Kamera-Insel auf der Rückseite des Telefons"
+        A["Hintere Glasabdeckung"]
     end
-    A --> B[Ultra-Wide Camera\n13mm eq / 120° FOV]
-    A --> C[Wide / Primary Camera\n24mm eq / f/1.6 + OIS]
-    A --> D[5× Periscope Telephoto\n120mm eq / Prism-Refracted]
-    A --> E[ToF Depth Sensor\nLaser Dot Projector]
+    A --> B[Ultraweitwinkel-Kamera<br/>13 mm Äquiv. / 120° FOV]
+    A --> C[Weitwinkel- / Hauptkamera<br/>24 mm Äquiv. / f/1.6 + OIS]
+    A --> D[5-faches Periskop-Tele<br/>120 mm Äquiv. / Prisma-Reflexion]
+    A --> E[ToF Tiefensensor<br/>Laserpunktprojektor]
 ```
 
-When you perform a pinch-zoom gesture in the camera app, the HAL (Hardware Abstraction Layer) smoothly switches the active physical camera at pre-determined thresholds. For example, zooming from 0.5× to 1.0× fades from the ultra-wide to the wide. At 2.9× the app is still digitally cropping the wide camera. At 3.0×, the HAL switches the active source to the periscope telephoto camera. Between those zoom ratios, a sophisticated image-fusing algorithm uses both cameras simultaneously to maintain a seamless transition.
+Wenn Sie in der Kamera-App eine Pinch-to-Zoom-Geste ausführen, schaltet der HAL (Hardware Abstraction Layer) an fest vorgegebenen Schwellenwerten die aktive physische Kamera nahtlos um. Zum Beispiel wird beim Zoomen von 0,5x auf 1,0x vom Ultraweitwinkel auf das Weitwinkel übergeblendet. Bei 2,9x wird die Weitwinkelkamera immer noch digital beschnitten. Bei 3,0x schaltet der HAL die aktive Quelle auf das Periskop-Telemodul um. Zwischen diesen Zoomstufen nutzt ein ausgeklügelter Image-Fusing-Algorithmus beide Kameras gleichzeitig, um einen nahtlosen Übergang zu gewährleisten.
 
-## The Full Journey: From Photon to Saved Photo, Millisecond by Millisecond
+## Die volle Reise: Vom Photon zum gespeicherten Foto, Millisekunde für Millisekunde
 
-Here is the complete, numbered timeline of what physically happens inside a smartphone during a single still photo capture, starting from the moment the user's finger lifts off the virtual shutter button. The numbers are representative of a 2026 flagship capturing a 12MP default-mode JPEG in daylight:
+Hier ist der vollständige, nummerierte Zeitablauf dessen, was physisch in einem Smartphone während einer einzelnen Standbildaufnahme passiert, beginnend mit dem Moment, in dem der Finger des Benutzers den virtuellen Auslöser loslässt. Die Zahlen sind repräsentativ für ein Flaggschiff von 2026, das ein 12-MP-JPEG im Standardmodus bei Tageslicht aufnimmt:
 
-- **0 ms**: User taps shutter. The Camera2 API framework receives the `CaptureRequest` with `TEMPLATE_STILL_CAPTURE`.
-- **0–2 ms**: The 3A algorithm (Auto-Focus, Auto-Exposure, Auto-White-Balance) converges to its final values.
-- **2–6 ms**: The voice coil motor (VCM) energizes its coil, physically moving the lens barrel by 0.2mm to the exact focus distance the AF algorithm calculated.
-- **6–21 ms (15 ms exposure)**: The global reset releases the sensor pixels' charge. For 15 milliseconds, photodiodes accumulate photon-generated electrons. The rolling shutter reads out row-by-row during and after this window.
-- **18–28 ms**: The sensor outputs the raw Bayer data over the MIPI CSI-2 high-speed serial bus. A typical configuration is 4 data lanes at 2.5 Gbps per lane = 10 Gbps total bandwidth, which comfortably handles a 12MP frame's raw bit depth plus blanking intervals.
-- **28–31 ms**: The ISP's 8-stage pipeline processes the frame through hotpixel correction, demosaic, noise reduction, lens shading, geometric correction, color matrix, tone curve, and sharpening. This happens entirely in hardware — no CPU involvement at the pixel level.
-- **31–33 ms**: The processed YUV image is sent to the hardware JPEG encoder, which applies lossy DCT compression at quality level 90–95 and writes the JFIF file headers (EXIF, thumbnail, GPS coordinates if tagged).
-- **33–40 ms**: The completed JPEG blob is written via the MediaStore content provider into the app's files directory, for example `/data/data/com.yourpackagename/files/DCIM/Camera/IMG_20260806_151042.jpg`. The MediaScanner is notified, and the photo appears in the system gallery.
+- **0 ms**: Benutzer tippt auf den Auslöser. Das Camera2-API-Framework empfängt den `CaptureRequest` mit `TEMPLATE_STILL_CAPTURE`.
+- **0–2 ms**: Der 3A-Algorithmus (Auto-Focus, Auto-Exposure, Auto-White-Balance) konvergiert auf seine endgültigen Werte.
+- **2–6 ms**: Der Voice Coil Motor (VCM) setzt seine Spule unter Strom und bewegt den Objektivtubus physisch um 0,2 mm auf die exakte Fokusdistanz, die der AF-Algorithmus berechnet hat.
+- **6–21 ms (15 ms Belichtung)**: Der Global Reset gibt die Ladung der Sensorpixel frei. 15 Millisekunden lang sammeln die Fotodioden durch Photonen erzeugte Elektronen. Der Rolling Shutter liest während und nach diesem Fenster Zeile für Zeile aus.
+- **18–28 ms**: Der Sensor gibt die rohen Bayer-Daten über den seriellen Hochgeschwindigkeitsbus MIPI CSI-2 aus. Eine typische Konfiguration sind 4 Datenleitungen mit je 2,5 Gbit/s = 10 Gbit/s Gesamtbandbreite, was die rohe Bittiefe eines 12-MP-Frames plus Austastlücken bequem bewältigt.
+- **28–31 ms**: Die 8-stufige Pipeline des ISP verarbeitet das Bild durch Hotpixel-Korrektur, Demosaic, Rauschunterdrückung, Objektivschattierung, geometrische Korrektur, Farbmatrix, Tonwertkurve und Schärfung. Dies geschieht vollständig in Hardware — ohne CPU-Beteiligung auf Pixelebene.
+- **31–33 ms**: Das verarbeitete YUV-Bild wird an den Hardware-JPEG-Encoder gesendet, der die verlustbehaftete DCT-Kompression bei Qualitätsstufe 90–95 anwendet und die JFIF-Datei-Header schreibt (EXIF, Thumbnail, GPS-Koordinaten, falls markiert).
+- **33–40 ms**: Der fertige JPEG-Blob wird über den MediaStore-Content-Provider in das Dateiverzeichnis der App geschrieben, zum Beispiel `/data/data/com.ihrpaketname/files/DCIM/Camera/IMG_20260806_151042.jpg`. Der MediaScanner wird benachrichtigt, und das Foto erscheint in der Galerie des Systems.
 
 ```mermaid
 sequenceDiagram
     participant User
     participant UI as App UI
-    participant VCM as VCM / Focus Actuator
-    participant Sensor as Image Sensor
+    participant VCM as VCM / Fokus-Aktor
+    participant Sensor as Bildsensor
     participant MIPI as MIPI CSI-2 Bus
-    participant ISP as ISP Pipeline
-    participant JPEG as JPEG Encoder
-    participant Storage as Flash Storage
+    participant ISP as ISP-Pipeline
+    participant JPEG as JPEG-Encoder
+    participant Storage as Flash-Speicher
 
-    User->>UI: 0ms: Tap Shutter Button
-    UI->>VCM: 2ms: Move lens to AF distance
-    VCM-->>UI: 6ms: Focus locked
-    UI->>Sensor: 6ms: Start exposure
-    Note over Sensor: 6ms–21ms: 15ms exposure rolling readout
-    Sensor->>MIPI: 18ms–28ms: Stream RAW Bayer @ 10Gbps
-    MIPI->>ISP: 28ms: Full frame received
-    Note over ISP: 28ms–31ms: 8-stage pipeline processing
-    ISP->>JPEG: 31ms: Send YUV frame
-    JPEG-->>ISP: 33ms: JPEG compressed
-    ISP->>Storage: 33ms–40ms: Write JPEG + EXIF
-    Storage-->>UI: 40ms: File saved OK
-    UI-->>User: 40ms: Show thumbnail animation
+    User->>UI: 0 ms: Auslöser tippen
+    UI->>VCM: 2 ms: Objektiv auf AF-Distanz bewegen
+    VCM-->>UI: 6 ms: Fokus gesperrt
+    UI->>Sensor: 6 ms: Belichtung starten
+    Note over Sensor: 6 ms–21 ms: 15 ms Belichtung Rolling-Readout
+    Sensor->>MIPI: 18 ms–28 ms: RAW Bayer streamen @ 10 Gbit/s
+    MIPI->>ISP: 28 ms: Vollbild empfangen
+    Note over ISP: 28 ms–31 ms: Verarbeitung in der 8-stufigen Pipeline
+    ISP->>JPEG: 31 ms: YUV-Bild senden
+    JPEG-->>ISP: 33 ms: JPEG komprimiert
+    ISP->>Storage: 33 ms–40 ms: JPEG + EXIF schreiben
+    Storage-->>UI: 40 ms: Datei erfolgreich gespeichert
+    UI-->>User: 40 ms: Thumbnail-Animation zeigen
 ```
 
-The entire process takes approximately 40 milliseconds end-to-end for a daylight still photo. In low light the exposure time itself lengthens (potentially to several seconds for Night Mode multi-frame capture), and the timeline scales proportionally.
+Der gesamte Prozess dauert bei einem Standbild am Tag etwa 40 Millisekunden von Ende zu Ende. Bei wenig Licht verlängert sich die Belichtungszeit selbst (potenziell auf mehrere Sekunden bei einer Multi-Frame-Aufnahme im Nachtmodus), und der Zeitablauf skaliert entsprechend.
 
-## Summary
+## Zusammenfassung
 
-You now have a complete physical picture of the smartphone camera system. You know that each rear camera bump is a sealed module containing a lens barrel with multiple elements, a VCM autofocus actuator, an IR-cut filter, a CMOS sensor with a Bayer RGGB color filter array, and a flex cable carrying MIPI CSI-2 data. You understand focal length equivalence, aperture, and OIS. You know how the ISP's 8-stage pipeline transforms a raw Bayer mosaic into a finished JPEG, and you can distinguish RAW (sensor-native, 10–14 bit, post-processing headroom) from JPEG (ISP-processed, 8-bit, share-ready). You understand why modern phones use 3+ fixed cameras instead of a zoom lens, and you have walked through the exact millisecond-by-millisecond timeline of a single photo capture.
+Sie haben nun ein vollständiges physisches Bild des Smartphone-Kamerasystems. Sie wissen, dass jede Wölbung der Rückkamera ein versiegeltes Modul ist, das einen Objektivtubus mit mehreren Elementen, einen VCM-Autofokus-Aktor, einen IR-Sperrfilter, einen CMOS-Sensor mit einem Bayer-RGGB-Farbfilter-Array und ein Flachbandkabel für MIPI-CSI-2-Daten enthält. Sie verstehen das Brennweiten-Äquivalent, die Blende und OIS. Sie wissen, wie die 8-stufige Pipeline des ISP ein rohes Bayer-Mosaik in ein fertiges JPEG verwandelt, und Sie können RAW (sensor-nativ, 10–14 Bit, Spielraum für Nachbearbeitung) von JPEG (ISP-verarbeitet, 8 Bit, bereit zum Teilen) unterscheiden. Sie verstehen, warum moderne Telefone 3+ fest installierte Kameras anstelle eines Zoomobjektivs verwenden, und Sie haben den exakten Millisekunden-Zeitablauf einer einzelnen Fotoaufnahme durchlaufen.
 
-## What's Next
+## Wie geht es weiter?
 
-In Chapter 3, we move from the physical hardware to what that hardware is capable of producing. We will explore the real-world features of modern smartphone photography: HDR multi-frame bracketing, portrait bokeh via stereo / ToF / ML, Night Sight multi-frame long exposures, slow-motion high-speed video capture, ultra-wide distortion correction, and periscope telephoto. You will learn how computational photography — the fusion of optics, sensors, multi-frame signal processing, and on-device machine learning — creates imagery that no single lens/sensor combination could ever produce on its own.
+In Kapitel 3 gehen wir von der physischen Hardware dazu über, wozu diese Hardware in der Lage ist. Wir werden die realen Funktionen der modernen Smartphone-Fotografie erkunden: HDR-Belichtungsreihen, Porträt-Bokeh über Stereo / ToF / ML, Multi-Frame-Langzeitbelichtungen bei Night Sight, Zeitlupen-Hochgeschwindigkeitsaufnahmen, Ultraweitwinkel-Verzeichnungskorrektur und Periskop-Teleobjektive. Sie werden lernen, wie die computergestützte Fotografie — die Verschmelzung von Optik, Sensoren, Multi-Frame-Signalverarbeitung und maschinellem Lernen auf dem Gerät — Bilder erzeugt, die keine einzelne Kombination aus Objektiv und Sensor jemals von sich aus produzieren könnte.

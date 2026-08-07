@@ -1,35 +1,35 @@
 ---
 sidebar_position: 16
-title: "Chapter 16: White Balance & Color"
-description: Control color in Android Camera2 with Auto White Balance presets and manual color correction. Learn AWB modes, color temperature (2000K–10000K), 3×3 color transforms, COLOR_CORRECTION_GAINS, and working Kotlin code for warm-tone sunset presets and full manual white balance.
-keywords: [android camera2 white balance, CONTROL_AWB_MODE, COLOR_CORRECTION_GAINS, COLOR_CORRECTION_TRANSFORM, color temperature, color correction matrix, Rec.709 vs DCI-P3 camera2]
+title: "第 16 章：白平衡与色彩"
+description: 在 Android Camera2 中利用自动白平衡预设和手动色彩校正来控制色彩。学习 AWB 模式、色温 (2000K–10000K)、3×3 色彩变换、COLOR_CORRECTION_GAINS，以及用于暖色调日落预设和全手动白平衡的 Kotlin 代码。
+keywords: [android camera2 白平衡, CONTROL_AWB_MODE, COLOR_CORRECTION_GAINS, COLOR_CORRECTION_TRANSFORM, 色温, 色彩校正矩阵, Rec.709 对比 DCI-P3 camera2]
 ---
 
-# Chapter 16: White Balance & Color
+# 第 16 章：白平衡与色彩
 
-You've mastered brightness (exposure) and sharpness (focus). Now it's time to control the **look** — the *color tone* of the image.
+你已经掌握了亮度（曝光）和清晰度（对焦）。现在是时候控制图像的**观感**了——即色彩基调。
 
-When you take a photo of a white piece of paper under a warm incandescent lamp, the lamp's yellow/orange light hits the paper, and the sensor sees it as orange. *Your brain* corrects for this instantly and still sees "white paper" — but the raw sensor data records the truth: it's orange.
+当你在一盏暖色白炽灯下拍摄一张白纸时，灯光的黄/橙色光线照射在纸上，传感器看到的就是橙色。*你的大脑*会立即纠正这一点，依然看到"白纸"——但原始传感器数据记录的是事实：它是橙色的。
 
-**White Balance (WB)** is the camera's process of compensating for the color of the light source so that neutral whites look neutral. Get it wrong, and your entire photo has an unwanted color cast (too orange, too blue, too green).
+**白平衡 (White Balance, WB)** 是相机补偿光源颜色的过程，从而使中性白色看起来真的是白色的。如果搞错了，整张照片都会带有不想要的色偏（太橙、太蓝或太绿）。
 
-The [Android Camera Parameters app](https://github.com/zoozooll/AndroidCameraParameters) showcases every AWB preset in a live grid view and exposes a manual gains slider — open the app, switch to the White Balance panel, and you can watch exactly what we'll implement in this chapter.
+**Android Camera Parameters** 应用在实时网格视图中展示了每一个 AWB 预设，并提供了一个手动增益滑块——打开应用，切换到白平衡面板，你就可以观察到我们将在本章中实现的精确效果。
 
 ---
 
-## Color Temperature: The Warm-to-Cool Spectrum
+## 色温：从暖到冷的频谱
 
-Light sources are described by their **color temperature** in Kelvin (K). The scale describes the temperature of a theoretical "black body radiator" that glows the same color.
+光源是用开尔文 (K) 为单位的**色温**来描述的。这个标度描述了一个理论上的"黑体辐射器"发出的光的颜色与其温度的关系。
 
 ```mermaid
 graph LR
-    A[1800K<br/>Candlelight] --> B[2800K<br/>Incandescent Lamp]
-    B --> C[3500K<br/>Warm Fluorescent]
-    C --> D[4500K<br/>Cool Fluorescent]
-    D --> E[5500K<br/>Daylight / Flash]
-    E --> F[6500K<br/>Overcast Day]
-    F --> G[8000K<br/>Open Shade]
-    G --> H[10000K+<br/>Blue Sky / Deep Shade]
+    A["1800K<br/>烛光"] --> B["2800K<br/>白炽灯"]
+    B --> C[3500K<br/>暖色荧光灯]
+    C --> D[4500K<br/>冷色荧光灯]
+    D --> E[5500K<br/>日光 / 闪光灯]
+    E --> F[6500K<br/>阴天]
+    F --> G[8000K<br/>开阔阴影]
+    G --> H[10000K+<br/>蓝天 / 深层阴影]
     style A fill:#e67e22,color:#fff
     style B fill:#f39c12,color:#fff
     style C fill:#f1c40f,color:#333
@@ -40,92 +40,92 @@ graph LR
     style H fill:#3498db,color:#fff
 ```
 
-**Counterintuitive rule:** Warm light = *low* Kelvin number (1800K candle = very orange). Cool light = *high* Kelvin number (10000K sky = very blue). Your eyes learn this in childhood; your code must remember it explicitly.
+**反直觉的规则：** 暖色光 = *低*开尔文数值（1800K 烛光 = 非常橙）。冷色光 = *高*开尔文数值（10000K 天空 = 非常蓝）。你的眼睛在童年就学会了这一点；你的代码必须显式记住它。
 
-| Scene | Typical Color Temp | Cast if "Daylight" WB Used |
+| 场景 | 典型色温 | 若使用"日光"白平衡产生的偏色 |
 |-------|-------------------|----------------------------|
-| Candlelight dinner | 1800–2200K | Very orange / amber |
-| Home tungsten bulb | 2700–3000K | Orange / yellow |
-| Sunrise / Sunset | 3000–4000K | Warm golden tint (often desirable!) |
-| "Cool white" fluorescent | 4000–5000K | Greenish tint |
-| Midday sunlight | 5200–5800K | Correct neutral |
-| Electronic flash | 5500–6000K | Neutral (matches daylight) |
-| Overcast / heavy cloud | 6000–7500K | Slightly blue |
-| Open shade (no direct sun) | 7000–9000K | Blue cast |
-| Hazy blue sky | 9000–12000K | Very blue |
+| 烛光晚餐 | 1800–2200K | 非常橙 / 琥珀色 |
+| 家用钨丝灯泡 | 2700–3000K | 橙色 / 黄色 |
+| 日出 / 日落 | 3000–4000K | 暖金色调（通常很讨喜！） |
+| "冷白色"荧光灯 | 4000–5000K | 带绿色的色调 |
+| 正午阳光 | 5200–5800K | 正确的中性色 |
+| 电子闪光灯 | 5500–6000K | 中性色（与日光匹配） |
+| 阴天 / 浓云 | 6000–7500K | 略微偏蓝 |
+| 开阔阴影（无直射阳光） | 7000–9000K | 蓝色偏色 |
+| 朦胧蓝天 | 9000–12000K | 非常蓝 |
 
-Auto White Balance's job: detect the likely illuminant from scene statistics, then *subtract* the color cast so neutral objects appear neutral.
+自动白平衡的工作：从场景统计数据中检测可能的光源，然后*减去*偏色，使中性物体呈现中性色。
 
 ---
 
-## Auto White Balance (AWB) Modes in Camera2
+## Camera2 中的自动白平衡 (AWB) 模式
 
-Set via `CaptureRequest.CONTROL_AWB_MODE`:
+通过 `CaptureRequest.CONTROL_AWB_MODE` 进行设置：
 
-| Mode (CONTROL_AWB_MODE_*) | Effect | Use Case |
+| 模式 (CONTROL_AWB_MODE_*) | 效果 | 用例 |
 |---------------------------|--------|----------|
-| `OFF` | Manual white balance only. Use `COLOR_CORRECTION_GAINS` or `_TRANSFORM` explicitly. | Pro mode, custom color grading, RAW + post |
-| `AUTO` | Default. The ISP runs illuminant detection continuously. | General photography |
-| `INCANDESCENT` (TUNGSTEN) | ~2800K. Strong blue gain to cancel warm tungsten light. | Indoor home lamps, stage lighting |
-| `FLUORESCENT` | ~4500K. Gains for typical office fluorescent (tends toward green cast). | Office / classroom |
-| `WARM_FLUORESCENT` | ~3200K. Compensates warm-white fluorescent tubes. | Home CFL "warm white" lamps |
-| `DAYLIGHT` | ~5500K. Standard noon-sun illuminant profile. | Outdoor sunny day, matches flash |
-| `CLOUDY_DAYLIGHT` | ~6500K. Slight warming to cancel cool overcast. | Cloudy / hazy day |
-| `TWILIGHT` | Warm twilight golden-hour profile (~4500K). | Sunset, dusk, warm landscape |
-| `SHADE` | ~7500K. Strong red/gain against deep blue shade light. | Portrait in shadow, city shade |
+| `OFF` | 仅手动白平衡。显式使用 `COLOR_CORRECTION_GAINS` 或 `_TRANSFORM`。 | 专业模式、自定义调色、RAW + 后期 |
+| `AUTO` | 默认。ISP 持续运行光源检测。 | 普通摄影 |
+| `INCANDESCENT` (钨丝灯) | ~2800K。强蓝色增益以抵消温暖的钨丝灯光。 | 室内家用灯具、舞台灯光 |
+| `FLUORESCENT` | ~4500K。针对典型办公荧光灯的增益（倾向于偏绿）。 | 办公室 / 教室 |
+| `WARM_FLUORESCENT` | ~3200K。补偿暖白色荧光灯管。 | 家用节能灯 "暖白色" 模式 |
+| `DAYLIGHT` | ~5500K。标准的正午阳光光源简况。 | 户外晴天，匹配闪光灯 |
+| `CLOUDY_DAYLIGHT` | ~6500K。轻微变暖以抵消冷色调的阴天。 | 多云 / 朦胧天 |
+| `TWILIGHT` | 暖色调的黄昏金色时刻简况 (~4500K)。 | 日落、黄昏、温暖的风景 |
+| `SHADE` | ~7500K。强红色增益以抵消深蓝色的阴影光线。 | 阴影中的人像、城市背阴处 |
 
-**Query supported modes first:** Not every device ships all 9 presets. Flagship phones usually do; budget devices may offer only `AUTO` + `OFF`.
+**首先查询支持的模式：** 并不是每台设备都提供全部 9 种预设。旗舰手机通常提供；而入门级设备可能仅提供 `AUTO` + `OFF`。
 
 ```kotlin
 val availableAwbModes = characteristics.get(
     CameraCharacteristics.CONTROL_AWB_AVAILABLE_MODES
 ) ?: intArrayOf()
-Log.d("AWB", "Available modes: ${availableAwbModes.toList()}")
+Log.d("AWB", "可用模式: ${availableAwbModes.toList()}")
 ```
 
-### AWB States (Like AF, But Less Talkative)
+### AWB 状态（类似于 AF，但没那么"啰嗦"）
 
-The AWB state machine is conceptually similar to AF's but simpler — it has fewer states:
+AWB 状态机在概念上与 AF 类似，但更简单——它的状态较少：
 
-| AWB State | Meaning |
+| AWB 状态 | 含义 |
 |-----------|---------|
-| `CONTROL_AWB_STATE_INACTIVE` | AWB disabled (`AWB_MODE = OFF`) |
-| `CONTROL_AWB_STATE_SEARCHING` | Looking for correct illuminant (cast may drift) |
-| `CONTROL_AWB_STATE_CONVERGED` | Found stable illuminant — color is stable |
-| `CONTROL_AWB_STATE_LOCKED` | Explicitly locked via `CONTROL_AWB_LOCK = true` |
+| `CONTROL_AWB_STATE_INACTIVE` | AWB 已禁用 (`AWB_MODE = OFF`) |
+| `CONTROL_AWB_STATE_SEARCHING` | 正在寻找正确的光源（色调可能会漂移） |
+| `CONTROL_AWB_STATE_CONVERGED` | 找到了稳定的光源 — 色彩稳定 |
+| `CONTROL_AWB_STATE_LOCKED` | 通过 `CONTROL_AWB_LOCK = true` 被显式锁定 |
 
-Use the same "wait for converged / locked before capture" pattern you applied to AF for color-critical photography (product shots, catalog work).
+对于对色彩要求极高的摄影（产品拍摄、目录工作），请使用与 AF 相同的"等待收敛 / 锁定后再拍摄"模式。
 
 ---
 
-## How White Balance Correction Works: Under the Hood
+## 白平衡校正原理：底层机制
 
-AWB applies two color transforms to get from sensor RGB → displayable sRGB. Understanding them lets you bypass AWB entirely with manual values.
+AWB 通过应用两次色彩变换来实现从传感器 RGB 到可显示的 sRGB 的转换。理解这些原理可以让你通过手动数值绕过 AWB。
 
-### Step 1: Channel Gains (White Point Correction)
+### 第 1 步：通道增益（白点校正）
 
-First, multiply each color channel by a gain so a neutral surface comes out equal in R, G, B:
+首先，将每个颜色通道乘以一个增益值，使中性表面呈现出相等的 R、G、B：
 
-> If a scene with a 3200K tungsten lamp produces `[R=200, G=150, B=100]` from the sensor for a gray target, AWB applies channel gains of approximately `R: 1.0, G: 1.33, B: 2.0` to normalize to `[200, 200, 200]`.
+> 如果在 3200K 钨丝灯下的场景中，灰度目标产生的传感器输出为 `[R=200, G=150, B=100]`，则 AWB 应用大约为 `R: 1.0, G: 1.33, B: 2.0` 的通道增益来将其归一化为 `[200, 200, 200]`。
 
-In Camera2, this is exposed as **`CaptureRequest.COLOR_CORRECTION_GAINS`**: a 4-element float array in the order **[R, Geven, B, Godd]**.
+在 Camera2 中，这通过 **`CaptureRequest.COLOR_CORRECTION_GAINS`** 暴露：一个 4 元素的浮点数组，顺序为 **[R, Geven, B, Godd]**。
 
-The two green channels (`Geven`, `Godd`) exist because many smartphone sensors use a 2×2 Bayer grid: **GR / BG** alternating rows. Rows starting with Green-R vs Green-B have slightly different spectral sensitivity and need independent digital gains. For everyday work, setting both greens to the same value is fine.
+之所以有两个绿色通道 (`Geven`, `Godd`)，是因为许多智能手机传感器使用 2×2 拜耳阵列：**GR / BG** 交替行。以 Green-R 开始的行与以 Green-B 开始的行具有略微不同的光谱灵敏度，需要独立的数字增益。对于日常工作，将两个绿色设置为相同的值即可。
 
 ```kotlin
-// COLOR_CORRECTION_GAINS = [ R gain, G-even gain, B gain, G-odd gain ]
-val warmGains = floatArrayOf(1.0f, 1.2f, 0.8f, 1.2f)  // Warm tint: boost R, reduce B
-val coolGains = floatArrayOf(0.85f, 1.0f, 1.25f, 1.0f) // Cool tint: boost B, reduce R
-val neutralGains = floatArrayOf(1.0f, 1.0f, 1.0f, 1.0f) // Unity gains (raw sensor color)
+// COLOR_CORRECTION_GAINS = [ R 增益, G-even 增益, B 增益, G-odd 增益 ]
+val warmGains = floatArrayOf(1.0f, 1.2f, 0.8f, 1.2f)  // 暖色调: 提升 R, 降低 B
+val coolGains = floatArrayOf(0.85f, 1.0f, 1.25f, 1.0f) // 冷色调: 提升 B, 降低 R
+val neutralGains = floatArrayOf(1.0f, 1.0f, 1.0f, 1.0f) // 单位增益 (原始传感器色彩)
 ```
 
-**Valid range:** Gains are typically clamped to [0.0, 4.0] by the HAL. Use multiplicative factors between 0.5× and 3× for plausible results.
+**有效范围：** 增益通常由 HAL 限制在 [0.0, 4.0] 范围内。使用 0.5× 到 3× 之间的乘数即可获得合理的结果。
 
-### Step 2: 3×3 Color Transform Matrix (Gamut Mapping)
+### 第 2 步：3×3 色彩变换矩阵（色域映射）
 
-Channel gains only correct for the *white point*. But different sensors have different native color filter spectral responses, and different output devices have different display gamuts (sRGB/Rec.709 vs DCI-P3 vs Display P3). A **3×3 color correction matrix (CCM)** maps the sensor's native RGB color space → standard output space.
+通道增益仅纠正了*白点*。但不同的传感器具有不同的原生色彩滤镜光谱响应，且不同的输出设备具有不同的显示色域（sRGB/Rec.709 对比 DCI-P3 对比 Display P3）。**3×3 色彩校正矩阵 (CCM)** 将传感器的原生 RGB 色彩空间映射到标准输出空间。
 
-Mathematically:
+数学表示为：
 
 ```
 [ R' ]   [ m11  m12  m13 ] [ R ]
@@ -133,12 +133,12 @@ Mathematically:
 [ B' ]   [ m31  m32  m33 ] [ B ]
 ```
 
-Or in code: `output = M × input` where M is a 3×3 matrix.
+代码表示为：`output = M × input`，其中 M 是一个 3×3 矩阵。
 
-Camera2 exposes this via **`COLOR_CORRECTION_TRANSFORM`**, which is set using a `Rational[9]` array (row-major: `m11, m12, m13, m21, m22, m23, m31, m32, m33`). Identity matrix = input copied directly:
+Camera2 通过 **`COLOR_CORRECTION_TRANSFORM`** 暴露了这一点，它使用一个 `Rational[9]` 数组进行设置（行优先：`m11, m12, m13, m21, m22, m23, m31, m32, m33`）。单位矩阵表示直接复制输入：
 
 ```kotlin
-// Identity 3x3 matrix in Rationals: 1/1 for diagonal, 0/1 for off-diagonal
+// 有理数表示的 3x3 单位矩阵：对角线为 1/1, 非对角线为 0/1
 val identityMatrix = arrayOf(
     Rational(1,1), Rational(0,1), Rational(0,1),
     Rational(0,1), Rational(1,1), Rational(0,1),
@@ -146,24 +146,24 @@ val identityMatrix = arrayOf(
 )
 ```
 
-**The Rec.709 vs DCI-P3 Gamuts:**
+**Rec.709 与 DCI-P3 色域：**
 
-| Color Space | Coverage | Use Case |
+| 色彩空间 | 覆盖率 | 用例 |
 |-------------|----------|----------|
-| **Rec.709 (sRGB)** | ~35% of visible light | HDTV, web, JPEG default, ~100% of phone displays until ~2020 |
-| **DCI-P3** | ~45% of visible light | Digital cinema, 4K UHD, modern iPhone/Android wide-gamut displays |
+| **Rec.709 (sRGB)** | ~35% 的可见光 | HDTV、网页、JPEG 默认值，2020 年前约 100% 的手机显示屏 |
+| **DCI-P3** | ~45% 的可见光 | 数字影院、4K 超高清、现代 iPhone/Android 广色域显示屏 |
 
-A P3 display can show richer reds and greens than Rec.709. Your output CCM must pick a target gamut that matches what the viewer's screen expects. On Android, check `Display.isWideColorGamut()` and use an appropriate matrix.
+P3 显示屏比 Rec.709 能显示更丰富的红色和绿色。你的输出 CCM 必须挑选一个与观看者屏幕预期匹配的目标色域。在 Android 上，请检查 `Display.isWideColorGamut()` 并使用适当的矩阵。
 
-**Practical advice:** Unless you're writing a professional RAW developer or color-managed cinema app, set `COLOR_CORRECTION_MODE = TRANSFORM_MATRIX` and let the OEM's default matrix handle gamut mapping. Most pro-mode apps tweak only `COLOR_CORRECTION_GAINS` (the 4 gains) and leave the matrix alone.
+**实践建议：** 除非你正在编写专业的 RAW 显影工具或经过色彩管理的电影应用，否则请设置 `COLOR_CORRECTION_MODE = TRANSFORM_MATRIX` 并让 OEM 的默认矩阵处理色域映射。大多数专业模式应用仅调整 `COLOR_CORRECTION_GAINS`（那 4 个增益），而保持矩阵不变。
 
 ---
 
-## Complete Example 1: Lock AWB to Daylight Preset (Warm Tint Lock)
+## 完整示例 1：将 AWB 锁定为日光预设（暖色调锁定）
 
-Let's start simple. Sometimes you don't want full manual — you just want to **prevent AWB from drifting** between frames (e.g., timelapse, video with scene changes). Setting a fixed preset like `DAYLIGHT` guarantees consistent color across shots.
+让我们从简单的开始。有时你不需要全手动——你只是想**防止 AWB 在帧与帧之间漂移**（例如：延时摄影、有场景变化的视频）。设置一个像 `DAYLIGHT` 这样的固定预设可以保证跨拍摄的色彩一致性。
 
-This is the simplest manual color control.
+这是最简单的手动色彩控制。
 
 ```kotlin
 class AwbPresetController(
@@ -171,7 +171,7 @@ class AwbPresetController(
     private val captureSession: CameraCaptureSession,
     private val previewSurface: Surface
 ) {
-    // Return true if the HAL actually supports this mode
+    // 如果 HAL 实际支持该模式，则返回 true
     fun isModeSupported(mode: Int): Boolean {
         val available = characteristics.get(
             CameraCharacteristics.CONTROL_AWB_AVAILABLE_MODES
@@ -181,7 +181,7 @@ class AwbPresetController(
 
     fun setPresetDaylightForWarmTintLock(): Boolean {
         if (!isModeSupported(CameraMetadata.CONTROL_AWB_MODE_DAYLIGHT)) {
-            Log.w("AWB", "DAYLIGHT preset not supported on this device")
+            Log.w("AWB", "此设备不支持 DAYLIGHT 预设")
             return false
         }
 
@@ -190,13 +190,13 @@ class AwbPresetController(
         ).apply {
             addTarget(previewSurface)
 
-            // Lock white balance to DAYLIGHT (~5500K) mode.
-            // This will render indoor tungsten scenes as intentionally warm/orange,
-            // which is the "filmic" look preferred in cinematography.
+            // 将白平衡锁定为 DAYLIGHT (~5500K) 模式。
+            // 这将使室内的钨丝灯场景呈现出刻意的暖色/橙色，
+            // 这是电影摄影中偏爱的"电影感"效果。
             set(CaptureRequest.CONTROL_AWB_MODE,
                 CameraMetadata.CONTROL_AWB_MODE_DAYLIGHT)
 
-            // Keep AE and AF in their defaults (auto) for this example
+            // 在本例中保持 AE 和 AF 为默认设置（自动）
             set(CaptureRequest.CONTROL_MODE,
                 CameraMetadata.CONTROL_MODE_AUTO)
         }
@@ -209,7 +209,7 @@ class AwbPresetController(
                     result: TotalCaptureResult
                 ) {
                     val awbState = result.get(CaptureResult.CONTROL_AWB_STATE)
-                    Log.d("AWB", "Preset DAYLIGHT applied, AWB state=$awbState")
+                    Log.d("AWB", "已应用 DAYLIGHT 预设, AWB 状态=$awbState")
                 }
             }, null
         )
@@ -218,13 +218,13 @@ class AwbPresetController(
 }
 ```
 
-**Artistic application:** If you're shooting a sunset with `AWB_MODE = DAYLIGHT`, the 3000K sunset light will register as *warm* to the fixed 5500K balance — producing rich, saturated golden-orange tones. Using `AWB_MODE = AUTO` here would *neutralize the sunset* (the entire point!) by pumping in more blue to cancel the golden light. Presets preserve mood.
+**艺术应用：** 如果你使用 `AWB_MODE = DAYLIGHT` 拍摄日落，3000K 的日落光线在固定的 5500K 平衡下会显得*温暖*——从而产生浓郁、饱和的金橙色调。在这里使用 `AWB_MODE = AUTO` 将会*中和日落*（这正是要点！），因为它会注入更多蓝色来抵消金色的光线。预设可以保留氛围。
 
 ---
 
-## Complete Example 2: Full Manual AWB — Custom Warm Sunset Gains
+## 完整示例 2：全手动 AWB — 自定义暖色日落增益
 
-For ultimate creative control, disable AWB entirely and write your own gains. Let's build a "warm sunset look" — boosting red slightly, suppressing blue, with a subtle green boost to avoid a purple shift.
+为了获得终极的创意控制，请完全禁用 AWB 并写入你自己的增益。让我们建立一个"暖色日落观感"——略微提升红色，抑制蓝色，并带有微妙的绿色提升以避免出现紫色偏移。
 
 ```kotlin
 class ManualColorGradingController(
@@ -233,23 +233,23 @@ class ManualColorGradingController(
     private val previewSurface: Surface,
     private val jpegReaderSurface: Surface
 ) {
-    // Canonical color grading presets (R, Geven, B, Godd)
+    // 典型的调色预设 (R, Geven, B, Godd)
     object Presets {
         val NEUTRAL = floatArrayOf(1.00f, 1.00f, 1.00f, 1.00f)
-        val WARM_SUNSET = floatArrayOf(1.00f, 1.20f, 0.80f, 1.20f)  // Warm amber
-        val COOL_MORNING = floatArrayOf(0.85f, 1.00f, 1.25f, 1.00f)  // Cool blue
-        val VINTAGE_KODAK = floatArrayOf(1.15f, 1.00f, 0.85f, 1.00f) // Classic film-ish
-        val GREEN_SHIFT_FLUO = floatArrayOf(1.00f, 1.25f, 1.00f, 1.25f) // Fluorescent fix
+        val WARM_SUNSET = floatArrayOf(1.00f, 1.20f, 0.80f, 1.20f)  // 暖琥珀色
+        val COOL_MORNING = floatArrayOf(0.85f, 1.00f, 1.25f, 1.00f)  // 冷蓝色
+        val VINTAGE_KODAK = floatArrayOf(1.15f, 1.00f, 0.85f, 1.00f) // 经典电影感
+        val GREEN_SHIFT_FLUO = floatArrayOf(1.00f, 1.25f, 1.00f, 1.25f) // 荧光灯修正
     }
 
     fun applyManualGains(gains: FloatArray, includeMatrix: Boolean = true) {
-        // Validate: AWB_MODE = OFF must be supported (it always is on MANUAL capability)
+        // 验证：必须支持 AWB_MODE = OFF (具备 MANUAL 性能时通常都支持)
         val hwLevel = characteristics.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL)
         val supportsManualColor = (hwLevel == CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_3 ||
                                    hwLevel == CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_FULL ||
                                    isModeSupported(CameraMetadata.CONTROL_AWB_MODE_OFF))
         if (!supportsManualColor) {
-            Log.e("AWB", "This LEGACY-level device cannot do manual AWB gains")
+            Log.e("AWB", "此 LEGACY 级别设备无法进行手动 AWB 增益调整")
             return
         }
 
@@ -258,20 +258,20 @@ class ManualColorGradingController(
         ).apply {
             addTarget(previewSurface)
 
-            // 1) DISABLE AWB entirely
+            // 1) 完全禁用 AWB
             set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_OFF)
 
-            // 2) Apply the 4 channel gains (R, Geven, B, Godd)
+            // 2) 应用 4 个通道的增益 (R, Geven, B, Godd)
             set(CaptureRequest.COLOR_CORRECTION_GAINS, gains)
 
-            // 3) Pick a color correction strategy
+            // 3) 选择色彩校正策略
             if (includeMatrix) {
-                // FAST: let the HAL compute a good matrix for this illuminant
-                // (matrix is auto-derived; only gains are user-controlled)
+                // FAST: 让 HAL 为此光源计算一个好的矩阵
+                // (矩阵是自动推导的；仅增益受用户控制)
                 set(CaptureRequest.COLOR_CORRECTION_MODE,
                     CameraMetadata.COLOR_CORRECTION_MODE_FAST)
             } else {
-                // EXPERT: set our own 3x3 transform matrix + gains together
+                // EXPERT: 同时手动设置我们自己的 3x3 变换矩阵 + 增益
                 set(CaptureRequest.COLOR_CORRECTION_MODE,
                     CameraMetadata.COLOR_CORRECTION_MODE_TRANSFORM_MATRIX)
                 set(CaptureRequest.COLOR_CORRECTION_TRANSFORM, identityMatrix())
@@ -279,10 +279,10 @@ class ManualColorGradingController(
         }
 
         captureSession.setRepeatingRequest(request.build(), null, null)
-        Log.d("AWB", "Manual gains applied: [${gains.joinToString()}]")
+        Log.d("AWB", "已应用手动增益: [${gains.joinToString()}]")
     }
 
-    // ------- Still capture with locked manual color -------
+    // ------- 使用锁定的手动色彩进行静态拍摄 -------
     fun captureStillWithColorGrading(gains: FloatArray) {
         applyManualGains(gains)
 
@@ -297,13 +297,13 @@ class ManualColorGradingController(
             set(CaptureRequest.COLOR_CORRECTION_MODE,
                 CameraMetadata.COLOR_CORRECTION_MODE_FAST)
 
-            set(CaptureRequest.JPEG_QUALITY, 95)
+            set(CaptureRequest.JPEG_QUALITY, 95.toByte())
         }
 
         captureSession.capture(stillRequest.build(), null, null)
     }
 
-    // ------- Helpers -------
+    // ------- 辅助函数 -------
     private fun identityMatrix(): Array<Rational> = arrayOf(
         Rational(1,1), Rational(0,1), Rational(0,1),
         Rational(0,1), Rational(1,1), Rational(0,1),
@@ -319,45 +319,45 @@ class ManualColorGradingController(
 }
 ```
 
-### Using the Presets
+### 使用预设
 
 ```kotlin
-// User taps "Sunset Warm" button
+// 用户点击"日落暖色"按钮
 controller.applyManualGains(ManualColorGradingController.Presets.WARM_SUNSET)
 
-// User taps "Capture" — the same gains flow to the JPEG
+// 用户点击"拍摄" — 相同的增益流向 JPEG
 controller.captureStillWithColorGrading(ManualColorGradingController.Presets.WARM_SUNSET)
 ```
 
-### COLOR_CORRECTION_MODE: FAST vs TRANSFORM_MATRIX
+### COLOR_CORRECTION_MODE：FAST 对比 TRANSFORM_MATRIX
 
-Use this decision table:
+使用此决策表：
 
-| Scenario | Choose `COLOR_CORRECTION_MODE =` |
+| 场景 | 选择 `COLOR_CORRECTION_MODE =` |
 |----------|----------------------------------|
-| I only want manual gains; let OEM pick the matrix (most apps) | `FAST` |
-| I'm applying a full color-grading LUT / matrix externally, need untouched raw color space | `TRANSFORM_MATRIX` + identity matrix |
-| I have a custom color profile (ICC / DCP) derived for this sensor | `TRANSFORM_MATRIX` + custom 3x3 |
+| 我只需要手动增益；让 OEM 选择矩阵（多数应用） | `FAST` |
+| 我正在外部应用完整的调色 LUT / 矩阵，需要未经改动的原始色彩空间 | `TRANSFORM_MATRIX` + 单位矩阵 |
+| 我有为此传感器专门推导的自定义色彩配置文件 (ICC / DCP) | `TRANSFORM_MATRIX` + 自定义 3x3 |
 
-**Warning:** `TRANSFORM_MATRIX` with the identity matrix gives you **raw sensor color** without OEM gamut mapping. On many sensors, this looks noticeably desaturated and slightly green-tinted without additional processing. This is correct behavior — it's the raw sensor output ready for your custom processing pipeline.
+**警告：** 使用单位矩阵的 `TRANSFORM_MATRIX` 会给你**未经 OEM 色域映射的原始传感器色彩**。在许多传感器上，如果不进行额外处理，这看起来会明显偏灰（低饱和度）且略微带绿。这是正确行为——它是为你的自定义处理管线准备好的原始传感器输出。
 
 ---
 
-## Manual Kelvin-to-Gains Converter (Color Temperature Slider)
+## 手动开尔文转增益转换器（色温滑块）
 
-Pro camera apps (including [Android Camera Parameters](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)) expose a **Kelvin temperature slider**. Since Camera2 doesn't accept Kelvin directly, we approximate the R/B gains curve.
+专业相机应用（包括 **Android Camera Parameters**）会提供一个**开尔文温度滑块**。由于 Camera2 不直接接受开尔文数值，我们通过数学近似 R/B 增益曲线。
 
-A simple approximation that works for most smartphone sensors (calibrate your gain curve empirically on your target hardware):
+一个适用于大多数智能手机传感器的简单近似值（请根据你的目标硬件凭经验校准你的增益曲线）：
 
 ```kotlin
 class KelvinGainsConverter {
-    // Convert Kelvin [2000..10000] → approximate gains [R, Geven, B, Godd]
-    // Simple Planckian locus approximation (good enough for UI sliders)
+    // 将开尔文 [2000..10000] 转换为近似增益 [R, Geven, B, Godd]
+    // 简单的普朗克轨迹近似 (对于 UI 滑块足够用了)
     fun kelvinToRgbGains(kelvin: Int): FloatArray {
         val k = kelvin.coerceIn(2000, 10000)
         val temp = k / 100.0
 
-        // Red (warm at low K)
+        // 红色 (在低开尔文下偏暖)
         val r = when {
             temp <= 66 -> 255.0
             else -> {
@@ -367,7 +367,7 @@ class KelvinGainsConverter {
             }
         }
 
-        // Green
+        // 绿色
         val g = when {
             temp <= 66 -> {
                 var x = temp
@@ -381,7 +381,7 @@ class KelvinGainsConverter {
             }
         }
 
-        // Blue (cold at high K)
+        // 蓝色 (在高开尔文下偏冷)
         val b = when {
             temp >= 66 -> 255.0
             temp <= 19 -> 0.0
@@ -392,9 +392,9 @@ class KelvinGainsConverter {
             }
         }
 
-        // Normalize so GREEN = 1.0, then invert: we want GAINS to compensate for temp.
-        // If user picks 2800K (warm), we need MORE blue gain to cancel the warm cast.
-        // This function returns the *source* RGB; gains are 1/R : 1/G : 1/B, normalized at G=1
+        // 进行归一化，使 GREEN = 1.0, 然后取倒数: 我们需要的是补偿温度的增益。
+        // 如果用户选择了 2800K (暖色), 我们需要更多的蓝色增益来抵消暖色调。
+        // 此函数返回源 RGB; 增益为 1/R : 1/G : 1/B, 以 G=1 进行归一化
         val rGain = (g / r).toFloat().coerceIn(0.3f, 3.0f)
         val bGain = (g / b).toFloat().coerceIn(0.3f, 3.0f)
         return floatArrayOf(rGain, 1.0f, bGain, 1.0f)  // [R, Geven, B, Godd]
@@ -402,7 +402,7 @@ class KelvinGainsConverter {
 }
 ```
 
-Use it with a SeekBar (2000–10000 K range):
+配合 SeekBar 使用（2000–10000 K 范围）：
 
 ```kotlin
 val converter = KelvinGainsConverter()
@@ -418,44 +418,44 @@ seekKelvin.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
 })
 ```
 
-**Calibration note:** This is a generic Planckian approximation. For perfect results, run a Macbeth ColorChecker or white point calibration on your target device, then fit a curve to measured R/B gain ratios vs. true Kelvin. The [Android Camera Parameters app](https://github.com/zoozooll/AndroidCameraParameters) uses per-device calibration data loaded from the HAL via `SENSOR_CALIBRATION_TRANSFORM1` where available.
+**校准注记：** 这是一个通用的普朗克近似。为了获得完美结果，请在你的目标设备上运行 Macbeth ColorChecker 或白点校准，然后将曲线拟合到实测的 R/B 增益比与真实开尔文的关系上。**Android Camera Parameters** 应用使用了通过 `SENSOR_CALIBRATION_TRANSFORM1`（若可用）从 HAL 加载的每设备校准数据。
 
 ---
 
-## Troubleshooting Color Issues
+## 色彩问题排查
 
-| Symptom | Cause | Fix |
+| 症状 | 原因 | 解决办法 |
 |---------|-------|-----|
-| Manual gains set but color is unchanged | Forgot `CONTROL_AWB_MODE = OFF` → AWB still overriding gains | Set AWB_MODE = OFF *before* setting GAINS/TRANSFORM |
-| COLOR_CORRECTION_TRANSFORM ignored | Mode still `FAST`; only respected in `TRANSFORM_MATRIX` mode | Set `COLOR_CORRECTION_MODE = TRANSFORM_MATRIX` first |
-| AWB drifts between timelapse frames (green/purple tint flash) | AWB still in AUTO and re-evaluating each frame | Set fixed AWB_MODE preset or full manual gains for timelapse |
-| JPEG different color than preview | JPEG applied different mode/gains than the last repeating request | Apply SAME gains to both TEMPLATE_PREVIEW and TEMPLATE_STILL_CAPTURE builders |
-| LEGACY-level device: manual gains crash | INFO_SUPPORTED_HARDWARE_LEVEL = LEGACY (no manual color) | Graceful fallback; only expose AUTO + presets UI |
+| 设置了手动增益但色彩没有变化 | 忘记设置 `CONTROL_AWB_MODE = OFF` → AWB 仍在覆盖增益 | 必须在设置 GAINS/TRANSFORM *之前*设置 AWB_MODE = OFF |
+| COLOR_CORRECTION_TRANSFORM 被忽略 | 模式仍为 `FAST`; 该键仅在 `TRANSFORM_MATRIX` 模式下被尊重 | 先设置 `COLOR_CORRECTION_MODE = TRANSFORM_MATRIX` |
+| 延时摄影帧之间 AWB 漂移（出现绿色/紫色偏色闪烁） | AWB 仍处于 AUTO 状态且每帧都在重新评估 | 为延时摄影设置固定的 AWB_MODE 预设或全手动增益 |
+| JPEG 色彩与预览不同 | JPEG 应用的模式/增益与最后的重复请求不同 | 将相同的增益应用到 TEMPLATE_PREVIEW 和 TEMPLATE_STILL_CAPTURE 构建器中 |
+| LEGACY 级别设备：手动增益崩溃 | INFO_SUPPORTED_HARDWARE_LEVEL = LEGACY (不支持手动色彩) | 优雅回退；仅展示 AUTO + 预设 UI |
 
 ---
 
-## Summary
+## 小结
 
-White balance & color correction in Camera2 give you the final piece of the manual controls trilogy:
+Camera2 中的白平衡与色彩校正为你提供了手动控制三部曲的最后一块拼图：
 
-- **Color Temperature (K):** Low K (1800K candle) = warm/orange; high K (10000K shade) = cool/blue. AWB compensates to neutralize the illuminant.
-- **AWB Modes:** 9 presets (`INCANDESCENT` → `SHADE`) + `AUTO` + `OFF`. Query `CONTROL_AWB_AVAILABLE_MODES` before use.
-- **AWB States:** `SEARCHING → CONVERGED → LOCKED`. Wait for CONVERGED/LOCKED in color-critical sequences.
-- **Manual control has two layers:**
-  1. `COLOR_CORRECTION_GAINS` = 4-element float array `[R, Geven, B, Godd]` — white-point correction. Use `COLOR_CORRECTION_MODE = FAST` (OEM matrix, custom gains).
-  2. `COLOR_CORRECTION_TRANSFORM` = 3×3 `Rational[9]` matrix — full gamut mapping. Use `TRANSFORM_MATRIX` mode for identity matrix or custom CCM.
-- **Rec.709 vs DCI-P3:** The 3×3 matrix maps sensor color space → display-target gamut.
-- **Kelvin slider:** Approximate Kelvin→gains via Planckian locus math, apply with AWB OFF.
+- **色温 (K)：** 低 K (1800K 烛光) = 暖/橙色；高 K (10000K 阴影) = 冷/蓝色。AWB 进行补偿以中和光源颜色。
+- **AWB 模式：** 9 种预设 (`INCANDESCENT` → `SHADE`) + `AUTO` + `OFF`。使用前请查询 `CONTROL_AWB_AVAILABLE_MODES`。
+- **AWB 状态：** `SEARCHING → CONVERGED → LOCKED`。在色彩关键的序列中请等待 CONVERGED/LOCKED。
+- **手动控制有两个层级：**
+  1. `COLOR_CORRECTION_GAINS` = 4 元素浮点数组 `[R, Geven, B, Godd]` — 白点校正。使用 `COLOR_CORRECTION_MODE = FAST`（OEM 矩阵, 自定义增益）。
+  2. `COLOR_CORRECTION_TRANSFORM` = 3×3 `Rational[9]` 矩阵 — 完整的色域映射。在 `TRANSFORM_MATRIX` 模式下用于单位矩阵或自定义 CCM。
+- **Rec.709 对比 DCI-P3：** 3×3 矩阵将传感器色彩空间映射到显示目标色域。
+- **开尔文滑块：** 通过普朗克轨迹数学近似开尔文→增益，在 AWB 为 OFF 时应用。
 
-## What's Next
+## 下一章
 
-You now understand **exposure, focus, and white balance individually**. In **Chapter 17: The 3A Pipeline**, we finally orchestrate all three together as a single cohesive still-photo capture sequence:
+你现在已经分别理解了**曝光、对焦和白平衡**。在**第 17 章：3A 管线**中，我们将最终把这三者编排在一起，作为一个内聚的静态照片捕获序列：
 
-- The complete `AF trigger → AF locked → AE precapture → AE converged with flash → capture photo` flow
-- AE flash modes (`ON_AUTO_FLASH`, `ON_ALWAYS_FLASH`, `ON_AUTO_FLASH_REDEYE`)
-- AE states and the precapture trigger sequence
-- AWB states coordinated with AE+AF
-- A full production-quality Kotlin class that implements the entire 3A orchestration with a Mermaid sequence diagram
-- Reference to 3A Control Pipeline research
+- 完整的 `AF 触发 → AF 锁定 → AE 预捕获 → AE 闪光灯收敛 → 拍摄照片` 流程
+- AE 闪光灯模式 (`ON_AUTO_FLASH`, `ON_ALWAYS_FLASH`, `ON_AUTO_FLASH_REDEYE`)
+- AE 状态和预捕获触发序列
+- 与 AE+AF 协调的 AWB 状态
+- 一个实现整个 3A 编排的生产级 Kotlin 类，并配有 Mermaid 序列图
+- 参考 3A 控制管线研究
 
-This is the chapter that ties everything into a working pro-camera app. Don't miss it.
+这一章将把所有内容串联成一个可以工作的专业相机应用。千万不要错过。

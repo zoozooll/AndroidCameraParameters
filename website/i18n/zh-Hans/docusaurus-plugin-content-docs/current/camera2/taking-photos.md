@@ -1,143 +1,144 @@
 ---
 sidebar_position: 9
-title: "Chapter 9: Taking Photos"
-description: Capture high-quality still photos with Camera2 using ImageReader (JPEG), precapture AE trigger, and CaptureCallback state machine. Save photos with Scoped Storage-compatible MediaStore (Android 10+) and legacy FileOutputStream, always remembering to close the Image buffer.
-keywords: [ImageReader, JPEG capture, precapture AE trigger, MediaStore Scoped Storage, CaptureCallback still photo]
+title: "第 9 章：拍照"
+description: 使用 Camera2 捕获高质量静态照片，利用 ImageReader (JPEG)、预捕获 AE 触发和 CaptureCallback 状态机。使用兼容分区存储的 MediaStore (Android 10+) 和旧版 FileOutputStream 保存照片，并始终记得关闭 Image 缓冲区。
+keywords: [ImageReader, JPEG 捕获, 预捕获 AE 触发, MediaStore 分区存储, CaptureCallback 静态照片]
 ---
 
-Congratulations on reaching the final chapter of Part II! If you've followed along since Chapter 5, your app now has: permission handling, a dedicated background thread, camera enumeration with `CameraCharacteristics`, robust open/close lifecycle management via `Semaphore`, and a smooth, correctly-oriented live preview rendered through `TextureView`. What's missing? **The ability to tap a button and keep a photo**. That's what this chapter delivers.
+恭喜你完成了第二部分的最后一章！如果你从第 5 章开始一直关注本系列，那么你的应用现在已经具备了：权限处理、专用后台线程、使用 `CameraCharacteristics` 的相机枚举、通过 `Semaphore` 实现的稳健的打开/关闭生命周期管理，以及通过 `TextureView` 渲染的平滑、朝向正确的实时预览。还差什么？**点击按钮并保留照片的能力**。这就是本章要交付的内容。
 
-By the end of this chapter, your tutorial project will be a genuinely usable camera application: tap the shutter, the app briefly freezes preview (as it should, to flush the pipeline), a still image is captured with proper auto-exposure convergence, it is saved to the device's shared Pictures directory with correct EXIF orientation metadata, and preview resumes automatically. You can then open the photo in Google Photos or the Android Camera Parameters app ([GitHub](https://github.com/zoozooll/AndroidCameraParameters), [Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)) to inspect EXIF data, resolution, and quality.
+到本章结束时，你的教程项目将成为一个真正可用的相机应用程序：点击快门，应用会短暂冻结预览（这是为了刷新管线），通过适当的自动曝光收敛捕获一张静态图像，将其保存到设备的公共 Pictures 目录中（带有正确的 EXIF 朝向元数据），然后预览自动恢复。你可以随后在 Google 相册或 **Android Camera Parameters** 应用（[GitHub](https://github.com/zoozooll/AndroidCameraParameters)，[Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)）中打开照片，以检查 EXIF 数据、分辨率和质量。
 
-The Android Camera Parameters app's manual capture mode uses a more advanced version of the pipeline we build in this chapter: it runs multi-frame burst captures with per-frame custom ISO, exposure time, and lens position — but it all builds on the same `ImageReader` + `CaptureCallback` fundamentals you will learn here.
+**Android Camera Parameters** 应用的手动拍摄模式使用了比我们在本章中构建的管线更高级的版本：它执行带有逐帧自定义 ISO、曝光时间和镜头位置的多帧连拍捕获——但这一切都建立在你将在此处学到的 `ImageReader` + `CaptureCallback` 基础之上。
 
-## Why Taking a Photo Is More Complex Than Preview
+## 为什么拍照比预览更复杂
 
-At first glance, "just capture a frame" sounds easy — we already have 60 preview frames per second flowing through the session, why can't we grab one? The answer is that preview frames and still frames are fundamentally different outputs:
+乍一看，"捕获一帧"听起来很容易——我们已经有每秒 60 帧的预览流经会话，为什么不能直接抓取一帧？答案是预览帧和静态帧是根本不同的输出：
 
-1. **Resolution difference**: Preview is ~1–2 MP (1080p). A still photo should use the sensor's **maximum** resolution (often 50+ MP on modern flagships). You don't want a 2 MP photo when your phone can deliver 50 MP.
-2. **Exposure difference**: `TEMPLATE_PREVIEW` optimizes for low-latency frame rate. `TEMPLATE_STILL_CAPTURE` optimizes for dynamic range, noise reduction, and color accuracy — the still frame needs the highest-quality ISP processing the pipeline can deliver.
-3. **3A convergence**: Before taking a photo, the camera's Auto-Exposure (AE) algorithm needs to be told "we're about to take a still — lock onto the current scene, converge exposure, white balance, and focus, and fire the flash if needed." This is the **precapture trigger** sequence. Skipping it leads to photos that are over/underexposed relative to what preview showed.
-4. **Storage and Scoped Storage**: The preview frame is never persisted. The photo frame must be written to disk as a valid JPEG file, indexed by the MediaStore so gallery apps can see it, and on Android 10+ this must use the Scoped Storage APIs (no arbitrary `File` writes to `/sdcard/DCIM/`).
+1. **分辨率差异**：预览约为 1–2 MP (1080p)。而静态照片应当使用传感器的**最大**分辨率（在现代旗舰机上通常为 50+ MP）。在手机可以提供 50 MP 画质时，你肯定不想要一张 2 MP 的照片。
+2. **曝光差异**：`TEMPLATE_PREVIEW` 针对低延迟帧率进行了优化。`TEMPLATE_STILL_CAPTURE` 则针对动态范围、降噪和色彩准确性进行了优化——静态帧需要管线能提供的最高质量 ISP 处理。
+3. **3A 收敛**：在拍照之前，相机的自动曝光 (AE) 算法需要被告知"我们要拍一张静态照片了——锁定当前场景，收敛曝光、白平衡和对焦，并根据需要闪光"。这就是**预捕获触发 (precapture trigger)** 序列。跳过这一步会导致照片相对于预览显示的画面出现过曝或欠曝。
+4. **存储与分区存储**：预览帧永远不会被持久化。而照片帧必须作为有效的 JPEG 文件写入磁盘，由 MediaStore 索引以便图库应用可见，且在 Android 10+ 上必须使用分区存储 (Scoped Storage) API（不能直接向 `/sdcard/DCIM/` 进行任意的 `File` 写入）。
 
-Still capture is a **multi-stage asynchronous state machine**, not a single call. The sequence diagram below shows the exact order and timing you must implement. Do not skip any step.
+静态拍摄是一个**多阶段异步状态机**，而不是单次调用。下面的序列图展示了你必须实现的准确顺序和时机。请勿跳过任何步骤。
 
 ```mermaid
 sequenceDiagram
-    actor User as 👤 User
+    actor User as 👤 用户
     participant App as 📱 MainActivity
     participant CB as 🎞️ CaptureCallback
     participant IR as 🖼️ ImageReader
     participant MS as 💾 MediaStore/Pictures
-    User->>App: Taps shutter button
+    User->>App: 点击快门按钮
     App->>App: lockFocusForCapture() 🔒
     App->>App: stopRepeating() ⏹️
     
-    App->>CB: Capture single request<br/>CONTROL_AE_PRECAPTURE_TRIGGER_START
-    Note over App,CB: Triggers AE flash metering + convergence
-    loop Wait for AE_STATE_CONVERGED or AE_STATE_FLASH_REQUIRED
-        CB-->>App: onCaptureCompleted(partial results)
+    App->>CB: 捕获单次请求<br/>CONTROL_AE_PRECAPTURE_TRIGGER_START
+    Note over App,CB: 触发 AE 闪光灯测光 + 收敛
+    loop 等待 AE_STATE_CONVERGED 或 AE_STATE_FLASH_REQUIRED
+        CB-->>App: onCaptureCompleted(部分结果)
     end
     
-    Note over App,CB: ⏰ AE has converged (or timed out after ~3s)
+    Note over App,CB: ⏰ AE 已收敛 (或在约 3s 后超时)
     
-    App->>CB: Capture still request<br/>TEMPLATE_STILL_CAPTURE + JPEG target
-    Note over App,CB: One-shot high-res capture through ISP
+    App->>CB: 捕获静态请求<br/>TEMPLATE_STILL_CAPTURE + JPEG 目标
+    Note over App,CB: 通过 ISP 的单次高分辨率捕获
     
     CB-->>IR: onImageAvailable() 🌠
-    IR->>IR: acquireLatestImage() → Image object
-    IR->>App: planes[0].buffer (raw JPEG ByteBuffer)
+    IR->>IR: acquireLatestImage() → Image 对象
+    IR->>App: planes[0].buffer (原始 JPEG ByteBuffer)
     App->>MS: MediaStore.createWriteRequest() → OutputStream
-    App->>MS: Write ByteBuffer bytes to OutputStream
-    App->>IR: image.close() ✅ FREE BUFFER
-    App->>MS: close() OutputStream → photo appears in Gallery
+    App->>MS: 将 ByteBuffer 字节写入 OutputStream
+    App->>IR: image.close() ✅ 释放缓冲区
+    App->>MS: close() OutputStream → 照片出现在相册中
     
     App->>App: unlockFocus() 🔓
-    App->>App: setRepeatingRequest() 🔄 Resume preview
+    App->>App: setRepeatingRequest() 🔄 恢复预览
     
-    Note over App,CB: 🎉 Ready for next shutter tap
+    Note over App,CB: 🎉 准备好下一次点击快门
 ```
 
-The timing of the precapture trigger is critical: it must be sent BEFORE the still capture, and you must wait for AE to converge (or hit a timeout) before firing the still. If you skip the wait, the photo will use the preview's exposure settings, which may be tuned for high frame rate rather than photo quality.
+预捕获触发的时机至关重要：它必须在静态捕获之前发送，并且你必须等待 AE 收敛（或达到超时）后才能触发静态拍摄。如果你跳过等待，照片将使用预览的曝光设置，而预览设置可能是为了高帧率而非照片质量而调整的。
 
-## Introducing ImageReader: The CPU-Accessible Frame Sink
+## 认识 ImageReader：供 CPU 访问的帧接收器
 
-In Chapter 8 we fed preview frames to a `SurfaceTexture` (GPU sink). For still capture we need a CPU-accessible sink so we can write the JPEG bytes to disk. That sink is `ImageReader`.
+在第 8 章中，我们将预览帧馈送到 `SurfaceTexture`（GPU 接收器）。对于静态拍摄，我们需要一个供 CPU 访问的接收器，以便我们可以将 JPEG 字节写入磁盘。这个接收器就是 `ImageReader`。
 
-`ImageReader` is constructed with:
+通过以下方式构造 `ImageReader`：
 ```kotlin
 val imageReader = ImageReader.newInstance(
-    width,           // Pixel width of still frames (max still size from characteristics)
-    height,          // Pixel height of still frames
-    ImageFormat.JPEG,// Format — JPEG for photos, RAW_SENSOR for DNG RAW, YUV_420_888 for processing
-    maxImages        // How many buffers to allocate in the queue (2–5 typically)
+    width,           // 静态帧的像素宽度 (来自 characteristics 的最大静态尺寸)
+    height,          // 静态帧的像素高度
+    ImageFormat.JPEG,// 格式 — 照片用 JPEG, DNG RAW 用 RAW_SENSOR, 处理用 YUV_420_888
+    maxImages        // 队列中要分配的缓冲区数量 (通常为 2–5)
 )
 ```
 
-The four parameters explained:
+四个参数详解：
 
-1. **width/height**: Use the camera's maximum JPEG size from `SCALER_STREAM_CONFIGURATION_MAP.getOutputSizes(ImageFormat.JPEG)`. Always pick the largest size for the highest-quality photo.
-2. **ImageFormat.JPEG**: The Image Signal Processor (ISP) will run full JPEG encoding pipeline (Huffman coding, quantization, EXIF embedding, JFIF header) before delivering the frame. The `Image.planes[0].buffer` is a **complete, valid JPEG file** — no re-encoding needed; you can write those bytes directly to disk.
-3. **maxImages**: The depth of the internal `BufferQueue`. JPEG buffers are large (5–20 MB each). Set this to **2** for a typical photo capture (one in-flight + one spare). Setting it higher wastes RAM; setting it to **1** and forgetting to `close()` the Image leads to permanent capture deadlock (the queue can never dequeue an empty buffer again).
+1. **width/height**：使用相机从 `SCALER_STREAM_CONFIGURATION_MAP.getOutputSizes(ImageFormat.JPEG)` 中获取的最大 JPEG 尺寸。始终选择最大尺寸以获得最高质量的照片。
+2. **ImageFormat.JPEG**：图像信号处理器 (ISP) 会在交付帧之前运行完整的 JPEG 编码管线（哈夫曼编码、量化、EXIF 嵌入、JFIF 文件头）。`Image.planes[0].buffer` 是一个**完整的、有效的 JPEG 文件**——无需重新编码；你可以直接将这些字节写入磁盘。
+3. **maxImages**：内部 `BufferQueue` 的深度。JPEG 缓冲区很大（每个 5–20 MB）。对于典型的照片拍摄，将其设置为 **2**（一个在途中 + 一个备用）。设置得更高会浪费 RAM；设置得太低（为 **1**）且忘记 `close()` 掉 Image 会导致永久的捕获死锁（队列再也无法取出空缓冲区进行使用了）。
 
-`ImageReader` exposes two crucial API surfaces:
-- **`imageReader.surface`**: Returns a `Surface` that can be added as a target to CaptureRequests and included in the `CameraCaptureSession` output surface list.
-- **`imageReader.setOnImageAvailableListener(listener, handler)`**: Registers a callback that fires on **every new frame** delivered to this reader. Inside this callback, you call `acquireLatestImage()` (or `acquireNextImage()`) to get the `Image` object.
+`ImageReader` 暴露了两个关键的 API 表面：
+- **`imageReader.surface`**：返回一个 `Surface`，可以将其作为目标添加到 CaptureRequest 中，并包含在 `CameraCaptureSession` 的输出 Surface 列表中。
+- **`imageReader.setOnImageAvailableListener(listener, handler)`**：注册一个回调，该回调在交付给此 reader 的**每一新帧**上触发。在此回调内部，你调用 `acquireLatestImage()`（或 `acquireNextImage()`）来获取 `Image` 对象。
 
-### ⚠️ CRITICAL RULE: Always close the Image
+### ⚠️ 关键规则：始终关闭 Image
 
-If you call `acquireLatestImage()` and do **not** call `image.close()`, that buffer is **permanently removed from the pool**. Once `maxImages` buffers are leaked, `OnImageAvailableListener` stops firing FOREVER (the queue has no empty buffers to dequeue into, so no new frames can arrive). Always use a try/finally block:
+如果你调用了 `acquireLatestImage()` 但**没有**调用 `image.close()`，该缓冲区将从池中**永久移除**。一旦泄露了 `maxImages` 个缓冲区，`OnImageAvailableListener` 将永远停止触发（队列没有可用的空缓冲区，因此没有新帧能到达）。请务必使用 try/finally 块：
 
 ```kotlin
 val image = imageReader.acquireLatestImage()
 try {
-    // Use image bytes here
+    // 在此处使用图像字节
 } finally {
-    image.close() // ALWAYS. No exceptions.
+    image.close() // 始终执行。无一例外。
 }
 ```
 
-This is the single most common Chapter 9 bug: capture works once, then never works again until the app is restarted.
+这是第 9 章中最常见的 bug：拍照能成功一次，然后就再也不起作用了，除非重启应用。
 
-## The Precapture AE State Machine
+## 预捕获 AE 状态机
 
-The Camera2 3A (Auto-Exposure / Auto-Focus / Auto-White-Balance) system is a per-frame state machine driven by the `CONTROL_AE_PRECAPTURE_TRIGGER` request key. The flow:
+Camera2 的 3A（自动曝光 / 自动对焦 / 自动白平衡）系统是一个由 `CONTROL_AE_PRECAPTURE_TRIGGER` 请求键驱动的逐帧状态机。流程如下：
 
-1. **Stop repeating preview**: `captureSession.stopRepeating()`. We don't want preview frames interleaving with the still pipeline.
-2. **Fire precapture trigger**: Build a single `CaptureRequest` that sets `CONTROL_AE_PRECAPTURE_TRIGGER` to `START`. Submit it with `captureSession.capture()` (NOT `setRepeatingRequest` — it's a one-shot command, not continuous).
-3. **Wait for convergence**: In the `CaptureCallback.onCaptureCompleted()` for the precapture trigger (and subsequent frames), inspect `CaptureResult.CONTROL_AE_STATE`. We are waiting for one of:
-   - `CONTROL_AE_STATE_CONVERGED` ✓ (AE is happy, scene is correctly metered)
-   - `CONTROL_AE_STATE_FLASH_REQUIRED` ✓ (AE determined flash is needed, flash is now charged)
-   - `CONTROL_AE_STATE_LOCKED` ✓ (if user manually locked AE earlier)
-   - A 3000ms timeout fires ✗ (safety valve — some buggy devices never signal convergence).
-4. **Fire still capture**: Build a `TEMPLATE_STILL_CAPTURE` request targeting the `ImageReader`'s Surface. Submit it with `captureSession.capture()`.
-5. **Image arrives**: `OnImageAvailableListener.onImageAvailable()` fires → acquire JPEG bytes → save to disk.
-6. **Unlock and resume**: Build a request that cancels AE trigger (`CONTROL_AE_PRECAPTURE_TRIGGER_CANCEL`), call `unlockFocus()` for AF/AWB, then `setRepeatingRequest(previewRequest, ...)` to restart preview.
+1. **停止重复预览**：`captureSession.stopRepeating()`。我们不希望预览帧干扰静态拍摄管线。
+2. **发送预捕获触发**：构建一个将 `CONTROL_AE_PRECAPTURE_TRIGGER` 设置为 `START` 的单次 `CaptureRequest`。使用 `captureSession.capture()` 提交它（不是 `setRepeatingRequest` —— 这是一个单次命令，不是持续性的）。
+3. **等待收敛**：在预捕获触发（及后续帧）的 `CaptureCallback.onCaptureCompleted()` 中，检查 `CaptureResult.CONTROL_AE_STATE`。我们在等待以下状态之一：
+   - `CONTROL_AE_STATE_CONVERGED` ✓（AE 满意，场景测光正确）
+   - `CONTROL_AE_STATE_FLASH_REQUIRED` ✓（AE 判定需要闪光，且闪光灯已就绪）
+   - `CONTROL_AE_STATE_LOCKED` ✓（如果用户之前手动锁定了 AE）
+   - 触发 3000ms 超时 ✗（安全阀——一些有问题的设备永远不会发出收敛信号）。
+4. **触发静态拍摄**：构建一个针对 `ImageReader` 的 Surface 的 `TEMPLATE_STILL_CAPTURE` 请求。使用 `captureSession.capture()` 提交它。
+5. **图像到达**：`OnImageAvailableListener.onImageAvailable()` 触发 → 获取 JPEG 字节 → 保存到磁盘。
+6. **解锁并恢复**：构建一个取消 AE 触发 (`CONTROL_AE_PRECAPTURE_TRIGGER_CANCEL`) 的请求，为 AF/AWB 调用 `unlockFocus()`，然后调用 `setRepeatingRequest(previewRequest, ...)` 重新启动预览。
 
-Each of the 6 steps corresponds to one state in our `CaptureStateMachine` enum we'll define in the code.
+上述 6 个步骤中的每一步都对应于我们代码中定义的 `CaptureStateMachine` 枚举中的一个状态。
 
-## Scoped Storage and MediaStore (Android 10+)
+## 分区存储与 MediaStore (Android 10+)
 
-From Android 10 (API 29) onward, apps can no longer write arbitrary files to the shared `/sdcard/Pictures` directory using the `java.io.File` API — doing so throws a `FileNotFoundException` with "Permission denied" even if you hold `WRITE_EXTERNAL_STORAGE`. The correct, future-proof approach uses the `MediaStore` content provider:
+从 Android 10 (API 29) 开始，应用不能再使用 `java.io.File` API 向共享的 `/sdcard/Pictures` 目录写入任意文件——这样做会抛出 `FileNotFoundException` 并提示 "Permission denied"，即使你持有 `WRITE_EXTERNAL_STORAGE` 权限也是如此。正确的、面向未来的做法是使用 `MediaStore` 内容提供者：
 
-1. **Prepare a `ContentValues` bundle**: MIME type (`image/jpeg`), relative path (`Pictures/Camera2Tutorial/` — the system creates the directory if needed), display name (timestamped).
-2. **Insert a pending row**: `contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)` returns a `Uri`.
-3. **Open an OutputStream to the Uri**: `contentResolver.openOutputStream(uri)` gives you a `ParcelFileDescriptor`-backed stream.
-4. **Write bytes and close**: The JPEG ByteBuffer from `ImageReader` is copied directly into the OutputStream.
-5. **Make the file visible to gallery apps**: Optional — add `IS_PENDING=0` in the values if you used a pending-write pattern (we'll use the simpler `IS_PENDING=1`-then-update approach for maximum compatibility).
+1. **准备 `ContentValues` 束**：MIME 类型 (`image/jpeg`)、相对路径 (`Pictures/Camera2Tutorial/` —— 系统会在需要时创建目录)、显示名称（带时间戳）。
+2. **插入挂起行**：`contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)` 返回一个 `Uri`。
+3. **打开指向该 Uri 的 OutputStream**：`contentResolver.openOutputStream(uri)` 为你提供一个由 `ParcelFileDescriptor` 支持的流。
+4. **写入字节并关闭**：将来自 `ImageReader` 的 JPEG ByteBuffer 直接复制到 OutputStream 中。
+5. **使文件对图库应用可见**：可选——如果你使用了挂起写入模式，请在 values 中添加 `IS_PENDING=0`（我们将使用更简单的 `IS_PENDING=1` 然后更新的方法，以获得最大兼容性）。
 
-On API 28 and below, we fall back to the traditional `File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), ...)` path with direct `FileOutputStream`, which still works because legacy storage models apply.
+在 API 28 及更低版本上，我们回退到传统的 `File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), ...)` 路径并使用直接的 `FileOutputStream`，这仍然有效，因为应用的是旧版存储模型。
 
-## Full Chapter 9 Code — Photo Capture
+## 第 9 章完整代码 — 照片捕获
 
-Here is the complete, end-to-end `MainActivity.kt` incorporating all of the above: the `ImageReader`, the 6-state precapture AE state machine, the shutter button, `MediaStore`/legacy save, and teardown of both session surfaces (preview + jpeg). We also update the layout XML for the shutter button.
+以下是集成了上述所有内容的完整 `MainActivity.kt`：`ImageReader`、6 状态预捕获 AE 状态机、快门按钮、`MediaStore`/旧版保存，以及对两个会话 Surface（预览 + jpeg）的拆除。我们还更新了快门按钮的布局 XML。
 
-### Updated Layout (activity_main.xml)
+### 更新后的布局 (activity_main.xml)
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
@@ -157,7 +158,7 @@ Here is the complete, end-to-end `MainActivity.kt` incorporating all of the abov
         android:padding="8dp"
         android:textColor="#FFFFFFFF"
         android:textSize="12sp"
-        tools:text="Initializing..." />
+        tools:text="正在初始化..." />
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/shutterButton"
@@ -165,16 +166,16 @@ Here is the complete, end-to-end `MainActivity.kt` incorporating all of the abov
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|center_horizontal"
         android:layout_marginBottom="48dp"
-        android:contentDescription="Take photo"
+        android:contentDescription="拍照"
         android:src="@android:drawable/ic_menu_camera"
         app:fabSize="normal" />
 
 </FrameLayout>
 ```
 
-If you don't have Material Components, replace the FAB with a `Button` with `layout_gravity="bottom|center_horizontal"`.
+如果你没有 Material Components，请将 FAB 替换为带有 `layout_gravity="bottom|center_horizontal"` 的 `Button`。
 
-### Full Kotlin Activity
+### 完整的 Kotlin Activity
 
 ```kotlin
 package com.example.camera2tutorial
@@ -235,11 +236,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var statusTextView: TextView
     private lateinit var shutterButton: FloatingActionButton
 
-    // Threading
+    // 线程
     private lateinit var backgroundThread: HandlerThread
     private lateinit var backgroundHandler: Handler
 
-    // Camera pipeline state
+    // 相机管线状态
     private lateinit var cameraManager: CameraManager
     private var cameraDevice: CameraDevice? = null
     private var captureSession: CameraCaptureSession? = null
@@ -251,31 +252,31 @@ class MainActivity : AppCompatActivity() {
     private lateinit var previewSize: Size
     private lateinit var jpegSize: Size
 
-    // 🆕 Still capture sink
+    // 🆕 静态拍摄接收器
     private lateinit var imageReader: ImageReader
 
-    // Concurrency
+    // 并发
     private val cameraOpenCloseLock = Semaphore(1)
 
-    // 🆕 Capture state machine
+    // 🆕 捕获状态机
     private enum class CaptureState {
-        IDLE,                 // Preview running normally
-        WAITING_AE_PRECAPTURE, // AE precapture trigger fired, waiting for converge
-        WAITING_AF_LOCK,      // (optional) used if we add AF trigger too
-        WAITING_STILL_CAPTURE,// Still capture submitted, waiting for ImageReader
-        PICTURE_SAVED         // Photo saved, about to return to IDLE
+        IDLE,                 // 预览正常运行
+        WAITING_AE_PRECAPTURE, // 已触发 AE 预捕获，等待收敛
+        WAITING_AF_LOCK,      // (可选) 如果我们也添加了 AF 触发
+        WAITING_STILL_CAPTURE,// 已提交静态捕获，等待 ImageReader
+        PICTURE_SAVED         // 照片已保存，准备返回 IDLE
     }
     private var captureState: CaptureState = CaptureState.IDLE
     private val precaptureTimeoutHandler: Handler by lazy { Handler(mainLooper) }
     private val precaptureTimeoutRunnable = Runnable {
         if (captureState == CaptureState.WAITING_AE_PRECAPTURE) {
-            Log.w(TAG, "⏰ Precapture AE timeout — proceeding with still anyway")
+            Log.w(TAG, "⏰ 预捕获 AE 超时 — 仍继续进行静态拍摄")
             captureStillPicture()
         }
     }
 
     // -------------------------------------------------------------------------
-    // Lifecycle + UI hookup
+    // 生命周期 + UI 挂接
     // -------------------------------------------------------------------------
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -284,7 +285,7 @@ class MainActivity : AppCompatActivity() {
         textureView = findViewById(R.id.textureView)
         statusTextView = findViewById(R.id.statusTextView)
         shutterButton = findViewById(R.id.shutterButton)
-        statusTextView.text = "Initializing..."
+        statusTextView.text = "正在初始化..."
 
         shutterButton.setOnClickListener { takePicture() }
 
@@ -322,7 +323,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     // -------------------------------------------------------------------------
-    // Chapter 6 condensed: camera discovery
+    // 第 6 章简略版：相机发现
     // -------------------------------------------------------------------------
     data class CamInfo(val id: String, val facing: Int?, val hw: Int?, val chars: CameraCharacteristics)
 
@@ -357,7 +358,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     // -------------------------------------------------------------------------
-    // Chapter 7 condensed: openCamera
+    // 第 7 章简略版：openCamera
     // -------------------------------------------------------------------------
     private val deviceCallback = object : CameraDevice.StateCallback() {
         override fun onOpened(cam: CameraDevice) {
@@ -372,42 +373,42 @@ class MainActivity : AppCompatActivity() {
         override fun onError(cam: CameraDevice, err: Int) {
             cameraOpenCloseLock.release()
             cameraDevice?.close(); cameraDevice = null
-            Toast.makeText(this@MainActivity, "Camera error $err", Toast.LENGTH_LONG).show()
+            Toast.makeText(this@MainActivity, "相机错误 $err", Toast.LENGTH_LONG).show()
         }
     }
 
     // -------------------------------------------------------------------------
-    // Session creation (now with 2 surfaces: preview + jpeg)
+    // 会话创建 (现在包含 2 个 surface：预览 + jpeg)
     // -------------------------------------------------------------------------
     private fun openCameraAndStartSession(vw: Int, vh: Int) {
         val camId = selectedCameraId ?: return
         if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) return
         if (!cameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
-            Toast.makeText(this, "Camera lock timeout", Toast.LENGTH_SHORT).show(); return
+            Toast.makeText(this, "相机锁定超时", Toast.LENGTH_SHORT).show(); return
         }
         val chars = cameraManager.getCameraCharacteristics(camId)
 
-        // Preview size
+        // 预览尺寸
         previewSize = choosePreviewSize(chars, vw, vh)
-        // 🆕 Still JPEG size (MAXIMUM available for best quality)
+        // 🆕 静态 JPEG 尺寸 (为了最佳画质选择可用的最大尺寸)
         jpegSize = chooseMaxJpegSize(chars)
 
-        // JPEG orientation tag = sensor orientation rotated by device rotation
+        // JPEG 朝向标签 = 经设备旋转后的传感器朝向
         jpegOrientation = computeJpegOrientation()
 
-        // 🆕 Create the ImageReader: width=jpegW, height=jpegH, format=JPEG, 2 buffers
+        // 🆕 创建 ImageReader: width=jpegW, height=jpegH, 格式=JPEG, 2 个缓冲区
         imageReader = ImageReader.newInstance(
             jpegSize.width,
             jpegSize.height,
             ImageFormat.JPEG,
             2
         )
-        // 🆕 Hook the JPEG frame available listener
+        // 🆕 挂接 JPEG 帧可用监听器
         imageReader.setOnImageAvailableListener(onJpegAvailableListener, backgroundHandler)
 
         configureTransform(vw, vh)
         textureView.surfaceTexture!!.setDefaultBufferSize(previewSize.width, previewSize.height)
-        statusTextView.text = "Session: preview ${previewSize} • JPEG ${jpegSize}"
+        statusTextView.text = "会话: 预览 ${previewSize} • JPEG ${jpegSize}"
 
         try { cameraManager.openCamera(camId, deviceCallback, backgroundHandler) }
         catch (e: CameraAccessException) { cameraOpenCloseLock.release() }
@@ -429,17 +430,17 @@ class MainActivity : AppCompatActivity() {
                 previewRequest = previewRequestBuilder!!.build()
                 captureState = CaptureState.IDLE
                 shutterButton.isEnabled = true
-                statusTextView.text = "🎥 Preview — tap shutter to take photo"
+                statusTextView.text = "🎥 预览 — 点击快门拍照"
                 session.setRepeatingRequest(previewRequest!!, captureCallback, backgroundHandler)
             }
             override fun onConfigureFailed(session: CameraCaptureSession) {
-                Toast.makeText(this@MainActivity, "Session failed", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@MainActivity, "会话失败", Toast.LENGTH_LONG).show()
             }
         }, backgroundHandler)
     }
 
     // -------------------------------------------------------------------------
-    // 🆕 CaptureCallback + takePicture state machine
+    // 🆕 CaptureCallback + takePicture 状态机
     // -------------------------------------------------------------------------
     private val captureCallback = object : CameraCaptureSession.CaptureCallback() {
         override fun onCaptureStarted(
@@ -466,8 +467,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         /**
-         * Called for every partial and completed frame.
-         * When we are waiting for AE precapture to converge, check AE_STATE here.
+         * 在每一部分或完整帧上被调用。
+         * 当我们在等待 AE 预捕获收敛时，在此处检查 AE_STATE。
          */
         private fun process(result: CaptureResult) {
             when (captureState) {
@@ -479,41 +480,40 @@ class MainActivity : AppCompatActivity() {
                         CaptureResult.CONTROL_AE_STATE_CONVERGED,
                         CaptureResult.CONTROL_AE_STATE_FLASH_REQUIRED,
                         CaptureResult.CONTROL_AE_STATE_LOCKED -> {
-                            // ✅ AE is ready — cancel timeout and fire still capture
+                            // ✅ AE 已就绪 — 取消超时并触发静态捕获
                             precaptureTimeoutHandler.removeCallbacks(precaptureTimeoutRunnable)
                             captureStillPicture()
                         }
-                        // else → CONTROL_AE_STATE_PRECAPTURE / SEARCHING / INACTIVE → keep waiting
+                        // 否则 → CONTROL_AE_STATE_PRECAPTURE / SEARCHING / INACTIVE → 继续等待
                     }
                 }
-                else -> { /* No state-tracking needed in IDLE or other states */ }
+                else -> { /* 在 IDLE 或其他状态下无需进行状态追踪 */ }
             }
         }
     }
 
-    /** Public shutter click entry point. */
+    /** 快门点击公共入口。 */
     fun takePicture() {
         if (cameraDevice == null || captureSession == null) return
         if (captureState != CaptureState.IDLE) {
-            Log.d(TAG, "⚠️ Capture in progress — ignoring duplicate shutter tap")
+            Log.d(TAG, "⚠️ 捕获正在进行中 — 忽略重复快门点击")
             return
         }
         shutterButton.isEnabled = false
-        statusTextView.text = "📸 Locking exposure..."
+        statusTextView.text = "📸 正在锁定曝光..."
         lockFocusAndFirePrecaptureTrigger()
     }
 
     /**
-     * Step 1–3: Stop repeating preview, submit AE precapture trigger, start 3s timeout.
-     * The captureCallback.process() method watches AE_STATE and calls captureStillPicture()
-     * when converged.
+     * 第 1–3 步：停止重复预览，提交 AE 预捕获触发，启动 3s 超时。
+     * captureCallback.process() 方法监视 AE_STATE 并在收敛时调用 captureStillPicture()。
      */
     private fun lockFocusAndFirePrecaptureTrigger() {
         val session = captureSession ?: return
         try {
             captureState = CaptureState.WAITING_AE_PRECAPTURE
 
-            // Build a request identical to preview but with AE precapture trigger = START
+            // 构建一个与预览相同但带有 AE 预捕获触发 = START 的请求
             previewRequestBuilder?.apply {
                 set(
                     CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER,
@@ -521,35 +521,35 @@ class MainActivity : AppCompatActivity() {
                 )
             }
 
-            // Pause continuous preview frames — use capture() to fire ONE trigger frame
+            // 暂停连续预览帧 — 使用 capture() 发送单个触发帧
             session.stopRepeating()
             session.capture(previewRequestBuilder!!.build(), captureCallback, backgroundHandler)
 
-            // Safety-valve timeout (3 seconds): some devices never signal AE converged
+            // 安全阀超时 (3 秒): 一些设备永远不会发出 AE 收敛信号
             precaptureTimeoutHandler.postDelayed(precaptureTimeoutRunnable, 3000)
 
         } catch (e: CameraAccessException) {
-            Log.e(TAG, "Precapture trigger failed", e)
+            Log.e(TAG, "预捕获触发失败", e)
             unlockFocusAndResumePreview()
         }
     }
 
     /**
-     * Step 4: AE converged (or timed out). Fire the single TEMPLATE_STILL_CAPTURE request
-     * targeting the ImageReader surface → JPEG bytes arrive via onJpegAvailableListener.
+     * 第 4 步：AE 已收敛 (或超时)。发送针对 ImageReader surface 的单个 TEMPLATE_STILL_CAPTURE 请求
+     * → JPEG 字节通过 onJpegAvailableListener 到达。
      */
     private fun captureStillPicture() {
         val cam = cameraDevice ?: return
         val session = captureSession ?: return
         captureState = CaptureState.WAITING_STILL_CAPTURE
-        statusTextView.text = "📷 Capturing photo..."
+        statusTextView.text = "📷 正在捕获照片..."
 
         try {
-            // 🆕 Use TEMPLATE_STILL_CAPTURE — highest quality ISP pipeline
+            // 🆕 使用 TEMPLATE_STILL_CAPTURE — 最高质量的 ISP 管线
             val stillBuilder = cam.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
             stillBuilder.addTarget(imageReader.surface)
             stillBuilder.set(CaptureRequest.JPEG_ORIENTATION, jpegOrientation)
-            stillBuilder.set(CaptureRequest.JPEG_QUALITY, 95.toByte()) // 1–100 quality
+            stillBuilder.set(CaptureRequest.JPEG_QUALITY, 95.toByte()) // 1–100 质量
 
             val stillCallback = object : CameraCaptureSession.CaptureCallback() {
                 override fun onCaptureCompleted(
@@ -557,8 +557,8 @@ class MainActivity : AppCompatActivity() {
                     req: CaptureRequest,
                     res: TotalCaptureResult
                 ) {
-                    Log.d(TAG, "📨 Still capture metadata delivered")
-                    // Note: the actual JPEG bytes arrive via onJpegAvailableListener, not here.
+                    Log.d(TAG, "📨 静态捕获元数据已交付")
+                    // 注意：实际的 JPEG 字节是通过 onJpegAvailableListener 到达的，而不是在这里。
                 }
             }
 
@@ -566,21 +566,21 @@ class MainActivity : AppCompatActivity() {
             session.capture(stillBuilder.build(), stillCallback, backgroundHandler)
 
         } catch (e: CameraAccessException) {
-            Log.e(TAG, "Still capture failed", e)
+            Log.e(TAG, "静态捕获失败", e)
             unlockFocusAndResumePreview()
         }
     }
 
     /**
-     * Step 5: JPEG bytes available in ImageReader. Acquire latest Image, write its bytes
-     * to MediaStore (or legacy File), CLOSE THE IMAGE, then resume preview.
+     * 第 5 步：ImageReader 中的 JPEG 字节可用。获取最新 Image，将其字节写入 MediaStore (或旧版 File)，
+     * 关闭 IMAGE，然后恢复预览。
      */
     private val onJpegAvailableListener = ImageReader.OnImageAvailableListener { reader ->
         var image: Image? = null
         try {
             image = reader.acquireLatestImage()
             if (image == null) {
-                Log.w(TAG, "acquireLatestImage returned null — buffer dropped")
+                Log.w(TAG, "acquireLatestImage 返回 null — 缓冲区丢弃")
                 return@OnImageAvailableListener
             }
             val buffer = image.planes[0].buffer
@@ -590,37 +590,37 @@ class MainActivity : AppCompatActivity() {
             val savedUri = savePhotoToStorage(bytes)
             captureState = CaptureState.PICTURE_SAVED
 
-            // Switch to main thread for UI updates / toasts
+            // 切换到主线程进行 UI 更新 / 显示 Toast
             runOnUiThread {
                 shutterButton.isEnabled = true
                 if (savedUri != null) {
-                    statusTextView.text = "✅ Saved! Uri=$savedUri"
+                    statusTextView.text = "✅ 已保存！Uri=$savedUri"
                     Toast.makeText(
                         this@MainActivity,
-                        "Photo saved: $savedUri",
+                        "照片已保存: $savedUri",
                         Toast.LENGTH_LONG
                     ).show()
                 } else {
-                    statusTextView.text = "❌ Save failed"
+                    statusTextView.text = "❌ 保存失败"
                     Toast.makeText(
                         this@MainActivity,
-                        "Failed to save photo — check Logcat",
+                        "照片保存失败 — 检查 Logcat",
                         Toast.LENGTH_LONG
                     ).show()
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "onJpegAvailable error", e)
+            Log.e(TAG, "onJpegAvailable 错误", e)
         } finally {
-            image?.close() // ✅ ALWAYS CLOSE THE IMAGE — no exceptions!
+            image?.close() // ✅ 始终关闭 IMAGE — 无一例外！
         }
 
-        // Step 6: Resume preview regardless of save success/failure
+        // 第 6 步：无论保存成功还是失败，都要恢复预览
         runOnUiThread { unlockFocusAndResumePreview() }
     }
 
     /**
-     * Step 6: Cancel AE precapture trigger, clear focus locks, restart repeating preview.
+     * 第 6 步：取消 AE 预捕获触发，清除对焦锁定，重新开始重复预览。
      */
     private fun unlockFocusAndResumePreview() {
         val session = captureSession ?: return
@@ -643,15 +643,15 @@ class MainActivity : AppCompatActivity() {
 
             if (statusTextView.text.startsWith("📸") ||
                 statusTextView.text.startsWith("📷")) {
-                statusTextView.text = "🎥 Preview — tap shutter to take photo"
+                statusTextView.text = "🎥 预览 — 点击快门拍照"
             }
         } catch (e: CameraAccessException) {
-            Log.e(TAG, "Failed to resume preview after still capture", e)
+            Log.e(TAG, "静态捕获后恢复预览失败", e)
         }
     }
 
     // -------------------------------------------------------------------------
-    // 🆕 savePhotoToStorage: MediaStore (API 29+) + legacy File (API 28+)
+    // 🆕 savePhotoToStorage: MediaStore (API 29+) + 旧版 File (API 28+)
     // -------------------------------------------------------------------------
     private fun savePhotoToStorage(jpegBytes: ByteArray): android.net.Uri? {
         val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
@@ -659,37 +659,37 @@ class MainActivity : AppCompatActivity() {
         val relativeDir = "${Environment.DIRECTORY_PICTURES}/Camera2Tutorial"
 
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            // ✅ Scoped Storage via MediaStore (no WRITE_EXTERNAL_STORAGE permission needed!)
+            // ✅ 通过 MediaStore 进行分区存储 (无需 WRITE_EXTERNAL_STORAGE 权限！)
             val values = ContentValues().apply {
                 put(MediaStore.Images.Media.DISPLAY_NAME, "$displayName.jpg")
                 put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
                 put(MediaStore.Images.Media.RELATIVE_PATH, relativeDir)
-                put(MediaStore.Images.Media.IS_PENDING, 1) // Mark as pending while writing
+                put(MediaStore.Images.Media.IS_PENDING, 1) // 写入时标记为挂起
             }
             val resolver = contentResolver
             val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
                 ?: return null
             try {
                 resolver.openOutputStream(uri)?.use { os -> os.write(jpegBytes) }
-                // Clear the PENDING flag so gallery apps can see it now
+                // 清除 PENDING 标志，以便图库应用现在可以看到它
                 values.clear()
                 values.put(MediaStore.Images.Media.IS_PENDING, 0)
                 resolver.update(uri, values, null, null)
-                Log.d(TAG, "✅ MediaStore saved: $uri")
+                Log.d(TAG, "✅ MediaStore 已保存: $uri")
                 uri
             } catch (e: Exception) {
-                Log.e(TAG, "MediaStore write failed", e)
-                resolver.delete(uri, null, null) // Clean up half-written pending file
+                Log.e(TAG, "MediaStore 写入失败", e)
+                resolver.delete(uri, null, null) // 清理写了一半的挂起文件
                 null
             }
         } else {
-            // 🕰️ Legacy path: direct file write to public Pictures directory
+            // 🕰️ 旧版路径：直接将文件写入公共 Pictures 目录
             val dir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "Camera2Tutorial")
             if (!dir.exists()) dir.mkdirs()
             val file = File(dir, "$displayName.jpg")
             try {
                 FileOutputStream(file).use { os -> os.write(jpegBytes) }
-                // Index the file so gallery apps discover it immediately
+                // 索引文件，以便图库应用立即发现它
                 val values = ContentValues().apply {
                     put(MediaStore.Images.Media.DATA, file.absolutePath)
                     put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
@@ -698,14 +698,14 @@ class MainActivity : AppCompatActivity() {
                 contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
                 android.net.Uri.fromFile(file)
             } catch (e: Exception) {
-                Log.e(TAG, "Legacy file write failed", e)
+                Log.e(TAG, "旧版文件写入失败", e)
                 null
             }
         }
     }
 
     // -------------------------------------------------------------------------
-    // Sizing + orientation helpers
+    // 尺寸 + 朝向辅助函数
     // -------------------------------------------------------------------------
     private fun choosePreviewSize(chars: CameraCharacteristics, vw: Int, vh: Int): Size {
         val map = chars[CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP]!!
@@ -722,8 +722,8 @@ class MainActivity : AppCompatActivity() {
         val map = chars[CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP]!!
         val choices = map.getOutputSizes(ImageFormat.JPEG).toList()
         val max = choices.maxByOrNull { it.width * it.height }!!
-        Log.d(TAG, "Max JPEG size selected: ${max.width}×${max.height} " +
-            "(from ${choices.size} sizes)")
+        Log.d(TAG, "选定的最大 JPEG 尺寸: ${max.width}×${max.height} " +
+            "(来自 ${choices.size} 个尺寸)")
         return max
     }
 
@@ -768,7 +768,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     // -------------------------------------------------------------------------
-    // Teardown
+    // 拆除
     // -------------------------------------------------------------------------
     private fun closeEverything() {
         try {
@@ -781,7 +781,7 @@ class MainActivity : AppCompatActivity() {
             captureSession = null
             cameraDevice?.close(); cameraDevice = null
             if (this::imageReader.isInitialized) {
-                imageReader.close() // Important — frees the JPEG BufferQueue memory
+                imageReader.close() // 重要 — 释放 JPEG BufferQueue 内存
             }
         } catch (_: InterruptedException) {
         } finally {
@@ -790,13 +790,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     // -------------------------------------------------------------------------
-    // Boilerplate permissions
+    // 权限样板代码
     // -------------------------------------------------------------------------
     companion object {
         private const val TAG = "Camera2Tutorial"
         private const val REQUEST_CODE_PERMISSIONS = 10
         private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
-        // WRITE_EXTERNAL_STORAGE is only needed pre-Q for legacy file save path
+        // pre-Q 在旧版文件保存路径下仅需要 WRITE_EXTERNAL_STORAGE 权限
         private val WRITE_EXTERNAL_IF_NEEDED =
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q)
                 arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE)
@@ -817,7 +817,7 @@ class MainActivity : AppCompatActivity() {
             if (allPermissionsGranted()) {
                 initializeCameraManager()
             } else {
-                Toast.makeText(this, "Permissions required", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "需要权限", Toast.LENGTH_LONG).show()
                 finish()
             }
         }
@@ -825,79 +825,79 @@ class MainActivity : AppCompatActivity() {
 }
 ```
 
-### Reading the Capture State Machine
+### 解读捕获状态机
 
-Follow the `takePicture()` → `lockFocusAndFirePrecaptureTrigger()` → (AE converged or timeout) → `captureStillPicture()` → `onJpegAvailableListener` → `unlockFocusAndResumePreview()` call chain. Each step's transition is gated by `captureState`. Duplicate taps are ignored (the `if (captureState != IDLE) return` check at the top of `takePicture()`).
+遵循 `takePicture()` → `lockFocusAndFirePrecaptureTrigger()` → (AE 已收敛或超时) → `captureStillPicture()` → `onJpegAvailableListener` → `unlockFocusAndResumePreview()` 调用链。每一步的转换都受 `captureState` 控制。重复的点击将被忽略（`takePicture()` 顶部的 `if (captureState != IDLE) return` 检查）。
 
-Key specific details:
-- **`JPEG_ORIENTATION`**: Set in the still capture request. Gallery apps read the EXIF orientation tag from the JPEG header to rotate the displayed photo. Without this, landscape photos appear sideways even though the pixel data is correct.
-- **`JPEG_QUALITY = 95`**: Good balance between quality and file size. 100 is lossless in theory but produces 2–3× larger files with minimal visual gain; 80 produces visible compression artifacts in detailed textures.
-- **`IS_PENDING=1 → 0` pattern (API 29+)**: Tells MediaStore "don't let photo editors, gallery apps, or MTP hosts see this file until I'm done writing it." Prevents half-written corrupt files from appearing in Google Photos while the `OutputStream` write is in progress. Always clear the flag.
+关键的具体细节：
+- **`JPEG_ORIENTATION`**：在静态捕获请求中设置。图库应用读取 JPEG 文件头中的 EXIF 朝向标签，以旋转显示的照片。没有此标签，即使像素数据正确，横向照片也会显示为侧向。
+- **`JPEG_QUALITY = 95`**：质量与文件大小之间的良好平衡。100 在理论上是无损的，但会产生大 2–3 倍的文件，视觉提升微乎其微；80 在精细纹理中会产生可见的压缩伪影。
+- **`IS_PENDING=1 → 0` 模式 (API 29+)**：告诉 MediaStore "在写入完成之前，不要让照片编辑器、图库应用或 MTP 主机看到此文件"。防止正在进行的 `OutputStream` 写入导致损坏的半成品文件出现在 Google 相册中。务必清除此标志。
 
-## Verification: Running the Photo Capture Flow
+## 验证：运行照片捕获流程
 
-Install and launch the Chapter 9 app on a physical Android device (emulator cameras have weird AE state machines and are not representative). Verify each of the following checkpoint behaviors:
+在真实的 Android 设备上安装并启动第 9 章的应用（模拟器相机的 AE 状态机比较奇怪，不具代表性）。验证以下每一个检查点行为：
 
-1. **Preview runs as before**. Status shows *🎥 Preview — tap shutter to take photo*. Shutter FAB is visible and clickable.
-2. **Tap shutter**. Status changes to *📸 Locking exposure...* → *📷 Capturing photo...* → *✅ Saved! Uri=content://media/external/images/media/12345*.
-3. **Preview freezes briefly** (~0.3–1.0 seconds) while AE converges and the still frame is processed. Then preview starts again. This brief freeze is correct and expected behavior.
-4. **Open the device's Gallery / Photos app**. Navigate to the **Pictures → Camera2Tutorial** album. You should see a thumbnail of the photo you took. Open it — it should be full resolution (e.g., 8160×6120 for a 50 MP sensor), correctly oriented, and properly exposed.
-5. **Open the photo in the Android Camera Parameters app's EXIF viewer** ([Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)). Check that the EXIF orientation tag matches the device's rotation at capture time, JPEG quality = 95, and the resolution matches `jpegSize` logged at session startup.
-6. **Rapidly tap shutter 10+ times**. The `captureState != IDLE` guard should swallow duplicate taps during the capture cycle; at the end you should have exactly as many saved photos as completed capture cycles.
+1. **预览如常运行**。状态显示 *🎥 预览 — 点击快门拍照*。快门 FAB 可见且可点击。
+2. **点击快门**。状态变为 *📸 正在锁定曝光...* → *📷 正在捕获照片...* → *✅ 已保存！Uri=content://media/external/images/media/12345*。
+3. **预览短暂冻结**（约 0.3–1.0 秒），期间 AE 收敛且静态帧正在被处理。然后预览再次启动。这种短暂冻结是正确且符合预期的行为。
+4. **打开设备的图库 / 相册应用**。导航到 **Pictures → Camera2Tutorial** 相册。你应该能看到拍摄照片的缩略图。打开它——它应该是全分辨率的（例如 50 MP 传感器对应 8160×6120），朝向正确且曝光正常。
+5. **在 Android Camera Parameters 应用的 EXIF 查看器中打开照片**（[Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)）。检查 EXIF 朝向标签是否与拍摄时的设备旋转匹配，JPEG 质量 = 95，且分辨率与会话启动时记录的 `jpegSize` 匹配。
+6. **快速点击快门 10 次以上**。`captureState != IDLE` 防御机制应当在捕获周期内吞掉重复的点击；最后你应该拥有与完成的捕获周期数量完全一致的已保存照片。
 
-### Logcat Output Reference
+### Logcat 输出参考
 
-A successful capture produces Logcat entries roughly in this order:
+成功的捕获会产生大致按此顺序排列的 Logcat 条目：
 ```
-D/Camera2Tutorial: Max JPEG size selected: 8160×6120 (from 9 sizes)
-D/Camera2Tutorial: 📸 Locking exposure...
+D/Camera2Tutorial: 选定的最大 JPEG 尺寸: 8160×6120 (来自 9 个尺寸)
+D/Camera2Tutorial: 📸 正在锁定曝光...
 D/Camera2Tutorial: AE_STATE = CONTROL_AE_STATE_SEARCHING
 D/Camera2Tutorial: AE_STATE = CONTROL_AE_STATE_SEARCHING
 D/Camera2Tutorial: AE_STATE = CONTROL_AE_STATE_CONVERGED
-D/Camera2Tutorial: 📷 Capturing photo...
-D/Camera2Tutorial: 📨 Still capture metadata delivered
-D/Camera2Tutorial: ✅ MediaStore saved: content://media/external/images/media/9876
-D/Camera2Tutorial: 🎥 Preview — tap shutter to take photo
+D/Camera2Tutorial: 📷 正在捕获照片...
+D/Camera2Tutorial: 📨 静态捕获元数据已交付
+D/Camera2Tutorial: ✅ MediaStore 已保存: content://media/external/images/media/9876
+D/Camera2Tutorial: 🎥 预览 — 点击快门拍照
 ```
 
-## Troubleshooting Capture Failures
+## 捕获失败排查
 
-### captureStillPicture() never fires (stuck on Locking exposure...)
+### captureStillPicture() 从未触发 (卡在"正在锁定曝光...")
 
-The 3-second timeout should eventually fire and proceed — if even the timeout doesn't fire, the `precaptureTimeoutRunnable` was never posted. Double-check that `lockFocusAndFirePrecaptureTrigger()` calls `precaptureTimeoutHandler.postDelayed(precaptureTimeoutRunnable, 3000)`. If timeout fires every time but `AE_STATE` never appears converged, you may be on a LEGACY-level camera with broken AE state reporting. In that case, add a check: if the hardware level is LEGACY, skip the precapture trigger entirely and jump straight from `takePicture()` to `captureStillPicture()`.
+3 秒超时最终应当触发并继续——如果连超时都没触发，说明 `precaptureTimeoutRunnable` 从未被投递。仔细检查 `lockFocusAndFirePrecaptureTrigger()` 是否调用了 `precaptureTimeoutHandler.postDelayed(precaptureTimeoutRunnable, 3000)`。如果每次都触发超时，但 `AE_STATE` 看起来从未收敛，你可能使用的是带有损坏的 AE 状态报告的 LEGACY 级别相机。在这种情况下，添加一个检查：如果硬件级别是 LEGACY，跳过预捕获触发，直接从 `takePicture()` 跳转到 `captureStillPicture()`。
 
-### Capture works once, then all subsequent captures never produce onImageAvailable
+### 拍照成功一次，但后续所有捕获都无法产生 onImageAvailable
 
-You leaked the `Image` by forgetting to call `image.close()`. The `maxImages = 2` pool is exhausted, so no new frames can be delivered until the app process is killed. Verify the `finally { image?.close() }` block in `onJpegAvailableListener`. As a debugging aid, log `imageReader.acquireLatestImage()` returning null — that's the telltale sign of a buffer leak.
+由于忘记调用 `image.close()`，你导致了 `Image` 泄露。`maxImages = 2` 的池子已耗尽，除非杀掉应用进程，否则无法交付新帧。验证 `onJpegAvailableListener` 中的 `finally { image?.close() }` 块。作为调试辅助，可以记录 `imageReader.acquireLatestImage()` 返回 null 的情况——这是缓冲区泄露的明显迹象。
 
-### Photo appears sideways in gallery
+### 图库中的照片显示为侧向
 
-Your `computeJpegOrientation()` return value is wrong. Test it in all 4 device orientations (portrait, landscape left, reverse landscape, upside-down portrait) on both the back and front cameras. The front camera needs the orientation flipped (mirrored) because `LENS_FACING_FRONT` sensors are mirrored by convention.
+你的 `computeJpegOrientation()` 返回值有误。在所有 4 种设备方向（纵向、左横向、反向横向、反向纵向）下对后置和前置摄像头分别进行测试。前置摄像头需要翻转（镜像）朝向，因为按照惯例，`LENS_FACING_FRONT` 传感器是镜像的。
 
-### MediaStore throws SecurityException on API 29+
+### MediaStore 在 API 29+ 上抛出 SecurityException
 
-You forgot to remove `WRITE_EXTERNAL_STORAGE` from the API 29+ permission list AND you're on a device with `requestLegacyExternalStorage=false`. On API 29+, `WRITE_EXTERNAL_STORAGE` grants **nothing** — only MediaStore Uris work. The `WRITE_EXTERNAL_IF_NEEDED` helper correctly omits the permission on Q+.
+你忘记从 API 29+ 的权限列表中移除 `WRITE_EXTERNAL_STORAGE` 且你使用的设备设置了 `requestLegacyExternalStorage=false`。在 API 29+ 上，`WRITE_EXTERNAL_STORAGE` **不授予任何权限** —— 只有 MediaStore Uri 才有效。`WRITE_EXTERNAL_IF_NEEDED` 辅助函数在 Q+ 上正确地忽略了该权限。
 
-## Summary
+## 小结
 
-Part II ends on a high note: your tutorial app is now a **fully functional camera application**. You implemented:
+第二部分圆满结束：你的教程应用现在是一个**功能齐全的相机应用程序**。你实现了：
 
-1. **ImageReader** as the CPU-accessible JPEG sink: correct width/height (max JPEG size), `ImageFormat.JPEG`, `maxImages = 2` buffer count, `OnImageAvailableListener` registration, and the inviolable rule to **always close the Image in a finally block** to prevent permanent buffer starvation.
-2. **The 6-state capture state machine**: `IDLE → WAITING_AE_PRECAPTURE → (converged/timeout) → WAITING_STILL_CAPTURE → PICTURE_SAVED → back to IDLE`, guarded by duplicate-tap suppression and a 3-second safety-valve timeout for devices with broken AE state reporting.
-3. **Precapture AE trigger flow**: `stopRepeating → session.capture(CONTROL_AE_PRECAPTURE_TRIGGER_START) → process AE_STATE in CaptureCallback until CONVERGED/FLASH_REQUIRED/LOCKED → fire still capture`.
-4. **TEMPLATE_STILL_CAPTURE + quality settings**: `JPEG_ORIENTATION` EXIF tag set based on sensor orientation + device rotation (front camera mirrored correctly), `JPEG_QUALITY = 95`.
-5. **Future-proof photo storage**: `MediaStore.Images.Media.EXTERNAL_CONTENT_URI` + `RELATIVE_PATH` + `IS_PENDING=1→0` pattern for Scoped Storage on Android 10+, with a fallback legacy `FileOutputStream` path to `Environment.DIRECTORY_PICTURES` on Android 9 and below, plus immediate MediaStore indexing so gallery apps see the new file right away.
-6. **Symmetric teardown**: `closeEverything()` stops repeating, aborts captures, closes session, closes device, closes `ImageReader` (critical to free 2× 20 MB JPEG buffers), all inside the `Semaphore(1)` critical section.
+1. **ImageReader** 作为供 CPU 访问的 JPEG 接收器：正确的宽/高 (最大 JPEG 尺寸)、`ImageFormat.JPEG`、`maxImages = 2` 的缓冲区计数、`OnImageAvailableListener` 注册，以及**始终在 finally 块中关闭 Image** 以防止缓冲区永久匮乏的不变规则。
+2. **6 状态捕获状态机**：`IDLE → WAITING_AE_PRECAPTURE → (收敛/超时) → WAITING_STILL_CAPTURE → PICTURE_SAVED → 回到 IDLE`，受重复点击抑制和针对损坏的 AE 状态报告设备的 3 秒安全阀超时保护。
+3. **预捕获 AE 触发流程**：`stopRepeating → session.capture(CONTROL_AE_PRECAPTURE_TRIGGER_START) → 在 CaptureCallback 中处理 AE_STATE 直到 CONVERGED/FLASH_REQUIRED/LOCKED → 发起静态拍摄`。
+4. **TEMPLATE_STILL_CAPTURE + 质量设置**：基于传感器朝向 + 设备旋转设置 `JPEG_ORIENTATION` EXIF 标签（前置摄像头正确镜像），`JPEG_QUALITY = 95`。
+5. **面向未来的照片存储**：Android 10+ 采用分区存储的 `MediaStore.Images.Media.EXTERNAL_CONTENT_URI` + `RELATIVE_PATH` + `IS_PENDING=1→0` 模式，Android 9 及以下版本回退到 `Environment.DIRECTORY_PICTURES` 的旧版 `FileOutputStream` 路径，外加立即进行的 MediaStore 索引，以便图库应用能立刻看到新文件。
+6. **对称拆除**：`closeEverything()` 会停止重复、中止捕获、关闭会话、关闭设备、关闭 `ImageReader`（关键在于释放 2× 20 MB 的 JPEG 缓冲区），所有操作均在 `Semaphore(1)` 临界区内进行。
 
-The code in this chapter forms the baseline for any serious Camera2 still photography app. The Android Camera Parameters app ([GitHub](https://github.com/zoozooll/AndroidCameraParameters), [Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)) extends this state machine with 10+ additional states for AF trigger, AWB lock, multi-frame burst capture, RAW (DNG) output alongside JPEG, and manual per-frame ISO/exposure-time override — but every one of those features is an incremental addition to the same `ImageReader` + `CaptureCallback` + state machine pattern you now fully understand.
+本章中的代码构成了任何严谨的 Camera2 静态摄影应用的基础。[GitHub](https://github.com/zoozooll/AndroidCameraParameters) 上的 **Android Camera Parameters** 应用将此状态机扩展了 10 多个额外状态，用于 AF 触发、AWB 锁定、多帧连拍捕获、RAW (DNG) 输出以及 JPEG 旁路、手动逐帧 ISO/曝光时间覆盖——但其中每一项功能都是对你现在已经完全理解的同一个 `ImageReader` + `CaptureCallback` + 状态机模式的增量补充。
 
-## What's Next (Looking Ahead to Part III)
+## 下一章（展望第三部分）
 
-This concludes **Part II: Your First Camera2 App**. In five chapters, you built a production-quality skeleton application with permission handling, threading, camera enumeration, open/close lifecycle, preview rendering, and JPEG still capture. If you stopped here and shipped this code, you'd already have a better camera app than many on the Play Store.
+**第二部分：你的第一个 Camera2 应用**到此结束。在五章中，你构建了一个具有权限处理、线程化、相机枚举、打开/关闭生命周期、预览渲染和 JPEG 静态捕获功能的生产级骨架应用。如果你就此止步并发布这段代码，你已经拥有了一个比 Play 商店中许多应用更好的相机应用。
 
-But the Camera2 API's true power lies in what comes next. **Part III (Chapters 10–12)** dives deep into the internals you'll need for a professional camera application:
-- **Chapter 10: The CameraCharacteristics Encyclopedia** — every key family (SENSOR, LENS, SCALER, STATISTICS, CONTROL, INFO, REQUEST, SYNC), what they mean, and how to design feature flags around them.
-- **Chapter 11: The Camera2 Pipeline & HAL3 Architecture** — P1 vs P2 vs P3 nodes, reprocessing, the `CaptureRequest`/`CaptureResult` key duality, sync framework, and what `TEMPLATE_*` actually configures under the hood.
-- **Chapter 12: Capture Types, Bursts, and 3A in Depth** — repeating vs single-shot vs burst, ZSL reprocessing queues, AF/AE/AWB state machine transitions, manual controls (`LENS_FOCUS_DISTANCE`, `SENSOR_SENSITIVITY`/`SENSOR_EXPOSURE_TIME`), and the `CONTROL_CAPTURE_INTENT` taxonomy.
+但 Camera2 API 的真正威力在于接下来的内容。**第三部分 (第 10–12 章)** 将深入探讨专业相机应用所需的内部机制：
+- **第 10 章：CameraCharacteristics 百科全书** —— 每一个键系列 (SENSOR, LENS, SCALER, STATISTICS, CONTROL, INFO, REQUEST, SYNC)，它们的含义，以及如何围绕它们设计功能标志。
+- **第 11 章：Camera2 管线与 HAL3 架构** —— P1、P2 与 P3 节点、重处理、`CaptureRequest`/`CaptureResult` 键的对等性、同步框架，以及 `TEMPLATE_*` 在底层到底配置了什么。
+- **第 12 章：捕获类型、连拍与深入 3A** —— 重复 vs 单次 vs 连拍、ZSL 重处理队列、AF/AE/AWB 状态机转换、手动控制 (`LENS_FOCUS_DISTANCE`, `SENSOR_SENSITIVITY`/`SENSOR_EXPOSURE_TIME`) 以及 `CONTROL_CAPTURE_INTENT` 分类学。
 
-Until then, go take some photos with your Chapter 9 app. Explore a scene with mixed lighting (bright window + dark interior) and see how the precapture AE trigger adjusts exposure relative to preview. Compare the file size at `JPEG_QUALITY = 50` vs `95` vs `100`. Swap `chooseMaxJpegSize` for a 4K size and notice the speed difference. The best way to internalize this material is to see the real-world consequences of each parameter. Congratulations on building your first Camera2 camera — you've earned it.
+在此之前，请尝试用你第 9 章的应用拍些照片。探索光线复杂的场景（明亮的窗户 + 昏暗的室内），看看预捕获 AE 触发如何相对于预览调整曝光。对比 `JPEG_QUALITY = 50` vs `95` vs `100` 的文件大小。将 `chooseMaxJpegSize` 换成 4K 尺寸，观察速度差异。内化这些材料的最佳方式是观察每个参数带来的现实后果。恭喜你构建了你的第一台 Camera2 相机——这是你应得的。

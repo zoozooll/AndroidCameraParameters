@@ -1,39 +1,39 @@
 ---
 sidebar_position: 1
 slug: /
-description: Ringkasan dasbor Android Camera Parameters dan fitur diagnostik utamanya termasuk deteksi tingkat perangkat keras dan pelacakan fitur waktu nyata.
-keywords: [dasbor kamera android, deteksi tingkat perangkat keras, diagnostik kamera]
+description: Ikhtisar dasbor Android Camera Parameters dan fitur diagnostik utamanya termasuk deteksi level perangkat keras dan pelacakan fitur waktu nyata.
+keywords: [dasbor kamera android, deteksi level perangkat keras, diagnostik kamera]
 ---
 
-# Ringkasan Aplikasi
+# Ikhtisar Aplikasi
 
-Halaman ini memberikan perincian mendetail tentang dasbor aplikasi dan fitur-fitur utamanya.
+Halaman ini memberikan rincian mendalam tentang dasbor dan fitur utama aplikasi.
 
-![Ringkasan Aplikasi](/img/camera_params_feature_graph.png)
+![App Overview](/img/camera_params_feature_graph.png)
 
 ## Komponen Dasbor
 
 ### 1. Navigasi & Pemilihan
-- **Menu Navigasi**: Akses cepat ke Pengaturan, Ekspor/Impor, pengalihan Tema, dan info Tentang.
-- **Pemilihan Kamera**: Klik pada Nama Kamera atau Lencana ID untuk beralih antara lensa Belakang, Depan, dan Eksternal.
+- **Laci Menu**: Akses Kebijakan Privasi, Beri Nilai Aplikasi, dan informasi Tentang melalui ikon menu di pojok kiri atas.
+- **Pemilihan Kamera**: Ketuk Nama Kamera atau Lencana ID (misalnya, "0") untuk membuka menu dropdown dan beralih antar lensa yang tersedia (Belakang, Depan, Ultra-lebar, dll.).
+- **Navigasi Bawah**: Beralih dengan mulus antara **Ikhtisar**, **Kategori**, **JSON Mentah**, dan **Favorit**.
 
 ### 2. Kartu Ringkasan
-Kartu Ringkasan memberikan cuplikan tingkat tinggi dari kamera yang dipilih:
-- **Tingkat Perangkat Keras**: Menunjukkan tingkat dukungan API Camera2 (LEGACY, LIMITED, FULL, LEVEL_3).
-- **Resolusi Sensor**: Total hitungan megapiksel sensor.
-- **FPS Video Maks**: Kecepatan bingkai tertinggi yang didukung untuk perekaman video.
+Kartu Ringkasan di bagian atas memberikan informasi yang paling penting:
+- **Tingkat Perangkat Keras**: Tingkat dukungan API Camera2 (LEGACY, LIMITED, FULL, atau LEVEL_3). Ini menentukan kemampuan keseluruhan lensa.
 
-### 3. Kotak Fitur Utama
-Kotak pandangan sekilas yang menunjukkan dukungan untuk fitur profesional kritis:
-- **Dukungan RAW**: Kemampuan untuk menangkap data sensor yang tidak terkompresi.
-- **Eksposur & Fokus Manual**: Kontrol tingkat pro atas pengambilan gambar.
-- **Kemampuan Flash**: Dukungan untuk Flash Otomatis dan pengurangan mata merah.
-- **OIS (Stabilisasi Gambar Optik)**: Pengurangan guncangan berbasis perangkat keras.
-- **HDR & Deteksi Wajah**: Kemampuan pemrosesan pemandangan cerdas.
+### 3. Kisi Fitur Utama
+Kisi visual yang memberikan status instan untuk fitur tingkat profesional:
+- **Resolusi & Ukuran Sensor**: Karakteristik fisik sensor.
+- **FPS Video Maksimum**: Kemampuan frame rate puncak.
+- **Dukungan RAW**: Menunjukkan apakah sensor dapat mengeluarkan data yang tidak terkompresi.
+- **OIS (Stabilisasi Gambar Optik)**: Ketersediaan stabilisasi lensa fisik.
+- **Kontrol Manual**: Status dukungan Eksposur Manual dan Fokus Manual.
+- **Pemrosesan**: Dukungan untuk HDR, Deteksi Wajah, dan Pengurangan Mata Merah.
 
-### 4. Kategori Parameter
-Karakteristik kamera yang mendetail dikelompokkan ke dalam kategori logis untuk eksplorasi yang mudah:
-- **Sensor**: Ukuran larik aktif, sensitivitas, rentang waktu eksposur.
-- **Lensa**: Bukaan, panjang fokus, jarak fokus.
-- **AE/AF/AWB**: Kontrol mendetail untuk Eksposur Otomatis, Fokus Otomatis, dan Keseimbangan Putih Otomatis.
-- **Output**: Ukuran JPEG, RAW, dan YUV yang didukung.
+### 4. Parameter Terkategorisasi (Tab Kategori)
+Jelajahi daftar lengkap CameraCharacteristics yang disusun ke dalam kelompok logis:
+- **Sensor**: Resolusi, ukuran fisik, rentang sensitivitas.
+- **Lensa**: Panjang fokus, bukaan (aperture), mode stabilisasi.
+- **AE/AF/AWB**: Mode kontrol terperinci untuk eksposur, fokus, dan keseimbangan putih.
+- **Pencarian**: Gunakan bilah pencarian terintegrasi untuk menemukan kunci API atau nilai spesifik dengan cepat.

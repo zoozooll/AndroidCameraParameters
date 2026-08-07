@@ -1,74 +1,74 @@
 ---
 sidebar_position: 12
-title: "Chapter 12: CameraCharacteristics Deep Dive"
-description: Master CameraCharacteristics — the immutable static metadata that describes every camera before you open it. Hardware levels (LEGACY, LIMITED, FULL, LEVEL_3, EXTERNAL), capability flags, metadata key organization, and runtime capability queries.
-keywords: [CameraCharacteristics, hardware level, INFO_SUPPORTED_HARDWARE_LEVEL, LEGACY, LIMITED, FULL, LEVEL_3, EXTERNAL, REQUEST_AVAILABLE_CAPABILITIES, MANUAL_SENSOR, RAW, metadata keys]
+title: "Kapitel 12: Tiefer Einblick in CameraCharacteristics"
+description: Meistern Sie CameraCharacteristics — die unveränderlichen statischen Metadaten, die jede Kamera beschreiben, bevor Sie sie öffnen. Hardware-Level (LEGACY, LIMITED, FULL, LEVEL_3, EXTERNAL), Capability-Flags, Organisation der Metadaten-Schlüssel und Laufzeit-Fähigkeitsabfragen.
+keywords: [CameraCharacteristics, Hardware-Level, INFO_SUPPORTED_HARDWARE_LEVEL, LEGACY, LIMITED, FULL, LEVEL_3, EXTERNAL, REQUEST_AVAILABLE_CAPABILITIES, MANUAL_SENSOR, RAW, Metadaten-Schlüssel]
 ---
 
-## 12.1 The Spec Sheet in Your Pocket
+## 12.1 Das Datenblatt in Ihrer Tasche
 
-Before you can call `openCamera()`, before you can build a `CaptureRequest`, before you can configure a session — there is `CameraCharacteristics`. It is the immutable, power-on-free window into *everything* a camera can do. Think of it as the camera's spec sheet, exposed as a structured queryable object.
+Bevor Sie `openCamera()` aufrufen, bevor Sie einen `CaptureRequest` erstellen, bevor Sie eine Sitzung konfigurieren können — gibt es die `CameraCharacteristics`. Sie sind das unveränderliche Fenster, das keinen Strom verbraucht, in *alles*, was eine Kamera leisten kann. Betrachten Sie sie als das Datenblatt der Kamera, das als strukturiertes, abfragbares Objekt offengelegt wird.
 
-`CameraCharacteristics` is your most important tool for writing apps that work across Android's 10,000+ device models. You cannot assume manual ISO works. You cannot assume RAW is available. You cannot even assume the camera supports 1080p preview — unless you ask `CameraCharacteristics`.
+`CameraCharacteristics` ist Ihr wichtigstes Werkzeug, um Apps zu schreiben, die auf den über 10.000 Android-Gerätemodellen funktionieren. Sie können nicht davon ausgehen, dass der manuelle ISO-Wert funktioniert. Sie können nicht davon ausgehen, dass RAW verfügbar ist. Sie können nicht einmal davon ausgehen, dass die Kamera eine 1080p-Vorschau unterstützt — es sei denn, Sie fragen die `CameraCharacteristics` ab.
 
-In [Chapter 6](discovering-cameras.md) we touched on the basics: lens facing, sensor size, focal length. In this deep dive we go much further:
-- The five **hardware levels** (LEGACY → LIMITED → FULL → LEVEL_3 → EXTERNAL) and what each guarantees
-- The ten+ **capability flags** (`MANUAL_SENSOR`, `RAW`, `DEPTH_OUTPUT`, etc.) and which hardware levels provide them
-- How metadata keys are **organized hierarchically** by subsystem (`android.sensor.*`, `android.lens.*`, `android.control.*`, ...)
-- How to write a **comprehensive runtime capability query** with graceful fallbacks
+In [Kapitel 6](discovering-cameras.md) haben wir die Grundlagen gestreift: Ausrichtung des Objektivs, Sensorgröße, Brennweite. In diesem tiefen Einblick gehen wir viel weiter:
+- Die fünf **Hardware-Level** (LEGACY → LIMITED → FULL → LEVEL_3 → EXTERNAL) und was jedes garantiert.
+- Die zehn+ **Capability-Flags** (`MANUAL_SENSOR`, `RAW`, `DEPTH_OUTPUT` usw.) und welche Hardware-Level diese bereitstellen.
+- Wie Metadaten-Schlüssel **hierarchisch nach Subsystemen organisiert** sind (`android.sensor.*`, `android.lens.*`, `android.control.*`, ...).
+- Wie man eine **umfassende Laufzeit-Fähigkeitsabfrage** mit eleganten Fallbacks schreibt.
 
-The Android Camera Parameters app ([GitHub](https://github.com/zoozooll/AndroidCameraParameters), [Play Store](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)) is essentially a `CameraCharacteristics` browser on steroids. Open it to any camera and you'll see exactly the keys we discuss in this chapter, organized by category, with human-readable labels and live-value rendering.
+Die App Android Camera Parameters ([GitHub](https://github.com/zoozooll/AndroidCameraParameters), [Play Store](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)) ist im Grunde ein `CameraCharacteristics`-Browser auf Steroiden. Öffnen Sie sie für eine beliebige Kamera und Sie sehen genau die Schlüssel, die wir in diesem Kapitel besprechen, nach Kategorien geordnet, mit menschenlesbaren Beschriftungen und Live-Werte-Rendering.
 
-## 12.2 What CameraCharacteristics Actually Is
+## 12.2 Was CameraCharacteristics eigentlich sind
 
-Formally, `CameraCharacteristics` is:
+Formal gesehen sind `CameraCharacteristics`:
 
-- **Immutable** — Once obtained from `CameraManager.getCameraCharacteristics(id)`, the object never changes (with one documented exception: foldable `SENSOR_ORIENTATION` on API 32+).
-- **Power-free** — Querying it does **not** power on the sensor or ISP. You can call it in `onCreate()` of your first Activity without battery impact.
-- **Per-camera** — Every logical camera ID has its own `CameraCharacteristics` object.
-- **Type-safe and keyed** — Data is accessed via `<Key<T>> get(Key<T> key)` where each key has a documented type (Int, Long, Float, Rect, Array, etc.).
+- **Unveränderlich** — Einmal über `CameraManager.getCameraCharacteristics(id)` erhalten, ändert sich das Objekt niemals (mit einer dokumentierten Ausnahme: `SENSOR_ORIENTATION` bei Foldables ab API 32).
+- **Stromlos** — Das Abfragen verbraucht **keinen** Strom vom Sensor oder ISP. Sie können sie in `onCreate()` Ihrer ersten Activity aufrufen, ohne den Akku zu belasten.
+- **Pro Kamera** — Jede logische Kamera-ID hat ihr eigenes `CameraCharacteristics`-Objekt.
+- **Typsicher und schlüsselbasiert** — Der Zugriff auf Daten erfolgt über `<Key<T>> get(Key<T> key)`, wobei jeder Schlüssel einen dokumentierten Typ hat (Int, Long, Float, Rect, Array usw.).
 
-You obtain one with a single call:
+Sie erhalten eines mit einem einzigen Aufruf:
 
 ```kotlin
 val cameraManager = getSystemService(CAMERA_SERVICE) as CameraManager
-val cameraIdList = cameraManager.cameraIdList  // e.g. ["0", "1", "2", "3"]
+val cameraIdList = cameraManager.cameraIdList  // z. B. ["0", "1", "2", "3"]
 
 for (id in cameraIdList) {
     val characteristics: CameraCharacteristics = cameraManager.getCameraCharacteristics(id)
-    // Query away — no sensor power used!
+    // Abfragen nach Belieben — kein Sensorstrom verbraucht!
 }
 ```
 
-On Android 15 (API 35) you can use `CameraManager.getCameraDeviceSetup(id)` for lightweight session-configuration queries without opening the camera (see [Chapter 28](camera2-architecture.md) for `CameraDeviceSetup` details).
+Unter Android 15 (API 35) können Sie `CameraManager.getCameraDeviceSetup(id)` für leichtgewichtige Sitzungskonfigurationsabfragen verwenden, ohne die Kamera zu öffnen (siehe [Kapitel 28](camera2-architecture.md) für Details zu `CameraDeviceSetup`).
 
-## 12.3 Hardware Level: INFO_SUPPORTED_HARDWARE_LEVEL
+## 12.3 Hardware-Level: INFO_SUPPORTED_HARDWARE_LEVEL
 
-The single most important `CameraCharacteristics` key is **`INFO_SUPPORTED_HARDWARE_LEVEL`**. It defines the entire tier of the camera HAL and tells you (broadly) what features are guaranteed to work. There are five hardware levels:
+Der wichtigste Schlüssel in den `CameraCharacteristics` ist **`INFO_SUPPORTED_HARDWARE_LEVEL`**. Er definiert die gesamte Stufe des Kamera-HALs und sagt Ihnen (im Groben), welche Funktionen garantiert funktionieren. Es gibt fünf Hardware-Level:
 
-### The Five Hardware Levels
+### Die fünf Hardware-Level
 
-| Level | Constant | Typical Devices | What It Means In Practice |
+| Level | Konstante | Typische Geräte | Bedeutung in der Praxis |
 |-------|----------|----------------|---------------------------|
-| **LEGACY** | `INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY` | Pre-2015 budget devices, very old chipsets | Camera2 API is a wrapper around the old `android.hardware.Camera` API. No per-frame controls, no manual settings, RAW impossible, burst unreliable. Treat these devices as "Camera1-era with Camera2 syntax." |
-| **LIMITED** | `INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED` | Budget phones (Android Go, entry-level SoCs like MediaTek Helio, Snapdragon 4xx) | Native Camera2 HAL but only subset of features. 3A (AF/AE/AWB) work. Preview + JPEG work. But **no** manual sensor control, **no** RAW, **no** guaranteed burst, **no** YUV reprocessing. This is Android's "baseline functional" camera level. |
-| **FULL** | `INFO_SUPPORTED_HARDWARE_LEVEL_FULL` | Mid-range and flagship phones (Snapdragon 6xx/7xx/8xx, Exynos mid+, Dimensity 7xxx+) | The "pro camera" tier. Guarantees MANUAL_SENSOR, MANUAL_POST_PROCESSING, BURST_CAPTURE, per-frame settings, 30fps full-res, RAW, all output formats, predictable pipeline depth. What you want for any serious camera app. |
-| **LEVEL_3** | `INFO_SUPPORTED_HARDWARE_LEVEL_3` | High-end flagships with advanced ISP (Snapdragon 8 Gen 1+, Pixel 6+, Exynos 2xxx+) | FULL + extra: YUV reprocessing (input stream support, offline reprocessing), private reprocessing, advanced statistics, hardware JPEG + RAW at max resolution simultaneously. Required for ZSL with RAW output. |
-| **EXTERNAL** | `INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL` | USB cameras, webcams connected via OTG | External camera HAL. Behaves like LIMITED or FULL depending on the USB device. Key caveat: camera can be hotplugged/disconnected at any time, so listen for `ACTION_CAMERA_DEVICE_STATE_CHANGED`. |
+| **LEGACY** | `INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY` | Budget-Geräte vor 2015, sehr alte Chipsätze | Die Camera2-API ist ein Wrapper um die alte `android.hardware.Camera`-API. Keine Steuerung pro Frame, keine manuellen Einstellungen, RAW unmöglich, Bursts unzuverlässig. Behandeln Sie diese Geräte als "Camera1-Ära mit Camera2-Syntax". |
+| **LIMITED** | `INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED` | Budget-Handys (Android Go, Einstiegs-SoCs wie MediaTek Helio, Snapdragon 4xx) | Nativer Camera2-HAL, aber nur eine Teilmenge der Funktionen. 3A (AF/AE/AWB) funktionieren. Vorschau + JPEG funktionieren. Aber **keine** manuelle Sensorsteuerung, **keine** RAW, **keine** garantierter Burst, **kein** YUV-Reprocessing. Dies ist Androids "funktionale Basisstufe" für Kameras. |
+| **FULL** | `INFO_SUPPORTED_HARDWARE_LEVEL_FULL` | Mittelklasse- und Flaggschiff-Telefone (Snapdragon 6xx/7xx/8xx, Exynos Mittelklasse+, Dimensity 7xxx+) | Die Stufe für "Profi-Kameras". Garantiert MANUAL_SENSOR, MANUAL_POST_PROCESSING, BURST_CAPTURE, Einstellungen pro Frame, 30 fps bei voller Auflösung, RAW, alle Ausgabeformate, vorhersehbare Pipeline-Tiefe. Was man für jede ernsthafte Kamera-App will. |
+| **LEVEL_3** | `INFO_SUPPORTED_HARDWARE_LEVEL_3` | High-End-Flaggschiffe mit fortschrittlichem ISP (Snapdragon 8 Gen 1+, Pixel 6+, Exynos 2xxx+) | FULL + Extras: YUV-Reprocessing (Unterstützung von Eingabeströmen, Offline-Reprocessing), privates Reprocessing, erweiterte Statistiken, Hardware-JPEG + RAW gleichzeitig bei maximaler Auflösung. Erforderlich für ZSL mit RAW-Ausgabe. |
+| **EXTERNAL** | `INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL` | USB-Kameras, Webcams über OTG | Externer Kamera-HAL. Verhält sich je nach USB-Gerät wie LIMITED oder FULL. Wichtiger Vorbehalt: Die Kamera kann jederzeit angeschlossen/getrennt werden, hören Sie also auf `ACTION_CAMERA_DEVICE_STATE_CHANGED`. |
 
 ```mermaid
 flowchart BT
-    LEGACY["LEGACY<br/>Camera1 wrapper, no manual controls"]
-    LIMITED["LIMITED<br/>3A works, JPEG preview only"]
-    FULL["FULL<br/>Manual sensor, RAW, burst, all formats"]
-    LEVEL3["LEVEL_3<br/>FULL + reprocessing + advanced stats"]
-    EXTERNAL["EXTERNAL<br/>USB/OTG cameras (hotpluggable)"]
+    LEGACY["LEGACY<br/>Camera1-Wrapper, keine manuellen Steuerungen"]
+    LIMITED["LIMITED<br/>3A funktioniert, nur JPEG-Vorschau"]
+    FULL["FULL<br/>Manueller Sensor, RAW, Burst, alle Formate"]
+    LEVEL3["LEVEL_3<br/>FULL + Reprocessing + erweiterte Statistiken"]
+    EXTERNAL["EXTERNAL<br/>USB/OTG-Kameras (Hotpluggable)"]
 
-    LIMITED -->|"Adds manual/RAW/burst"| FULL
-    FULL -->|"Adds reprocessing"| LEVEL3
+    LIMITED -->|"Fügt manuell/RAW/Burst hinzu"| FULL
+    FULL -->|"Fügt Reprocessing hinzu"| LEVEL3
     LEGACY -.->|Wrapped HAL| LIMITED
-    EXTERNAL -.->|Varies by device| LIMITED
-    EXTERNAL -.->|If device supports it| FULL
+    EXTERNAL -.->|Variiert je nach Gerät| LIMITED
+    EXTERNAL -.->|Falls Gerät dies unterstützt| FULL
 
     classDef low fill:#ffebee,stroke:#c62828;
     classDef mid fill:#fff3e0,stroke:#e65100;
@@ -82,34 +82,34 @@ flowchart BT
 ```
 
 :::important
-Hardware level is a **guarantee**, not a best-effort flag. If a device reports FULL, Google's CTS (Compatibility Test Suite) has verified that every FULL-level feature works. If a device reports LIMITED, you cannot rely on any FULL-level feature — even if it happens to work on one specific LIMITED device, it will break on another.
+Das Hardware-Level ist eine **Garantie**, kein Best-Effort-Flag. Wenn ein Gerät FULL meldet, hat Googles CTS (Compatibility Test Suite) verifiziert, dass jede Funktion der FULL-Stufe funktioniert. Wenn ein Gerät LIMITED meldet, können Sie sich auf keine Funktion der FULL-Stufe verlassen — selbst wenn sie auf einem bestimmten LIMITED-Gerät zufällig funktioniert, wird sie auf einem anderen fehlschlagen.
 :::
 
-### Checking Hardware Level at Runtime
+### Überprüfung des Hardware-Levels zur Laufzeit
 
 ```kotlin
 val hardwareLevel = characteristics.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL)
 
 when (hardwareLevel) {
     CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY -> {
-        Log.w("CamCaps", "LEGACY hardware — manual/RAW disabled. Falling back to basic JPEG.")
+        Log.w("CamCaps", "LEGACY-Hardware — manuell/RAW deaktiviert. Fallback auf Basis-JPEG.")
         disableManualControls()
         disableRawCapture()
     }
     CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED -> {
-        Log.i("CamCaps", "LIMITED hardware — basic photo + preview only.")
+        Log.i("CamCaps", "LIMITED-Hardware — nur Basisfoto + Vorschau.")
         disableManualControls()
         disableRawCapture()
         disableBurstCapture()
     }
     CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL -> {
-        Log.i("CamCaps", "FULL hardware — enabling manual controls, RAW, and burst.")
+        Log.i("CamCaps", "FULL-Hardware — aktiviere manuelle Steuerungen, RAW und Burst.")
         enableManualControls()
         enableRawCapture()
         enableBurstCapture()
     }
     CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_3 -> {
-        Log.i("CamCaps", "LEVEL_3 hardware — FULL + reprocessing + ZSL + advanced stats.")
+        Log.i("CamCaps", "LEVEL_3-Hardware — FULL + Reprocessing + ZSL + erweiterte Statistiken.")
         enableManualControls()
         enableRawCapture()
         enableBurstCapture()
@@ -117,42 +117,42 @@ when (hardwareLevel) {
         enableZeroShutterLag()
     }
     CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL -> {
-        Log.i("CamCaps", "EXTERNAL camera — may be LIMITED or FULL; registering disconnect listener.")
+        Log.i("CamCaps", "EXTERNAL-Kamera — kann LIMITED oder FULL sein; registriere Trennungs-Listener.")
         registerHotplugListener()
-        // Dynamically probe capabilities rather than assuming
+        // Fähigkeiten dynamisch prüfen, anstatt sie vorauszusetzen
     }
     else -> {
-        Log.w("CamCaps", "Unknown hardware level $hardwareLevel — assuming LIMITED for safety.")
+        Log.w("CamCaps", "Unbekanntes Hardware-Level $hardwareLevel — nehme LIMITED zur Sicherheit an.")
         safeDefaultFeatures()
     }
 }
 ```
 
-## 12.4 Capabilities: REQUEST_AVAILABLE_CAPABILITIES
+## 12.4 Fähigkeiten: REQUEST_AVAILABLE_CAPABILITIES
 
-The hardware level is a *coarse* tier. For fine-grained feature detection, Camera2 exposes `REQUEST_AVAILABLE_CAPABILITIES` — a `IntArray` of capability flags. Each flag describes one specific thing the camera can do.
+Das Hardware-Level ist eine *grobe* Einstufung. Für eine fein abgestimmte Erkennung von Funktionen legt Camera2 `REQUEST_AVAILABLE_CAPABILITIES` offen — ein `IntArray` von Capability-Flags. Jedes Flag beschreibt eine spezifische Sache, die die Kamera leisten kann.
 
-The formal relationship between hardware level and capabilities:
+Die formale Beziehung zwischen Hardware-Level und Fähigkeiten:
 
 ```mermaid
 flowchart LR
-    subgraph Level["Hardware Level Guarantee"]
+    subgraph Level["Garantie des Hardware-Levels"]
         LEG["LEGACY"]
         LIM["LIMITED"]
         FUL["FULL"]
         L3["LEVEL_3"]
     end
 
-    subgraph Cap["Guaranteed Capability Flags"]
-        BC["BACKWARD_COMPATIBLE ✅ All levels"]
+    subgraph Cap["Garantierte Capability-Flags"]
+        BC["BACKWARD_COMPATIBLE ✅ Alle Level"]
         MS["MANUAL_SENSOR"]
         MP["MANUAL_POST_PROCESSING"]
         RAW["RAW"]
         BURST["BURST_CAPTURE"]
         YUV["YUV_REPROCESSING"]
         PRIV["PRIVATE_REPROCESSING"]
-        DEPTH["DEPTH_OUTPUT ✅ Optional on any"]
-        LMC["LOGICAL_MULTI_CAMERA ✅ Optional on any"]
+        DEPTH["DEPTH_OUTPUT ✅ Optional auf jedem"]
+        LMC["LOGICAL_MULTI_CAMERA ✅ Optional auf jedem"]
     end
 
     LEG --> BC
@@ -172,28 +172,28 @@ flowchart LR
     L3 --> YUV
     L3 --> PRIV
 
-    LEG -.->|"May claim but unreliable"| MS
-    LIM -.->|"Rarely, and untested"| RAW
+    LEG -.->|"Kann beansprucht werden, aber unzuverlässig"| MS
+    LIM -.->|"Selten und ungetestet"| RAW
 ```
 
-### The Capability Flags, Explained
+### Die Capability-Flags erklärt
 
-| Flag Constant | Meaning | Hardware Level Guarantee | Practical Implication |
+| Flag-Konstante | Bedeutung | Garantie des Hardware-Levels | Praktische Auswirkung |
 |--------------|---------|--------------------------|----------------------|
-| `BACKWARD_COMPATIBLE` | Camera implements the baseline Camera2 API | **All 5 levels** (LEGACY–EXTERNAL) | If this is missing, the camera device is effectively non-functional for your app. |
-| `MANUAL_SENSOR` | App can manually control `SENSOR_EXPOSURE_TIME`, `SENSOR_SENSITIVITY`, `SENSOR_FRAME_DURATION`, `LENS_FOCUS_DISTANCE`, `LENS_APERTURE` | Guaranteed on **FULL** and **LEVEL_3** | Pro-mode and manual camera UIs require this. Without it, all manual ISO/exposure sliders must be hidden. |
-| `MANUAL_POST_PROCESSING` | App can manually control ISP stages: noise reduction, edge enhancement, tone curve, color correction gains, color correction transform | Guaranteed on **FULL** and **LEVEL_3** | Needed for custom "film look" LUTs, manual white balance via gains, sharpness/blur control. |
-| `RAW` | Sensor outputs RAW Bayer data via `ImageFormat.RAW_SENSOR`, `RAW10`, or `RAW12` | Guaranteed on **FULL** and **LEVEL_3** | DNG capture, RAW-to-JPEG editing pipeline, computational photography all start here. |
-| `PRIVATE_REPROCESSING` | Camera supports `InputSurface` + offline reprocessing of HAL-private-format images into JPEG/YUV | Guaranteed on **LEVEL_3**. Rare on FULL. | Enables Zero-Shutter-Lag (ZSL): circular-buffer past frames, reprocess a recent one into a high-quality still. |
-| `YUV_REPROCESSING` | Camera supports `InputSurface` + reprocessing of app-provided YUV_420_888 images back through the ISP | Guaranteed on **LEVEL_3** | Enables "apply cinematic LUT to recorded video" or "re-focus portrait depth in post" pipelines. |
-| `DEPTH_OUTPUT` | Camera can output depth maps (`DEPTH16` / `DEPTH_POINT_CLOUD` formats) | **Optional on ANY** level. Check the array explicitly. | Portrait mode bokeh, AR measurement, 3D scanning. Often paired with `LOGICAL_MULTI_CAMERA` (dual physical cameras for stereo depth). |
-| `LOGICAL_MULTI_CAMERA` | This logical camera is backed by 2+ physical sensors (e.g. ultra-wide + wide + telephoto) | **Optional on ANY** level. Usually only flagships. | Enables seamless optical zoom (see [Chapter 20](multi-camera.md)). You can query `LOGICAL_MULTI_CAMERA_PHYSICAL_IDS` to get the physical camera IDs. |
-| `BURST_CAPTURE` | `captureBurst()` with > 1 frame works at full resolution without frame drops | Guaranteed on **FULL** and **LEVEL_3** | Without this, burst capture may stutter, drop frames, or silently fail. Exposure / focus bracketing require this. |
-| `CONSTRAINED_HIGH_SPEED_VIDEO` | Supports `createHighSpeedRequestList()` + high-speed video (120fps, 240fps) | **Optional on FULL/LEVEL_3**. Rare on LIMITED. | Slow-motion recording (see [Chapter 19](high-speed-video.md)). |
-| `MOTION_TRACKING` | Camera can track objects / faces at high frame rate with low latency | Optional (rare). Found on Pixel and some flagships. | AR motion tracking, sports autofocus. |
-| `LOGICAL_MULTI_CAMERA_SYNC` | Multiple physical cameras in a logical device can capture synchronized frames | Optional. Required for true simultaneous multi-sensor capture. | Computational photography that uses multiple lenses at once (e.g. fusion zoom). |
+| `BACKWARD_COMPATIBLE` | Die Kamera implementiert die Basis-Camera2-API | **Alle 5 Level** (LEGACY–EXTERNAL) | Wenn dies fehlt, ist das Kameragerät für Ihre App praktisch funktionsunfähig. |
+| `MANUAL_SENSOR` | Die App kann `SENSOR_EXPOSURE_TIME`, `SENSOR_SENSITIVITY`, `SENSOR_FRAME_DURATION`, `LENS_FOCUS_DISTANCE`, `LENS_APERTURE` manuell steuern | Garantiert auf **FULL** und **LEVEL_3** | UIs für den Pro-Modus und manuelle Kameras erfordern dies. Ohne dies müssen alle manuellen ISO-/Belichtungs-Schieberegler ausgeblendet werden. |
+| `MANUAL_POST_PROCESSING` | Die App kann ISP-Stufen manuell steuern: Rauschunterdrückung, Kantenanhebung, Tonwertkurve, Farbkorrektur-Gains, Farbkorrektur-Transformation | Garantiert auf **FULL** und **LEVEL_3** | Erforderlich für benutzerdefinierte "Filmlook"-LUTs, manuellen Weißabgleich über Gains, Schärfe-/Unschärfe-Steuerung. |
+| `RAW` | Der Sensor gibt RAW-Bayer-Daten über die Formate `ImageFormat.RAW_SENSOR`, `RAW10` oder `RAW12` aus | Garantiert auf **FULL** und **LEVEL_3** | DNG-Aufnahme, RAW-zu-JPEG-Bearbeitungspipeline, computergestützte Fotografie — alles beginnt hier. |
+| `PRIVATE_REPROCESSING` | Die Kamera unterstützt `InputSurface` + Offline-Reprocessing von Bildern im HAL-privaten Format in JPEG/YUV | Garantiert auf **LEVEL_3**. Selten auf FULL. | Ermöglicht Zero-Shutter-Lag (ZSL): Ringpuffer für vergangene Frames, Reprocessing eines aktuellen Frames in ein hochwertiges Standbild. |
+| `YUV_REPROCESSING` | Die Kamera unterstützt `InputSurface` + Reprocessing von App-bereitgestellten YUV_420_888-Bildern zurück durch den ISP | Garantiert auf **LEVEL_3** | Ermöglicht "Anwenden einer cineastischen LUT auf aufgezeichnetes Video" oder Pipelines zur nachträglichen Neufokussierung der Porträttiefe. |
+| `DEPTH_OUTPUT` | Die Kamera kann Tiefenkarten ausgeben (Formate `DEPTH16` / `DEPTH_POINT_CLOUD`) | **Optional auf JEDEM** Level. Prüfen Sie das Array explizit. | Porträtmodus-Bokeh, AR-Messungen, 3D-Scannen. Oft gepaart mit `LOGICAL_MULTI_CAMERA` (zwei physische Kameras für Stereo-Tiefe). |
+| `LOGICAL_MULTI_CAMERA` | Diese logische Kamera wird von 2+ physischen Sensoren unterstützt (z. B. Ultraweitwinkel + Weitwinkel + Tele) | **Optional auf JEDEM** Level. Meist nur bei Flaggschiffen. | Ermöglicht nahtlosen optischen Zoom (siehe [Kapitel 20](multi-camera.md)). Sie können `LOGICAL_MULTI_CAMERA_PHYSICAL_IDS` abfragen, um die IDs der physischen Kameras zu erhalten. |
+| `BURST_CAPTURE` | `captureBurst()` mit > 1 Frame funktioniert bei voller Auflösung ohne Frame-Drops | Garantiert auf **FULL** und **LEVEL_3** | Ohne dies kann die Serienaufnahme ruckeln, Bilder auslassen oder stillschweigend fehlschlagen. Belichtungs- oder Fokusreihen erfordern dies. |
+| `CONSTRAINED_HIGH_SPEED_VIDEO` | Unterstützt `createHighSpeedRequestList()` + High-Speed-Video (120 fps, 240 fps) | **Optional auf FULL/LEVEL_3**. Selten auf LIMITED. | Zeitlupenaufnahme (siehe [Kapitel 19](high-speed-video.md)). |
+| `MOTION_TRACKING` | Die Kamera kann Objekte / Gesichter bei hoher Bildrate mit niedriger Latenz verfolgen | Optional (selten). Zu finden bei Pixel-Geräten und einigen Flaggschiffen. | AR-Bewegungsverfolgung, Sport-Autofokus. |
+| `LOGICAL_MULTI_CAMERA_SYNC` | Mehrere physische Kameras in einem logischen Gerät können synchronisierte Bilder aufnehmen | Optional. Erforderlich für echte simultane Aufnahme mit mehreren Sensoren. | Computergestützte Fotografie, die mehrere Objektive gleichzeitig verwendet (z. B. Fusions-Zoom). |
 
-### Querying All Capabilities at Runtime
+### Abfrage aller Fähigkeiten zur Laufzeit
 
 ```kotlin
 val capabilities = characteristics.get(
@@ -227,9 +227,9 @@ val supportsPrivateReprocessing = hasCapability(
     CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_PRIVATE_REPROCESSING
 )
 
-// Build human-readable report
+// Erstellung eines menschenlesbaren Berichts
 val capabilityReport = buildString {
-    appendLine("=== Camera Capabilities Report ===")
+    appendLine("=== Bericht der Kamerafähigkeiten ===")
     appendLine("BACKWARD_COMPATIBLE:     ${hasCapability(
         CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_BACKWARD_COMPATIBLE
     )}")
@@ -248,7 +248,7 @@ val capabilityReport = buildString {
 
 Log.i("CamCaps", capabilityReport)
 
-// Now gate your UI features
+// Nun steuern Sie die Sichtbarkeit Ihrer UI-Funktionen
 manualIsoSlider.isEnabled = supportsManualSensor
 manualExposureSlider.isEnabled = supportsManualSensor
 rawCaptureToggle.isEnabled = supportsRaw
@@ -260,40 +260,40 @@ zslMode.isEnabled = supportsPrivateReprocessing  // LEVEL_3
 ```
 
 :::tip
-The Android Camera Parameters app renders this exact query as color-coded checkboxes in the **Capabilities** card of the camera summary view. Green = supported, gray = unsupported. You can compare multiple cameras side-by-side to see how the ultra-wide's capabilities differ from the main camera's.
+Die App Android Camera Parameters stellt genau diese Abfrage als farbcodierte Checkboxen in der Karte **Capabilities** der Kamera-Zusammenfassungsansicht dar. Grün = unterstützt, grau = nicht unterstützt. Sie können mehrere Kameras nebeneinander vergleichen, um zu sehen, wie sich die Fähigkeiten des Ultraweitwinkels von denen der Hauptkamera unterscheiden.
 :::
 
-## 12.5 Metadata Organization: The android.* Namespace
+## 12.5 Organisation der Metadaten: Der android.* Namespace
 
-Every key in `CameraCharacteristics`, `CaptureRequest`, and `CaptureResult` follows a hierarchical naming convention: `android.<subsystem>.<parameter>`. The dot-separated components group related settings by the hardware/software subsystem they control.
+Jeder Schlüssel in den `CameraCharacteristics`, `CaptureRequest` und `CaptureResult` folgt einer hierarchischen Namenskonvention: `android.<subsystem>.<parameter>`. Die durch Punkte getrennten Komponenten gruppieren verwandte Einstellungen nach dem Hardware-/Software-Subsystem, das sie steuern.
 
-### The Subsystem Classes
+### Die Subsystem-Klassen
 
-| Subsystem Prefix | Kotlin Metadata Class | What It Covers |
+| Subsystem-Präfix | Kotlin Metadaten-Klasse | Was es abdeckt |
 |-----------------|----------------------|---------------|
-| `android.sensor.*` | `CameraCharacteristics.SensorInfo*`, `CaptureRequest.SENSOR_*`, `CaptureResult.SENSOR_*` | Sensor readout: exposure time, ISO sensitivity, frame duration, timestamp, pixel array, active array, rolling shutter direction, test pattern modes |
-| `android.lens.*` | `LensInfo*`, `Lens.*` | Optics: focus distance, aperture, focal length, optical stabilization (OIS), filter density (ND), focus range, available apertures |
-| `android.control.*` | `Control*` | 3A algorithms: auto-exposure (AE) modes / state / target / regions, auto-focus (AF) modes / state / trigger / regions, auto-white-balance (AWB) modes / state / regions, anti-banding, scene modes, effect modes, video stabilization (EIS) |
-| `android.scaler.*` | `Scaler.*` | Output pipeline configuration: crop region (digital zoom), rotation, stream configuration map (output formats, sizes, durations), available minimum frame durations |
-| `android.jpeg.*` | `Jpeg*` | JPEG encoding: quality, orientation, GPS coordinates, thumbnail size, thumbnail quality |
-| `android.request.*` | `Request*` | Pipeline-wide capabilities: available capabilities array, pipeline max depth, max num output raw/proc, metadata object keys, available template list |
-| `android.flash.*` | `FlashInfo*`, `Flash*` | Flash unit: availability, charge state, color temperature, max brightness, mode (off / single / torch) |
-| `android.statistics.*` | `Statistics*` | ISP statistics output: face detection, face IDs, face landmarks, face scores, histogram, sharpness map, lens shading map, hot pixel map |
-| `android.info.*` | `Info*` | Static camera info: supported hardware level, device version, supported hardware level, available face detect modes, available noise reduction modes |
-| `android.black.*` | `BlackLevel*` | Black level lock, black level pattern (fixed pattern noise correction) |
-| `android.colorCorrection.*` | `ColorCorrection*` | Color pipeline: transform matrix, color correction gains (R, G, B channels), aberration correction mode |
-| `android.tonemap.*` | `Tonemap*` | Tone mapping: tonemap curve (custom gamma), tonemap mode, contrast, saturation |
-| `android.edge.*` | `Edge*` | Edge enhancement / sharpening: mode, strength |
-| `android.noiseReduction.*` | `NoiseReduction*` | Noise reduction: mode, strength, temporal NR strength |
-| `android.shading.*` | `Shading*` | Lens shading / vignetting correction: mode, strength |
-| `android.hotPixel.*` | `HotPixel*` | Hot pixel correction: mode, hot pixel map |
-| `android.distortionCorrection.*` | `DistortionCorrection*` | Lens geometric distortion correction: mode |
-| `android.depth.*` | `Depth*` | Depth output: depth is exclusive, maximum depth samples, depth format |
-| `android.logicalMultiCamera.*` | `LogicalMultiCamera*` | Logical multi-camera: physical camera IDs, physical sensor sync |
+| `android.sensor.*` | `CameraCharacteristics.SensorInfo*`, `CaptureRequest.SENSOR_*`, `CaptureResult.SENSOR_*` | Sensorauslesung: Belichtungszeit, ISO-Empfindlichkeit, Frame-Dauer, Zeitstempel, Pixel-Array, aktives Array, Rolling-Shutter-Richtung, Testbildmodi |
+| `android.lens.*` | `LensInfo*`, `Lens.*` | Optik: Fokusabstand, Blende, Brennweite, optische Stabilisierung (OIS), Filterdichte (ND), Fokusbereich, verfügbare Blenden |
+| `android.control.*` | `Control*` | 3A-Algorithmen: Auto-Belichtung (AE) Modi / Status / Ziel / Regionen, Auto-Fokus (AF) Modi / Status / Trigger / Regionen, Auto-Weißabgleich (AWB) Modi / Status / Regionen, Anti-Banding, Szenenmodi, Effektmodi, Videostabilisierung (EIS) |
+| `android.scaler.*` | `Scaler.*` | Konfiguration der Ausgabepipeline: Crop-Region (digitaler Zoom), Rotation, Stream-Konfigurations-Map (Ausgabeformate, Größen, Zeitdauern), verfügbare Mindest-Frame-Dauern |
+| `android.jpeg.*` | `Jpeg*` | JPEG-Kodierung: Qualität, Ausrichtung, GPS-Koordinaten, Thumbnail-Größe, Thumbnail-Qualität |
+| `android.request.*` | `Request*` | Pipeline-weite Fähigkeiten: verfügbares Fähigkeiten-Array, maximale Pipeline-Tiefe, maximale Anzahl an Ausgaben RAW/Proc, Schlüssel für Metadaten-Objekte, Liste der verfügbaren Vorlagen |
+| `android.flash.*` | `FlashInfo*`, `Flash*` | Blitzeinheit: Verfügbarkeit, Ladezustand, Farbtemperatur, maximale Helligkeit, Modus (aus / einzeln / Taschenlampe) |
+| `android.statistics.*` | `Statistics*` | Ausgabe von ISP-Statistiken: Gesichtserkennung, Face-IDs, Gesichts-Landmarken, Gesichts-Bewertungen, Histogramm, Schärfekarte, Objektivschattierungs-Map, Hot-Pixel-Map |
+| `android.info.*` | `Info*` | Statische Kamera-Infos: unterstütztes Hardware-Level, Geräteversion, verfügbare Modi für Gesichtserkennung, verfügbare Modi für Rauschunterdrückung |
+| `android.black.*` | `BlackLevel*` | Schwarzpunkt-Sperre, Schwarzpunkt-Muster (Korrektur des Fixed Pattern Noise) |
+| `android.colorCorrection.*` | `ColorCorrection*` | Farbpipeline: Transformationsmatrix, Farbkorrektur-Gains (R-, G-, B-Kanäle), Modus für Aberrationskorrektur |
+| `android.tonemap.*` | `Tonemap*` | Tonwertkorrektur: Tonwertkurve (benutzerdefiniertes Gamma), Tonwertmodus, Kontrast, Sättigung |
+| `android.edge.*` | `Edge*` | Kantenanhebung / Schärfen: Modus, Stärke |
+| `android.noiseReduction.*` | `NoiseReduction*` | Rauschunterdrückung: Modus, Stärke, zeitliche NR-Stärke |
+| `android.shading.*` | `Shading*` | Objektivschattierung / Vignettierungskorrektur: Modus, Stärke |
+| `android.hotPixel.*` | `HotPixel*` | Hot-Pixel-Korrektur: Modus, Hot-Pixel-Map |
+| `android.distortionCorrection.*` | `DistortionCorrection*` | Geometrische Verzeichnungskorrektur des Objektivs: Modus |
+| `android.depth.*` | `Depth*` | Tiefenausgabe: Tiefe ist exklusiv, maximale Anzahl an Tiefenproben, Tiefenformat |
+| `android.logicalMultiCamera.*` | `LogicalMultiCamera*` | Logische Multi-Kamera: physische Kamera-IDs, physischer Sensorsync |
 
 ```mermaid
 mindmap
-  root((Camera Metadata))
+  root((Kamerametadaten))
     Sensor
       SENSOR_EXPOSURE_TIME
       SENSOR_SENSITIVITY
@@ -338,31 +338,31 @@ mindmap
       INFO_SUPPORTED_HARDWARE_LEVEL
 ```
 
-### A Note on Key Availability
+### Ein Hinweis zur Verfügbarkeit von Schlüsseln
 
-Not every key exists on every device. If you call `get(KEY)` on a key the device doesn't support, you get `null` — hence the `?: 0` or `?.let` patterns you see throughout this book.
+Nicht jeder Schlüssel existiert auf jedem Gerät. Wenn Sie `get(KEY)` für einen Schlüssel aufrufen, den das Gerät nicht unterstützt, erhalten Sie `null` — daher die Muster `?: 0` oder `?.let`, die Sie in diesem Buch überall sehen.
 
-The safe pattern is: **check if the key exists before reading it**, or use Kotlin's null-safety to provide a default.
+Das sichere Muster ist: **Prüfen Sie, ob der Schlüssel existiert, bevor Sie ihn lesen**, oder nutzen Sie Kotlins Null-Sicherheit, um einen Standardwert bereitzustellen.
 
 ```kotlin
-// Safe access with fallback defaults
+// Sicherer Zugriff mit Fallback-Standards
 val exposureTimeNs: Long = characteristics.get(
     CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE
-)?.upper ?: 1_000_000L  // default 1ms max if key missing
+)?.upper ?: 1_000_000L  // Standard 1 ms max, falls Schlüssel fehlt
 
-// Optional processing if key exists
+// Optionale Verarbeitung, falls Schlüssel existiert
 characteristics.get(CameraCharacteristics.LENS_INFO_AVAILABLE_APERTURES)?.let { apertures ->
-    Log.d("CamCaps", "Device supports ${apertures.size} apertures: ${apertures.contentToString()}")
+    Log.d("CamCaps", "Gerät unterstützt ${apertures.size} Blenden: ${apertures.contentToString()}")
     buildApertureSelector(apertures)
 } ?: run {
-    Log.d("CamCaps", "No variable aperture on this device")
+    Log.d("CamCaps", "Keine variable Blende auf diesem Gerät")
     hideApertureControl()
 }
 ```
 
-## 12.6 A Complete Runtime Capability Query (Production-Grade)
+## 12.6 Eine vollständige Laufzeit-Fähigkeitsabfrage (Produktionsqualität)
 
-Putting it all together, here is a production-ready capability query that you can drop into any Camera2 app. It combines hardware level, capability flags, and individual key checks:
+Zusammenfassend finden Sie hier eine produktionsreife Fähigkeitsabfrage, die Sie in jede Camera2-App einbauen können. Sie kombiniert Hardware-Level, Capability-Flags und die Überprüfung einzelner Schlüssel:
 
 ```kotlin
 data class CameraCapabilityProfile(
@@ -409,7 +409,7 @@ fun buildCapabilityProfile(
     val caps = c.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES) ?: intArrayOf()
     fun has(cap: Int) = caps.contains(cap)
 
-    // Hardware level provides capability guarantees, but check flags for safety
+    // Das Hardware-Level bietet Garantien für Fähigkeiten, aber prüfen Sie zur Sicherheit die Flags
     val atLeastFull = hwLevel == CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL ||
                       hwLevel == CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_3
 
@@ -420,7 +420,7 @@ fun buildCapabilityProfile(
         hardwareLevel = hwLevel,
         hardwareLevelName = hwLevelName,
 
-        // Use flag check + hardware level guarantee fallback for safety
+        // Nutze Flag-Check + Hardware-Level-Garantie-Fallback zur Sicherheit
         supportsManualSensor = has(
             CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR
         ) || atLeastFull,
@@ -460,36 +460,36 @@ fun buildCapabilityProfile(
     )
 }
 
-// Usage:
+// Verwendung:
 val profile = buildCapabilityProfile(cameraManager, "0")
-Log.d("CamCaps", "Camera 0 profile: ${profile.hardwareLevelName}, " +
-    "Manual=${profile.supportsManualSensor}, RAW=${profile.supportsRaw}, " +
-    "Burst=${profile.supportsBurst}, Depth=${profile.supportsDepth}, " +
+Log.d("CamCaps", "Profil für Kamera 0: ${profile.hardwareLevelName}, " +
+    "Manuell=${profile.supportsManualSensor}, RAW=${profile.supportsRaw}, " +
+    "Burst=${profile.supportsBurst}, Tiefe=${profile.supportsDepth}, " +
     "Zoom=${profile.maxDigitalZoom}x")
 ```
 
-## 12.7 Visualizing in the Android Camera Parameters App
+## 12.7 Visualisierung in der App Android Camera Parameters
 
-The Android Camera Parameters app ([GitHub](https://github.com/zoozooll/AndroidCameraParameters), [Play Store](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)) is the ideal companion to this chapter. It turns the raw `CameraCharacteristics` key/value pairs into a browsable UI:
+Die App Android Camera Parameters ([GitHub](https://github.com/zoozooll/AndroidCameraParameters), [Play Store](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)) ist der ideale Begleiter zu diesem Kapitel. Sie wandelt die rohen `CameraCharacteristics`-Schlüssel-Wert-Paare in eine durchsuchbare UI um:
 
-- **Summary card** — Hardware level (with color-coded badge: red=LEGACY, orange=LIMITED, green=FULL, teal=LEVEL_3, blue=EXTERNAL), lens facing, sensor resolution, focal lengths
-- **Capabilities card** — Checkmark list of every `REQUEST_AVAILABLE_CAPABILITIES` flag, green if present
-- **Category tabs** — Organized exactly by the `android.*` subsystems: Sensor, Lens, Control, Scaler, Jpeg, Flash, Statistics, Info, Request
-- **Raw JSON tab** — The complete serialized `CameraCharacteristics` object for copy/paste into bug reports
-- **Compare mode** — Swipe between cameras (0, 1, 2, 3) to see how hardware levels and capabilities differ across lenses
+- **Übersichtskarte** — Hardware-Level (mit farbcodiertem Badge: rot=LEGACY, orange=LIMITED, grün=FULL, blaugrün=LEVEL_3, blau=EXTERNAL), Objektiv-Ausrichtung, Sensorauflösung, Brennweiten.
+- **Capabilities-Karte** — Checkliste jedes `REQUEST_AVAILABLE_CAPABILITIES`-Flags, grün wenn vorhanden.
+- **Kategorie-Tabs** — Genau nach den `android.*`-Subsystemen organisiert: Sensor, Lens, Control, Scaler, Jpeg, Flash, Statistics, Info, Request.
+- **Raw-JSON-Tab** — Das vollständige serialisierte `CameraCharacteristics`-Objekt zum Kopieren/Einfügen in Fehlerberichte.
+- **Vergleichsmodus** — Wischen Sie zwischen Kameras (0, 1, 2, 3), um zu sehen, wie sich Hardware-Level und Fähigkeiten zwischen den Objektiven unterscheiden.
 
-## 12.8 Summary
+## 12.8 Zusammenfassung
 
-| Concept | Key Takeaway |
+| Konzept | Kernaussage |
 |---------|-------------|
-| **Hardware Level** | 5 tiers: LEGACY (wrapper) → LIMITED (baseline) → FULL (pro + manual/RAW) → LEVEL_3 (FULL + reprocessing) → EXTERNAL (USB). FULL is the minimum for any serious camera work. CTS-verified guarantees. |
-| **Capability Flags** | Fine-grained feature detection via `REQUEST_AVAILABLE_CAPABILITIES`. Key flags: `MANUAL_SENSOR`, `MANUAL_POST_PROCESSING`, `RAW`, `BURST_CAPTURE`, `DEPTH_OUTPUT`, `LOGICAL_MULTI_CAMERA`, `PRIVATE_REPROCESSING`, `YUV_REPROCESSING`, `CONSTRAINED_HIGH_SPEED_VIDEO`. |
-| **Level → Capability Mapping** | FULL guarantees MANUAL_SENSOR, MANUAL_POST_PROCESSING, RAW, BURST. LEVEL_3 adds YUV/PRIVATE_REPROCESSING. DEPTH and LOGICAL_MULTI_CAMERA are optional on all levels. |
-| **Metadata Namespace** | Keys organized as `android.<subsystem>.<param>`. Main subsystems: sensor, lens, control, scaler, jpeg, request, flash, statistics, info. Each subsystem has static info (CameraCharacteristics), request inputs (CaptureRequest), and result outputs (CaptureResult). |
-| **Safe Queries** | Always provide null-safety defaults for `get()` — many keys are optional. Use hardware level as coarse gate, capability flags as fine gate, individual key presence for per-device tuning. |
+| **Hardware-Level** | 5 Stufen: LEGACY (Wrapper) → LIMITED (Basis) → FULL (Pro + manuell/RAW) → LEVEL_3 (FULL + Reprocessing) → EXTERNAL (USB). FULL ist das Minimum für jede ernsthafte Kameraarbeit. CTS-verifizierte Garantien. |
+| **Capability-Flags** | Fein abgestimmte Erkennung von Funktionen über `REQUEST_AVAILABLE_CAPABILITIES`. Wichtige Flags: `MANUAL_SENSOR`, `MANUAL_POST_PROCESSING`, `RAW`, `BURST_CAPTURE`, `DEPTH_OUTPUT`, `LOGICAL_MULTI_CAMERA`, `PRIVATE_REPROCESSING`, `YUV_REPROCESSING`, `CONSTRAINED_HIGH_SPEED_VIDEO`. |
+| **Level → Capability Zuordnung** | FULL garantiert MANUAL_SENSOR, MANUAL_POST_PROCESSING, RAW, BURST. LEVEL_3 fügt YUV/PRIVATE_REPROCESSING hinzu. DEPTH und LOGICAL_MULTI_CAMERA sind auf allen Leveln optional. |
+| **Metadaten-Namensraum** | Schlüssel organisiert als `android.<subsystem>.<parameter>`. Wichtigste Subsysteme: Sensor, Lens, Control, Scaler, Jpeg, Request, Flash, Statistics, Info. Jedes Subsystem verfügt über statische Informationen (CameraCharacteristics), Anforderungs-Eingaben (CaptureRequest) und Ergebnisausgaben (CaptureResult). |
+| **Sichere Abfragen** | Stellen Sie immer Fallback-Standards für `get()` — viele Schlüssel sind optional. Nutzen Sie das Hardware-Level als groben Filter, Capability-Flags als feinen Filter und das Vorhandensein einzelner Schlüssel für gerätespezifisches Tuning. |
 
-## What's Next
+## Wie geht es weiter?
 
-Now that you understand what a camera can do (characteristics) and how to control it (the pipeline + capture types), you have the complete foundation for Part IV.
+Nachdem Sie nun verstanden haben, was eine Kamera leisten kann (Characteristics) und wie man sie steuert (Pipeline + Aufnahme-Typen), verfügen Sie über die vollständige Grundlage für Teil IV.
 
-In **Chapter 13: Manual Camera ISO and Exposure**, you will learn to use the `MANUAL_SENSOR` capability to manually control `SENSOR_EXPOSURE_TIME` and `SENSOR_SENSITIVITY` — implementing a pro-mode exposure slider with live preview, exposure compensation, and the exposure triangle trade-offs.
+In **Kapitel 13: Manuelle Kamera-ISO und Belichtung** lernen Sie, die Fähigkeit `MANUAL_SENSOR` zu nutzen, um `SENSOR_EXPOSURE_TIME` und `SENSOR_SENSITIVITY` manuell zu steuern — und implementieren einen Belichtungsregler für den Pro-Modus mit Live-Vorschau, Belichtungskorrektur und den Kompromissen des Belichtungsdreiecks.

@@ -1,4 +1,4 @@
----
+﻿---
 sidebar_position: 24
 title: "Chapter 24: CameraX"
 description: "Master CameraX, Jetpack's lifecycle-aware camera library that wraps Camera2. Learn UseCase architecture, Camera2Interop for injecting manual parameters, and a decision framework for choosing CameraX vs Camera2."
@@ -62,7 +62,7 @@ The full architecture looks like this:
 
 ```mermaid
 graph LR
-    App[Your App<br/>LifecycleOwner] -->|bindToLifecycle| UC[CameraX UseCases<br/>Preview · ImageCapture<br/>ImageAnalysis · VideoCapture]
+    App["Your App<br/>LifecycleOwner"] -->|bindToLifecycle| UC["CameraX UseCases<br/>Preview · ImageCapture<br/>ImageAnalysis · VideoCapture"]
     UC -->|UseCase config| CX[CameraX Core<br/>camera-camera2 module<br/>Quirk DB · Resolution Selector]
     CX -->|CaptureRequest · Session| C2[Camera2 Framework<br/>android.hardware.camera2]
     C2 -->|Binder IPC| HAL[Camera HAL3<br/>camera3_device_t]
@@ -182,7 +182,7 @@ The hardest architectural question is not "how do I use CameraX?" but "should I 
 
 ```mermaid
 flowchart TD
-    A[Start] --> B{Need RAW capture,<br/>ZSL reprocessing,<br/>multi-camera physical streams,<br/>high-speed &gt;60fps?}
+    A["Start"] --> B{Need RAW capture,<br/>ZSL reprocessing,<br/>multi-camera physical streams,<br/>high-speed &gt;60fps?}
     B -->|Yes| D[Use raw Camera2]
     B -->|No| C{Need per-frame CaptureRequest<br/>templating per physical camera,<br/>custom session config<br/>(input reprocess surfaces),<br/>or offline sessions?}
     C -->|Yes| D

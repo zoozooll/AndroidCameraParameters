@@ -1,262 +1,262 @@
 ---
 sidebar_position: 2
-title: "Chapter 2: Understanding Smartphone Cameras"
-description: "Explore the camera module hardware inside every smartphone: the lens, image sensor, ISP processor, the difference between RAW and JPEG, multi-camera designs, and the complete journey from photons to a stored photo."
-keywords: [smartphone camera, camera module, camera lens, image sensor, ISP, RAW vs JPEG, multi-camera]
+title: "Bab 2: Memahami Kamera Smartphone"
+description: "Jelajahi perangkat keras modul kamera di dalam setiap smartphone: lensa, sensor gambar, prosesor ISP, perbedaan antara RAW dan JPEG, desain multi-kamera, dan perjalanan lengkap dari foton hingga foto yang disimpan."
+keywords: [kamera smartphone, modul kamera, lensa kamera, sensor gambar, ISP, RAW vs JPEG, multi-kamera]
 ---
 
-# Chapter 2: Understanding Smartphone Cameras
+# Bab 2: Memahami Kamera Smartphone
 
-Before writing a single line of Camera2 API code, you must understand the physical hardware that your code will be commanding. A smartphone camera is not just "a lens pointed at a sensor." It is a tightly integrated, sealed, precision-engineered assembly containing optics, actuators, filters, semiconductors, and high-speed data buses. This chapter explains every component from the glass that first catches light to the flash memory chip where your final photo is stored.
+Sebelum menulis satu baris kode API Camera2, Anda harus memahami perangkat keras fisik yang akan diperintah oleh kode Anda. Kamera smartphone bukan sekadar "lensa yang diarahkan ke sensor." Ini adalah rakitan yang terintegrasi erat, tersegel, dan dirancang dengan presisi yang berisi optik, aktuator, filter, semikonduktor, dan bus data berkecepatan tinggi. Bab ini menjelaskan setiap komponen mulai dari kaca yang pertama kali menangkap cahaya hingga chip memori flash tempat foto terakhir Anda disimpan.
 
-The goal of this chapter is to build a mental model of the camera pipeline as a physical system. When later chapters ask you to configure a capture request with `CONTROL_AE_TARGET_FPS_RANGE` or `SENSOR_SENSITIVITY`, you will understand exactly which piece of hardware those parameters affect and why the values matter.
+Tujuan dari bab ini adalah untuk membangun model mental dari pipeline kamera sebagai sistem fisik. Ketika bab-bab selanjutnya meminta Anda untuk mengonfigurasi permintaan pengambilan gambar dengan `CONTROL_AE_TARGET_FPS_RANGE` atau `SENSOR_SENSITIVITY`, Anda akan memahami persis bagian perangkat keras mana yang dipengaruhi oleh parameter tersebut dan mengapa nilai tersebut penting.
 
-## The Camera Module: A Sealed Optical Assembly
+## Modul Kamera: Rakitan Optik Tersegel
 
-When you look at the back of a modern flagship phone — imagine a Pixel 10 or Galaxy S26 Ultra — you see a raised rectangular island protruding 2 to 4 millimeters from the rear glass. That island is not a single camera. One rectangular island houses three separate circular modules: the largest at the bottom is the primary wide, a smaller one above it is the 3× periscope telephoto, and the medium-sized one to the left is the 0.5× ultra-wide. Each circular "bump" within that island is a complete, independent camera module.
+Saat Anda melihat bagian belakang ponsel unggulan modern — bayangkan Pixel 10 atau Galaxy S26 Ultra — Anda melihat pulau persegi menonjol 2 hingga 4 milimeter dari kaca belakang. Pulau itu bukanlah satu kamera tunggal. Satu pulau persegi menampung tiga modul melingkar terpisah: yang terbesar di bagian bawah adalah kamera lebar utama, yang lebih kecil di atasnya adalah telefoto periskop 3×, dan yang berukuran sedang di sebelah kiri adalah ultra-lebar 0,5×. Setiap "tonjolan" melingkar di dalam pulau itu adalah modul kamera yang lengkap dan independen.
 
-A camera module is a hermetically sealed unit manufactured in a dust-free clean room. It contains, stacked in order from the outside world inward:
+Modul kamera adalah unit yang tersegel secara hermetis yang diproduksi di ruang bersih bebas debu. Modul ini berisi, disusun berurutan dari dunia luar ke dalam:
 
-1. **Protective cover glass**: A scratch-resistant sapphire or Gorilla Glass window that seals the module and keeps dust out.
-2. **Lens barrel**: A cylindrical stack of 4 to 6 individual glass (or sometimes plastic aspheric) lens elements, held in precise alignment by thin plastic spacers.
-3. **Voice Coil Motor (VCM)**: An electromagnetic actuator that moves the entire lens barrel forward or backward along the optical axis by fractions of a millimeter to achieve autofocus. Some premium VCMs can also shift the lens perpendicular to the axis for optical image stabilization (OIS).
-4. **Infrared (IR) cut filter**: A thin, coated glass wafer placed directly in front of the sensor. It blocks infrared light (which the silicon sensor is sensitive to but the human eye is not) so that recorded colors match what humans perceive.
-5. **Sensor die**: The silicon CMOS image sensor chip itself, wire-bonded to a substrate. The active pixel array faces upward toward the lens.
-6. **Flexible Printed Circuit (FPC)**: A thin, bendable ribbon cable that carries power, ground, control signals (I2C), and high-speed image data (MIPI CSI-2) from the module to the phone's mainboard.
-7. **Board-to-board connector**: A tiny, high-density plug at the end of the FPC that snaps into a mating receptacle on the phone's main PCB.
+1. **Kaca penutup pelindung**: Jendela safir atau Gorilla Glass tahan gores yang menyegel modul dan menjaganya dari debu.
+2. **Barel lensa**: Tumpukan silinder berisi 4 hingga 6 elemen lensa individu dari kaca (atau terkadang plastik asferis), yang dijaga keselarasannya dengan presisi oleh spacer plastik tipis.
+3. **Voice Coil Motor (VCM)**: Aktuator elektromagnetik yang menggerakkan seluruh barel lensa maju atau mundur di sepanjang sumbu optik sejauh sepersekian milimeter untuk mencapai autofokus. Beberapa VCM premium juga dapat menggeser lensa tegak lurus terhadap sumbu untuk stabilisasi gambar optik (OIS).
+4. **Filter pemotong Inframerah (IR)**: Wafer kaca tipis berlapis yang diletakkan tepat di depan sensor. Filter ini memblokir cahaya inframerah (yang sensitif bagi sensor silikon tetapi tidak bagi mata manusia) sehingga warna yang direkam sesuai dengan apa yang dirasakan manusia.
+5. **Die sensor**: Chip sensor gambar CMOS silikon itu sendiri, yang terikat kabel ke substrat. Array piksel aktif menghadap ke atas menuju lensa.
+6. **Flexible Printed Circuit (FPC)**: Kabel pita tipis yang dapat ditekuk yang membawa daya, ground, sinyal kontrol (I2C), dan data gambar berkecepatan tinggi (MIPI CSI-2) dari modul ke papan utama ponsel.
+7. **Konektor board-to-board**: Steker kecil dengan kepadatan tinggi di ujung FPC yang masuk ke dalam soket pasangannya di PCB utama ponsel.
 
-The entire assembly — from cover glass to connector — is typically 5 to 8 millimeters thick for a conventional rear camera, and 10 to 14 millimeters long (inside the phone, oriented horizontally) for a periscope telephoto. The modules are calibrated individually at the factory: lens alignment, sensor tilt, color shading, and autofocus infinity position are all measured and stored in one-time-programmable (OTP) memory on the module itself. The Camera2 API reads this calibration data at device boot so your app does not have to account for unit-to-unit manufacturing variation.
+Seluruh rakitan — dari kaca penutup hingga konektor — biasanya setebal 5 hingga 8 milimeter untuk kamera belakang konvensional, dan sepanjang 10 hingga 14 milimeter (di dalam ponsel, berorientasi horizontal) untuk telefoto periskop. Modul-modul tersebut dikalibrasi secara individual di pabrik: keselarasan lensa, kemiringan sensor, bayangan warna, dan posisi tak terhingga autofokus semuanya diukur dan disimpan dalam memori one-time-programmable (OTP) pada modul itu sendiri. API Camera2 membaca data kalibrasi ini saat perangkat dinyalakan sehingga aplikasi Anda tidak perlu memperhitungkan variasi manufaktur antar unit.
 
-## The Lens: Focal Length, Aperture, and Stabilization
+## Lensa: Panjang Fokus, Bukaan, dan Stabilisasi
 
-The lens is the first component that light encounters. Its job is to bend incoming light rays so they converge into a sharp image exactly on the plane of the image sensor.
+Lensa adalah komponen pertama yang ditemui cahaya. Tugasnya adalah membelokkan sinar cahaya yang masuk sehingga mereka bertemu menjadi gambar yang tajam tepat pada bidang sensor gambar.
 
-### Focal Length and Full-Frame Equivalence
+### Panjang Fokus dan Ekivalensi Full-Frame
 
-Focal length determines the field of view (how much of the scene fits in the frame) and magnification (how large distant subjects appear). Smartphone camera specs always advertise **full-frame equivalent focal lengths**. This is a convention that normalizes across different sensor sizes so consumers can compare apples to apples. A full-frame sensor is the 36mm × 24mm size historically used in 35mm film SLR cameras.
+Panjang fokus menentukan bidang pandang (seberapa banyak pemandangan yang masuk dalam bingkai) dan pembesaran (seberapa besar subjek yang jauh terlihat). Spesifikasi kamera smartphone selalu mengiklankan **panjang fokus ekivalen full-frame**. Ini adalah konvensi yang menormalkan berbagai ukuran sensor sehingga konsumen dapat membandingkan secara adil. Sensor full-frame adalah ukuran 36mm × 24mm yang secara historis digunakan dalam kamera SLR film 35mm.
 
-Common full-frame equivalent focal lengths on smartphones:
+Panjang fokus ekivalen full-frame yang umum pada smartphone:
 
-- **10–18mm (Ultra-wide)**: 100° to 130° diagonal field of view. Used for landscapes, architecture, group selfies, and close-up macro shots.
-- **22–28mm (Wide / Primary)**: The default "normal" camera on every phone. ~75° field of view, similar to human peripheral vision but flatter.
-- **45–80mm (Telephoto, 2× to 3×)**: Narrow 30° to 50° field of view. Used for portraits (natural-looking face proportions, less perspective distortion) and general zoom.
-- **100–240mm (Periscope telephoto, 5× to 10×)**: 10° to 25° field of view. The prism-bent periscope design allows long focal lengths without making the phone 2 centimeters thick.
+- **10–18mm (Ultra-lebar)**: Bidang pandang diagonal 100° hingga 130°. Digunakan untuk pemandangan, arsitektur, foto grup selfie, dan bidikan makro jarak dekat.
+- **22–28mm (Lebar / Utama)**: Kamera "normal" default pada setiap ponsel. Bidang pandang ~75°, mirip dengan penglihatan perifer manusia tetapi lebih datar.
+- **45–80mm (Telefoto, 2× hingga 3×)**: Bidang pandang sempit 30° hingga 50°. Digunakan untuk potret (proporsi wajah yang terlihat alami, distorsi perspektif yang lebih sedikit) dan zoom umum.
+- **100–240mm (Telefoto periskop, 5× hingga 10×)**: Bidang pandang 10° hingga 25°. Desain periskop yang dibelokkan prisma memungkinkan panjang fokus yang panjang tanpa membuat ponsel setebal 2 sentimeter.
 
-Here is how light travels through a typical 5-element wide-angle lens assembly:
+Berikut adalah cara cahaya merambat melalui rakitan lensa sudut lebar 5 elemen yang umum:
 
 ```mermaid
 graph LR
-    A[Incoming Light Rays] --> B[Element 1\nAspherical\nConvex]
-    B --> C[Element 2\nConcave\nChromatic Correction]
-    C --> D[Element 3\nConvex]
-    D --> E[Element 4\nConcave\nDistortion Control]
-    E --> F[Element 5\nPlanoconvex]
-    F --> G[Focal Plane\nImage Sensor]
+    A["Sinar Cahaya yang Masuk"] --> B["Elemen 1<br/>Asferis<br/>Konveks"]
+    B --> C[Elemen 2<br/>Konkaf<br/>Koreksi Kromatik]
+    C --> D[Elemen 3<br/>Konveks]
+    D --> E[Elemen 4<br/>Konkaf<br/>Kontrol Distorsi]
+    E --> F[Elemen 5<br/>Planokonveks]
+    F --> G[Bidang Fokus<br/>Sensor Gambar]
 ```
 
-### Aperture
+### Bukaan (Aperture)
 
-The aperture is the size of the opening through which light passes inside the lens. It is described as an **f-number** (or f-stop): the focal length divided by the diameter of the aperture. A **smaller f-number means a wider hole, which means more light** reaches the sensor.
+Bukaan adalah ukuran lubang tempat cahaya lewat di dalam lensa. Ini digambarkan sebagai **angka-f** (atau f-stop): panjang fokus dibagi dengan diameter bukaan. **Angka-f yang lebih kecil berarti lubang yang lebih lebar, yang berarti lebih banyak cahaya** yang mencapai sensor.
 
-- f/1.4 to f/1.8: Very wide aperture. Typical flagship primary cameras. Excellent in low light.
-- f/2.0 to f/2.4: Moderate aperture. Typical ultra-wide and telephoto cameras on most phones.
-- f/2.8 to f/4.0: Narrow aperture. Found on lower-cost front cameras and some periscope modules.
+- f/1.4 hingga f/1.8: Bukaan sangat lebar. Umum pada kamera utama ponsel unggulan. Sangat baik dalam cahaya rendah.
+- f/2.0 hingga f/2.4: Bukaan sedang. Umum pada kamera ultra-lebar dan telefoto pada kebanyakan ponsel.
+- f/2.8 hingga f/4.0: Bukaan sempit. Ditemukan pada kamera depan berbiaya lebih rendah dan beberapa modul periskop.
 
-The aperture is usually fixed in smartphone cameras. A few 2020-era Samsung flagships featured a **variable aperture mechanism** with a dual-diaphragm that could mechanically switch between f/1.5 and f/2.4. This is extremely rare today because VCM-based focus and multi-frame computational HDR have made variable aperture unnecessary for most use cases.
+Bukaan biasanya tetap pada kamera smartphone. Beberapa ponsel unggulan Samsung era 2020 memiliki **mekanisme bukaan variabel** dengan diafragma ganda yang dapat beralih secara mekanis antara f/1.5 dan f/2.4. Hal ini sangat langka saat ini karena fokus berbasis VCM dan HDR komputasional multi-bingkai telah membuat bukaan variabel tidak diperlukan untuk sebagian besar kasus penggunaan.
 
-### Optical Image Stabilization (OIS)
+### Stabilisasi Gambar Optik (OIS)
 
-When you hold a phone, your hands naturally shake by tiny angular amounts — on the order of 0.1° to 0.5° at 1/30th of a second. Over a long enough exposure, this shake causes the entire image to blur. **Optical Image Stabilization (OIS)** solves this problem by physically moving either the lens barrel (lens-shift OIS) or the sensor die itself (sensor-shift OIS) to counteract the detected motion. A tiny gyroscope inside the camera module (or shared from the phone's main IMU) measures angular velocity 1,000 to 8,000 times per second, and the OIS actuator moves the optics accordingly. OIS can typically compensate for 3 to 5 stops of handshake, meaning an exposure that would have required 1/60s to stay sharp can now be shot at 1/8s or 1/4s with equal sharpness.
+Saat Anda memegang ponsel, tangan Anda secara alami bergetar dalam jumlah sudut yang kecil — sekitar 0,1° hingga 0,5° pada 1/30 detik. Selama eksposur yang cukup lama, getaran ini menyebabkan seluruh gambar menjadi kabur. **Stabilisasi Gambar Optik (OIS)** memecahkan masalah ini dengan menggerakkan barel lensa secara fisik (lens-shift OIS) atau die sensor itu sendiri (sensor-shift OIS) untuk menangkal gerakan yang terdeteksi. Giroskop kecil di dalam modul kamera (atau yang digunakan bersama dari IMU utama ponsel) mengukur kecepatan sudut 1.000 hingga 8.000 kali per detik, dan aktuator OIS menggerakkan optik sesuai dengan itu. OIS biasanya dapat mengompensasi 3 hingga 5 stop getaran tangan, yang berarti eksposur yang tadinya membutuhkan 1/60 detik untuk tetap tajam sekarang dapat diambil pada 1/8 detik atau 1/4 detik dengan ketajaman yang sama.
 
-## The Image Sensor: Where Light Becomes Electricity
+## Sensor Gambar: Tempat Cahaya Menjadi Listrik
 
-The image sensor is a silicon chip containing millions of individual light detectors called **photodiodes**, arranged in a precise rectangular grid. Every smartphone sensor today is a **CMOS (Complementary Metal-Oxide-Semiconductor)** type.
+Sensor gambar adalah chip silikon yang berisi jutaan detektor cahaya individu yang disebut **fotodioda**, yang disusun dalam kisi persegi panjang yang presisi. Setiap sensor smartphone saat ini adalah jenis **CMOS (Complementary Metal-Oxide-Semiconductor)**.
 
-### Pixel Size and Megapixels
+### Ukuran Piksel dan Megapiksel
 
-Each individual photodiode + readout circuit is called a **pixel**. The physical size of each pixel (measured in micrometers, μm) is arguably more important than the total megapixel count. A larger pixel captures more photons per unit time, which means less shot noise and better low-light performance.
+Setiap fotodioda individu + sirkuit pembacaan disebut **piksel**. Ukuran fisik setiap piksel (diukur dalam mikrometer, μm) bisa dibilang lebih penting daripada total jumlah megapiksel. Piksel yang lebih besar menangkap lebih banyak foton per unit waktu, yang berarti lebih sedikit noise shot dan performa cahaya rendah yang lebih baik.
 
-Common pixel sizes in 2026 smartphones:
+Ukuran piksel umum pada smartphone tahun 2026:
 
-- **0.6μm to 0.8μm**: Very small pixels. Used in 108MP to 200MP high-resolution sensors. These rely entirely on pixel binning for acceptable noise.
-- **1.0μm to 1.2μm**: Mid-size. Used in 48MP to 64MP sensors with default 4:1 binning to 12MP–16MP output.
-- **2.0μm to 2.4μm**: Large "flagship" pixels. Used in dedicated 12MP–16MP sensors (Google Pixel, iPhone Pro) or as the binned output of 48MP sensors in "high quality" mode.
+- **0,6μm hingga 0,8μm**: Piksel sangat kecil. Digunakan dalam sensor resolusi tinggi 108MP hingga 200MP. Sensor ini sepenuhnya bergantung pada pixel binning untuk noise yang dapat diterima.
+- **1,0μm hingga 1,2μm**: Ukuran sedang. Digunakan dalam sensor 48MP hingga 64MP dengan binning default 4:1 untuk output 12MP–16MP.
+- **2,0μm hingga 2,4μm**: Piksel besar "unggulan". Digunakan dalam sensor khusus 12MP–16MP (Google Pixel, iPhone Pro) atau sebagai output binned dari sensor 48MP dalam mode "kualitas tinggi".
 
-Pixel binning is the technique of combining the charge from adjacent 2×2 (or 3×3, or 4×4) pixels into a single "super pixel" during readout. A 48MP sensor with 0.8μm individual pixels, when binned 4-to-1, behaves like a 12MP sensor with 1.6μm effective pixels — dramatically improving signal-to-noise ratio. The Camera2 API exposes both the full-resolution raw mode and the default binned mode as separate stream configurations.
+Pixel binning adalah teknik menggabungkan muatan dari piksel 2×2 (atau 3×3, atau 4×4) yang berdekatan menjadi satu "piksel super" selama pembacaan. Sensor 48MP dengan piksel individu 0,8μm, saat di-binning 4-ke-1, berperilaku seperti sensor 12MP dengan piksel efektif 1,6μm — secara dramatis meningkatkan rasio signal-to-noise. API Camera2 mengekspos mode raw resolusi penuh dan mode binned default sebagai konfigurasi stream yang terpisah.
 
-The megapixel count math is straightforward: a 48MP sensor has an active array of approximately 8,000 × 6,000 photodiodes = 48,000,000 individual light sensors.
+Perhitungan jumlah megapiksel sangat sederhana: sensor 48MP memiliki array aktif sekitar 8.000 × 6.000 fotodioda = 48.000,000 sensor cahaya individu.
 
-### Sensor Size Classifications
+### Klasifikasi Ukuran Sensor
 
-Sensor size follows a legacy inch-based notation dating back to 1950s Vidicon television tubes. The format is "1/X inch" where X is the divisor; smaller X means a larger sensor:
+Ukuran sensor mengikuti notasi berbasis inci lama yang berasal dari tabung televisi Vidicon tahun 1950-an. Formatnya adalah "1/X inci" di mana X adalah pembaginya; X yang lebih kecil berarti sensor yang lebih besar:
 
-- 1/3.06" to 1/2.55": Small sensors, typical for front cameras and budget ultra-wides (~5MP to 13MP).
-- 1/1.7" to 1/1.3": Large mobile sensors, flagships primary cameras (48MP, 50MP, 108MP).
-- 1-inch (Type 1): Very large for a phone. Found in the Xiaomi 13 Ultra, Sharp Aquos R series, and Sony Xperia Pro-I. Approximately 13.2mm × 8.8mm active area — approaching the size of some Micro Four Thirds cameras.
+- 1/3,06" hingga 1/2,55": Sensor kecil, umum untuk kamera depan dan ultra-lebar anggaran (~5MP hingga 13MP).
+- 1/1,7" hingga 1/1,3": Sensor seluler besar, kamera utama ponsel unggulan (48MP, 50MP, 108MP).
+- 1-inci (Tipe 1): Sangat besar untuk ponsel. Ditemukan pada Xiaomi 13 Ultra, seri Sharp Aquos R, dan Sony Xperia Pro-I. Area aktif sekitar 13,2mm × 8,8mm — mendekati ukuran beberapa kamera Micro Four Thirds.
 
-A larger sensor, given equal megapixel count, always has larger individual pixels. That is why the "one-inch sensor" phones produce noticeably better low-light photos.
+Sensor yang lebih besar, dengan jumlah megapiksel yang sama, selalu memiliki piksel individu yang lebih besar. Itulah sebabnya ponsel "sensor satu inci" menghasilkan foto cahaya rendah yang jauh lebih baik.
 
-### The Bayer Color Filter Array (CFA)
+### Bayer Color Filter Array (CFA)
 
-A raw silicon photodiode is colorblind — it only measures total photon intensity, not wavelength. To record color, manufacturers deposit a tiny **color filter** on top of each individual pixel. The almost-universal pattern is the **Bayer RGGB filter array**: 50% green pixels, 25% red, and 25% blue, arranged in a repeating 2×2 tile. The human eye is more sensitive to green light, so doubling the green sampling improves perceived luminance resolution and noise performance.
+Fotodioda silikon mentah bersifat buta warna — ia hanya mengukur intensitas foton total, bukan panjang gelombang. Untuk merekam warna, produsen menempatkan **filter warna** kecil di atas setiap piksel individu. Pola yang hampir universal adalah **Bayer RGGB filter array**: 50% piksel hijau, 25% merah, dan 25% biru, yang disusun dalam ubin 2×2 yang berulang. Mata manusia lebih sensitif terhadap cahaya hijau, sehingga penggandaan sampel hijau meningkatkan resolusi luminans yang dirasakan dan performa noise.
 
 ```mermaid
 graph LR
-    subgraph "4x4 Bayer Pattern (RGGB)"
+    subgraph "Pola Bayer 4x4 (RGGB)"
         direction TB
         A1[R] --- A2[G] --- A3[R] --- A4[G]
         B1[G] --- B2[B] --- B3[G] --- B4[B]
         C1[R] --- C2[G] --- C3[R] --- C4[G]
         D1[G] --- D2[B] --- D3[G] --- D4[B]
     end
-    E[IR Cut Filter\nBlocks Infrared] --> F[Color Filter Array\nBayer RGGB Deposited on Glass]
-    F --> G[Silicon Photodiodes\nConvert Photons→Electrons]
+    E["Filter Pemotong IR<br/>Memblokir Inframerah"] --> F["Array Filter Warna<br/>Bayer RGGB Ditempatkan pada Kaca"]
+    F --> G[Fotodioda Silikon<br/>Mengubah Foton→Elektron]
 ```
 
-After readout, the sensor data is a mosaic of separate red, green, and blue values — not a full-color image yet. The step that fills in the missing color information for each pixel is called **demosaicing** (or debayering) and it is the first major computational step performed in the ISP.
+Setelah pembacaan, data sensor adalah mosaik dari nilai merah, hijau, dan biru yang terpisah — belum menjadi gambar berwarna penuh. Langkah yang mengisi informasi warna yang hilang untuk setiap piksel disebut **demosaicing** (atau debayering) dan ini adalah langkah komputasi besar pertama yang dilakukan di ISP.
 
-### Rolling Shutter vs Global Shutter
+### Rana Bergulir (Rolling Shutter) vs Rana Global (Global Shutter)
 
-Nearly every smartphone image sensor uses a **rolling shutter**. The sensor does not expose or read all pixels at once. Instead, it exposes and reads the pixel array row by row, from top to bottom, one horizontal line at a time. A typical 48MP sensor rolling readout takes approximately 15 to 25 milliseconds for a full-frame capture.
+Hampir setiap sensor gambar smartphone menggunakan **rana bergulir**. Sensor tidak mengekspos atau membaca semua piksel sekaligus. Sebaliknya, ia mengekspos dan membaca array piksel baris demi baris, dari atas ke bawah, satu garis horizontal pada satu waktu. Pembacaan bergulir sensor 48MP yang khas membutuhkan waktu sekitar 15 hingga 25 milidetik untuk pengambilan bingkai penuh.
 
-Rolling shutter produces characteristic distortions on very fast-moving subjects: a spinning airplane propeller or a ceiling fan appears bent or wavy; the top and bottom of a vertically-panned building lean in opposite directions (the "jello effect" in video). Global shutter sensors, by contrast, expose every pixel simultaneously and read them all at once after the exposure ends. Global shutter is used in machine vision, action cameras, and some specialized front-facing IR face-unlock sensors, but the global shutter pixel design has lower light sensitivity and higher cost, so it is not used in main smartphone cameras.
+Rana bergulir menghasilkan distorsi karakteristik pada subjek yang bergerak sangat cepat: baling-baling pesawat yang berputar atau kipas langit-langit tampak bengkok atau bergelombang; bagian atas dan bawah bangunan yang dipotret dengan gerakan pan vertikal miring ke arah yang berlawanan (efek "jello" dalam video). Sebaliknya, sensor rana global mengekspos setiap piksel secara bersamaan dan membaca semuanya sekaligus setelah eksposur berakhir. Rana global digunakan dalam visi mesin, kamera aksi, dan beberapa sensor buka kunci wajah IR menghadap ke depan yang khusus, tetapi desain piksel rana global memiliki sensitivitas cahaya yang lebih rendah dan biaya yang lebih tinggi, sehingga tidak digunakan dalam kamera utama smartphone.
 
-## The ISP: Image Signal Processor
+## ISP: Image Signal Processor
 
-The **ISP (Image Signal Processor)** is a dedicated hardware block (either a separate chip or, more commonly today, an integrated part of the main SoC alongside the CPU and GPU) whose sole job is to transform the raw, mosaic'd, noisy, distorted data streaming off the sensor into a visually pleasing color image.
+**ISP (Image Signal Processor)** adalah blok perangkat keras khusus (baik chip terpisah atau, yang lebih umum saat ini, bagian terintegrasi dari SoC utama bersama CPU dan GPU) yang tugas satu-satunya adalah mengubah data mentah, bermosaik, ber-noise, dan terdistorsi yang mengalir dari sensor menjadi gambar berwarna yang menyenangkan secara visual.
 
-The ISP runs a fixed, hardwired pipeline of image processing stages at extremely high throughput. A modern 48MP sensor running at 30 frames per second sends 1.44 billion pixels per second to the ISP. The ISP must process every single pixel through all stages in under 33 milliseconds per frame to keep up.
+ISP menjalankan pipeline tahap pemrosesan gambar yang tetap dan terprogram secara keras pada throughput yang sangat tinggi. Sensor 48MP modern yang berjalan pada 30 bingkai per detik mengirimkan 1,44 miliar piksel per detik ke ISP. ISP harus memproses setiap piksel melalui semua tahap dalam waktu kurang dari 33 milidetik per bingkai untuk mengimbanginya.
 
-The canonical ISP pipeline stages, in order, are:
+Tahap pipeline ISP kanonik, secara berurutan, adalah:
 
-1. **Hot Pixel Correction**: Factory-calibrated "stuck" pixels (always bright or always dark) are replaced with interpolated values from neighbors.
-2. **Demosaic / Debayer**: The Bayer RGGB mosaic is converted into a full RGB image by estimating the missing two color channels at each pixel location from surrounding pixels using edge-aware interpolation algorithms.
-3. **Noise Reduction (Temporal + Spatial)**: Random shot noise and sensor read noise are suppressed. Spatial NR blurs flat regions while preserving edges. Temporal NR merges information from previous video frames (if available) for even cleaner results.
-4. **Lens Shading Correction (Vignetting Correction)**: The corners of the image are naturally darker because light must pass through the lens at a steeper angle. The ISP applies a per-pixel digital gain ramp, brighter at the corners, to flatten the illumination. Calibration data for this ramp is stored in the module's OTP.
-5. **Geometric Distortion Correction**: Ultra-wide and fisheye lenses produce barrel distortion (straight lines bow outward). The ISP remaps pixel coordinates using a stored polynomial lens model to produce a rectilinear image where straight lines actually appear straight. This step inherently crops 5–10% of the outer pixel ring.
-6. **Color Correction Matrix (CCM)**: The raw sensor RGB spectral response does not match the human eye's trichromatic response. A 3×3 matrix multiplication converts sensor-native RGB into standard sRGB or DCI-P3 color space. The CCM coefficients are tuned per-module per-illuminant (daylight, tungsten, fluorescent).
-7. **Tone Curve Adjustment**: A non-linear S-shaped tone mapping curve is applied to the linear RGB data to compress the high-dynamic-range sensor signal into the low-dynamic-range output (typically 8-bit sRGB gamma-encoded). This step is what makes the image "pop" — contrast increases in the midtones, highlights are rolled off, shadows are lifted.
-8. **Edge Enhancement / Sharpening**: A subtle unsharp mask is applied to recover high-frequency detail softened by the noise reduction and optical low-pass filter. The sharpening amount is carefully controlled to avoid introducing halos.
+1. **Koreksi Piksel Panas (Hot Pixel Correction)**: Piksel "macet" yang dikalibrasi pabrik (selalu terang atau selalu gelap) diganti dengan nilai interpolasi dari tetangganya.
+2. **Demosaic / Debayer**: Mosaik Bayer RGGB diubah menjadi gambar RGB penuh dengan memperkirakan dua saluran warna yang hilang di setiap lokasi piksel dari piksel sekitarnya menggunakan algoritma interpolasi yang sadar tepi (edge-aware).
+3. **Pengurangan Noise (Temporal + Spasial)**: Noise shot acak dan noise pembacaan sensor ditekan. Spasial NR mengaburkan wilayah datar sambil mempertahankan tepian. Temporal NR menggabungkan informasi dari bingkai video sebelumnya (jika tersedia) untuk hasil yang lebih bersih.
+4. **Koreksi Bayangan Lensa (Vignetting Correction)**: Sudut-sudut gambar secara alami lebih gelap karena cahaya harus melewati lensa pada sudut yang lebih curam. ISP menerapkan peningkatan gain digital per piksel, yang lebih terang di sudut-sudut, untuk meratakan pencahayaan. Data kalibrasi untuk peningkatan ini disimpan dalam OTP modul.
+5. **Koreksi Distorsi Geometris**: Lensa ultra-lebar dan fisheye menghasilkan distorsi barel (garis lurus melengkung ke luar). ISP memetakan ulang koordinat piksel menggunakan model lensa polinomial yang disimpan untuk menghasilkan gambar rektilinear di mana garis lurus benar-benar tampak lurus. Langkah ini secara inheren memotong (crop) 5–10% dari cincin piksel luar.
+6. **Color Correction Matrix (CCM)**: Respons spektral RGB sensor mentah tidak cocok dengan respons trikromatik mata manusia. Perkalian matriks 3×3 mengubah RGB asli sensor menjadi ruang warna standar sRGB atau DCI-P3. Koefisien CCM disetel per modul per iluminan (cahaya siang, tungsten, fluoresen).
+7. **Penyesuaian Kurva Nada (Tone Curve Adjustment)**: Kurva pemetaan nada berbentuk S non-linear diterapkan pada data RGB linear untuk mengompresi sinyal sensor rentang dinamis tinggi (high-dynamic-range) ke dalam output rentang dinamis rendah (low-dynamic-range) (biasanya sRGB 8-bit yang dikodekan gamma). Langkah inilah yang membuat gambar menjadi "menonjol" — kontras meningkat pada nada tengah (midtones), sorotan diredam, bayangan diangkat.
+8. **Peningkatan Tepi / Penajaman (Edge Enhancement / Sharpening)**: Masker unsharp yang halus diterapkan untuk memulihkan detail frekuensi tinggi yang dilembutkan oleh pengurangan noise dan filter low-pass optik. Jumlah penajaman dikontrol dengan hati-hati untuk menghindari munculnya halo.
 
 ```mermaid
 flowchart TD
-    A[Raw Bayer Data\nfrom Sensor] --> B[Hot Pixel Correction]
-    B --> C[Demosaic / Debayer\nBayer → Full RGB]
-    C --> D[Noise Reduction\nSpatial + Temporal]
-    D --> E[Lens Shading Correction\nFix Vignetting]
-    E --> F[Geometric Distortion\nCorrect Fisheye / Barrel]
-    F --> G[Color Correction Matrix\nsRGB / P3 Color Space]
-    G --> H[Tone Curve Adjustment\nGamma + S-Curve]
-    H --> I[Edge Enhancement / Sharpening]
-    I --> J[Final Processed Image\n→ JPEG Encoder / Display]
+    A["Data Bayer Mentah<br/>dari Sensor"] --> B["Koreksi Piksel Panas"]
+    B --> C[Demosaic / Debayer<br/>Bayer → RGB Penuh]
+    C --> D[Pengurangan Noise<br/>Spasial + Temporal]
+    D --> E[Koreksi Bayangan Lensa<br/>Memperbaiki Vinyet]
+    E --> F[Distorsi Geometris<br/>Koreksi Fisheye / Barel]
+    F --> G[Matriks Koreksi Warna<br/>Ruang Warna sRGB / P3]
+    G --> H[Penyesuaian Kurva Nada<br/>Gamma + Kurva-S]
+    H --> I[Peningkatan Tepi / Penajaman]
+    I --> J[Gambar Final yang Diproses<br/>→ Encoder JPEG / Tampilan]
 ```
 
-The ISP's processing quality is a major differentiator between phone manufacturers. Google, Samsung, Apple, and Xiaomi each tune their ISP pipelines with different artistic priorities: some favor natural colors, some oversaturated "punchy" output, some aggressive noise reduction vs retained detail. The Camera2 API gives you some control over individual ISP stage strengths (via the Android tonemap and color correction controls), but most of the detailed stage parameters are locked behind vendor proprietary APIs.
+Kualitas pemrosesan ISP adalah pembeda utama antar produsen ponsel. Google, Samsung, Apple, dan Xiaomi masing-masing menyetel pipeline ISP mereka dengan prioritas artistik yang berbeda: beberapa menyukai warna alami, beberapa menyukai output yang tajam dan jenuh, beberapa menyukai pengurangan noise yang agresif vs detail yang dipertahankan. API Camera2 memberi Anda kontrol atas kekuatan tahap ISP individu (melalui kontrol tonemap dan koreksi warna Android), tetapi sebagian besar parameter tahap yang terperinci dikunci di balik API milik vendor.
 
-## RAW vs JPEG: Two Paths from Sensor to Storage
+## RAW vs JPEG: Dua Jalur dari Sensor ke Penyimpanan
 
-The ISP pipeline above produces a processed image. But the Camera2 API also allows you to bypass the ISP entirely and read the raw sensor data directly. This is the critical distinction between RAW and JPEG output.
+Pipeline ISP di atas menghasilkan gambar yang diproses. Namun API Camera2 juga memungkinkan Anda untuk melewati ISP sepenuhnya dan membaca data sensor mentah secara langsung. Ini adalah perbedaan kritis antara output RAW dan JPEG.
 
-### RAW Format
+### Format RAW
 
-A **RAW file** (on Android this means a DNG file, Digital Negative) contains exactly what the sensor measured before any ISP processing runs. It is a 10-bit, 12-bit, or 14-bit per pixel Bayer mosaic — still in the original RGGB pattern, still with vignetting, still with noise, still linear. The RAW file also contains metadata tags specifying the exact color filter array pattern, the sensor's color profile, black level, white level, and the lens model.
+Sebuah **file RAW** (di Android ini berarti file DNG, Digital Negative) berisi persis apa yang diukur sensor sebelum pemrosesan ISP dijalankan. Ini adalah mosaik Bayer 10-bit, 12-bit, atau 14-bit per piksel — masih dalam pola RGGB asli, masih dengan vinyet, masih dengan noise, masih linear. File RAW juga berisi tag metadata yang menentukan pola array filter warna yang tepat, profil warna sensor, tingkat hitam, tingkat putih, dan model lensa.
 
-- **Bit depth**: RAW10 = 10 bits per channel = 1,024 levels. RAW12 = 4,096 levels. RAW14 = 16,384 levels. Compare this to JPEG's 8 bits = 256 levels.
-- **File size**: 20–40 MB per 48MP photo. Uncompressed or near-lossless compressed.
-- **Use case**: Professional post-production editing. The extra stops of headroom allow an editor to "rescue" overexposed highlights (by 2 to 3 stops of EV) or lift underexposed shadows without banding.
+- **Kedalaman bit**: RAW10 = 10 bit per saluran = 1.024 level. RAW12 = 4.096 level. RAW14 = 16.384 level. Bandingkan dengan JPEG 8 bit = 256 level.
+- **Ukuran file**: 20–40 MB per foto 48MP. Tidak terkompresi atau terkompresi hampir tanpa kehilangan (near-lossless).
+- **Kasus penggunaan**: Pengeditan pasca-produksi profesional. Ruang tambahan dari stop ekstra memungkinkan editor untuk "menyelamatkan" sorotan yang terlalu terang (sebesar 2 hingga 3 stop EV) atau mengangkat bayangan yang terlalu gelap tanpa munculnya banding.
 
-### JPEG Format
+### Format JPEG
 
-A **JPEG file** is the fully-cooked output of the ISP. Every single one of the 8 ISP stages above has already been applied to the pixel data. Then the image is converted from RGB to YCbCr 4:2:0 chroma-subsampled color space and compressed with a lossy Discrete Cosine Transform algorithm at roughly a 10:1 to 20:1 compression ratio.
+Sebuah **file JPEG** adalah output "matang" dari ISP. Setiap satu dari 8 tahap ISP di atas telah diterapkan pada data piksel. Kemudian gambar diubah dari RGB ke ruang warna YCbCr 4:2:0 chroma-subsampled dan dikompresi dengan algoritma Discrete Cosine Transform yang lossy pada rasio kompresi sekitar 10:1 hingga 20:1.
 
-- **Bit depth**: Always 8 bits per channel = 256 levels per color.
-- **File size**: 2–5 MB for a 12MP–48MP photo, depending on JPEG quality level.
-- **Use case**: Instant sharing, social media, any workflow where the photo is "done" as shot. Adjustments in a mobile editor degrade the image quickly because only 256 levels remain.
+- **Kedalaman bit**: Selalu 8 bit per saluran = 256 level per warna.
+- **Ukuran file**: 2–5 MB untuk foto 12MP–48MP, tergantung pada tingkat kualitas JPEG.
+- **Kasus penggunaan**: Berbagi instan, media sosial, alur kerja apa pun di mana foto dianggap "selesai" saat diambil. Penyesuaian dalam editor seluler menurunkan kualitas gambar dengan cepat karena hanya tersisa 256 level.
 
-### Comparison Table: RAW vs JPEG
+### Tabel Perbandingan: RAW vs JPEG
 
-| Feature | RAW (DNG) | JPEG |
+| Fitur | RAW (DNG) | JPEG |
 |---------|-----------|------|
-| ISP Processing Applied | None — all stages skipped | All 8 stages applied and irreversible |
-| Color Depth | 10–14 bit (1,024–16,384 levels) | 8 bit (256 levels) |
-| White Balance | Tagged in metadata, fully changeable in post | Baked into pixels — minor edits only |
-| Exposure Latitude | ±2 to 3 stops recoverable | ±1/2 stop at best before banding |
-| File Size (48MP) | 25–40 MB | 3–6 MB |
-| Color Space | Sensor-native linear RGB | sRGB or Display P3 gamma-encoded |
-| Sharpening / Noise Reduction | None — editor's choice | Applied; can't be undone |
-| Typical Workflow | Adobe Lightroom / Capture One workflow | Direct share to Instagram / Messages |
+| Pemrosesan ISP yang Diterapkan | Tidak ada — semua tahap dilewati | Semua 8 tahap diterapkan dan tidak dapat dibatalkan |
+| Kedalaman Warna | 10–14 bit (1.024–16.384 level) | 8 bit (256 level) |
+| Keseimbangan Putih | Ditandai dalam metadata, dapat diubah sepenuhnya di pasca | Tertanam dalam piksel — hanya pengeditan kecil |
+| Latitudo Eksposur | ±2 hingga 3 stop dapat dipulihkan | Maksimal ±1/2 stop sebelum banding |
+| Ukuran File (48MP) | 25–40 MB | 3–6 MB |
+| Ruang Warna | RGB linear asli sensor | sRGB atau Display P3 yang dikodekan gamma |
+| Penajaman / Pengurangan Noise | Tidak ada — pilihan editor | Diterapkan; tidak dapat dibatalkan |
+| Alur Kerja Umum | Alur kerja Adobe Lightroom / Capture One | Berbagi langsung ke Instagram / Pesan |
 
-## Multi-Camera Phones: Why Not One Giant Zoom Lens?
+## Ponsel Multi-Kamera: Mengapa Tidak Satu Lensa Zoom Raksasa?
 
-A traditional point-and-shoot camera uses a single zoom lens with moving internal groups that continuously change focal length from wide to telephoto. Why can't a smartphone do the same? Physics. A 10× zoom lens that covers 24mm–240mm full-frame equivalent with a constant f/2.8 aperture requires an optical path roughly 5 centimeters (2 inches) long. A smartphone is, at most, 0.9 centimeters thick. The math simply does not fit.
+Kamera saku tradisional menggunakan satu lensa zoom dengan grup internal yang bergerak yang terus-menerus mengubah panjang fokus dari lebar ke telefoto. Mengapa smartphone tidak bisa melakukan hal yang sama? Fisika. Lensa zoom 10× yang mencakup ekivalen full-frame 24mm–240mm dengan bukaan konstan f/2.8 memerlukan jalur optik sepanjang kira-kira 5 sentimeter (2 inci). Sebuah smartphone, paling banyak, setebal 0,9 sentimeter. Matematikanya tidak cocok.
 
-The smartphone industry solved this not with a zoom lens, but with **multiple fixed-focal-length cameras**, each optimized for a different purpose, and a "smooth zoom" computational system that fades from one camera to the next at specific zoom ratios.
+Industri smartphone memecahkan hal ini bukan dengan lensa zoom, tetapi dengan **beberapa kamera dengan panjang fokus tetap**, masing-masing dioptimalkan untuk tujuan yang berbeda, dan sistem komputasi "smooth zoom" yang memudar dari satu kamera ke kamera berikutnya pada rasio zoom tertentu.
 
-A typical 2026 flagship rear camera island contains:
+Pulau kamera belakang ponsel unggulan tahun 2026 yang khas berisi:
 
-1. **Ultra-Wide (0.5× zoom, ~13mm eq, ~120° FOV)**: Short focal length, large depth of field. Ideal for landscapes, architecture, group shots, and close-focus macro when repositioned via software.
-2. **Wide / Primary (1× zoom, ~24mm eq, ~75° FOV)**: The default. The largest sensor, the widest aperture, the best OIS. Used for 80% of everyday photos.
-3. **Telephoto / Periscope (3× to 10× optical, ~72mm to ~240mm eq)**: A conventional telephoto lens (3×) sits directly above its sensor. A periscope telephoto (5×, 10×) uses a 45° prism near the phone's edge to reflect light 90°, so the lens barrel runs horizontally inside the phone's body rather than vertically through its thickness.
-4. **ToF / Depth Sensor**: A near-infrared laser dot projector (or, on iPhones, a structured-light LiDAR scanner) that pulses 30,000+ IR dots onto the scene and measures their round-trip time to produce a per-pixel depth map. Used for accurate portrait bokeh, augmented reality occlusion, and fast autofocus in low light.
+1. **Ultra-Lebar (zoom 0,5×, ~13mm eq, ~120° FOV)**: Panjang fokus pendek, kedalaman bidang besar. Ideal untuk pemandangan, arsitektur, foto grup, dan makro fokus dekat saat diposisikan ulang melalui perangkat lunak.
+2. **Lebar / Utama (zoom 1×, ~24mm eq, ~75° FOV)**: Default. Sensor terbesar, bukaan terlebar, OIS terbaik. Digunakan untuk 80% foto sehari-hari.
+3. **Telefoto / Periskop (optik 3× hingga 10×, ~72mm hingga ~240mm eq)**: Lensa telefoto konvensional (3×) diletakkan langsung di atas sensornya. Telefoto periskop (5×, 10×) menggunakan prisma 45° di dekat tepi ponsel untuk memantulkan cahaya 90°, sehingga barel lensa berjalan secara horizontal di dalam badan ponsel, bukan secara vertikal menembus ketebalannya.
+4. **Sensor Kedalaman ToF**: Proyektor titik laser inframerah dekat (atau, pada iPhone, pemindai LiDAR cahaya terstruktur) yang memancarkan 30.000+ titik IR ke pemandangan dan mengukur waktu pulang-pergi mereka untuk menghasilkan peta kedalaman per piksel. Digunakan untuk bokeh potret yang akurat, oklusi realitas tertambah (AR), dan autofokus cepat dalam cahaya rendah.
 
 ```mermaid
 graph TB
-    subgraph "Phone Rear Camera Island"
-        A[Rear Glass Cover]
+    subgraph "Pulau Kamera Belakang Ponsel"
+        A["Penutup Kaca Belakang"]
     end
-    A --> B[Ultra-Wide Camera\n13mm eq / 120° FOV]
-    A --> C[Wide / Primary Camera\n24mm eq / f/1.6 + OIS]
-    A --> D[5× Periscope Telephoto\n120mm eq / Prism-Refracted]
-    A --> E[ToF Depth Sensor\nLaser Dot Projector]
+    A --> B[Kamera Ultra-Lebar<br/>13mm eq / 120° FOV]
+    A --> C[Kamera Lebar / Utama<br/>24mm eq / f/1.6 + OIS]
+    A --> D[Telefoto Periskop 5×<br/>120mm eq / Refraksi Prisma]
+    A --> E[Sensor Kedalaman ToF<br/>Proyektor Titik Laser]
 ```
 
-When you perform a pinch-zoom gesture in the camera app, the HAL (Hardware Abstraction Layer) smoothly switches the active physical camera at pre-determined thresholds. For example, zooming from 0.5× to 1.0× fades from the ultra-wide to the wide. At 2.9× the app is still digitally cropping the wide camera. At 3.0×, the HAL switches the active source to the periscope telephoto camera. Between those zoom ratios, a sophisticated image-fusing algorithm uses both cameras simultaneously to maintain a seamless transition.
+Saat Anda melakukan gerakan pinch-zoom di aplikasi kamera, HAL (Hardware Abstraction Layer) secara mulus mengalihkan kamera fisik yang aktif pada ambang batas yang ditentukan sebelumnya. Misalnya, memperbesar dari 0,5× ke 1,0× memudar dari ultra-lebar ke lebar. Pada 2,9× aplikasi masih memotong (crop) secara digital dari kamera lebar. Pada 3,0×, HAL mengalihkan sumber aktif ke kamera telefoto periskop. Di antara rasio zoom tersebut, algoritma penggabungan gambar yang canggih menggunakan kedua kamera secara bersamaan untuk mempertahankan transisi yang mulus.
 
-## The Full Journey: From Photon to Saved Photo, Millisecond by Millisecond
+## Perjalanan Lengkap: Dari Foton hingga Foto yang Tersimpan, Milidetik demi Milidetik
 
-Here is the complete, numbered timeline of what physically happens inside a smartphone during a single still photo capture, starting from the moment the user's finger lifts off the virtual shutter button. The numbers are representative of a 2026 flagship capturing a 12MP default-mode JPEG in daylight:
+Berikut adalah lini masa lengkap bernomor tentang apa yang terjadi secara fisik di dalam smartphone selama satu pengambilan foto diam, mulai dari saat jari pengguna diangkat dari tombol rana virtual. Angka-angka ini mewakili ponsel unggulan tahun 2026 yang mengambil foto JPEG mode default 12MP di siang hari:
 
-- **0 ms**: User taps shutter. The Camera2 API framework receives the `CaptureRequest` with `TEMPLATE_STILL_CAPTURE`.
-- **0–2 ms**: The 3A algorithm (Auto-Focus, Auto-Exposure, Auto-White-Balance) converges to its final values.
-- **2–6 ms**: The voice coil motor (VCM) energizes its coil, physically moving the lens barrel by 0.2mm to the exact focus distance the AF algorithm calculated.
-- **6–21 ms (15 ms exposure)**: The global reset releases the sensor pixels' charge. For 15 milliseconds, photodiodes accumulate photon-generated electrons. The rolling shutter reads out row-by-row during and after this window.
-- **18–28 ms**: The sensor outputs the raw Bayer data over the MIPI CSI-2 high-speed serial bus. A typical configuration is 4 data lanes at 2.5 Gbps per lane = 10 Gbps total bandwidth, which comfortably handles a 12MP frame's raw bit depth plus blanking intervals.
-- **28–31 ms**: The ISP's 8-stage pipeline processes the frame through hotpixel correction, demosaic, noise reduction, lens shading, geometric correction, color matrix, tone curve, and sharpening. This happens entirely in hardware — no CPU involvement at the pixel level.
-- **31–33 ms**: The processed YUV image is sent to the hardware JPEG encoder, which applies lossy DCT compression at quality level 90–95 and writes the JFIF file headers (EXIF, thumbnail, GPS coordinates if tagged).
-- **33–40 ms**: The completed JPEG blob is written via the MediaStore content provider into the app's files directory, for example `/data/data/com.yourpackagename/files/DCIM/Camera/IMG_20260806_151042.jpg`. The MediaScanner is notified, and the photo appears in the system gallery.
+- **0 ms**: Pengguna mengetuk rana. Kerangka kerja API Camera2 menerima `CaptureRequest` dengan `TEMPLATE_STILL_CAPTURE`.
+- **0–2 ms**: Algoritma 3A (Auto-Focus, Auto-Exposure, Auto-White-Balance) memusat ke nilai finalnya.
+- **2–6 ms**: Voice coil motor (VCM) memberi energi pada kumparannya, menggerakkan barel lensa secara fisik sejauh 0,2mm ke jarak fokus tepat yang dihitung oleh algoritma AF.
+- **6–21 ms (eksposur 15 ms)**: Reset global melepaskan muatan piksel sensor. Selama 15 milidetik, fotodioda mengumpulkan elektron yang dihasilkan foton. Rana bergulir membaca baris demi baris selama dan setelah jendela ini.
+- **18–28 ms**: Sensor mengeluarkan data Bayer mentah melalui bus serial kecepatan tinggi MIPI CSI-2. Konfigurasi yang umum adalah 4 jalur data pada 2,5 Gbps per jalur = total bandwidth 10 Gbps, yang dengan nyaman menangani kedalaman bit mentah bingkai 12MP ditambah interval blanking.
+- **28–31 ms**: Pipeline 8 tahap ISP memproses bingkai melalui koreksi hotpixel, demosaic, pengurangan noise, bayangan lensa, koreksi geometris, matriks warna, kurva nada, dan penajaman. Ini terjadi sepenuhnya di perangkat keras — tidak ada keterlibatan CPU pada tingkat piksel.
+- **31–33 ms**: Gambar YUV yang diproses dikirim ke encoder JPEG perangkat keras, yang menerapkan kompresi DCT yang lossy pada tingkat kualitas 90–95 dan menulis header file JFIF (EXIF, thumbnail, koordinat GPS jika ditandai).
+- **33–40 ms**: Blob JPEG yang sudah selesai ditulis melalui penyedia konten MediaStore ke dalam direktori file aplikasi, misalnya `/data/data/com.namapaketanda/files/DCIM/Camera/IMG_20260806_151042.jpg`. MediaScanner diberitahu, dan foto muncul di galeri sistem.
 
 ```mermaid
 sequenceDiagram
     participant User
-    participant UI as App UI
-    participant VCM as VCM / Focus Actuator
-    participant Sensor as Image Sensor
-    participant MIPI as MIPI CSI-2 Bus
-    participant ISP as ISP Pipeline
-    participant JPEG as JPEG Encoder
-    participant Storage as Flash Storage
+    participant UI as UI Aplikasi
+    participant VCM as VCM / Aktuator Fokus
+    participant Sensor as Sensor Gambar
+    participant MIPI as Bus MIPI CSI-2
+    participant ISP as Pipeline ISP
+    participant JPEG as Encoder JPEG
+    participant Storage as Penyimpanan Flash
 
-    User->>UI: 0ms: Tap Shutter Button
-    UI->>VCM: 2ms: Move lens to AF distance
-    VCM-->>UI: 6ms: Focus locked
-    UI->>Sensor: 6ms: Start exposure
-    Note over Sensor: 6ms–21ms: 15ms exposure rolling readout
-    Sensor->>MIPI: 18ms–28ms: Stream RAW Bayer @ 10Gbps
-    MIPI->>ISP: 28ms: Full frame received
-    Note over ISP: 28ms–31ms: 8-stage pipeline processing
-    ISP->>JPEG: 31ms: Send YUV frame
-    JPEG-->>ISP: 33ms: JPEG compressed
-    ISP->>Storage: 33ms–40ms: Write JPEG + EXIF
-    Storage-->>UI: 40ms: File saved OK
-    UI-->>User: 40ms: Show thumbnail animation
+    User->>UI: 0ms: Ketuk Tombol Rana
+    UI->>VCM: 2ms: Gerakkan lensa ke jarak AF
+    VCM-->>UI: 6ms: Fokus terkunci
+    UI->>Sensor: 6ms: Mulai eksposur
+    Note over Sensor: 6ms–21ms: eksposur 15ms pembacaan bergulir
+    Sensor->>MIPI: 18ms–28ms: Stream Bayer RAW @ 10Gbps
+    MIPI->>ISP: 28ms: Bingkai penuh diterima
+    Note over ISP: 28ms–31ms: pemrosesan pipeline 8 tahap
+    ISP->>JPEG: 31ms: Kirim bingkai YUV
+    JPEG-->>ISP: 33ms: JPEG terkompresi
+    ISP->>Storage: 33ms–40ms: Tulis JPEG + EXIF
+    Storage-->>UI: 40ms: File berhasil disimpan
+    UI-->>User: 40ms: Tampilkan animasi thumbnail
 ```
 
-The entire process takes approximately 40 milliseconds end-to-end for a daylight still photo. In low light the exposure time itself lengthens (potentially to several seconds for Night Mode multi-frame capture), and the timeline scales proportionally.
+Seluruh proses memakan waktu sekitar 40 milidetik dari awal hingga akhir untuk foto diam di siang hari. Dalam cahaya rendah, waktu eksposur itu sendiri memanjang (berpotensi beberapa detik untuk pengambilan multi-bingkai Mode Malam), dan lini masa berskala secara proporsional.
 
-## Summary
+## Ringkasan
 
-You now have a complete physical picture of the smartphone camera system. You know that each rear camera bump is a sealed module containing a lens barrel with multiple elements, a VCM autofocus actuator, an IR-cut filter, a CMOS sensor with a Bayer RGGB color filter array, and a flex cable carrying MIPI CSI-2 data. You understand focal length equivalence, aperture, and OIS. You know how the ISP's 8-stage pipeline transforms a raw Bayer mosaic into a finished JPEG, and you can distinguish RAW (sensor-native, 10–14 bit, post-processing headroom) from JPEG (ISP-processed, 8-bit, share-ready). You understand why modern phones use 3+ fixed cameras instead of a zoom lens, and you have walked through the exact millisecond-by-millisecond timeline of a single photo capture.
+Anda sekarang memiliki gambaran fisik yang lengkap tentang sistem kamera smartphone. Anda tahu bahwa setiap tonjolan kamera belakang adalah modul tersegel yang berisi barel lensa dengan beberapa elemen, aktuator autofokus VCM, filter pemotong IR, sensor CMOS dengan array filter warna Bayer RGGB, dan kabel fleksibel yang membawa data MIPI CSI-2. Anda memahami panjang fokus ekivalen, bukaan, dan OIS. Anda tahu bagaimana pipeline 8 tahap ISP mengubah mosaik Bayer mentah menjadi JPEG yang sudah jadi, dan Anda dapat membedakan RAW (asli sensor, 10–14 bit, ruang pemrosesan pasca) dari JPEG (diproses ISP, 8-bit, siap berbagi). Anda memahami mengapa ponsel modern menggunakan 3+ kamera tetap daripada lensa zoom, dan Anda telah menelusuri lini masa milidetik demi milidetik yang tepat dari satu pengambilan foto.
 
-## What's Next
+## Apa Selanjutnya
 
-In Chapter 3, we move from the physical hardware to what that hardware is capable of producing. We will explore the real-world features of modern smartphone photography: HDR multi-frame bracketing, portrait bokeh via stereo / ToF / ML, Night Sight multi-frame long exposures, slow-motion high-speed video capture, ultra-wide distortion correction, and periscope telephoto. You will learn how computational photography — the fusion of optics, sensors, multi-frame signal processing, and on-device machine learning — creates imagery that no single lens/sensor combination could ever produce on its own.
+Dalam Bab 3, kita berpindah dari perangkat keras fisik ke apa yang mampu dihasilkan oleh perangkat keras tersebut. Kita akan menjelajahi fitur-fitur dunia nyata dari fotografi smartphone modern: bracketing multi-bingkai HDR, bokeh potret melalui stereo / ToF / ML, eksposur panjang multi-bingkai Night Sight, pengambilan video kecepatan tinggi gerak lambat, koreksi distorsi ultra-lebar, dan telefoto periskop. Anda akan mempelajari bagaimana fotografi komputasional — penggabungan optik, sensor, pemrosesan sinyal multi-bingkai, dan pembelajaran mesin pada perangkat — menciptakan citra yang tidak dapat dihasilkan oleh kombinasi lensa/sensor tunggal mana pun secara mandiri.

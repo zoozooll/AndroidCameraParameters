@@ -1,32 +1,32 @@
-﻿---
+---
 sidebar_position: 29
-title: "Camera Metadata Encyclopedia"
-description: Complete reference guide for all essential CameraCharacteristics metadata keys including Sensor, Lens, Control, Scaler, Request, Flash, JPEG, Statistics, and Info categories.
-keywords: [CameraCharacteristics, CameraMetadata, Sensor, Lens, Control, Scaler, camera metadata reference]
+title: "摄像头元数据百科全书"
+description: CameraCharacteristics 所有核心元数据键的完整参考指南,涵盖 Sensor、Lens、Control、Scaler、Request、Flash、JPEG、Statistics 和 Info 分类。
+keywords: [CameraCharacteristics, CameraMetadata, Sensor, Lens, Control, Scaler, 摄像头元数据参考]
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-# Camera Metadata Encyclopedia
+# 摄像头元数据百科全书
 
-## Companion App
+## 配套应用
 
-Inspect every key in this encyclopedia live on your own device — install the Android Camera Parameters app:
+在你自己的设备上实时查看本百科中每一个键 —— 安装 Android Camera Parameters 应用:
 
-- **GitHub (Open Source):** [github.com/zoozooll/AndroidCameraParameters](https://github.com/zoozooll/AndroidCameraParameters)
+- **GitHub(开源):** [github.com/zoozooll/AndroidCameraParameters](https://github.com/zoozooll/AndroidCameraParameters)
 - **Google Play:** [play.google.com/store/apps/details?id=com.minininja.cameraparams](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)
 
-The app is a living implementation of every concept on this page. Every metadata entry below tells you exactly which tab and screen displays that value so you can cross-reference with a real device in your hand.
+该应用是本页每一个概念的活实现。下方每个元数据条目都会告诉你具体在哪个标签页和屏幕显示该值,以便你与手中真实设备进行对照验证。
 
 ---
 
-## Metadata Taxonomy
+## 元数据分类法
 
 ```mermaid
 mindmap
-  root((Camera2 Metadata))
-    Sensor
+  root((Camera2 元数据))
+    传感器
       SENSOR_INFO_ACTIVE_ARRAY_SIZE
       SENSOR_INFO_PIXEL_ARRAY_SIZE
       SENSOR_INFO_SENSITIVITY_RANGE
@@ -34,33 +34,33 @@ mindmap
       SENSOR_INFO_WHITE_LEVEL
       SENSOR_INFO_COLOR_FILTER_ARRANGEMENT
       SENSOR_INFO_TIMESTAMP_SOURCE
-    Lens
+    镜头
       LENS_FACING
       LENS_INFO_AVAILABLE_FOCAL_LENGTHS
       LENS_INFO_MINIMUM_FOCUS_DISTANCE
       LENS_INFO_AVAILABLE_APERTURES
       LENS_INFO_OPTICAL_STABILIZATION_MODE
-    Control
+    控制
       CONTROL_AE_AVAILABLE_MODES
       CONTROL_AF_AVAILABLE_MODES
       CONTROL_AWB_AVAILABLE_MODES
       CONTROL_AVAILABLE_EFFECTS
       CONTROL_AE_COMPENSATION_RANGE
-    Scaler
+    缩放器
       SCALER_STREAM_CONFIGURATION_MAP
       SCALER_AVAILABLE_MAX_DIGITAL_ZOOM
       SCALER_CROPPING_TYPE
-    Request
+    请求
       REQUEST_AVAILABLE_CAPABILITIES
       REQUEST_PARTIAL_RESULT_COUNT
       REQUEST_MAX_NUM_OUTPUT_STREAMS
-    Flash
+    闪光灯
       FLASH_INFO_AVAILABLE
       FLASH_INFO_STRENGTH_MAXIMUM_LEVEL
     JPEG
       JPEG_AVAILABLE_THUMBNAIL_SIZES
       JPEG_MAX_SIZE
-    Info
+    信息
       INFO_SUPPORTED_HARDWARE_LEVEL
       INFO_DEVICE_STATE_ORIENTATIONS
       INFO_VERSION
@@ -68,62 +68,62 @@ mindmap
 
 ---
 
-## Introduction
+## 简介
 
-Welcome to the Camera Metadata Encyclopedia, the definitive reference for understanding the 300+ metadata keys that describe every capability of an Android camera device. If the previous chapters in this series taught you *how* to operate Camera2 — opening sessions, building requests, streaming surfaces — this encyclopedia teaches you *what* your camera is actually capable of doing. Every feature you enable in a `CaptureRequest.Builder` must first be validated against `CameraCharacteristics`. Skip this validation and your app will crash on a certain percentage of devices, or worse, silently produce corrupted output.
+欢迎来到摄像头元数据百科全书,这是理解描述 Android 摄像头设备每一项能力的 300+ 元数据键的权威参考。如果本系列之前的章节教的是 *如何* 操作 Camera2 —— 打开会话、构建请求、流式传输 Surface —— 本百科教的是你的摄像头 *实际能做什么*。你在 `CaptureRequest.Builder` 中启用的每一个功能,都必须先与 `CameraCharacteristics` 校对。跳过这一步,你的应用就会在某一比例的设备上崩溃,或者更糟,静默地产生损坏的输出。
 
-This encyclopedia exists because Camera2 metadata is notoriously under-documented in the official Android SDK reference. The documentation tells you the type of each key (a `Range&lt;Int&gt;`, a `FloatArray`, etc.) but rarely tells you the *semantics*: what a "diopter" means in practice, why an active array size differs from a pixel array size, or which sequence of keys you must check together before exposing a manual-ISO button. The entries here bridge that gap with production-grade code, common OEM pitfalls, and real device behavior drawn from thousands of device profiles in the Android Camera Parameters database.
+本百科的存在,是因为 Camera2 元数据在官方 Android SDK 参考中的文档出了名的匮乏。文档告诉你每个键的类型(一个 `Range&lt;Int&gt;`、一个 `FloatArray` 等),却很少告诉你 *语义*:实践中的"屈光度(diopter)"是什么意思,为什么 active array size 与 pixel array size 不同,或者在暴露手动 ISO 按钮之前必须把哪些键组合在一起检查。这里的条目通过生产级代码、常见 OEM 坑,以及来自 Android Camera Parameters 数据库中数千份设备配置文件的真实设备行为,弥合了这一鸿沟。
 
-Think of this page as a lookup table for your camera application architecture. When you design a settings screen, go to the Control section. When you build a zoom UI, go to Scaler. When you write a RAW processing pipeline, go to Sensor. Every entry follows the same six-point structure so you can jump directly to the code you need without re-learning layout. The companion app on your phone then validates that the same queries work against real silicon from Samsung, Sony, HiSilicon, MediaTek, and Google Tensor.
+把本页当作摄像头应用架构的查阅表。设计设置界面时,去 Control 章节;构建变焦 UI 时,去 Scaler;编写 RAW 处理流水线时,去 Sensor。每个条目都遵循同样的六点结构,所以你可以直接跳到需要的代码而无需重新学习布局。手机上的配套应用随后会验证同样的查询能对三星、索尼、海思、联发科和 Google Tensor 的真实芯片工作。
 
-No device supports every key in this encyclopedia. That is the entire point. The correct pattern for Camera2 development is: query the key → null-check the result → feature-gate the UI → document the fallback path. This page gives you the query, the check, and the pitfall you will hit if you skip it.
-
----
-
-## How Camera2 Metadata is Organized
-
-Camera2 metadata lives in three parallel class hierarchies, all rooted in `android.hardware.camera2.CameraMetadata`. The static description of what a camera *can* do lives in `CameraCharacteristics` — you query this exactly once per camera ID after discovering it via `CameraManager.getCameraIdList()`. The per-request description of what you *want* the camera to do lives in `CaptureRequest` — you populate keys via `CaptureRequest.Builder.set()`. The per-frame description of what the camera *actually did* lives in `CaptureResult` (or its total variant `TotalCaptureResult`) — you read keys from the callback in `CameraCaptureSession.CaptureCallback.onCaptureCompleted()`.
-
-Every key in all three hierarchies extends `CaptureResult.Key<T>` (or its siblings `CameraCharacteristics.Key<T>` and `CaptureRequest.Key<T>`) and is a strongly-typed field descriptor. There are over 300 public keys across the three classes, plus additional OEM-private keys accessible via `CameraCharacteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_SESSION_KEYS)` on certain vendor extensions. The categories in this encyclopedia follow the conceptual groupings used by the HAL3 interface specification: Sensor describes the imager, Lens describes the optics, Control describes the 3A (auto-exposure, auto-focus, auto-white-balance) algorithms, Scaler describes the crop-and-resize pipeline, Request describes cross-cutting capability flags, Flash describes the torch/flash LED, JPEG describes the still-image encoder, and Info describes the camera package and HAL version.
+没有任何设备支持本百科中的每一个键。这正是全部要点。Camera2 开发的正确模式是:查询键 → 对结果做空检查 → 对 UI 做功能门控 → 记录兜底路径。本页给你查询、检查,以及跳过它就会踩到的坑。
 
 ---
 
-## Conventions Used in This Encyclopedia
+## Camera2 元数据如何组织
 
-Every metadata entry below follows exactly six sections:
+Camera2 元数据存在于三个并列的类层级中,全部以 `android.hardware.camera2.CameraMetadata` 为根。摄像头 *能* 做什么的静态描述位于 `CameraCharacteristics` 中 —— 你通过 `CameraManager.getCameraIdList()` 发现某个 camera ID 后,每个 ID 只查询一次。每个请求中你 *想让* 摄像头做什么的描述位于 `CaptureRequest` 中 —— 你通过 `CaptureRequest.Builder.set()` 填充键。每帧中摄像头 *实际做了什么* 的描述位于 `CaptureResult`(或其完整变体 `TotalCaptureResult`)中 —— 你从 `CameraCaptureSession.CaptureCallback.onCaptureCompleted()` 回调里读取键。
 
-1. **What is it?** A 1–2 paragraph definition of the key, its type, and its semantics.
-2. **Why does it exist?** The design rationale that led Android engineers to expose this key rather than deriving the value implicitly.
-3. **Which devices support it?** The minimum hardware level, capability flags, and Android version where this key becomes meaningful.
-4. **How do I query it?** A complete Kotlin code snippet with null-safety, showing the exact `characteristics.get()` call plus error handling.
-5. **How can I inspect it with Android Camera Parameters?** The exact tab hierarchy in the companion app where you can see this value rendered on a device.
-6. **Common pitfalls.** One or more real-world issues developers hit, usually involving OEM fragmentation, hidden state coupling between keys, or misunderstanding of units.
-
-Code snippets use idiomatic Kotlin with nullable-safe operators (`?.`) and the Elvis operator (`?:`) plus `run` blocks for fallback. All snippets assume you already hold a `CameraCharacteristics` instance named `characteristics` obtained via `cameraManager.getCameraCharacteristics(cameraId)`. Snippets that produce user-visible output use string formatting with units (diopters, nanoseconds, EV steps) so you can drop them directly into a `PreferenceScreen` or a `TextView` debug overlay.
-
-The companion app references always use the same pattern: *Tab Name / Sub-tab Name*. For example "Overview / Hardware Level" means: open the app, tap the Overview tab in the bottom navigation, then look for the Hardware Level card. If a key appears in multiple screens we list the canonical primary location first.
+三个层级中的所有键都继承自 `CaptureResult.Key<T>`(或其兄弟 `CameraCharacteristics.Key<T>` 和 `CaptureRequest.Key<T>`),都是强类型字段描述符。三个类合计有超过 300 个公开键,加上通过 `CameraCharacteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_SESSION_KEYS)` 在某些厂商扩展上可访问的额外 OEM 私有键。本百科中的分类遵循 HAL3 接口规范所用的概念分组:Sensor 描述成像器,Lens 描述光学组件,Control 描述 3A(自动曝光、自动对焦、自动白平衡)算法,Scaler 描述裁剪与缩放流水线,Request 描述跨切面能力标志,Flash 描述手电筒/闪光灯 LED,JPEG 描述静态图像编码器,Info 描述摄像头封装与 HAL 版本。
 
 ---
 
-## Sensor Category
+## 本百科的约定
+
+下方每个元数据条目都严格包含六个章节:
+
+1. **它是什么?** 键、其类型和语义的 1–2 段定义。
+2. **它为什么存在?** 促使 Android 工程师暴露此键(而不是隐式派生该值)的设计动机。
+3. **哪些设备支持?** 此键变得有意义的最低硬件等级、能力标志和 Android 版本。
+4. **如何查询?** 完整的、带空安全的 Kotlin 代码片段,展示确切的 `characteristics.get()` 调用以及错误处理。
+5. **如何在 Android Camera Parameters 中查看?** 配套应用中能看到该值在设备上渲染的确切标签页层级。
+6. **常见坑。** 开发者遇到的一个或多个真实问题,通常涉及 OEM 碎片化、键之间隐藏的状态耦合,或对单位的误解。
+
+代码片段使用地道的 Kotlin,带有空安全操作符(`?.`)、Elvis 操作符(`?:`)以及用于兜底的 `run` 块。所有片段假定你已持有名为 `characteristics` 的 `CameraCharacteristics` 实例(通过 `cameraManager.getCameraCharacteristics(cameraId)` 获取)。产生用户可见输出的片段使用带单位(屈光度、纳秒、EV 步进)的字符串格式化,便于直接放进 `PreferenceScreen` 或 `TextView` 调试叠加层。
+
+配套应用的引用总是使用同样的模式:*标签页名 / 子标签页名*。例如 "Overview / Hardware Level" 表示:打开应用,点击底部导航的 Overview 标签页,然后找 Hardware Level 卡片。如果某个键出现在多个屏幕,我们先列出规范的主位置。
+
+---
+
+## Sensor 分类
 
 ### SENSOR_INFO_ACTIVE_ARRAY_SIZE
 
-**1. What is it?**
+**1. 它是什么?**
 
-`SENSOR_INFO_ACTIVE_ARRAY_SIZE` is a `android.graphics.Rect` describing the pixel coordinates of the active imaging area within the full sensor die. In practice this is the largest rectangle of pixels that can actually be read out and delivered to an output stream. The rectangle is always axis-aligned and expressed in pixel-coordinate space where `(0,0)` is the top-left corner of the full pixel array. Typical values look like `Rect(0, 0, 8000, 6000)` for an 8K×6K sensor, or `Rect(120, 160, 3880, 2880)` when the sensor manufacturer leaves a small inactive border (optically-black pixels) around the edge.
+`SENSOR_INFO_ACTIVE_ARRAY_SIZE` 是一个 `android.graphics.Rect`,描述完整传感器晶粒(die)内活动成像区的像素坐标。实践中这是能实际读出并交付给输出流的最大像素矩形。该矩形始终轴向对齐,以 `(0,0)` 为完整像素阵列左上角的像素坐标系表示。8K×6K 传感器的典型值形如 `Rect(0, 0, 8000, 6000)`;当传感器厂商在边缘留下一圈非活动边框(光学黑像素)时则形如 `Rect(120, 160, 3880, 2880)`。
 
-Every output stream you configure — whether JPEG, YUV_420_888, RAW, or a preview SurfaceTexture — is ultimately cropped from this active area. When you request a 4:3 JPEG at 12MP the camera ISP crops the active array to 4:3 aspect ratio and scales down. When you apply digital zoom via `SCALER_CROP_REGION`, that crop region is itself cropped relative to the active array, not the pixel array.
+你配置的每一个输出流 —— 无论是 JPEG、YUV_420_888、RAW 还是预览 SurfaceTexture —— 最终都从这个活动区裁剪而来。当你请求一张 4:3 的 12MP JPEG,摄像头 ISP 把活动阵列裁剪到 4:3 宽高比并缩放。当你通过 `SCALER_CROP_REGION` 应用数码变焦时,该裁剪区本身就是相对活动阵列(而非像素阵列)裁剪的。
 
-**2. Why does it exist?**
+**2. 它为什么存在?**
 
-Sensor dies always contain more physical photodiodes than are delivered to the ISP pipeline. The outermost rows and columns are "dummy" or "optically black" pixels used for dark-current calibration and lens-shading correction — not real picture data. Without `SENSOR_INFO_ACTIVE_ARRAY_SIZE` developers would have no way to know which coordinate system to use for `SCALER_CROP_REGION` or face-based crop tracking. Camera1 used to hide this distinction entirely, which made digital-zoom math inconsistent across OEMs. Camera2 exposes it explicitly so crop regions can be calculated with pixel-perfect precision.
+传感器晶粒总是含有比交付给 ISP 流水线更多的物理光敏二极管。最外圈的行与列是"哑元"或"光学黑"像素,用于暗电流校准和镜头阴影校正 —— 不是真正的图像数据。没有 `SENSOR_INFO_ACTIVE_ARRAY_SIZE`,开发者就无法知道该用哪个坐标系来计算 `SCALER_CROP_REGION` 或基于人脸的裁剪跟踪。Camera1 时代完全隐藏了这一区别,导致数码变焦的数学在不同 OEM 间不一致。Camera2 显式暴露它,使裁剪区可被像素级精确计算。
 
-**3. Which devices support it?**
+**3. 哪些设备支持?**
 
-All Camera2 devices support this key at all hardware levels: LEGACY, LIMITED, FULL, and LEVEL_3. It is listed in `CameraCharacteristics.getAvailableCaptureResultKeys()` for every camera ID, including external USB cameras. The rect is always non-empty and its width/height never exceed `SENSOR_INFO_PIXEL_ARRAY_SIZE`.
+所有 Camera2 设备在所有硬件等级(LEGACY、LIMITED、FULL、LEVEL_3)都支持此键。它出现在每个 camera ID(包括外部 USB 摄像头)的 `CameraCharacteristics.getAvailableCaptureResultKeys()` 中。该矩形始终非空,其宽/高永不超过 `SENSOR_INFO_PIXEL_ARRAY_SIZE`。
 
-**4. How do I query it?**
+**4. 如何查询?**
 
 ```kotlin
 val activeArray: Rect? = characteristics.get(
@@ -134,44 +134,44 @@ activeArray?.let { rect ->
     val widthPx = rect.width()
     val heightPx = rect.height()
     val megapixels = (widthPx * heightPx) / 1_000_000.0
-    Log.d(TAG, "Active array: ${widthPx}×${heightPx}px (%.1f MP)".format(megapixels))
+    Log.d(TAG, "活动阵列: ${widthPx}×${heightPx}px (%.1f MP)".format(megapixels))
     Log.d(TAG, "  Left=${rect.left}, Top=${rect.top}, Right=${rect.right}, Bottom=${rect.bottom}")
 } ?: run {
-    Log.w(TAG, "Active array size not available on this device")
+    Log.w(TAG, "此设备上活动阵列尺寸不可用")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. 如何在 Android Camera Parameters 中查看?**
 
-Navigate to **Sensor / Sensor Info**. The active array is rendered as the second line of the "Sensor Geometry" card, below the pixel array size. The companion app also draws the active array rectangle visually superimposed on a scaled representation of the pixel array, so you can see at a glance how much of the physical die is actually usable.
+前往 **Sensor / Sensor Info**。活动阵列渲染为 "Sensor Geometry" 卡片的第二行,位于像素阵列尺寸下方。配套应用还把活动阵列矩形以视觉方式叠加在像素阵列的缩放表示上,让你一眼看出物理晶粒中实际可用的部分。
 
-**6. Common pitfalls**
+**6. 常见坑**
 
-The single biggest mistake is querying `SENSOR_INFO_PIXEL_ARRAY_SIZE` and then expecting JPEG output at that resolution. Full-size still images always use the active array dimensions, never the pixel array. On a typical 50MP Samsung ISOCELL sensor the pixel array might be 8192×6144 but the active array is 8000×6000. If you allocate a 50.3MP buffer (from pixel array) you get a 48MP image and the remaining pixels are silently dropped, or worse, you get a corrupted buffer on legacy HAL devices. Always use `activeArray.width() * activeArray.height()` for buffer sizing, never the pixel array product. The second common pitfall is using active array coordinates without including the offset: when the rect top/left are non-zero, your crop-region math must add that origin or the zoom drifts toward the top-left.
+最大的错误是查询 `SENSOR_INFO_PIXEL_ARRAY_SIZE` 后期望 JPEG 输出是该分辨率。全尺寸静态图像始终使用活动阵列尺寸,而非像素阵列。在典型的 50MP 三星 ISOCELL 传感器上,像素阵列可能是 8192×6144,而活动阵列是 8000×6000。如果你按像素阵列分配 50.3MP 缓冲区,会得到一张 48MP 图像,其余像素被静默丢弃;更糟的是在旧 HAL 设备上会得到损坏的缓冲区。缓冲区尺寸永远用 `activeArray.width() * activeArray.height()`,而非像素阵列乘积。第二个常见坑是使用活动阵列坐标却不带偏移:当矩形 top/left 非零时,裁剪区数学必须加上该原点,否则变焦会偏向左上角漂移。
 
 ---
 
 ### SENSOR_INFO_PIXEL_ARRAY_SIZE
 
-**1. What is it?**
+**1. 它是什么?**
 
-`SENSOR_INFO_PIXEL_ARRAY_SIZE` is a `android.util.Size` representing the total number of physical photodiodes on the sensor die, including any optically-black or dummy border pixels. This is the "marketing megapixel" number: a 108MP sensor advertises pixel array dimensions of 12000×9000 regardless of how many are actually delivered to the ISP pipeline. Type-wise it is a simple `Size` with `.width` and `.height` fields.
+`SENSOR_INFO_PIXEL_ARRAY_SIZE` 是一个 `android.util.Size`,表示传感器晶粒上物理光敏二极管的总数,包括任何光学黑或哑元边框像素。这就是"营销像素"数:108MP 传感器对外标称像素阵列尺寸为 12000×9000,无论实际交付给 ISP 流水线多少像素。类型上它是简单的 `Size`,带 `.width` 与 `.height` 字段。
 
-The relationship to the active array is always:
+与活动阵列的关系始终是:
 - `pixelArray.width >= activeArray.width`
 - `pixelArray.height >= activeArray.height`
 
-The difference is typically 100–400 pixels on each axis, used for optical black (OB) lines and factory lens-shading calibration.
+差值通常在每条轴 100–400 像素,用于光学黑(OB)行和出厂镜头阴影校准。
 
-**2. Why does it exist?**
+**2. 它为什么存在?**
 
-RAW capture pipelines need the full pixel dimensions to parse RAW10/RAW12/RAW16 buffers correctly, because the RAW format (when `SENSOR_INFO_PRE_CORRECTION_ACTIVE_ARRAY_SIZE` is not available) sometimes includes the OB lines. Developers writing custom demosaic or dark-frame subtraction code also need to know how many pixels on each border to strip before processing. On the consumer-facing side, marketing teams and benchmark apps use pixel array size to report "true" sensor resolution without the OEM's ISP crop.
+RAW 拍摄流水线需要完整像素尺寸以正确解析 RAW10/RAW12/RAW16 缓冲区,因为 RAW 格式(当 `SENSOR_INFO_PRE_CORRECTION_ACTIVE_ARRAY_SIZE` 不可用时)有时包含 OB 行。编写自定义去马赛克或暗帧相减代码的开发者,也需要知道每条边框要剥除多少像素才能处理。面向消费端,营销团队和基准测试应用用像素阵列尺寸报告"真实"传感器分辨率,绕开 OEM 的 ISP 裁剪。
 
-**3. Which devices support it?**
+**3. 哪些设备支持?**
 
-All hardware levels expose this key. There is no capability flag prerequisite. RAW-capable devices (those advertising `REQUEST_AVAILABLE_CAPABILITIES_RAW`) are required by the Camera2 CDD to report pixel array size accurate to within one row/column of the physical sensor specification.
+所有硬件等级都暴露此键。无能力标志前置条件。支持 RAW 的设备(声明 `REQUEST_AVAILABLE_CAPABILITIES_RAW` 的设备)受 Camera2 CDD 要求,需将像素阵列尺寸报告至与物理传感器规格相差一行/列之内。
 
-**4. How do I query it?**
+**4. 如何查询?**
 
 ```kotlin
 val pixelArray: Size? = characteristics.get(
@@ -180,45 +180,45 @@ val pixelArray: Size? = characteristics.get(
 
 pixelArray?.let { size ->
     val mp = (size.width * size.height) / 1_000_000.0
-    Log.d(TAG, "Pixel array: ${size.width}×${size.height}px (%.1f MP marketing)".format(mp))
+    Log.d(TAG, "像素阵列: ${size.width}×${size.height}px (%.1f MP 营销值)".format(mp))
     
     characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)?.let { active ->
         val usablePct = (active.width() * active.height()).toDouble() /
                         (size.width * size.height).toDouble() * 100.0
-        Log.d(TAG, "  %.1f%% of pixels are deliverable via active array".format(usablePct))
+        Log.d(TAG, "  %.1f%% 的像素可通过活动阵列交付".format(usablePct))
     }
 } ?: run {
-    Log.w(TAG, "Pixel array size not available")
+    Log.w(TAG, "像素阵列尺寸不可用")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. 如何在 Android Camera Parameters 中查看?**
 
-Open **Sensor / Sensor Info** and look at the first entry in the "Sensor Geometry" card, labeled "Pixel Array". The app renders it as width×height with the marketing megapixel count in parentheses (e.g. "8192 × 6144 (50.3 MP)"). If you tap the row a dialog opens with a comparison table of pixel array vs. active array vs. pre-correction active array.
+打开 **Sensor / Sensor Info**,查看 "Sensor Geometry" 卡片第一项,标签为 "Pixel Array"。应用以 宽×高 渲染,括号中是营销像素数(例如 "8192 × 6144 (50.3 MP)")。点击该行会弹出对话框,以对比表展示像素阵列、活动阵列与 pre-correction active array。
 
-**6. Common pitfalls**
+**6. 常见坑**
 
-Confusing pixel array with deliverable JPEG size is universal among first-time Camera2 developers. The sequence is always: (1) query `SCALER_STREAM_CONFIGURATION_MAP.getOutputSizes(ImageFormat.JPEG)` to get the *actual* resolutions the encoder can produce, (2) the largest JPEG size will equal (or be a scaled crop of) `SENSOR_INFO_ACTIVE_ARRAY_SIZE`, never the pixel array. If you write code that computes a 4:3 crop from pixel array dimensions, the result will be slightly wider than what the ISP can actually deliver, and the camera device will silently clamp it — introducing subtle pixel drift in face-tracking zoom. Second, on reprocessing-capable devices that advertise `REQUEST_AVAILABLE_CAPABILITIES_PRIVATE_REPROCESSING`, the reprocessing input size uses pixel array semantics; using active array for reprocessing causes frame-alignment errors.
+把像素阵列与可交付 JPEG 尺寸混淆,在 Camera2 新手中几乎人手一份。流程始终是:(1) 查询 `SCALER_STREAM_CONFIGURATION_MAP.getOutputSizes(ImageFormat.JPEG)` 获取编码器能产生的 *实际* 分辨率,(2) 最大 JPEG 尺寸会等于(或是 `SENSOR_INFO_ACTIVE_ARRAY_SIZE` 的缩放裁剪),绝不是像素阵列。如果你写代码用像素阵列尺寸算 4:3 裁剪,结果会比 ISP 实际能交付的略宽,摄像头设备会静默夹紧 —— 在人脸跟踪变焦中引入细微的像素漂移。第二,在声明 `REQUEST_AVAILABLE_CAPABILITIES_PRIVATE_REPROCESSING` 的可重处理设备上,重处理输入尺寸使用像素阵列语义;用活动阵列做重处理会导致帧对齐错误。
 
 ---
 
 ### SENSOR_INFO_SENSITIVITY_RANGE
 
-**1. What is it?**
+**1. 它是什么?**
 
-`SENSOR_INFO_SENSITIVITY_RANGE` is a `android.util.Range&lt;Int&gt;` specifying the minimum and maximum ISO (analog gain) values the sensor can apply *during raw readout*. Units are ISO arithmetic: 100 is base ISO (cleanest image, lowest noise), 6400 or higher is high-sensitivity mode (noisier image, shorter shutter time for the same EV). Typical ranges on modern devices are `[100, 6400]` for mid-range phones and `[50, 12800]` or `[32, 25600]` for flagship sensors with large pixel wells.
+`SENSOR_INFO_SENSITIVITY_RANGE` 是一个 `android.util.Range&lt;Int&gt;`,指定传感器 *在原始读出期间* 可应用的最小和最大 ISO(模拟增益)值。单位是 ISO 算术值:100 是基础 ISO(最干净、噪声最低的图像),6400 或更高是高感光度模式(噪声更大,相同 EV 下快门时间更短)。现代设备的典型范围:中端机 `[100, 6400]`;像素阱较大的旗舰传感器 `[50, 12800]` 或 `[32, 25600]`。
 
-Sensitivity is applied *before* any digital gain in the ISP pipeline. The values returned here correspond to what you set in `CaptureRequest.SENSOR_SENSITIVITY` when manual control is enabled.
+感光度在 ISP 流水线中 *先于* 任何数字增益应用。这里返回的值对应你启用手动控制后在 `CaptureRequest.SENSOR_SENSITIVITY` 中所设的值。
 
-**2. Why does it exist?**
+**2. 它为什么存在?**
 
-Every CMOS sensor has a physical minimum gain level (determined by the readout amplifier) and a maximum level (determined by how much the analog signal can be amplified before clipping or unacceptable noise). Without an explicit range, each OEM would use different implicit defaults. Camera2 exposes the range so that manual-exposure UI sliders can have correct min/max endpoints, and so developers can validate a manual ISO request *before* submitting it to the capture session — avoiding the vague `IllegalArgumentException` the session throws if you request out-of-range values.
+每个 CMOS 传感器都有物理最小增益等级(由读出放大器决定)和最大等级(由模拟信号在削波或不可接受噪声之前可被放大多少决定)。没有显式范围,各 OEM 会用不同的隐式默认值。Camera2 暴露此范围,使手动曝光 UI 滑块有正确的最小/最大端点,并让开发者能在提交给 capture session 之前 *先* 校验手动 ISO 请求 —— 避免请求越界时 session 抛出含糊的 `IllegalArgumentException`。
 
-**3. Which devices support it?**
+**3. 哪些设备支持?**
 
-All devices expose this key as a `Range&lt;Int&gt;`. However, the values are only *controllable* if the device advertises `REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR` in its capability list. On LIMITED-level devices without that flag, the range will still return values (typically `[100, 800]`) but setting `SENSOR_SENSITIVITY` in a CaptureRequest is ignored — the AE algorithm remains in charge. Always feature-gate manual ISO UI on the MANUAL_SENSOR flag, not on the range being non-null.
+所有设备均以 `Range&lt;Int&gt;` 暴露此键。但只有在设备能力列表中声明 `REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR` 时,这些值才是 *可控制* 的。在缺少该标志的 LIMITED 等级设备上,范围仍会返回值(通常 `[100, 800]`),但在 CaptureRequest 中设置 `SENSOR_SENSITIVITY` 会被忽略 —— AE 算法继续做主。手动 ISO 的 UI 一定要基于 MANUAL_SENSOR 标志门控,而非基于范围非空。
 
-**4. How do I query it?**
+**4. 如何查询?**
 
 ```kotlin
 val sensitivityRange: Range<Int>? = characteristics.get(
@@ -233,53 +233,53 @@ val hasManualSensor = capabilities?.contains(
 ) ?: false
 
 sensitivityRange?.let { range ->
-    Log.d(TAG, "Sensitivity range: ISO ${range.lower} to ISO ${range.upper}")
-    Log.d(TAG, "  Manual ISO control available: $hasManualSensor")
+    Log.d(TAG, "感光度范围: ISO ${range.lower} 至 ISO ${range.upper}")
+    Log.d(TAG, "  手动 ISO 控制可用: $hasManualSensor")
     
     if (hasManualSensor) {
         val stopCount = log2(range.upper.toDouble() / range.lower.toDouble())
-        Log.d(TAG, "  Dynamic range: %.1f stops".format(stopCount))
+        Log.d(TAG, "  动态范围: %.1f 档".format(stopCount))
     } else {
-        Log.w(TAG, "  WARNING: Range reported but MANUAL_SENSOR flag is ABSENT.")
-        Log.w(TAG, "  Setting SENSOR_SENSITIVITY will be IGNORED by AE algorithm!")
+        Log.w(TAG, "  警告: 范围已报告但 MANUAL_SENSOR 标志缺失。")
+        Log.w(TAG, "  设置 SENSOR_SENSITIVITY 会被 AE 算法忽略!")
     }
 } ?: run {
-    Log.w(TAG, "Sensitivity range not available")
+    Log.w(TAG, "感光度范围不可用")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. 如何在 Android Camera Parameters 中查看?**
 
-Navigate to **Sensor / Manual Sensor** where the sensitivity range appears as "ISO Range" in the first card. On devices with MANUAL_SENSOR capability the range is shown with a slider preview indicating what the manual UI exposes. On non-manual devices the app explicitly marks the range as "Read Only" and displays a warning banner explaining that values are for informational purposes only.
+前往 **Sensor / Manual Sensor**,感光度范围以第一张卡片的 "ISO Range" 呈现。在具备 MANUAL_SENSOR 能力的设备上,范围下方有滑块预览,指示手动 UI 暴露的范围。在不支持手动的设备上,应用明确把范围标为 "Read Only",并显示警告横幅说明这些值仅供参考。
 
-**6. Common pitfalls**
+**6. 常见坑**
 
-The first pitfall: seeing a valid sensitivity range and enabling manual ISO controls without checking `MANUAL_SENSOR`. This works on the developer's test device (a Pixel 8, say, which has FULL hardware level) but the slider silently does nothing on 60% of mid-range phones in the field. The user sees the UI, drags the slider, sees no noise difference, and leaves a one-star review. Always check both keys together.
+第一个坑:看到有效的感光度范围就启用手动 ISO 控件,却不检查 `MANUAL_SENSOR`。这会在开发者测试机(比如 Pixel 8,FULL 硬件等级)上工作,但滑块在现场约 60% 的中端机上静默无效。用户看到 UI、拖动滑块、看不到噪声变化,然后留下一星差评。一定要两个键一起检查。
 
-The second pitfall: units confusion. `SENSOR_SENSITIVITY` uses ISO *arithmetic*, not logarithmic. A slider that goes from 100 to 6400 *linearly* makes the top 75% of the track feel identical (6400 to 3200 is one stop, 3200 to 1600 is another stop, ..., 200 to 100 is the last stop) while the bottom 25% covers 6 stops. Correct sliders interpolate values using a logarithmic scale so each 10% of track equals roughly one stop.
+第二个坑:单位混淆。`SENSOR_SENSITIVITY` 用 ISO *算术值*,不是对数。一个 *线性* 从 100 到 6400 的滑块会让顶部 75% 的轨道感觉一样(6400→3200 是一档,3200→1600 又一档,……,200→100 是最后一档),而底部 25% 覆盖 6 档。正确的滑块用对数刻度插值,使每 10% 轨道约等于一档。
 
 ---
 
 ### SENSOR_INFO_EXPOSURE_TIME_RANGE
 
-**1. What is it?**
+**1. 它是什么?**
 
-`SENSOR_INFO_EXPOSURE_TIME_RANGE` is a `android.util.Range&lt;Long&gt;` specifying the minimum and maximum shutter duration the sensor can expose a single frame for, measured in **nanoseconds**. Every value in this range corresponds to a valid argument for `CaptureRequest.SENSOR_EXPOSURE_TIME` when manual sensor control is enabled. Typical ranges span from roughly `Range(1_000_000L, 1_000_000_000L)` (1 millisecond minimum up to 1 second maximum) on mid-range devices, up to `Range(100_000L, 10_000_000_000L)` (0.1 ms to 10 seconds) on flagship FULL-level devices with dedicated night-mode support. A few LEVEL_3 cinema-grade external cameras go up to 30 seconds or longer.
+`SENSOR_INFO_EXPOSURE_TIME_RANGE` 是一个 `android.util.Range&lt;Long&gt;`,指定传感器对单帧曝光的最短和最长快门时长,以 **纳秒** 为单位。该范围内的每个值都是启用手动传感器控制时 `CaptureRequest.SENSOR_EXPOSURE_TIME` 的合法参数。中端设备的典型范围约从 `Range(1_000_000L, 1_000_000_000L)`(最短 1 毫秒、最长 1 秒),到具备专用夜景模式的旗舰 FULL 等级设备 `Range(100_000L, 10_000_000_000L)`(0.1 毫秒至 10 秒)。少数 LEVEL_3 影院级外接摄像头可达 30 秒或更长。
 
-The conversion between nanoseconds and common time units is:
-- 1 microsecond = 1,000 ns
-- 1 millisecond = 1,000,000 ns
-- 1 second = 1,000,000,000 ns
+纳秒与常用时间单位换算:
+- 1 微秒 = 1,000 ns
+- 1 毫秒 = 1,000,000 ns
+- 1 秒 = 1,000,000,000 ns
 
-**2. Why does it exist?**
+**2. 它为什么存在?**
 
-The Camera HAL needs an explicit shutter-time contract with the application layer for two reasons. First, long exposures interact with `SENSOR_FRAME_DURATION` in non-obvious ways: if you request a 5-second exposure, the minimum frame duration jumps to 5 seconds plus sensor blanking, which means preview callbacks stop arriving for 5 seconds and the UI appears frozen. Second, the very shortest exposures (microseconds) interact with the rolling-shutter skew of the sensor; below the minimum exposure time the sensor's readout timing can't keep up and output frames contain corrupted scan lines.
+Camera HAL 需要与上层有显式的快门时长约定,原因有二。其一,长曝光与 `SENSOR_FRAME_DURATION` 的交互不直观:如果你请求 5 秒曝光,最小帧时长会跳到 5 秒加传感器消隐,意味着预览回调 5 秒不到,UI 看起来卡死。其二,极短曝光(微秒级)与传感器的 rolling-shutter 倾斜交互;低于最小曝光时长时传感器读出时序跟不上,输出帧会出现损坏的扫描线。
 
-**3. Which devices support it?**
+**3. 哪些设备支持?**
 
-Like sensitivity range, this key is present on all devices but only *controllable* when `MANUAL_SENSOR` is in the capability list. LIMITED devices that lack manual-sensor support will still report a plausible exposure range (usually 1 ms to 1/30 s) so that AE-timing analysis tools can reason about the AE algorithm's behavior, but manual settings are ignored. Full manual control requires both the range *and* the capability flag.
+与感光度范围一样,此键在所有设备上都存在,但只有当 `MANUAL_SENSOR` 在能力列表中时才 *可控制*。缺乏手动传感器支持的 LIMITED 设备仍会报告一个合理的曝光范围(通常 1 毫秒至 1/30 秒),以便 AE 时序分析工具推断 AE 算法行为,但手动设置会被忽略。完整手动控制需要范围 *加上* 能力标志两者皆有。
 
-**4. How do I query it?**
+**4. 如何查询?**
 
 ```kotlin
 fun Long.nanosToSeconds(): Double = this / 1_000_000_000.0
@@ -295,12 +295,12 @@ val hasManualSensor = characteristics.get(
 )?.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR) ?: false
 
 exposureRange?.let { range ->
-    Log.d(TAG, "Exposure time range:")
-    Log.d(TAG, "  Min: ${range.lower} ns = %.4f ms = %.7f s"
+    Log.d(TAG, "曝光时长范围:")
+    Log.d(TAG, "  最小: ${range.lower} ns = %.4f ms = %.7f s"
         .format(range.lower.nanosToMillis(), range.lower.nanosToSeconds()))
-    Log.d(TAG, "  Max: ${range.upper} ns = %.2f ms = %.4f s"
+    Log.d(TAG, "  最大: ${range.upper} ns = %.2f ms = %.4f s"
         .format(range.upper.nanosToMillis(), range.upper.nanosToSeconds()))
-    Log.d(TAG, "  Manual shutter control available: $hasManualSensor")
+    Log.d(TAG, "  手动快门控制可用: $hasManualSensor")
     
     val shutterSpeeds = listOf(
         0.001, 0.002, 0.004, 0.008, 0.016, 0.033,
@@ -310,41 +310,41 @@ exposureRange?.let { range ->
         val ns = s.secondsToNanos()
         ns >= range.lower && ns <= range.upper
     }
-    Log.d(TAG, "  Supported common stops: $supportedSpeeds seconds")
+    Log.d(TAG, "  支持的常用档位: $supportedSpeeds 秒")
 } ?: run {
-    Log.w(TAG, "Exposure time range not available")
+    Log.w(TAG, "曝光时长范围不可用")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. 如何在 Android Camera Parameters 中查看?**
 
-Go to **Sensor / Manual Sensor** card, titled "Exposure Range". The app shows the value three ways: raw nanoseconds, milliseconds, and seconds for both endpoints. A horizontal timeline below visualizes the range with common shutter-speed stops (1/1000 s through 8 s) marked as ticks, so you can see at a glance whether long-exposure night photography is possible. Manual control capability is indicated by a green checkmark (controllable) or red "read-only" label.
+前往 **Sensor / Manual Sensor** 卡片,标题 "Exposure Range"。应用以三种方式展示数值:两端点的原始纳秒、毫秒、秒。下方一条横向时间线可视化该范围,常用快门档位(1/1000 s 至 8 s)标为刻度,一眼可看出长曝光夜景是否可行。手动控制能力用绿色对勾(可控制)或红色 "read-only" 标签指示。
 
-**6. Common pitfalls**
+**6. 常见坑**
 
-The preview-freeze pitfall: developers set a 4-second exposure for a low-light still capture but forget that the same `CaptureRequest` applies to ALL surfaces in the session, including the preview `SurfaceTexture`. Result: for 4 seconds, no preview frames arrive, the screen freezes, and the user thinks the app crashed. The fix is a single-frame repeating request for the preview surface at normal 30 fps, then a separate `setRepeatingBurst` or `capture` call with the long exposure applied only to the JPEG/RAW surfaces via `CaptureRequest.Builder.addTarget()`.
+预览卡死坑:开发者为弱光静态拍摄设置 4 秒曝光,却忘了同一个 `CaptureRequest` 会应用到 session 中的 *所有* Surface,包括预览 `SurfaceTexture`。结果:4 秒内无预览帧到达,屏幕冻结,用户以为应用崩溃。修复:为预览 Surface 使用单帧 30 fps 的常规 repeating request,然后通过 `CaptureRequest.Builder.addTarget()` 把长曝光只应用到 JPEG/RAW Surface,以单独的 `setRepeatingBurst` 或 `capture` 调用发起。
 
-The second pitfall is integer overflow in conversions. Multiplication and division with `1_000_000_000` pushes against the 32-bit integer limit. Always use `Long` (64-bit) for any variable that holds nanoseconds, and write explicit helper extension functions (like `nanosToSeconds()` above) so you never divide in the wrong order. A 1-second exposure stored as an Int overflows at roughly 2.1 seconds, causing the HAL to receive a negative exposure time, which either crashes the session or clamps silently to minimum on certain MediaTek HALs.
+第二个坑是单位换算中的整数溢出。乘除 `1_000_000_000` 接近 32 位整数极限。任何持有纳秒的变量一律用 `Long`(64 位),并写显式辅助扩展函数(如上面的 `nanosToSeconds()`),以避免除法顺序错误。1 秒曝光存为 Int 在约 2.1 秒处溢出,导致 HAL 收到负的曝光时长,在某些联发科 HAL 上会崩溃 session 或静默夹紧到最小值。
 
 ---
 
 ### SENSOR_INFO_WHITE_LEVEL
 
-**1. What is it?**
+**1. 它是什么?**
 
-`SENSOR_INFO_WHITE_LEVEL` is a single `Int` representing the maximum analog-to-digital converter (ADC) code value that a RAW sensor pixel can reach before clipping. For a RAW10 sensor (10 bits per pixel per channel) the white level is typically 1023 (2¹⁰−1). For RAW12 it is typically 4095. For RAW14 it is typically 16383. Some sensors round down slightly (e.g. 16300 instead of 16383 for RAW14) to leave headroom for HDR highlights or pixel-defect correction; the exact value is sensor-calibrated at the factory.
+`SENSOR_INFO_WHITE_LEVEL` 是单个 `Int`,表示 RAW 传感器像素在削波前能达到的最大模数转换器(ADC)码值。对 RAW10 传感器(每通道每像素 10 位),white level 通常为 1023(2¹⁰−1)。RAW12 通常 4095。RAW14 通常 16383。部分传感器略向下取整(如 RAW14 用 16300 而非 16383),为 HDR 高光或像素缺陷校正留余量;具体值由工厂逐传感器校准。
 
-This is the per-channel saturation value. In any RAW frame from this sensor, any pixel channel at (or above) the white level represents blown-out highlights with no recoverable detail.
+这是每通道的饱和值。在该传感器的任一 RAW 帧中,任何达到(或超过)white level 的像素通道都代表过曝高光,无可恢复细节。
 
-**2. Why does it exist?**
+**2. 它为什么存在?**
 
-The RAW pixel format always uses the same bit depth per channel. A RAW10 buffer stores every pixel in 16-bit aligned integers, and developers unfamiliar with RAW processing naturally divide by 65535 (the max 16-bit value) when normalizing to floating point. This produces images that are dim, washed-out, and with incorrect black point subtraction. `SENSOR_INFO_WHITE_LEVEL` gives you the correct divisor: divide RAW pixels by `WHITE_LEVEL - BLACK_LEVEL_PATTERN` (not 65535) to get the 0.0–1.0 linear light range. Every RAW sensor also has a `SENSOR_BLACK_LEVEL_PATTERN` key giving the per-channel zero-exposure offset; combining the two gives you the full RAW-to-float normalization curve.
+RAW 像素格式每通道使用相同位深。RAW10 缓冲区把每个像素存为 16 位对齐整数,不熟悉 RAW 处理的开发者在归一化到浮点时自然会除以 65535(16 位最大值)。这会产生偏暗、发灰且黑点扣除错误的图像。`SENSOR_INFO_WHITE_LEVEL` 给你正确的除数:把 RAW 像素除以 `WHITE_LEVEL - BLACK_LEVEL_PATTERN`(不是 65535)得到 0.0–1.0 线性光范围。每个 RAW 传感器还有 `SENSOR_BLACK_LEVEL_PATTERN` 键,给出每通道零曝光偏移;两者结合即得完整 RAW 到浮点的归一化曲线。
 
-**3. Which devices support it?**
+**3. 哪些设备支持?**
 
-This key is required on any device that reports `REQUEST_AVAILABLE_CAPABILITIES_RAW` in its capability list — i.e. any camera that can output RAW10/RAW12/RAW16 buffers via `ImageReader`. On non-RAW devices the key may still be present (returning a nominal value matching the sensor's native bit depth) but there is no way to read RAW pixels, so the key is purely informational.
+任何在能力列表中声明 `REQUEST_AVAILABLE_CAPABILITIES_RAW` 的设备都要求此键 —— 即任何能通过 `ImageReader` 输出 RAW10/RAW12/RAW16 缓冲区的摄像头。在非 RAW 设备上该键可能仍存在(返回与传感器原生位深匹配的标称值),但无法读取 RAW 像素,所以该键仅作信息。
 
-**4. How do I query it?**
+**4. 如何查询?**
 
 ```kotlin
 val whiteLevel: Int? = characteristics.get(
@@ -359,60 +359,60 @@ whiteLevel?.let { wl ->
     Log.d(TAG, "SENSOR_INFO_WHITE_LEVEL = $wl")
     
     val bits = ceil(log2(wl.toDouble() + 1.0)).toInt()
-    Log.d(TAG, "  Effective RAW bit depth: $bits bits per channel")
-    Log.d(TAG, "  Largest RAW pixel value (saturation): $wl")
+    Log.d(TAG, "  有效 RAW 位深: $bits 位每通道")
+    Log.d(TAG, "  最大 RAW 像素值(饱和): $wl")
     
     blackLevelPattern?.let { bl ->
         if (bl.size == 4) {
-            Log.d(TAG, "  Black level pattern (R, Gr, Gb, B) = [${bl[0]}, ${bl[1]}, ${bl[2]}, ${bl[3]}]")
+            Log.d(TAG, "  黑电平模式 (R, Gr, Gb, B) = [${bl[0]}, ${bl[1]}, ${bl[2]}, ${bl[3]}]")
             val avgBlack = (bl[0] + bl[1] + bl[2] + bl[3]) / 4.0
             val usableDnRange = wl - avgBlack
             val stops = log2(usableDnRange / avgBlack)
-            Log.d(TAG, "  Normalization divisor: ${wl - avgBlack.toInt()}")
-            Log.d(TAG, "  Estimated RAW dynamic range: %.1f stops".format(stops))
+            Log.d(TAG, "  归一化除数: ${wl - avgBlack.toInt()}")
+            Log.d(TAG, "  估算 RAW 动态范围: %.1f 档".format(stops))
         }
     } ?: run {
-        Log.d(TAG, "  No black-level pattern. Assume 0. Normalize by $wl directly.")
+        Log.d(TAG, "  无黑电平模式。假设 0,直接用 $wl 归一化。")
     }
 } ?: run {
-    Log.w(TAG, "White level not available — RAW output may not be supported")
+    Log.w(TAG, "white level 不可用 —— 可能不支持 RAW 输出")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. 如何在 Android Camera Parameters 中查看?**
 
-The white level is in **Sensor / Sensor Info** under the "RAW Sensor Parameters" card, next to black level pattern and color filter arrangement. If RAW capability is present the companion app shows a live preview of a horizontal gradient bar normalized correctly with the device's own white level, so you can visually compare the correct normalization (using the key) against the common mistake of dividing by 65535 — the mistaken version appears visibly darker.
+white level 在 **Sensor / Sensor Info** 的 "RAW Sensor Parameters" 卡片中,紧邻 black level pattern 和 color filter arrangement。若 RAW 能力存在,配套应用用设备自身的 white level 正确归一化水平渐变条做实时预览,便于视觉对比正确归一化(使用此键)与常见的除以 65535 的错误 —— 错误版本明显更暗。
 
-**6. Common pitfalls**
+**6. 常见坑**
 
-Normalizing by 65535 instead of white level is the universal first mistake in RAW processing. A RAW10 photo normalized by 65535 comes out at roughly 1/64th brightness — nearly pure black. Developers notice this and apply a 64× gain multiplier to compensate, which introduces banding because they're stretching 10 bits of information into 16 bits of precision, compressing the tonal range. Correct code subtracts the black level first, then divides by (white level minus black level). This gives a properly-exposed linear light image ready for gamma and tone-mapping.
+用 65535 而非 white level 归一化,是 RAW 处理的通用第一错误。一张 RAW10 照片用 65535 归一化后亮度约为 1/64 —— 几乎纯黑。开发者会注意到并加 64× 增益补偿,但这会引入带状瑕疵,因为把 10 位信息拉伸到 16 位精度,压缩了色调范围。正确代码先减去黑电平,再除以(white level 减黑电平)。这给出正确曝光的线性光图像,可送入 gamma 与色调映射。
 
-A second pitfall: white level can vary *per frame* on certain HDR sensors, where the ADC gain changes between long and short exposures for staggered-HDR readout. Check `CaptureResult.SENSOR_DYNAMIC_WHITE_LEVEL` in each `onCaptureCompleted` callback on Android 13+ devices; use the per-frame value when available instead of the static `CameraCharacteristics` constant. Sticky caching of the static white level on HDR sensors produces clipped highlights on the short-exposure frame.
+第二个坑:在部分 HDR 传感器上 white level 会 *逐帧* 变化,因为 staggered-HDR 读出的长/短曝光间 ADC 增益变化。在 Android 13+ 设备上,于每个 `onCaptureCompleted` 回调中检查 `CaptureResult.SENSOR_DYNAMIC_WHITE_LEVEL`;可用时用逐帧值,而非静态 `CameraCharacteristics` 常量。在 HDR 传感器上静态缓存 white level 会让短曝光帧高光削波。
 
 ---
 
 ### SENSOR_INFO_COLOR_FILTER_ARRANGEMENT
 
-**1. What is it?**
+**1. 它是什么?**
 
-`SENSOR_INFO_COLOR_FILTER_ARRANGEMENT` is an `Int` enum describing the layout of the Bayer color filter array (CFA) on top of the sensor's photodiodes. The CFA is the microscopic color mosaic that gives each pixel a red, green, or blue color sensitivity (two green pixels per 2×2 block). Possible values are:
-- `SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_RGGB` — the most common (top row Red-Green, second row Green-Blue)
-- `SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_GRBG` — green-red / blue-green variant
-- `SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_BGGR` — blue-green / green-red variant (common on Sony sensors)
-- `SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_GBRG` — green-blue / red-green variant
-- `SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_MONOCHROME` — no color filter, pure luminance sensor (infrared or dedicated night-vision cameras)
+`SENSOR_INFO_COLOR_FILTER_ARRANGEMENT` 是一个 `Int` 枚举,描述传感器光敏二极管上方 Bayer 滤色阵列(CFA)的布局。CFA 是给每个像素赋予红、绿、蓝感色性的微观光学马赛克(每个 2×2 块中有两个绿像素)。可能取值:
+- `SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_RGGB` —— 最常见(顶行红-绿,次行绿-蓝)
+- `SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_GRBG` —— 绿-红 / 蓝-绿 变体
+- `SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_BGGR` —— 蓝-绿 / 绿-红 变体(索尼传感器常见)
+- `SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_GBRG` —— 绿-蓝 / 红-绿 变体
+- `SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_MONOCHROME` —— 无滤色片,纯亮度传感器(红外或专用夜视摄像头)
 
-The arrangement describes the (x=0, y=0) top-left pixel of the active array. Every 2×2 block repeats this pattern across the entire sensor surface.
+该排列描述活动阵列 (x=0, y=0) 左上像素。整个传感器表面每 2×2 块重复此模式。
 
-**2. Why does it exist?**
+**2. 它为什么存在?**
 
-RAW sensor data is monochrome-by-nature. A demosaic algorithm must be applied to reconstruct a full RGB image by interpolating the missing two color channels for each pixel. The demosaic algorithm *must* know which color is at each physical location. If you run an RGGB demosaic on a BGGR sensor you get an image with inverted colors: red pixels become blue, blue become red, and the human eye immediately notices the wrong skin tones. Demosaic quality is also CFA-dependent — adaptive algorithms like AMaZE or LMMSE need the exact arrangement to pick the correct interpolation direction.
+RAW 传感器数据天然是单色的。必须应用去马赛克算法,通过插值每个像素缺失的两个颜色通道来重建完整 RGB 图像。去马赛克算法 *必须* 知道每个物理位置是什么颜色。若对 BGGR 传感器跑 RGGB 去马赛克,会得到颜色反转的图像:红像素变蓝,蓝变红,人眼立刻察觉肤色不对。去马赛克质量也依赖 CFA —— AMaZE 或 LMMSE 等自适应算法需要确切排列才能选对插值方向。
 
-**3. Which devices support it?**
+**3. 哪些设备支持?**
 
-Required on all RAW-capable devices. On devices without RAW output the key may still be present (allowing analytical tools to describe sensor construction) but there's no code path that *needs* the value. External USB cameras via the EXTERNAL hardware level sometimes omit this key; you must fall back to a `SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_RGGB` default, because USB UVC cameras almost universally use RGGB.
+所有 RAW 能力设备必需。在不支持 RAW 输出的设备上该键可能仍存在(便于分析工具描述传感器构造),但没有 *需要* 该值的代码路径。通过 EXTERNAL 硬件等级接入的外接 USB 摄像头有时省略此键;你必须兜底为 `SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_RGGB` 默认值,因为 USB UVC 摄像头几乎都用 RGGB。
 
-**4. How do I query it?**
+**4. 如何查询?**
 
 ```kotlin
 val cfa: Int? = characteristics.get(
@@ -433,59 +433,59 @@ cfa?.let { arrangement ->
     val isMono = arrangement == CameraCharacteristics
         .SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_MONOCHROME
     
-    Log.d(TAG, "  Is monochrome sensor: $isMono")
+    Log.d(TAG, "  是否为单色传感器: $isMono")
     if (isMono) {
-        Log.d(TAG, "  Demosaic: NOT REQUIRED. Pixels are already luminance-only.")
-        Log.d(TAG, "  Tip: Skip de-Bayer step. Directly treat RAW as grayscale.")
+        Log.d(TAG, "  去马赛克: 不需要。像素已是纯亮度。")
+        Log.d(TAG, "  提示: 跳过 de-Bayer 步骤。直接把 RAW 当灰度处理。")
     } else {
-        Log.d(TAG, "  Demosaic: REQUIRED. Use CFA '$arrangementName' in RAW decoder.")
-        Log.d(TAG, "  Pixel (0,0) channel: " + when (arrangement) {
-            CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_RGGB -> "Red"
-            CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_GRBG -> "Green (Red row)"
-            CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_BGGR -> "Blue"
-            CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_GBRG -> "Green (Blue row)"
+        Log.d(TAG, "  去马赛克: 需要。在 RAW 解码器中使用 CFA '$arrangementName'。")
+        Log.d(TAG, "  像素 (0,0) 通道: " + when (arrangement) {
+            CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_RGGB -> "红"
+            CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_GRBG -> "绿(红行)"
+            CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_BGGR -> "蓝"
+            CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_GBRG -> "绿(蓝行)"
             else -> "?"
         })
     }
 } ?: run {
-    Log.w(TAG, "No CFA info. Defaulting to RGGB for external USB / legacy devices.")
+    Log.w(TAG, "无 CFA 信息。外接 USB / 旧设备兜底为 RGGB。")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. 如何在 Android Camera Parameters 中查看?**
 
-Open **Sensor / Sensor Info** and look at the "Color Filter Array" row in the RAW Sensor Parameters card. The app renders a 4×4 pixel visual representation of the mosaic using the actual arrangement reported by the sensor — red, green, and blue squares tiled the way the silicon sees them. Monochrome sensors are rendered as a flat gray grid with the label "NO CFA".
+打开 **Sensor / Sensor Info**,在 RAW Sensor Parameters 卡片中查看 "Color Filter Array" 行。应用按传感器报告的实际排列渲染 4×4 像素的马赛克可视化 —— 红、绿、蓝方块按芯片看到的方式铺排。单色传感器渲染为平面灰色网格,标签 "NO CFA"。
 
-**6. Common pitfalls**
+**6. 常见坑**
 
-The hard failure mode is hardcoding RGGB demosaic. Every Sony Exmor-RS sensor on the market ships with BGGR, so if you hardcode RGGB your code works on the Samsung ISOCELL phone you tested with and produces a color-inverted image on every Xperia, most Pixels, and all iPhones running Android (if such a thing existed). The fix is straightforward: read the key and branch your demosaic. Many open-source RAW libraries (libraw, OpenImageIO) accept a CFA enum directly, so map the Android CFA value to the library constant and pass it through.
+硬编码 RGGB 去马赛克是硬失败模式。市面每颗索尼 Exmor-RS 传感器都用 BGGR,所以硬编码 RGGB 后,代码在你测试的三星 ISOCELL 手机上工作,却在每台 Xperia、大多数 Pixel 以及所有运行 Android 的 iPhone(若真存在)上产生颜色反转图像。修复很简单:读键并对去马赛克分支。许多开源 RAW 库(libraw、OpenImageIO)直接接受 CFA 枚举,把 Android CFA 值映射到库常量并透传即可。
 
-The second pitfall: `SENSOR_INFO_COLOR_FILTER_ARRANGEMENT` describes the active array top-left pixel. If you crop the RAW buffer (say, to extract a 1000×1000 region for face processing), the CFA pattern *shifts* by (crop.left mod 2, crop.top mod 2). Cropping one pixel right converts an RGGB pattern to GRBG in the cropped sub-image. Cropping both one right and one down converts RGGB to BGGR. Most developers forget this and demosaic the crop with the original pattern, producing a high-frequency color moiré that looks like a demosaic bug but is actually a coordinate bug. Fix by adjusting the CFA for the crop parity or by always cropping on even boundaries.
+第二个坑:`SENSOR_INFO_COLOR_FILTER_ARRANGEMENT` 描述活动阵列左上像素。若裁剪 RAW 缓冲区(比如提取 1000×1000 区域做人脸处理),CFA 模式会按 (crop.left mod 2, crop.top mod 2) *偏移*。向右裁 1 像素把 RGGB 变成 GRBG;右 1 下 1 把 RGGB 变成 BGGR。多数开发者忘了这点,用原始模式对裁剪区去马赛克,产生高频色彩摩尔纹,看起来像去马赛克 bug,其实是坐标 bug。修复:按裁剪奇偶性调整 CFA,或始终在偶数边界裁剪。
 
 ---
 
-## Lens Category
+## Lens 分类
 
 ### LENS_FACING
 
-**1. What is it?**
+**1. 它是什么?**
 
-`LENS_FACING` is an `Int` enum describing the physical mounting direction of the camera module relative to the device screen. The three possible values are:
-- `LENS_FACING_BACK` — camera points away from the user (the "main" camera, used for landscape photography)
-- `LENS_FACING_FRONT` — camera points toward the user (selfie camera, always mounted in the screen bezel or notch)
-- `LENS_FACING_EXTERNAL` — USB webcam, HDMI capture card, or other hot-pluggable camera with unknown orientation
+`LENS_FACING` 是一个 `Int` 枚举,描述摄像头模组相对于设备屏幕的物理安装方向。三个可能值:
+- `LENS_FACING_BACK` —— 摄像头背向用户("主"摄像头,用于横拍风景)
+- `LENS_FACING_FRONT` —— 摄像头朝向用户(自拍相机,始终装在屏幕边框或刘海中)
+- `LENS_FACING_EXTERNAL` —— USB 摄像头、HDMI 采集卡或其他热插拔、方向未知的摄像头
 
-This key is static per camera ID; it never changes during the lifetime of a device (foldables excepted — see `INFO_DEVICE_STATE_ORIENTATIONS` for dynamic state).
+此键对每个 camera ID 是静态的;在设备生命周期中永不变(可折叠设备除外 —— 见 Info 章节的 `INFO_DEVICE_STATE_ORIENTATIONS`)。
 
-**2. Why does it exist?**
+**2. 它为什么存在?**
 
-The most visible impact of facing is in the preview transform. Android requires that the back-facing camera preview rotate with the device orientation using the sensor's natural landscape orientation plus `SENSOR_ORIENTATION`; for the front-facing camera the preview must also be **mirrored horizontally** so the user sees themselves as though looking in a mirror. Without a facing key each application would have to guess which camera is which using heuristics (first ID = back, second = front) which break on multi-camera devices where IDs 0, 1, 2, 3 are all back-facing.
+facing 最直观的影响在预览变换。Android 要求后置摄像头预览随设备方向旋转,使用传感器的自然横屏方向加上 `SENSOR_ORIENTATION`;前置摄像头预览还必须 **水平镜像**,让用户像照镜子一样看自己。没有 facing 键,每个应用都得用启发式猜测哪颗是哪颗(第一 ID = 后,第二 = 前),这在 ID 0、1、2、3 全是后置的多摄设备上会失效。
 
-**3. Which devices support it?**
+**3. 哪些设备支持?**
 
-Every camera ID on every device reports this key. It is impossible to enumerate a valid camera ID via `CameraManager.getCameraIdList()` that does not have `LENS_FACING` populated. Even LEGACY-level Camera1-wrapped devices expose it. External USB cameras get `LENS_FACING_EXTERNAL` by default.
+每个设备的每个 camera ID 都报告此键。通过 `CameraManager.getCameraIdList()` 枚举的合法 camera ID 不可能没填 `LENS_FACING`。即便是 LEGACY 等级的 Camera1 包装设备也暴露它。外接 USB 摄像头默认得到 `LENS_FACING_EXTERNAL`。
 
-**4. How do I query it?**
+**4. 如何查询?**
 
 ```kotlin
 val facing: Int? = characteristics.get(
@@ -505,7 +505,7 @@ facing?.let { f ->
         CameraCharacteristics.SENSOR_ORIENTATION
     ) ?: 0
     
-    Log.d(TAG, "  Sensor orientation (natural rotation): $sensorOrientation°")
+    Log.d(TAG, "  传感器方向(自然旋转): $sensorOrientation°")
     
     val totalDisplayRotation = when (f) {
         CameraCharacteristics.LENS_FACING_FRONT -> {
@@ -518,40 +518,40 @@ facing?.let { f ->
         }
         else -> displayRotation
     }
-    Log.d(TAG, "  Calculated display rotation: $totalDisplayRotation°")
-    Log.d(TAG, "  Front camera: MUST horizontally mirror preview TextureView/SurfaceView")
+    Log.d(TAG, "  计算出的显示旋转: $totalDisplayRotation°")
+    Log.d(TAG, "  前置摄像头: 必须水平镜像预览 TextureView/SurfaceView")
 } ?: run {
-    Log.e(TAG, "LENS_FACING is null — this should never happen on a valid camera ID")
+    Log.e(TAG, "LENS_FACING 为 null —— 这在合法 camera ID 上不应发生")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. 如何在 Android Camera Parameters 中查看?**
 
-Navigate to **Overview / Cameras**. The first card lists every camera ID as a row, showing facing, sensor orientation, megapixel count, and hardware level in compact form. Front cameras have a "🤳" badge, back cameras have "📷", and external USB cameras show "🔌". Tapping any camera row opens the detail view where facing is shown as the first metadata field.
+前往 **Overview / Cameras**。第一张卡片把每个 camera ID 列为一行,以紧凑形式显示 facing、传感器方向、像素数和硬件等级。前置摄像头有 "🤳" 徽章,后置有 "📷",外接 USB 摄像头显示 "🔌"。点击任一行打开详情视图,facing 是第一个元数据字段。
 
-**6. Common pitfalls**
+**6. 常见坑**
 
-The selfie mirroring pitfall is universal: developers correctly mirror the preview `TextureView` for a natural "looking in a mirror" experience, but then capture the JPEG via `ImageReader` and wonder why the photo is *not* mirrored. The mirroring is a **display-only transform** applied to the preview surface. The actual sensor pixels (and therefore the JPEG bytes) are never mirrored. Users hate this: "My selfies look flipped!" The fix is to write the horizontal flip into the JPEG's EXIF orientation tag using `ExifInterface`. Set `TAG_ORIENTATION` to `ORIENTATION_FLIP_HORIZONTAL` for front cameras. Most gallery apps respect this flag and display the photo mirrored; photo editors do the same. If you truly need pixel-fliped output (for upload to a server that ignores EXIF), then post-process the `Bitmap` with `Canvas` and a horizontal `Matrix.preScale(-1f, 1f)` before saving.
+自拍镜像坑几乎人手一份:开发者正确地为前置预览 `TextureView` 做镜像以获得自然的"照镜子"体验,然后通过 `ImageReader` 拍 JPEG,疑惑照片 *没* 镜像。镜像只是应用于预览 Surface 的 **仅显示变换**。实际传感器像素(因而 JPEG 字节)从不被镜像。用户讨厌这点:"我的自拍看起来反了!" 修复是把水平翻转写入 JPEG 的 EXIF 方向标签,用 `ExifInterface`。对前置摄像头把 `TAG_ORIENTATION` 设为 `ORIENTATION_FLIP_HORIZONTAL`。多数相册应用尊重此标志并以镜像方式显示照片;图片编辑器同理。若确需像素级翻转输出(用于上传到忽略 EXIF 的服务器),则用 `Canvas` 配合水平 `Matrix.preScale(-1f, 1f)` 在保存前对 `Bitmap` 后处理。
 
-A second pitfall: foldable devices with under-display cameras. The same logical camera ID can report `LENS_FACING_FRONT` when unfolded but the preview transform changes because the sensor orientation changes. See `INFO_DEVICE_STATE_ORIENTATIONS` in the Info section. Never cache `LENS_FACING` + `SENSOR_ORIENTATION` as a static pair — requery both when the device reports a configuration change.
+第二个坑:带屏下摄像头的折叠设备。同一个逻辑 camera ID 在展开时报告 `LENS_FACING_FRONT`,但预览变换会因传感器方向变化而改变。见 Info 章节的 `INFO_DEVICE_STATE_ORIENTATIONS`。永远不要把 `LENS_FACING` + `SENSOR_ORIENTATION` 作为静态对缓存 —— 设备报告配置变化时两者都要重新查询。
 
 ---
 
 ### LENS_INFO_AVAILABLE_FOCAL_LENGTHS
 
-**1. What is it?**
+**1. 它是什么?**
 
-`LENS_INFO_AVAILABLE_FOCAL_LENGTHS` is a `FloatArray` listing the discrete optical focal lengths (in millimeters) that this camera can produce via physical lens movement or multi-camera switching. Single-camera devices report a one-element array like `[4.2]` meaning a 4.2 mm prime lens. Multi-camera logical devices (backing the same camera ID with multiple physical sensors) report an array like `[1.7, 5.0, 12.0]` meaning ultra-wide (1.7 mm), wide-angle (5.0 mm), and periscope telephoto (12.0 mm) options are available. Note this is **optical** focal length, not the 35mm-equivalent marketing number. To get 35mm-equivalent multiply by `LENS_INFO_AVAILABLE_FOCAL_LENGTHS[i] / SENSOR_INFO_PHYSICAL_SIZE.width`.
+`LENS_INFO_AVAILABLE_FOCAL_LENGTHS` 是一个 `FloatArray`,列出本摄像头通过物理镜头移动或多摄切换能产生的离散光学焦距(毫米)。单摄设备报告单元素数组如 `[4.2]`,表示 4.2 mm 定焦镜头。多摄逻辑设备(同一 camera ID 由多颗物理传感器支撑)报告形如 `[1.7, 5.0, 12.0]` 的数组,表示可选超广角(1.7 mm)、广角(5.0 mm)和潜望长焦(12.0 mm)。注意这是 **光学** 焦距,不是 35mm 等效营销数值。要得到 35mm 等效,乘以 `LENS_INFO_AVAILABLE_FOCAL_LENGTHS[i] / SENSOR_INFO_PHYSICAL_SIZE.width`。
 
-**2. Why does it exist?**
+**2. 它为什么存在?**
 
-Focal length is the fundamental property that determines the angle of view of a photograph. The Camera2 zoom subsystem was redesigned for multi-camera devices to allow the framework to *seamlessly switch* between physical cameras as the user pinches to zoom. Without knowing which optical focal lengths are available, developers cannot design a zoom UI that highlights optical zoom "sweet spots" (1×, 3×, 5×) where the framework is using a real lens with no digital crop. This key lets you render a zoom bar with visual notches at each focal length.
+焦距是决定照片视角的基本属性。Camera2 变焦子系统为多摄设备重新设计,允许框架在用户捏合变焦时 *无缝切换* 物理摄像头。不知道有哪些光学焦距可用,开发者就无法设计出能在光学变焦"甜点"(1×、3×、5×)处高亮的变焦 UI —— 那些位置框架用的是真实镜头、无数码裁剪。此键让你在每个焦距处渲染带视觉刻度的变焦条。
 
-**3. Which devices support it?**
+**3. 哪些设备支持?**
 
-All hardware levels. Single-camera devices always have a single-element array. Multi-camera capability (`REQUEST_AVAILABLE_CAPABILITIES_LOGICAL_MULTI_CAMERA`) is correlated with longer arrays, but not strictly required — some OEMs expose a multi-focal-length array via LEGACY-level camera wrapping. The array is guaranteed to be sorted in increasing order on compliant devices.
+所有硬件等级。单摄设备总是单元素数组。多摄能力(`REQUEST_AVAILABLE_CAPABILITIES_LOGICAL_MULTI_CAMERA`)与更长数组相关,但非严格要求 —— 部分 OEM 通过 LEGACY 等级 Camera1 包装暴露多焦距数组。在合规设备上数组保证按升序排序。
 
-**4. How do I query it?**
+**4. 如何查询?**
 
 ```kotlin
 val focalLengths: FloatArray? = characteristics.get(
@@ -563,62 +563,62 @@ val sensorSize: SizeF? = characteristics.get(
 )
 
 focalLengths?.let { fLengths ->
-    Log.d(TAG, "Optical focal lengths (${fLengths.size} discrete values):")
+    Log.d(TAG, "光学焦距(${fLengths.size} 个离散值):")
     
     fLengths.sort()
     fLengths.forEachIndexed { index, mm ->
-        Log.d(TAG, "  [$index] ${"%.2f".format(mm)}mm (optical)")
+        Log.d(TAG, "  [$index] ${"%.2f".format(mm)}mm (光学)")
         
         sensorSize?.let { size ->
             val fullFrameDiagonalMm = 43.27
             val cropFactor = fullFrameDiagonalMm / hypot(size.width.toDouble(), size.height.toDouble())
             val equivalent35mm = mm * cropFactor
             val angleOfViewDeg = 2.0 * atan(size.width.toDouble() / (2.0 * mm.toDouble())) * 180.0 / Math.PI
-            Log.d(TAG, "       35mm-equiv: ${"%.1f".format(equivalent35mm)}mm | " +
-                       "AoV: ${"%.0f".format(angleOfViewDeg)}° | " +
-                       "Crop: ${"%.2f".format(cropFactor)}×")
+            Log.d(TAG, "       35mm 等效: ${"%.1f".format(equivalent35mm)}mm | " +
+                       "视角: ${"%.0f".format(angleOfViewDeg)}° | " +
+                       "剪裁系数: ${"%.2f".format(cropFactor)}×")
         }
     }
     
     if (fLengths.size > 1) {
         val zoomRatios = fLengths.map { it / fLengths[0] }
-        Log.d(TAG, "  Optical zoom steps (relative to widest): " +
+        Log.d(TAG, "  光学变焦步进(相对最广角): " +
                    zoomRatios.joinToString("×, ") { "%.1f".format(it) } + "×")
     }
 } ?: run {
-    Log.w(TAG, "Available focal lengths array unavailable")
+    Log.w(TAG, "可用焦距数组不可用")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. 如何在 Android Camera Parameters 中查看?**
 
-Open **Lens / Lens Info**. The focal lengths appear as the "Focal Lengths" card showing each optical focal length with its 35mm-equivalent, angle of view, and crop factor. On multi-camera logical devices each focal length has a badge that says which physical camera ID backs it, and tapping renders a visual representation of the angle of view cone (the wider the angle, the wider the triangle diagram).
+打开 **Lens / Lens Info**。焦距以 "Focal Lengths" 卡片呈现,显示每个光学焦距及其 35mm 等效、视角和剪裁系数。在多摄逻辑设备上,每个焦距有徽章说明它由哪个物理 camera ID 支撑,点击会渲染视角锥的视觉表示(角度越宽,三角形图越宽)。
 
-**6. Common pitfalls**
+**6. 常见坑**
 
-Focal length vs. focus distance: the most commonly confused pair in all of Camera2. `LENS_INFO_AVAILABLE_FOCAL_LENGTHS` (in mm) is the **optical property of the lens** — how wide or narrow the scene is. `LENS_FOCUS_DISTANCE` (in diopters, 1/m) is the **current AF position** — how far away the camera is focused. Setting `LENS_FOCAL_LENGTH` switches between physical cameras; setting `LENS_FOCUS_DISTANCE` moves the autofocus motor inside one lens. The two are orthogonal and independent. Developers often build one slider that tries to control both, with bizarre results.
+焦距 vs. 对焦距离:Camera2 中最容易混淆的一对。`LENS_INFO_AVAILABLE_FOCAL_LENGTHS`(毫米)是 **镜头的光学属性** —— 场景有多宽或多窄。`LENS_FOCUS_DISTANCE`(屈光度,1/m)是 **当前对焦位置** —— 摄像头对焦在多远。设 `LENS_FOCAL_LENGTH` 在物理摄像头间切换;设 `LENS_FOCUS_DISTANCE` 移动单镜头内的对焦马达。两者正交独立。开发者常建一个滑块试图同时控制两者,结果离奇。
 
-Second pitfall: assuming the array is sorted. On most FULL-level devices it is, but on certain LEGACY wrappers from Xiaomi and Oppo the widest lens is the last element, not the first. Always call `fLengths.sort()` before computing zoom-step ratios. Computing ratio against the wrong element yields a 0.25× "zoom" that your UI cannot display correctly.
+第二个坑:假设数组已排序。在多数 FULL 等级设备上是,但在小米和 Oppo 的某些 LEGACY 包装上最广镜头是最后一个元素而非第一个。计算变焦步进比之前一定先 `fLengths.sort()`。用错元素算比会得到 0.25× "变焦",UI 无法正确显示。
 
 ---
 
 ### LENS_INFO_MINIMUM_FOCUS_DISTANCE
 
-**1. What is it?**
+**1. 它是什么?**
 
-`LENS_INFO_MINIMUM_FOCUS_DISTANCE` is a single `Float` measured in **diopters (D)**, defined as the inverse of the closest focusable distance in meters. A value of `10.0` means the lens can focus on objects as close as 0.1 meters (10 cm). A value of `0.0` means the lens is fixed-focus ("focus free") — it cannot change its focus distance at all, because it is optimized for infinity. Most selfie cameras, budget phone cameras, and wide-angle front cameras are fixed-focus. Values of 20D or higher indicate a macro-capable module that can focus on objects touching the lens.
+`LENS_INFO_MINIMUM_FOCUS_DISTANCE` 是单个 `Float`,单位 **屈光度(D)**,定义为最近可对焦距离(米)的倒数。值 `10.0` 表示镜头能对焦近至 0.1 米(10 厘米)的物体。值 `0.0` 表示镜头是定焦("focus free")—— 完全不能改变对焦距离,因为它对无穷远优化。多数自拍相机、廉价手机摄像头和广角前置摄像头是定焦。20D 或更高表示具备微距能力的模组,能对焦贴着镜头的物体。
 
-Diopters are mathematically convenient because they're linear in the lens equation: `1 / distance = 1 / focal_length + 1 / sensor_distance`. When you set `CaptureRequest.LENS_FOCUS_DISTANCE` to a value, the HAL interprets it as a diopter.
+屈光度在数学上便利,因为它们在透镜方程中线性:`1 / 距离 = 1 / 焦距 + 1 / 像距`。当你把 `CaptureRequest.LENS_FOCUS_DISTANCE` 设为某值,HAL 把它解释为屈光度。
 
-**2. Why does it exist?**
+**2. 它为什么存在?**
 
-Without a minimum focus distance, there is no programmatic way to know whether a camera is even capable of manual focus. If you show a manual focus slider on a fixed-focus camera (0.0 diopters) the slider's movement produces zero change in the image — confusing users. The key also defines the valid range of the `LENS_FOCUS_DISTANCE` request parameter: valid values always span `[0.0, minimum_focus_distance]` (infinity to closest-focus). For macro photography you know exactly how close you can get before the image goes soft.
+没有最小对焦距离,就没有编程方式判断摄像头是否支持手动对焦。若在定焦摄像头(0.0 屈光度)上显示手动对焦滑块,滑块移动对图像毫无改变 —— 让用户困惑。此键还定义 `LENS_FOCUS_DISTANCE` 请求参数的合法范围:合法值始终跨 `[0.0, minimum_focus_distance]`(无穷远到最近对焦)。拍微距时你确切知道图像变软前能凑多近。
 
-**3. Which devices support it?**
+**3. 哪些设备支持?**
 
-Exposed on all devices, but meaningful only when combined with manual control. The `MANUAL_SENSOR` capability flag (again) determines whether setting `LENS_FOCUS_DISTANCE` actually changes the lens. LIMITED-level devices may report `LENS_INFO_MINIMUM_FOCUS_DISTANCE = 10.0` but if `MANUAL_SENSOR` is absent, writing `LENS_FOCUS_DISTANCE` in a capture request is silently ignored by the AF system. LEGACY-wrapped devices sometimes report `0.0` even though the physical module *can* focus — this is a known LEGACY wrapper limitation.
+所有设备都暴露,但只有配合手动控制才有意义。`MANUAL_SENSOR` 能力标志(同样)决定设置 `LENS_FOCUS_DISTANCE` 是否真改变镜头。LIMITED 等级设备可能报告 `LENS_INFO_MINIMUM_FOCUS_DISTANCE = 10.0`,但若缺 `MANUAL_SENSOR`,在 capture request 中写 `LENS_FOCUS_DISTANCE` 会被 AF 系统静默忽略。LEGACY 包装设备有时报告 `0.0`,即使物理模组 *能* 对焦 —— 这是已知的 LEGACY 包装局限。
 
-**4. How do I query it?**
+**4. 如何查询?**
 
 ```kotlin
 val minFocusDiopters: Float? = characteristics.get(
@@ -630,73 +630,73 @@ val hasManualSensor = characteristics.get(
 )?.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR) ?: false
 
 minFocusDiopters?.let { d ->
-    Log.d(TAG, "LENS_INFO_MINIMUM_FOCUS_DISTANCE = %.2f D (diopters)".format(d))
+    Log.d(TAG, "LENS_INFO_MINIMUM_FOCUS_DISTANCE = %.2f D (屈光度)".format(d))
     
     val closestFocusMeters = if (d > 0.0f) (1.0 / d.toDouble()) else Double.POSITIVE_INFINITY
     val closestFocusCm = if (d > 0.0f) (100.0 / d.toDouble()) else Double.POSITIVE_INFINITY
     
     when {
         d == 0.0f -> {
-            Log.d(TAG, "  Lens type: FIXED-FOCUS (cannot change focus at all)")
-            Log.d(TAG, "  Closest focus: effectively infinity (landscape only)")
-            Log.d(TAG, "  UI action: HIDE manual focus slider entirely.")
+            Log.d(TAG, "  镜头类型: 定焦(完全不能改变对焦)")
+            Log.d(TAG, "  最近对焦: 实际为无穷远(仅风景)")
+            Log.d(TAG, "  UI 操作: 完全隐藏手动对焦滑块。")
         }
         d < 2.0f -> {
-            Log.d(TAG, "  Lens type: Soft-focusable (close focus is ~${"%.0f".format(closestFocusCm)} cm)")
-            Log.d(TAG, "  UI: Show slider but user won't see much change.")
+            Log.d(TAG, "  镜头类型: 软可对焦(最近对焦约 ${"%.0f".format(closestFocusCm)} cm)")
+            Log.d(TAG, "  UI: 显示滑块,但用户看不到多少变化。")
         }
         d >= 2.0f && d < 10.0f -> {
-            Log.d(TAG, "  Lens type: Standard focus (closest ~${"%.0f".format(closestFocusCm)} cm)")
+            Log.d(TAG, "  镜头类型: 标准对焦(最近约 ${"%.0f".format(closestFocusCm)} cm)")
         }
         d >= 10.0f && d < 20.0f -> {
-            Log.d(TAG, "  Lens type: Close-focus capable (closest ~${"%.0f".format(closestFocusCm)} cm)")
+            Log.d(TAG, "  镜头类型: 近摄能力(最近约 ${"%.0f".format(closestFocusCm)} cm)")
         }
         else -> {
-            Log.d(TAG, "  Lens type: MACRO capable (closest ${"%.1f".format(closestFocusCm)} cm!)")
+            Log.d(TAG, "  镜头类型: 微距能力(最近 ${"%.1f".format(closestFocusCm)} cm!)")
         }
     }
     
     if (hasManualSensor) {
-        Log.d(TAG, "  Manual focus: CONTROLLABLE via CaptureRequest.LENS_FOCUS_DISTANCE")
-        Log.d(TAG, "  Valid range: [0.0 (∞) → %.2f D (${"%.0f".format(closestFocusCm)} cm)]".format(d))
+        Log.d(TAG, "  手动对焦: 可通过 CaptureRequest.LENS_FOCUS_DISTANCE 控制")
+        Log.d(TAG, "  合法范围: [0.0 (∞) → %.2f D (${"%.0f".format(closestFocusCm)} cm)]".format(d))
     } else {
-        Log.w(TAG, "  WARNING: Lens reports focus range but MANUAL_SENSOR absent.")
-        Log.w(TAG, "  Manual focus slider would do nothing. Hide it.")
+        Log.w(TAG, "  警告: 镜头报告对焦范围但 MANUAL_SENSOR 缺失。")
+        Log.w(TAG, "  手动对焦滑块毫无作用。隐藏它。")
     }
 } ?: run {
-    Log.w(TAG, "Minimum focus distance not available")
+    Log.w(TAG, "最小对焦距离不可用")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. 如何在 Android Camera Parameters 中查看?**
 
-Look in **Lens / Lens Info** under "Minimum Focus Distance". The app renders the value three ways: raw diopters, closest distance in centimeters, and closest distance in inches, so you can immediately tell if a camera is macro-capable. If the value is 0.0 a red banner warns "FIXED FOCUS — manual focus slider not available". The manual focus screen in the app reads this key first and refuses to show its slider when minimum focus is 0.0 or when MANUAL_SENSOR is missing.
+在 **Lens / Lens Info** 的 "Minimum Focus Distance" 处查看。应用以三种方式渲染数值:原始屈光度、最近距离厘米、最近距离英寸,让你立刻判断摄像头是否具备微距能力。若值为 0.0,红色横幅警告 "FIXED FOCUS — 手动对焦滑块不可用"。应用内的手动对焦屏先读此键,当最小对焦为 0.0 或缺 MANUAL_SENSOR 时拒绝显示滑块。
 
-**6. Common pitfalls**
+**6. 常见坑**
 
-Number one: showing a manual focus slider when `minFocusDistance == 0.0f`. The slider goes from 0.0 to 0.0 — a single point. UI-wise this is a no-op track that does nothing, and QA will file it as a bug. The correct behavior is to check both `minFocusDistance > 0.0` and `MANUAL_SENSOR` capability. If either check fails, remove or disable the focus slider from the settings panel. In Compose: `if (minFocus > 0f && hasManualSensor) { ManualFocusSlider(...) }`.
+第一:在 `minFocusDistance == 0.0f` 时显示手动对焦滑块。滑块从 0.0 到 0.0 —— 单点。UI 上这是一个无操作轨道,QA 会作为 bug 提交。正确做法是同时检查 `minFocusDistance > 0.0` 和 `MANUAL_SENSOR` 能力。任一不满足就从设置面板移除或禁用对焦滑块。Compose 中:`if (minFocus > 0f && hasManualSensor) { ManualFocusSlider(...) }`。
 
-Second pitfall: diopter scale inverted on the slider. Diopters grow *toward* the camera (10 D = 10 cm, 1 D = 1 m, 0 D = ∞). If you naively map slider-left = 0.0 and slider-right = minFocusDistance, "pulling the slider right" focuses *closer* instead of farther, which is opposite user expectation for a "focus near → far" slider. Flip the mapping: slider position `p ∈ [0,1]` should map to `focus = (1.0 - p) * minFocusDistance` so that slider-left = infinity and slider-right = closest focus.
+第二个坑:滑块上屈光度刻度反向。屈光度 *朝向* 摄像头增长(10 D = 10 cm,1 D = 1 m,0 D = ∞)。如果你天真地把 slider-left = 0.0、slider-right = minFocusDistance,"把滑块拉右"对焦 *更近* 而非更远,与用户对"近 → 远对焦"滑块的预期相反。翻转映射:滑块位置 `p ∈ [0,1]` 应映射到 `focus = (1.0 - p) * minFocusDistance`,使 slider-left = 无穷远,slider-right = 最近对焦。
 
 ---
 
 ### LENS_INFO_AVAILABLE_APERTURES
 
-**1. What is it?**
+**1. 它是什么?**
 
-`LENS_INFO_AVAILABLE_APERTURES` is a `FloatArray` of f-stop numbers representing the discrete aperture sizes the lens can achieve. An f-stop is the ratio `focal_length / iris_diameter` — lower numbers mean a wider aperture (more light, shallower depth of field), higher numbers mean a narrower aperture (less light, deeper focus). Most modern smartphones have a fixed aperture: `[1.8]` or `[1.7]` or `[2.2]` depending on the lens. A small number of premium devices (Samsung Galaxy S9–S23 Ultra, some Xiaomi flagships) feature a *mechanical dual-aperture* iris that physically switches between two stops like `[1.5, 2.4]`.
+`LENS_INFO_AVAILABLE_APERTURES` 是一个 `FloatArray`,列出镜头能实现的离散光圈 f 值。f 值是 `焦距 / 光圈直径` 的比值 —— 数字越小光圈越大(更多光、更浅景深),数字越大光圈越小(更少光、更深焦)。多数现代手机光圈固定:`[1.8]` 或 `[1.7]` 或 `[2.2]`,取决于镜头。少数高端设备(三星 Galaxy S9–S23 Ultra、部分小米旗舰)有 *机械双光圈* 光阑,在两档间物理切换,如 `[1.5, 2.4]`。
 
-The array is sorted in increasing order on CDD-compliant devices.
+在 CDD 合规设备上数组按升序排序。
 
-**2. Why does it exist?**
+**2. 它为什么存在?**
 
-Photography's "exposure triangle" is ISO, shutter speed, and aperture. On smartphones with fixed apertures the triangle collapses to two variables because aperture is locked. The available apertures array tells the developer exactly whether the "A" in ISO+SS+A is actually a third variable or a constant. Manual exposure UIs that show an aperture slider for fixed-aperture cameras are buggy.
+摄影的"曝光三角"是 ISO、快门速度和光圈。在固定光圈手机上,三角退化为两个变量,因为光圈被锁死。可用光圈数组告诉开发者 ISO+SS+A 中的"A"到底真是第三个变量还是常量。给固定光圈摄像头显示光圈滑块的手动曝光 UI 是有 bug 的。
 
-**3. Which devices support it?**
+**3. 哪些设备支持?**
 
-All devices report this array. Single-element arrays (fixed aperture) dominate the market. Multi-element arrays exist only on flagship devices with physical dual-aperture mechanisms, approximately &lt;1% of the active device population as of 2024. No capability flag prerequisites: if the array has more than one entry, you can set `CaptureRequest.LENS_APERTURE` to any of those entries and it will work — no MANUAL_SENSOR check required, because the mechanical iris switching is independent of the sensor gain/timing controls.
+所有设备报告此数组。单元素数组(固定光圈)主导市场。多数组只存在于带物理双光圈机构的高端设备,约占 2024 年活跃设备的 &lt;1%。无能力标志前置:若数组多于一项,你可把 `CaptureRequest.LENS_APERTURE` 设为其中任一项,即可工作 —— 无需 MANUAL_SENSOR 检查,因为机械光阑切换独立于传感器增益/时序控制。
 
-**4. How do I query it?**
+**4. 如何查询?**
 
 ```kotlin
 val apertures: FloatArray? = characteristics.get(
@@ -705,64 +705,64 @@ val apertures: FloatArray? = characteristics.get(
 
 apertures?.let { stops ->
     stops.sort()
-    Log.d(TAG, "Available apertures: f/${stops.joinToString(", f/") { "%.1f".format(it) }}")
+    Log.d(TAG, "可用光圈: f/${stops.joinToString(", f/") { "%.1f".format(it) }}")
     
     when (stops.size) {
         0 -> {
-            Log.e(TAG, "  ERROR: Empty aperture array (HAL violation)")
+            Log.e(TAG, "  错误: 空光圈数组(HAL 违规)")
         }
         1 -> {
             val f = stops[0]
-            Log.d(TAG, "  FIXED aperture f/${"%.1f".format(f)}.")
-            Log.d(TAG, "  Exposure triangle: 2 variables (ISO + Shutter Speed only).")
-            Log.d(TAG, "  UI: HIDE aperture selector / disable button.")
+            Log.d(TAG, "  固定光圈 f/${"%.1f".format(f)}。")
+            Log.d(TAG, "  曝光三角: 2 变量(仅 ISO + 快门速度)。")
+            Log.d(TAG, "  UI: 隐藏光圈选择器 / 禁用按钮。")
         }
         else -> {
-            Log.d(TAG, "  VARIABLE aperture (${stops.size} stops — mechanical iris!)")
+            Log.d(TAG, "  可变光圈(${stops.size} 档 —— 机械光阑!)")
             stops.forEachIndexed { i, f ->
                 val lightGainedVersusSmallest = (stops.last() / f) * (stops.last() / f)
-                Log.d(TAG, "    [$i] f/${"%.1f".format(f)} — ${"%.1f".format(lightGainedVersusSmallest)}× light vs f/${"%.1f".format(stops.last())}")
+                Log.d(TAG, "    [$i] f/${"%.1f".format(f)} — 相对 f/${"%.1f".format(stops.last())} 进光 ${"%.1f".format(lightGainedVersusSmallest)}×")
             }
-            Log.d(TAG, "  UI: SHOW aperture selector. Set via CaptureRequest.LENS_APERTURE.")
+            Log.d(TAG, "  UI: 显示光圈选择器。通过 CaptureRequest.LENS_APERTURE 设置。")
         }
     }
 } ?: run {
-    Log.w(TAG, "Available apertures array unavailable")
+    Log.w(TAG, "可用光圈数组不可用")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. 如何在 Android Camera Parameters 中查看?**
 
-Go to **Lens / Lens Info** — the apertures appear as "Aperture" with one or more pill-shaped buttons for each available stop. On variable-aperture devices tapping each button live-switches the aperture and dims/brightens the preview accordingly so you can see the real depth-of-field change. On fixed-aperture devices the pill is grayed out and the tooltip explains "Fixed aperture — not controllable".
+前往 **Lens / Lens Info** —— 光圈以 "Aperture" 呈现,每个可用档位一个药丸形按钮。在可变光圈设备上,点击每个按钮实时切换光圈,预览随之变暗/变亮,可见真实景深变化。固定光圈设备上药丸呈灰色,tooltip 说明 "Fixed aperture — 不可控制"。
 
-**6. Common pitfalls**
+**6. 常见坑**
 
-Treating aperture as a controllable parameter on every device. Many developers learn the exposure triangle from a DSLR and assume all three controls exist on a phone. When they write `captureRequest.set(CaptureRequest.LENS_APERTURE, 2.8f)` on a fixed f/1.8 camera, the HAL silently ignores the request (on good HALs) or crashes the session (on bad LEGACY wrappers). Always check `apertures.size > 1` before exposing aperture UI. Count on two fingers: fewer than 2 entries = no selector.
+把光圈当作每台设备都可控制的参数。许多开发者从 DSLR 学曝光三角,假设手机三控件都存在。当他们在固定 f/1.8 摄像头上写 `captureRequest.set(CaptureRequest.LENS_APERTURE, 2.8f)`,HAL 静默忽略(好 HAL)或崩溃 session(差 LEGACY 包装)。在暴露光圈 UI 前总是检查 `apertures.size > 1`。两只手数得过来:少于 2 项 = 无选择器。
 
-The second pitfall: confusing f-stop units with linear brightness. F/stops are quadratic. f/1.4 lets in 2× more light than f/2.0 and 4× more light than f/2.8. When displaying an aperture slider, label it with the actual f-stops from the array, not with linear percentages, because each full stop step visually halves or doubles the image brightness.
+第二个坑:把 f 值单位与线性亮度混淆。f 值是二次的。f/1.4 比 f/2.0 进光多 2×,比 f/2.8 进光多 4×。显示光圈滑块时,用数组中的真实 f 值标签,而非线性百分比,因为每一整档视觉上让图像亮度减半或加倍。
 
 ---
 
 ### LENS_INFO_OPTICAL_STABILIZATION_MODE
 
-**1. What is it?**
+**1. 它是什么?**
 
-`LENS_INFO_OPTICAL_STABILIZATION_MODE` (note: paired with `LENS_INFO_AVAILABLE_OPTICAL_STABILIZATION` for the array of modes) is an `IntArray` listing whether hardware optical image stabilization (OIS) is available and which modes the HAL supports. Standard values are:
-- `LENS_OPTICAL_STABILIZATION_MODE_OFF` — no OIS, all stabilization must be done in software (EIS)
-- `LENS_OPTICAL_STABILIZATION_MODE_ON` — standard still-image OIS, gyro moves the lens group up/down/left/right by fractions of a millimeter to cancel hand tremor
-- `LENS_OPTICAL_STABILIZATION_MODE_VIDEO_STABILIZATION` — optimized OIS profile for video capture, with tuned filtering to match frame timing
+`LENS_INFO_OPTICAL_STABILIZATION_MODE`(注意:与列出模式数组的 `LENS_INFO_AVAILABLE_OPTICAL_STABILIZATION` 配对)是一个 `IntArray`,列出硬件光学防抖(OIS)是否可用及 HAL 支持哪些模式。标准值:
+- `LENS_OPTICAL_STABILIZATION_MODE_OFF` —— 无 OIS,所有防抖须在软件(EIS)做
+- `LENS_OPTICAL_STABILIZATION_MODE_ON` —— 标准静态图像 OIS,陀螺仪让镜头组上下左右移动零点几毫米抵消手抖
+- `LENS_OPTICAL_STABILIZATION_MODE_VIDEO_STABILIZATION` —— 为视频拍摄优化的 OIS 配置,带匹配帧时序的滤波调校
 
-The companion key in CaptureRequests is `LENS_OPTICAL_STABILIZATION_MODE` which selects the active mode from the available list.
+CaptureRequest 中的配套键是 `LENS_OPTICAL_STABILIZATION_MODE`,从可用列表中选择活动模式。
 
-**2. Why does it exist?**
+**2. 它为什么存在?**
 
-OIS and software EIS (electronic image stabilization) are two separate stabilization technologies that interact with each other in important ways. OIS physically moves the lens, requiring the crop margin reserved for EIS warping to be adjusted. On the majority of 2019–2024 Android devices the HAL does not permit both OIS and `CONTROL_VIDEO_STABILIZATION_MODE_ON` to be enabled simultaneously — enabling both causes a HAL conflict because the ISP's EIS warp calculator expects a static optical path and the OIS motor moves it anyway.
+OIS 与软件 EIS(电子防抖)是两种独立防抖技术,相互交互很重要。OIS 物理移动镜头,要求为 EIS 形变预留的裁剪余量被调整。在 2019–2024 大多数 Android 设备上,HAL 不允许 OIS 与 `CONTROL_VIDEO_STABILIZATION_MODE_ON` 同时启用 —— 同时启用会导致 HAL 冲突,因为 ISP 的 EIS 形变计算器期望静态光路,而 OIS 马达照常移动。
 
-**3. Which devices support it?**
+**3. 哪些设备支持?**
 
-All devices expose the available-modes array. The presence of `ON` in the array indicates actual OIS hardware. Flagship phones, most mid-range phones, and modern telephoto/periscope lenses include OIS. Budget phones (under $300 USD) and selfie cameras typically have `[OFF]` only. OIS is independent of hardware level: there exist LIMITED-level devices with OIS and FULL-level devices without.
+所有设备暴露可用模式数组。数组中存在 `ON` 表示真实 OIS 硬件。旗舰机、多数中端机和现代长焦/潜望镜头含 OIS。廉价机(300 美元以下)和自拍相机通常只有 `[OFF]`。OIS 与硬件等级无关:存在带 OIS 的 LIMITED 设备,也存在无 OIS 的 FULL 设备。
 
-**4. How do I query it?**
+**4. 如何查询?**
 
 ```kotlin
 val availableOisModes: IntArray? = characteristics.get(
@@ -778,7 +778,7 @@ availableOisModes?.let { modes ->
             else -> "UNKNOWN($m)"
         }
     }
-    Log.d(TAG, "Available OIS modes: [${modeNames.joinToString(", ")}]")
+    Log.d(TAG, "可用 OIS 模式: [${modeNames.joinToString(", ")}]")
     
     val hasOisHardware = modes.contains(
         CameraCharacteristics.LENS_OPTICAL_STABILIZATION_MODE_ON
@@ -786,7 +786,7 @@ availableOisModes?.let { modes ->
         CameraCharacteristics.LENS_OPTICAL_STABILIZATION_MODE_VIDEO_STABILIZATION
     )
     
-    Log.d(TAG, "  Hardware OIS present: $hasOisHardware")
+    Log.d(TAG, "  存在 OIS 硬件: $hasOisHardware")
     
     characteristics.get(
         CameraCharacteristics.CONTROL_AVAILABLE_VIDEO_STABILIZATION_MODES
@@ -794,65 +794,65 @@ availableOisModes?.let { modes ->
         val hasEis = eisModes.contains(
             CameraCharacteristics.CONTROL_VIDEO_STABILIZATION_MODE_ON
         )
-        Log.d(TAG, "  Software EIS available: $hasEis")
+        Log.d(TAG, "  软件 EIS 可用: $hasEis")
         
         if (hasOisHardware && hasEis) {
-            Log.w(TAG, "  CAUTION: Device claims both OIS + EIS.")
-            Log.w(TAG, "  Many HALs allow ONLY ONE AT A TIME — test simultaneously.")
-            Log.w(TAG, "  If session creation fails with both enabled, pick ONE.")
+            Log.w(TAG, "  注意: 设备同时声称支持 OIS + EIS。")
+            Log.w(TAG, "  许多 HAL 只允许同时开一个 —— 同时启用要测试。")
+            Log.w(TAG, "  若同时启用 session 创建失败,选其一。")
         }
     }
     
     val recommendedMode = when {
         modes.contains(CameraCharacteristics
-            .LENS_OPTICAL_STABILIZATION_MODE_VIDEO_STABILIZATION) -> "VIDEO profile"
+            .LENS_OPTICAL_STABILIZATION_MODE_VIDEO_STABILIZATION) -> "VIDEO 配置"
         modes.contains(CameraCharacteristics
             .LENS_OPTICAL_STABILIZATION_MODE_ON) -> "ON"
-        else -> "OFF (no OIS hardware)"
+        else -> "OFF(无 OIS 硬件)"
     }
-    Log.d(TAG, "  Recommended OIS for video recording: $recommendedMode")
+    Log.d(TAG, "  录像推荐的 OIS: $recommendedMode")
 } ?: run {
-    Log.w(TAG, "OIS info unavailable")
+    Log.w(TAG, "OIS 信息不可用")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. 如何在 Android Camera Parameters 中查看?**
 
-Navigate to **Lens / Stabilization**. The card shows "Available OIS Modes" as a list with ON/OFF state indicators. Below it the companion app also shows EIS modes and a warning banner if both are available, explaining the mutual-exclusivity risk. The preview activity in the app allows toggling OIS and EIS independently so you can immediately see whether enabling both causes a session failure on your device.
+前往 **Lens / Stabilization**。卡片以 "Available OIS Modes" 列表呈现,带 ON/OFF 状态指示。下方配套应用还显示 EIS 模式及(若两者都有的)警告横幅,说明互斥风险。应用内预览界面允许独立切换 OIS 与 EIS,让你立即看到同时启用是否在设备上导致 session 失败。
 
-**6. Common pitfalls**
+**6. 常见坑**
 
-Mutual exclusivity: the number one issue is enabling `LENS_OPTICAL_STABILIZATION_MODE = ON` and `CONTROL_VIDEO_STABILIZATION_MODE = ON` simultaneously. On Samsung Exynos devices this silently drops OIS (stabilization is less effective than pure OIS). On MediaTek devices the CaptureSession creation throws a `CameraAccessException` with no diagnostic message. On Snapdragon 8 Gen 1+ devices it works but introduces a jittery 1–2 frame delay in the preview because the EIS warp waits for the OIS gyro delay. The safe rule: choose OIS OR EIS, never both. Prefer OIS when available (it corrects before capture, preserves more light), fall back to EIS when the lens lacks the hardware.
+互斥性:头号问题是同时启用 `LENS_OPTICAL_STABILIZATION_MODE = ON` 与 `CONTROL_VIDEO_STABILIZATION_MODE = ON`。在三星 Exynos 设备上会静默丢弃 OIS(防抖效果不如纯 OIS)。在联发科设备上 CaptureSession 创建抛 `CameraAccessException` 无诊断信息。在骁龙 8 Gen 1+ 设备上能工作但预览引入 1–2 帧抖动延迟,因为 EIS 形变要等 OIS 陀螺仪延迟。安全规则:选 OIS 或 EIS,绝不两者。OIS 可用时优先(它在拍摄前纠正,保留更多光),镜头缺硬件时退而用 EIS。
 
-Second pitfall: video-optimized OIS vs. still OIS. Many flagships ship with `LENS_OPTICAL_STABILIZATION_MODE_VIDEO_STABILIZATION` in the array as a separate mode. If you set `ON` for video recording the OIS uses the still-image gyro filter, which over-corrects fast pans and makes the footage look "jittery stuck in place". Use the VIDEO-specific mode for video capture sessions and `ON` only for stills.
+第二个坑:视频优化 OIS vs. 静态 OIS。许多旗舰把 `LENS_OPTICAL_STABILIZATION_MODE_VIDEO_STABILIZATION` 作为独立模式放在数组中。录像时设 `ON` 会让 OIS 用静态图像陀螺滤波,对快速摇摄过度纠正,素材看起来"抖着粘在原地"。视频 capture session 用 VIDEO 专用模式,`ON` 只用于静态。
 
 ---
 
-## Control Category
+## Control 分类
 
 ### CONTROL_AE_AVAILABLE_MODES
 
-**1. What is it?**
+**1. 它是什么?**
 
-`CONTROL_AE_AVAILABLE_MODES` is an `IntArray` of `CONTROL_AE_MODE_*` constants describing which auto-exposure operating modes the 3A AE algorithm supports. The standard values are:
-- `CONTROL_AE_MODE_OFF` — AE locked; exposure time and ISO are taken from the manual `SENSOR_EXPOSURE_TIME` and `SENSOR_SENSITIVITY` keys only.
-- `CONTROL_AE_MODE_ON` — standard automatic exposure; the camera adjusts both shutter and gain automatically.
-- `CONTROL_AE_MODE_ON_AUTO_FLASH` — AE + automatic flash firing in low light.
-- `CONTROL_AE_MODE_ON_ALWAYS_FLASH` — AE + forced flash firing.
-- `CONTROL_AE_MODE_ON_AUTO_FLASH_REDEYE` — AE + pre-flash pulse for red-eye reduction.
-- `CONTROL_AE_MODE_ON_EXTERNAL_FLASH` — AE configured for an off-camera strobe.
+`CONTROL_AE_AVAILABLE_MODES` 是 `CONTROL_AE_MODE_*` 常量的 `IntArray`,描述 3A AE 算法支持哪些自动曝光工作模式。标准值:
+- `CONTROL_AE_MODE_OFF` —— AE 锁定;曝光时长和 ISO 仅取自手动 `SENSOR_EXPOSURE_TIME` 与 `SENSOR_SENSITIVITY` 键。
+- `CONTROL_AE_MODE_ON` —— 标准自动曝光;摄像头自动调整快门与增益。
+- `CONTROL_AE_MODE_ON_AUTO_FLASH` —— AE + 弱光自动闪光。
+- `CONTROL_AE_MODE_ON_ALWAYS_FLASH` —— AE + 强制闪光。
+- `CONTROL_AE_MODE_ON_AUTO_FLASH_REDEYE` —— AE + 防红眼预闪脉冲。
+- `CONTROL_AE_MODE_ON_EXTERNAL_FLASH` —— AE 配置为离机闪光灯。
 
-The CaptureRequest equivalent `CONTROL_AE_MODE` selects one of these values per request.
+CaptureRequest 等价键 `CONTROL_AE_MODE` 每次请求选其中之一。
 
-**2. Why does it exist?**
+**2. 它为什么存在?**
 
-Each AE mode requires different internal HAL state. For example, red-eye reduction mode needs to configure a pre-flash sequence (typically three short pulses at ~1/16th power) timed 20–50 ms before the main flash. External flash mode disables built-in flash metering entirely and expects a sync cable signal. If the HAL does not support red-eye (e.g. budget phone with only a single flash driver), the mode must be absent from the available list. Asking the HAL to use a mode it doesn't support results in either a fallback to `ON` (good HALs) or a session crash (bad LEGACY wrappers).
+每个 AE 模式需要不同的 HAL 内部状态。比如防红眼模式需配置预闪序列(通常在主闪前 20–50 ms 三个 ~1/16 功率短脉冲)。外闪模式完全禁用内置闪光测光,期待同步线信号。若 HAL 不支持防红眼(比如只有单闪驱动的廉价机),该模式必须不在可用列表中。要求 HAL 用不支持的模式会导致回退到 `ON`(好 HAL)或 session 崩溃(差 LEGACY 包装)。
 
-**3. Which devices support it?**
+**3. 哪些设备支持?**
 
-All hardware levels. The absolute minimum set, guaranteed on any valid camera ID, is `[OFF, ON]`. Flash-related modes are present only when `FLASH_INFO_AVAILABLE = true`. Red-eye is optional even on flash-equipped devices; many budget HALs skip the pre-flash pulse circuit for cost reasons.
+所有硬件等级。任一合法 camera ID 上保证的最小集合是 `[OFF, ON]`。闪光相关模式仅在 `FLASH_INFO_AVAILABLE = true` 时存在。防红眼即便在带闪设备上也可选;许多廉价 HAL 为省成本省略预闪脉冲电路。
 
-**4. How do I query it?**
+**4. 如何查询?**
 
 ```kotlin
 val aeModes: IntArray? = characteristics.get(
@@ -862,7 +862,7 @@ val aeModes: IntArray? = characteristics.get(
 aeModes?.let { modes ->
     val map = modes.map { m ->
         m to when (m) {
-            CameraCharacteristics.CONTROL_AE_MODE_OFF -> "OFF (manual only)"
+            CameraCharacteristics.CONTROL_AE_MODE_OFF -> "OFF(仅手动)"
             CameraCharacteristics.CONTROL_AE_MODE_ON -> "ON"
             CameraCharacteristics.CONTROL_AE_MODE_ON_AUTO_FLASH -> "ON_AUTO_FLASH"
             CameraCharacteristics.CONTROL_AE_MODE_ON_ALWAYS_FLASH -> "ON_ALWAYS_FLASH"
@@ -871,7 +871,7 @@ aeModes?.let { modes ->
             else -> "UNKNOWN($m)"
         }
     }
-    Log.d(TAG, "Available AE modes:")
+    Log.d(TAG, "可用 AE 模式:")
     map.forEach { (v, s) -> Log.d(TAG, "  $v — $s") }
     
     val hasFlash = characteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE)
@@ -884,24 +884,24 @@ aeModes?.let { modes ->
     )
     
     if (!hasAutoFlash && hasFlash) {
-        Log.w(TAG, "  Flash exists but AUTO_FLASH mode is missing? " +
-                   "Fallback: ALWAYS_FLASH or manual torch.")
+        Log.w(TAG, "  有闪光但缺 AUTO_FLASH 模式? " +
+                   "兜底: ALWAYS_FLASH 或手动手电。")
     }
     if (hasRedeye) {
-        Log.d(TAG, "  Red-eye reduction: SUPPORTED via pre-flash pulses.")
+        Log.d(TAG, "  防红眼: 通过预闪脉冲支持。")
     }
 } ?: run {
-    Log.w(TAG, "AE modes list unavailable")
+    Log.w(TAG, "AE 模式列表不可用")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. 如何在 Android Camera Parameters 中查看?**
 
-Look in **Control / 3A Modes**, the first card titled "AE Modes". Every available mode is rendered as a toggleable button. Tapping the button live-applies that mode to the preview capture session so you can observe the behavior change — for example tapping RED_EYE while pointing at a person's face triggers the pre-flash sequence visible in the preview frame.
+在 **Control / 3A Modes** 的第一张卡片 "AE Modes"。每个可用模式渲染为可切换按钮。点击按钮即把该模式实时应用到预览 capture session,便于观察行为变化 —— 比如指向人脸时点 RED_EYE 会触发预览帧可见的预闪序列。
 
-**6. Common pitfalls**
+**6. 常见坑**
 
-The double-OFF pitfall: `CONTROL_AE_MODE_OFF` alone does **NOT** enable manual exposure. Every developer hits this within the first week of Camera2. There is a global "master override" key called `CONTROL_MODE`. If `CONTROL_MODE` is still set to the default `CONTROL_MODE_AUTO`, the HAL interprets individual 3A-mode OFF values as "don't change the auto behavior" — exactly the opposite of what you expect. The correct manual-exposure sequence is:
+双重 OFF 坑:`CONTROL_AE_MODE_OFF` 单独 **不会** 启用手动曝光。每个开发者接触 Camera2 第一周都会踩。存在一个全局"主控"键 `CONTROL_MODE`。若 `CONTROL_MODE` 仍是默认 `CONTROL_MODE_AUTO`,HAL 把各 3A 模式的 OFF 值理解为"别动自动行为" —— 与你期望的恰恰相反。正确的手动曝光序列是:
 
 ```kotlin
 builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
@@ -912,31 +912,31 @@ builder.set(CaptureRequest.SENSOR_SENSITIVITY, iso)
 builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, exposureNs)
 ```
 
-Both `CONTROL_MODE` and `CONTROL_AE_MODE` must be `OFF`. Setting only the second yields a request that looks valid (no exception thrown) but AE continues to run — developers stare at their logging and cannot understand why ISO keeps changing despite setting it explicitly.
+`CONTROL_MODE` 与 `CONTROL_AE_MODE` 都必须 `OFF`。只设第二个会得到看似合法的请求(不抛异常),但 AE 继续运行 —— 开发者盯着日志不明白为何 ISO 仍在变,尽管显式设置了。
 
 ---
 
 ### CONTROL_AF_AVAILABLE_MODES
 
-**1. What is it?**
+**1. 它是什么?**
 
-`CONTROL_AF_AVAILABLE_MODES` is an `IntArray` listing all supported autofocus operating modes. Standard values:
-- `CONTROL_AF_MODE_OFF` — AF disabled; lens focus position is taken from `LENS_FOCUS_DISTANCE` (requires MANUAL_SENSOR).
-- `CONTROL_AF_MODE_AUTO` — single-shot AF: trigger focus with `CONTROL_AF_TRIGGER = START`, locks when converged.
-- `CONTROL_AF_MODE_MACRO` — single-shot AF with search algorithm optimized for close distances (&lt;30 cm).
-- `CONTROL_AF_MODE_CONTINUOUS_PICTURE` — continuous refocusing, aggressive, tuned for still capture: hunts quickly, refocuses whenever scene changes.
-- `CONTROL_AF_MODE_CONTINUOUS_VIDEO` — continuous refocusing, slow and smooth: avoids "focus breathing" artifacts during video recording by driving the lens gradually.
-- `CONTROL_AF_MODE_EDOF` — extended depth-of-field: software post-processing simulates sharp focus from ~30 cm to infinity, no physical lens motor movement.
+`CONTROL_AF_AVAILABLE_MODES` 是一个 `IntArray`,列出所有支持的对焦工作模式。标准值:
+- `CONTROL_AF_MODE_OFF` —— AF 禁用;镜头对焦位置取自 `LENS_FOCUS_DISTANCE`(需 MANUAL_SENSOR)。
+- `CONTROL_AF_MODE_AUTO` —— 单次 AF:用 `CONTROL_AF_TRIGGER = START` 触发对焦,收敛后锁定。
+- `CONTROL_AF_MODE_MACRO` —— 单次 AF,搜索算法针对近距离(&lt;30 cm)优化。
+- `CONTROL_AF_MODE_CONTINUOUS_PICTURE` —— 连续重对焦,激进,为静态拍摄调校:快速 hunt,场景变化即重对焦。
+- `CONTROL_AF_MODE_CONTINUOUS_VIDEO` —— 连续重对焦,缓慢平滑:通过逐步驱动镜头避免录像中的"呼吸感"伪影。
+- `CONTROL_AF_MODE_EDOF` —— 扩展景深:软件后处理模拟从 ~30 cm 到无穷远的清晰对焦,无物理镜头马达移动。
 
-**2. Why does it exist?**
+**2. 它为什么存在?**
 
-Different use cases require fundamentally different AF strategies. Video cannot tolerate the aggressive hunting of still-image continuous AF because each focus change visibly warps the image (focus breathing) and produces audible motor noise on the microphone track. Macro scenes need a search range limited to close distances because searching the full ∞→0.1m range takes 800 ms or longer. EDOF requires no lens motor at all. The key communicates which HAL algorithms are actually compiled in.
+不同用例需要根本不同的 AF 策略。视频无法容忍静态连续 AF 的激进 hunting,因为每次对焦变化都会可见地形变图像(呼吸感)并在麦克风轨上产生可闻的马达噪声。微距场景需把搜索范围限制在近距离,因为搜索完整 ∞→0.1m 范围要 800 ms 或更久。EDOF 完全不需要镜头马达。此键传达 HAL 中实际编译进了哪些算法。
 
-**3. Which devices support it?**
+**3. 哪些设备支持?**
 
-All hardware levels. Minimum set: almost every device includes `[AUTO, CONTINUOUS_PICTURE]`. `MACRO` is optional on fixed-focus devices (when `LENS_INFO_MINIMUM_FOCUS_DISTANCE = 0.0` then MACRO is typically omitted because AF can't close-focus anyway). `EDOF` appears only on budget devices with small sensors and post-processing focus. `CONTINUOUS_VIDEO` is present on any device that can record video via `MediaRecorder` — i.e., almost all.
+所有硬件等级。最小集合:几乎每台设备含 `[AUTO, CONTINUOUS_PICTURE]`。`MACRO` 在定焦设备上可选(当 `LENS_INFO_MINIMUM_FOCUS_DISTANCE = 0.0` 时 MACRO 通常被省略,因为 AF 反正不能近对焦)。`EDOF` 只出现在带小传感器和后处理对焦的廉价机上。`CONTINUOUS_VIDEO` 出现在任何能通过 `MediaRecorder` 录像的设备上 —— 即几乎所有。
 
-**4. How do I query it?**
+**4. 如何查询?**
 
 ```kotlin
 val afModes: IntArray? = characteristics.get(
@@ -944,15 +944,15 @@ val afModes: IntArray? = characteristics.get(
 )
 
 afModes?.let { modes ->
-    Log.d(TAG, "Available AF modes:")
+    Log.d(TAG, "可用 AF 模式:")
     modes.forEach { m ->
         val s = when (m) {
-            CameraCharacteristics.CONTROL_AF_MODE_OFF -> "OFF (manual focus position)"
-            CameraCharacteristics.CONTROL_AF_MODE_AUTO -> "AUTO (single-shot, trigger once)"
-            CameraCharacteristics.CONTROL_AF_MODE_MACRO -> "MACRO (single-shot, near-optimized)"
-            CameraCharacteristics.CONTROL_AF_MODE_CONTINUOUS_PICTURE -> "CONTINUOUS_PICTURE (fast hunt, stills)"
-            CameraCharacteristics.CONTROL_AF_MODE_CONTINUOUS_VIDEO -> "CONTINUOUS_VIDEO (smooth, no breathing)"
-            CameraCharacteristics.CONTROL_AF_MODE_EDOF -> "EDOF (software-extended DoF, no motor)"
+            CameraCharacteristics.CONTROL_AF_MODE_OFF -> "OFF(手动对焦位置)"
+            CameraCharacteristics.CONTROL_AF_MODE_AUTO -> "AUTO(单次,触发一次)"
+            CameraCharacteristics.CONTROL_AF_MODE_MACRO -> "MACRO(单次,近距优化)"
+            CameraCharacteristics.CONTROL_AF_MODE_CONTINUOUS_PICTURE -> "CONTINUOUS_PICTURE(快 hunt,静态)"
+            CameraCharacteristics.CONTROL_AF_MODE_CONTINUOUS_VIDEO -> "CONTINUOUS_VIDEO(平滑,无呼吸)"
+            CameraCharacteristics.CONTROL_AF_MODE_EDOF -> "EDOF(软件扩展景深,无马达)"
             else -> "UNKNOWN($m)"
         }
         Log.d(TAG, "  $m — $s")
@@ -967,57 +967,57 @@ afModes?.let { modes ->
     val hasEdof = modes.contains(CameraCharacteristics.CONTROL_AF_MODE_EDOF)
     
     if (hasEdof) {
-        Log.w(TAG, "  EDOF present: AF state machine will always report INACTIVE.")
-        Log.w(TAG, "  Do not wait for AF_STATE_FOCUSED_LOCKED on EDOF lenses.")
+        Log.w(TAG, "  存在 EDOF: AF 状态机永远报告 INACTIVE。")
+        Log.w(TAG, "  不要在 EDOF 镜头上等 AF_STATE_FOCUSED_LOCKED。")
     }
     
-    Log.d(TAG, "  Mode selector for video recording: " +
+    Log.d(TAG, "  录像模式选择器: " +
                if (hasContinuousVideo) "CONTINUOUS_VIDEO" else
-               if (hasContinuousPicture) "CONTINUOUS_PICTURE (FALLBACK)" else
-               "AUTO (FALLBACK)")
+               if (hasContinuousPicture) "CONTINUOUS_PICTURE(兜底)" else
+               "AUTO(兜底)")
 } ?: run {
-    Log.w(TAG, "AF modes list unavailable")
+    Log.w(TAG, "AF 模式列表不可用")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. 如何在 Android Camera Parameters 中查看?**
 
-Open **Control / 3A Modes** and look at the "AF Modes" card. Each available mode is a button. The companion app shows a live AF state indicator alongside each mode: when you tap CONTINUOUS_PICTURE while waving your hand in front of the lens, the state machine cycles PASSIVE_SCAN → PASSIVE_FOCUSED; when you tap CONTINUOUS_VIDEO the state machine transitions only every ~2 seconds even with scene motion — visible proof of the slower tuning. EDOF mode displays a tooltip explaining that no motor movement occurs.
+打开 **Control / 3A Modes**,查看 "AF Modes" 卡片。每个可用模式是一个按钮。配套应用在每个模式旁显示实时 AF 状态指示:在镜头前挥手时点 CONTINUOUS_PICTURE,状态机循环 PASSIVE_SCAN → PASSIVE_FOCUSED;点 CONTINUOUS_VIDEO 时即便有场景运动,状态机也仅每 ~2 秒迁移一次 —— 慢调校的可见证据。EDOF 模式显示 tooltip 说明无马达移动。
 
-**6. Common pitfalls**
+**6. 常见坑**
 
-Using CONTINUOUS_PICTURE for video: this produces footage that "breathes" with each refocus because the still-mode tuning drives the AF motor to its new position in ~80 ms. When the lens is wide-aperture (f/1.8) the focus plane visibly shifts, which users perceive as a "jittery video". Worse, on phones with microphones close to the lens motor, the recording picks up a faint but audible "tick tick tick" as the motor moves each frame. Use CONTINUOUS_VIDEO (or fall back to AUTO with periodic triggering) for any MediaRecorder/MediaCodec output surface.
+视频用 CONTINUOUS_PICTURE:这会让素材随每次重对焦"呼吸",因为静态模式调校把 AF 马达在 ~80 ms 内驱到新位置。当镜头大光圈(f/1.8)时焦平面可见偏移,用户感知为"抖动视频"。更糟的是,麦克风贴近镜头马达的手机,录音会拾取每帧马达移动的微弱可闻"嘀嘀嘀"。任何 MediaRecorder/MediaCodec 输出 Surface 都用 CONTINUOUS_VIDEO(或兜底用 AUTO 周期触发)。
 
-EDOF is the second pitfall: on EDOF devices the AF state machine *never transitions to FOCUSED_LOCKED*. Developers that block capture on `CaptureResult.CONTROL_AF_STATE == CONTROL_AF_STATE_FOCUSED_LOCKED` hang forever waiting for a state that will never arrive. EDOF uses `CONTROL_AF_STATE_INACTIVE` for the steady state because there is no physical motor to lock. The correct pattern when starting a still capture is: if `AF_MODE == EDOF` → skip AF trigger, fire immediately. Otherwise: trigger AF, wait for FOCUSED_LOCKED or NOT_FOCUSED_LOCKED, then fire.
+EDOF 是第二个坑:在 EDOF 设备上 AF 状态机 *永不迁移到 FOCUSED_LOCKED*。阻塞在 `CaptureResult.CONTROL_AF_STATE == CONTROL_AF_STATE_FOCUSED_LOCKED` 上的开发者会永远等待一个永不到来的状态。EDOF 用 `CONTROL_AF_STATE_INACTIVE` 作稳态,因为没有物理马达可锁。开始静态拍摄的正确模式是:若 `AF_MODE == EDOF` → 跳过 AF 触发,立即拍摄。否则:触发 AF,等 FOCUSED_LOCKED 或 NOT_FOCUSED_LOCKED,再拍。
 
 ---
 
 ### CONTROL_AWB_AVAILABLE_MODES
 
-**1. What is it?**
+**1. 它是什么?**
 
-`CONTROL_AWB_AVAILABLE_MODES` is an `IntArray` enumerating the auto-white-balance and fixed-color-temperature modes the AWB algorithm supports. Standard values:
-- `CONTROL_AWB_MODE_OFF` — AWB disabled; color correction is taken from `COLOR_CORRECTION_TRANSFORM` and `COLOR_CORRECTION_GAINS` (requires MANUAL_POST_PROCESSING capability for manual control, otherwise ignored).
-- `CONTROL_AWB_MODE_AUTO` — continuous AWB convergence; estimates scene color temperature from image statistics.
-- `CONTROL_AWB_MODE_INCANDESCENT` — fixed warm white balance ~2700K (tungsten / indoor light bulbs).
-- `CONTROL_AWB_MODE_FLUORESCENT` — fixed cool-white fluorescent ~4500K.
-- `CONTROL_AWB_MODE_WARM_FLUORESCENT` — fixed warm fluorescent ~3000K.
-- `CONTROL_AWB_MODE_DAYLIGHT` — fixed daylight ~5500K.
-- `CONTROL_AWB_MODE_CLOUDY_DAYLIGHT` — fixed overcast daylight ~6500K.
-- `CONTROL_AWB_MODE_TWILIGHT` — fixed dusk/dawn ~4000K.
-- `CONTROL_AWB_MODE_SHADE` — fixed deep-shade ~7500K.
+`CONTROL_AWB_AVAILABLE_MODES` 是一个 `IntArray`,枚举 AWB 算法支持的自动白平衡与固定色温模式。标准值:
+- `CONTROL_AWB_MODE_OFF` —— AWB 禁用;颜色校正取自 `COLOR_CORRECTION_TRANSFORM` 与 `COLOR_CORRECTION_GAINS`(手动控制需 MANUAL_POST_PROCESSING 能力,否则被忽略)。
+- `CONTROL_AWB_MODE_AUTO` —— 连续 AWB 收敛;从图像统计估计场景色温。
+- `CONTROL_AWB_MODE_INCANDESCENT` —— 固定暖白平衡 ~2700K(钨丝/室内灯泡)。
+- `CONTROL_AWB_MODE_FLUORESCENT` —— 固定冷白荧光 ~4500K。
+- `CONTROL_AWB_MODE_WARM_FLUORESCENT` —— 固定暖荧光 ~3000K。
+- `CONTROL_AWB_MODE_DAYLIGHT` —— 固定日光 ~5500K。
+- `CONTROL_AWB_MODE_CLOUDY_DAYLIGHT` —— 固定阴天日光 ~6500K。
+- `CONTROL_AWB_MODE_TWILIGHT` —— 固定黄昏/黎明 ~4000K。
+- `CONTROL_AWB_MODE_SHADE` —— 固定深荫 ~7500K。
 
-Each preset corresponds to a fixed set of RGB gains applied in the ISP color-correction pipeline.
+每个预设对应 ISP 颜色校正流水线中应用的一组固定 RGB 增益。
 
-**2. Why does it exist?**
+**2. 它为什么存在?**
 
-AWB presets solve the "how do I make the photo look like what my eye saw" problem under predictable lighting. The generic `AUTO` mode sometimes makes incorrect decisions: a wall painted pure red causes the AWB algorithm to think the scene is lit by cyan light, so it applies an overall green cast. If the user is explicitly taking a photo under a tungsten bulb, selecting `INCANDESCENT` tells the HAL: "I know the light temperature — use the gains calibrated for this illuminant, not the auto estimator."
+AWB 预设解决"如何让照片看起来像我眼睛所见"的问题,在可预测光线下。通用 `AUTO` 模式有时会决策错误:纯红色的墙让 AWB 算法以为场景被青光照亮,于是施加整体绿色偏。如果用户明确在钨丝灯下拍照,选 `INCANDESCENT` 告诉 HAL:"我已知光温 —— 用为此光源校准的增益,别用自动估计器。"
 
-**3. Which devices support it?**
+**3. 哪些设备支持?**
 
-All devices. The minimum set is `[OFF, AUTO]`. All eight preset modes appear on ~70% of devices; the remaining 30% (older devices, certain USB cameras) omit the rarer ones like `WARM_FLUORESCENT` or `SHADE`. There is no flash dependency: these are fixed color calibration values independent of illumination source.
+所有设备。最小集合 `[OFF, AUTO]`。八个预设模式出现在约 70% 设备上;其余 30%(较旧设备、某些 USB 摄像头)省略较稀有的 `WARM_FLUORESCENT` 或 `SHADE`。无闪光依赖:这些是独立于光源的固定颜色校准值。
 
-**4. How do I query it?**
+**4. 如何查询?**
 
 ```kotlin
 val awbModes: IntArray? = characteristics.get(
@@ -1027,10 +1027,10 @@ val awbModes: IntArray? = characteristics.get(
 awbModes?.let { modes ->
     val labelFor: (Int) -> Pair<String, Int> = { m ->
         when (m) {
-            CameraCharacteristics.CONTROL_AWB_MODE_OFF -> "OFF (manual CC gains)" to 0
-            CameraCharacteristics.CONTROL_AWB_MODE_AUTO -> "AUTO (continuous estimate)" to -1
-            CameraCharacteristics.CONTROL_AWB_MODE_INCANDESCENT -> "INCANDESCENT (Tungsten)" to 2700
-            CameraCharacteristics.CONTROL_AWB_MODE_FLUORESCENT -> "FLUORESCENT (Cool White)" to 4500
+            CameraCharacteristics.CONTROL_AWB_MODE_OFF -> "OFF(手动 CC 增益)" to 0
+            CameraCharacteristics.CONTROL_AWB_MODE_AUTO -> "AUTO(连续估计)" to -1
+            CameraCharacteristics.CONTROL_AWB_MODE_INCANDESCENT -> "INCANDESCENT(钨丝)" to 2700
+            CameraCharacteristics.CONTROL_AWB_MODE_FLUORESCENT -> "FLUORESCENT(冷白)" to 4500
             CameraCharacteristics.CONTROL_AWB_MODE_WARM_FLUORESCENT -> "WARM_FLUORESCENT" to 3000
             CameraCharacteristics.CONTROL_AWB_MODE_DAYLIGHT -> "DAYLIGHT" to 5500
             CameraCharacteristics.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT -> "CLOUDY_DAYLIGHT" to 6500
@@ -1040,16 +1040,16 @@ awbModes?.let { modes ->
         }
     }
     
-    Log.d(TAG, "Available AWB modes:")
+    Log.d(TAG, "可用 AWB 模式:")
     modes.forEach { m ->
         val (s, k) = labelFor(m)
-        val kelvinStr = if (k > 0) " ~${k}K" else if (k == 0) " (manual CTCC via MANUAL_POST_PROCESSING)" else ""
+        val kelvinStr = if (k > 0) " ~${k}K" else if (k == 0) " (通过 MANUAL_POST_PROCESSING 手动 CTCC)" else ""
         Log.d(TAG, "  $m — $s$kelvinStr")
     }
     
     val presetCount = modes.count { it != CameraCharacteristics.CONTROL_AWB_MODE_OFF &&
                                      it != CameraCharacteristics.CONTROL_AWB_MODE_AUTO }
-    Log.d(TAG, "  Fixed presets available: $presetCount / 7 standard")
+    Log.d(TAG, "  可用固定预设: $presetCount / 7 标准")
     
     val missing = listOf(
         CameraCharacteristics.CONTROL_AWB_MODE_INCANDESCENT,
@@ -1062,52 +1062,52 @@ awbModes?.let { modes ->
     ).filter { !modes.contains(it) }
     
     if (missing.isNotEmpty()) {
-        Log.w(TAG, "  Missing standard AWB presets: $missing")
-        Log.w(TAG, "  UI: Show only presets that exist. Don't hardcode all 8.")
+        Log.w(TAG, "  缺少的标准 AWB 预设: $missing")
+        Log.w(TAG, "  UI: 只显示存在的预设。不要硬编码全部 8 个。")
     }
 } ?: run {
-    Log.w(TAG, "AWB modes list unavailable")
+    Log.w(TAG, "AWB 模式列表不可用")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. 如何在 Android Camera Parameters 中查看?**
 
-Look in **Control / 3A Modes** under the "AWB Modes" card. Each preset is a button with a small color swatch showing the approximate cast of that preset. If you start with AUTO under indoor lighting then tap INCANDESCENT, the preview immediately cools down (less orange) because the preset removes the tungsten orange cast. Tapping SHADE under daylight warms up the preview slightly because the preset compensates for the blue shift of shade light.
+在 **Control / 3A Modes** 的 "AWB Modes" 卡片。每个预设是一个按钮,带一小块色样展示该预设的大致偏色。在室内光下从 AUTO 起步,然后点 INCANDESCENT,预览立即变冷(橙色减少),因为预设去除了钨丝灯橙色偏。日光下点 SHADE 让预览略变暖,因为预设补偿荫光的蓝色偏。
 
-**6. Common pitfalls**
+**6. 常见坑**
 
-Assuming preset temperature values match across OEMs. Android CDD does not require `DAYLIGHT` to be exactly 5500K; it only requires the preset to be "approximately daylight." In practice: Samsung's `DAYLIGHT` is ~5200K (slightly warm), Google Pixel's `DAYLIGHT` is ~5700K (slightly cool), and OnePlus's `DAYLIGHT` is ~5400K. If you build a custom color pipeline and rely on DAYLIGHT producing exact 5500K gains, the output colors will shift 200–500K depending on device. For precise cross-device color, use `MANUAL_POST_PROCESSING` capability and set `COLOR_CORRECTION_GAINS` + `COLOR_CORRECTION_TRANSFORM` manually using a calibrated scene (X-Rite color chart).
+假设预设温度值跨 OEM 一致。Android CDD 不要求 `DAYLIGHT` 精确为 5500K;只要求预设"近似日光"。实践中:三星的 `DAYLIGHT` ~5200K(略暖),Google Pixel 的 `DAYLIGHT` ~5700K(略冷),一加的 `DAYLIGHT` ~5400K。若你建自定义颜色流水线并依赖 DAYLIGHT 产生精确 5500K 增益,输出颜色会随设备偏移 200–500K。要跨设备精确颜色,用 `MANUAL_POST_PROCESSING` 能力并基于校准场景(X-Rite 色卡)手动设 `COLOR_CORRECTION_GAINS` + `COLOR_CORRECTION_TRANSFORM`。
 
-AWB_MODE_OFF without MANUAL_POST_PROCESSING is the second pitfall. Like AE, the global master override matters. Setting AWB to OFF while `CONTROL_MODE != OFF` produces a request where the HAL ignores the OFF setting. Manual AWB (custom color temperature) requires both `CONTROL_MODE = OFF` AND `MANUAL_POST_PROCESSING` capability, not just `MANUAL_SENSOR`. MANUAL_SENSOR gives ISO/shutter; MANUAL_POST_PROCESSING gives color gains and tonemap.
+无 MANUAL_POST_PROCESSING 的 AWB_MODE_OFF 是第二个坑。像 AE 一样,全局主控至关重要。AWB 设 OFF 而 `CONTROL_MODE != OFF` 会产生 HAL 忽略 OFF 的请求。手动 AWB(自定义色温)需 `CONTROL_MODE = OFF` *和* `MANUAL_POST_PROCESSING` 能力,而非仅 `MANUAL_SENSOR`。MANUAL_SENSOR 给 ISO/快门;MANUAL_POST_PROCESSING 给颜色增益和色调映射。
 
 ---
 
 ### CONTROL_AVAILABLE_EFFECTS
 
-**1. What is it?**
+**1. 它是什么?**
 
-`CONTROL_AVAILABLE_EFFECTS` is an `IntArray` of built-in OEM color filters that apply inside the ISP pipeline. Standard effect values:
-- `CONTROL_EFFECT_MODE_OFF` — no color effect (default).
-- `CONTROL_EFFECT_MODE_MONO` — grayscale / black-and-white.
-- `CONTROL_EFFECT_MODE_NEGATIVE` — inverted colors (film negative look).
-- `CONTROL_EFFECT_MODE_SOLARIZE` — Sabattier-style partial inversion.
-- `CONTROL_EFFECT_MODE_SEPIA` — brown-tone vintage look.
-- `CONTROL_EFFECT_MODE_POSTERIZE` — reduced color palette / banded.
-- `CONTROL_EFFECT_MODE_WHITEBOARD` — enhanced for whiteboard capture (boost contrast, remove shadows).
-- `CONTROL_EFFECT_MODE_BLACKBOARD` — enhanced for dark chalkboard capture (boost dim strokes, crop to board edges on some HALs).
-- `CONTROL_EFFECT_MODE_AQUA` — boosted blue channel / underwater look.
+`CONTROL_AVAILABLE_EFFECTS` 是 `IntArray`,列出在 ISP 流水线内应用的内置 OEM 滤镜。标准效果值:
+- `CONTROL_EFFECT_MODE_OFF` —— 无颜色效果(默认)。
+- `CONTROL_EFFECT_MODE_MONO` —— 灰度/黑白。
+- `CONTROL_EFFECT_MODE_NEGATIVE` —— 反色(胶片负片观感)。
+- `CONTROL_EFFECT_MODE_SOLARIZE` —— Sabattier 风格的部分反转。
+- `CONTROL_EFFECT_MODE_SEPIA` —— 棕调复古观感。
+- `CONTROL_EFFECT_MODE_POSTERIZE` —— 减少调色板/色带化。
+- `CONTROL_EFFECT_MODE_WHITEBOARD` —— 为白板拍摄增强(提对比、去阴影)。
+- `CONTROL_EFFECT_MODE_BLACKBOARD` —— 为深色粉笔板增强(提暗笔触,部分 HAL 裁到板边缘)。
+- `CONTROL_EFFECT_MODE_AQUA` —— 增强蓝色通道/水下观感。
 
-Plus OEM-specific values (100+, 101+, etc.) that are entirely vendor-defined.
+加上完全由厂商定义的 OEM 专有值(100+、101+ 等)。
 
-**2. Why does it exist?**
+**2. 它为什么存在?**
 
-Built-in ISP effects run at full preview resolution and zero CPU cost because they are implemented in hardware lookup tables inside the camera ISP. Running the equivalent effect on the CPU/GPU via RenderScript or Vulkan costs 5–15 ms per frame at 4K resolution, eating into frame budget. The key advertises which LUTs are baked into the HAL.
+内置 ISP 效果以全预览分辨率运行,零 CPU 开销,因为它们由摄像头 ISP 内的硬件查找表实现。在 CPU/GPU 上通过 RenderScript 或 Vulkan 跑等效效果,4K 每帧 5–15 ms,挤占帧预算。此键广告 HAL 中烘焙了哪些 LUT。
 
-**3. Which devices support it?**
+**3. 哪些设备支持?**
 
-All devices list at minimum `[OFF]`. Mid-range and budget phones typically include 3–6 effects (MONO, SEPIA, NEGATIVE, plus maybe POSTERIZE). Flagship Samsung and Xiaomi devices offer 12+ effects including OEM extensions like "Vintage," "Blue Ice," and "Provia" via vendor-private values not in the standard enum. Pixel devices have the fewest effects, offering only OFF and MONO in most generations.
+所有设备至少列 `[OFF]`。中端和廉价机典型含 3–6 个效果(MONO、SEPIA、NEGATIVE,可能加 POSTERIZE)。旗舰三星和小米设备提供 12+ 效果,包括通过厂商私有值(不在标准枚举)提供的"Vintage""Blue Ice""Provia"等 OEM 扩展。Pixel 设备效果最少,多数代际仅提供 OFF 和 MONO。
 
-**4. How do I query it?**
+**4. 如何查询?**
 
 ```kotlin
 val effects: IntArray? = characteristics.get(
@@ -1116,9 +1116,9 @@ val effects: IntArray? = characteristics.get(
 
 effects?.let { effs ->
     val standardName = mapOf(
-        CameraCharacteristics.CONTROL_EFFECT_MODE_OFF to "OFF (no effect)",
-        CameraCharacteristics.CONTROL_EFFECT_MODE_MONO to "MONO (B&W)",
-        CameraCharacteristics.CONTROL_EFFECT_MODE_NEGATIVE to "NEGATIVE (invert)",
+        CameraCharacteristics.CONTROL_EFFECT_MODE_OFF to "OFF(无效果)",
+        CameraCharacteristics.CONTROL_EFFECT_MODE_MONO to "MONO(黑白)",
+        CameraCharacteristics.CONTROL_EFFECT_MODE_NEGATIVE to "NEGATIVE(反色)",
         CameraCharacteristics.CONTROL_EFFECT_MODE_SOLARIZE to "SOLARIZE",
         CameraCharacteristics.CONTROL_EFFECT_MODE_SEPIA to "SEPIA",
         CameraCharacteristics.CONTROL_EFFECT_MODE_POSTERIZE to "POSTERIZE",
@@ -1127,57 +1127,57 @@ effects?.let { effs ->
         CameraCharacteristics.CONTROL_EFFECT_MODE_AQUA to "AQUA"
     )
     
-    Log.d(TAG, "Available ISP effects (${effs.size} modes):")
+    Log.d(TAG, "可用 ISP 效果(${effs.size} 个模式):")
     effs.forEach { e ->
         val standard = standardName[e]
         if (standard != null) {
             Log.d(TAG, "  $e — $standard")
         } else {
-            Log.d(TAG, "  $e — OEM_PRIVATE_EFFECT (vendor-defined)")
+            Log.d(TAG, "  $e — OEM_PRIVATE_EFFECT(厂商定义)")
         }
     }
     
     val oemCount = effs.count { it > CameraCharacteristics.CONTROL_EFFECT_MODE_AQUA }
     if (oemCount > 0) {
-        Log.w(TAG, "  OEM-private effects: $oemCount. Behavior NOT portable across devices.")
-        Log.w(TAG, "  Same numeric effect on Samsung ≠ same visual result on Xiaomi.")
+        Log.w(TAG, "  OEM 私有效果: $oemCount。行为跨设备不可移植。")
+        Log.w(TAG, "  三星上同数值效果 ≠ 小米上同数值视觉效果。")
     }
 } ?: run {
-    Log.w(TAG, "Effects list unavailable")
+    Log.w(TAG, "效果列表不可用")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. 如何在 Android Camera Parameters 中查看?**
 
-Navigate to **Control / Effects**. Each effect is a small thumbnail showing a preview swatch with the effect name. Tapping the thumbnail applies the effect to the live preview instantly — you can compare MONO vs. SEPIA vs. AQUA side by side by switching quickly. OEM-private effects are labeled "OEM [number]" with a warning tooltip explaining they may not be portable. Below the effects gallery is a benchmark card showing the frame rate with effects ON vs. OFF, demonstrating the zero-cost nature of ISP effects vs. GPU processing.
+前往 **Control / Effects**。每个效果是一个小缩略图,显示带效果名的预览色样。点击缩略图即时把效果应用到实时预览 —— 快速切换可并排比较 MONO、SEPIA、AQUA。OEM 私有效果标为 "OEM [编号]",带警告 tooltip 说明可能不可移植。效果画廊下方有基准卡片,显示开/关效果时的帧率,展示 ISP 效果相对 GPU 处理的零成本特性。
 
-**6. Common pitfalls**
+**6. 常见坑**
 
-Portability: built-in effects are the single most OEM-variable feature in all of Camera2. Even the *standard* MONO mode is not visually consistent: Samsung MONO applies a red-channel-weighted luminance (`0.30R + 0.50G + 0.20B`) with a slight S-curve; Pixel MONO uses BT.709 weighting (`0.2126R + 0.7152G + 0.0722B`) with no S-curve. SEPIA tones range from reddish-brown (LG) through pure yellow-sepia (Sony) to near-cool-brown (OnePlus). If your app's core visual identity depends on a specific filter look, implement it in GPU shaders with fixed coefficients. Reserve ISP effects for: (1) zero-cost preview convenience, or (2) platform-specific features on devices you have QA-tested. Never advertise an effect as "Sepia" in your marketing if the visual output varies by 100ΔE across devices.
+可移植性:内置效果是 Camera2 中 OEM 差异最大的特性。即便 *标准* MONO 模式视觉也不一致:三星 MONO 用红通道加权亮度(`0.30R + 0.50G + 0.20B`)带轻微 S 曲线;Pixel MONO 用 BT.709 加权(`0.2126R + 0.7152G + 0.0722B`)无 S 曲线。SEPIA 色调从 reddish-brown(LG)、纯黄棕(索尼)到近冷棕(一加)不等。若应用核心视觉身份依赖特定滤镜观感,用固定系数的 GPU 着色器实现。把 ISP 效果留给:(1) 零成本预览便利,或(2) 已 QA 测试设备上的平台专属特性。绝不要在营销中把效果标为"Sepia",若跨设备视觉输出差异达 100ΔE。
 
-Second pitfall: effects + face detection + HDR pipeline interact. On certain Sony and MediaTek HALs, enabling SEPIA or NEGATIVE effect disables HDR processing (because the ISP HDR tonemap and SEPIA LUT share the same hardware pipeline stage). Developers enable HDR and SEPIA, capture an image, and see no HDR highlights recovery. The only fix is to apply effects post-capture when HDR is active.
+第二个坑:效果 + 人脸检测 + HDR 流水线交互。在某些索尼和联发科 HAL 上,启用 SEPIA 或 NEGATIVE 效果会禁用 HDR 处理(因为 ISP HDR 色调映射与 SEPIA LUT 共用同一硬件流水线阶段)。开发者启用 HDR 与 SEPIA,拍一张,看不到 HDR 高光恢复。唯一修复是 HDR 激活时把效果改到拍摄后处理。
 
 ---
 
 ### CONTROL_AE_COMPENSATION_RANGE
 
-**1. What is it?**
+**1. 它是什么?**
 
-`CONTROL_AE_COMPENSATION_RANGE` is a `android.util.Range&lt;Int&gt;` specifying the minimum and maximum EV adjustment offsets you can pass to `CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION`. Critically, the values are **in integer steps**, not in stops. Each step corresponds to `CONTROL_AE_COMPENSATION_STEP`, which is a `Rational` (fraction) like `Rational(1, 3)` (0.333 EV per step). Combined:
-- `range = [-12, +12]`, `step = 1/3 EV` → effective EV range = -4 EV to +4 EV (in 1/3 stop increments)
-- `range = [-24, +24]`, `step = 1/2 EV` → effective EV range = -12 EV to +12 EV (in 1/2 stop increments)
+`CONTROL_AE_COMPENSATION_RANGE` 是一个 `android.util.Range&lt;Int&gt;`,指定你可传给 `CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION` 的最小和最大 EV 调整偏移。关键是,这些值 **是整数步进**,不是档。每步对应 `CONTROL_AE_COMPENSATION_STEP`,后者是 `Rational`(分数)如 `Rational(1, 3)`(每步 0.333 EV)。组合:
+- `范围 = [-12, +12]`,`步进 = 1/3 EV` → 有效 EV 范围 = -4 EV 到 +4 EV(1/3 档增量)
+- `范围 = [-24, +24]`,`步进 = 1/2 EV` → 有效 EV 范围 = -12 EV 到 +12 EV(1/2 档增量)
 
-The compensation value is added to whatever exposure the AE algorithm would have chosen, biasing the image brighter (+) or darker (−).
+补偿值加到 AE 算法本会选的曝光上,让图像偏亮(+)或偏暗(−)。
 
-**2. Why does it exist?**
+**2. 它为什么存在?**
 
-The AE algorithm makes global scene-based decisions. When a bright light occupies 10% of the frame (window in an indoor scene), AE underexposes the indoor area. The user wants to "add +1 EV" and have the indoor area brighter, even if the window clips. EV compensation is the standard photographer's control for this — every DSLR has a ± dial.
+AE 算法做全局场景决策。当亮光占画面 10%(室内场景的窗户),AE 会让室内区域欠曝。用户想"+1 EV"让室内更亮,哪怕窗户过曝。EV 补偿是摄影师的标准控件 —— 每个 DSLR 都有 ± 拨盘。
 
-**3. Which devices support it?**
+**3. 哪些设备支持?**
 
-All hardware levels, with a CDD minimum requirement of at least ±3 EV of range in some step size. LIMITED devices typically offer `[-12, +12]` with 1/3 or 1/2 step (±4 EV or ±6 EV total). FULL devices offer `[-24, +24]` or wider. No capability flags required — if the range exists (and it always does), setting `CONTROL_AE_EXPOSURE_COMPENSATION` works regardless of MANUAL_SENSOR.
+所有硬件等级,CDD 最低要求某步进下至少 ±3 EV 范围。LIMITED 设备典型提供 `[-12, +12]` 配 1/3 或 1/2 步进(±4 EV 或 ±6 EV 总量)。FULL 设备提供 `[-24, +24]` 或更宽。无能力标志要求 —— 只要范围存在(始终存在),设 `CONTROL_AE_EXPOSURE_COMPENSATION` 就工作,与 MANUAL_SENSOR 无关。
 
-**4. How do I query it?**
+**4. 如何查询?**
 
 ```kotlin
 val compensationRange: Range<Int>? = characteristics.get(
@@ -1195,18 +1195,18 @@ compensationRange?.let { rng ->
     val evMin = rng.lower * stepValue
     val evMax = rng.upper * stepValue
     
-    Log.d(TAG, "CONTROL_AE_COMPENSATION_RANGE = [${rng.lower}, ${rng.upper}] (steps)")
-    Log.d(TAG, "CONTROL_AE_COMPENSATION_STEP = ${step.numerator}/${step.denominator} = ${"%.4f".format(stepValue)} EV/step")
-    Log.d(TAG, "  EFFECTIVE EV range: ${"%.1f".format(evMin)} EV — ${"%.1f".format(evMax)} EV")
-    Log.d(TAG, "  Total latitude: ${"%.1f".format(evMax - evMin)} EV")
+    Log.d(TAG, "CONTROL_AE_COMPENSATION_RANGE = [${rng.lower}, ${rng.upper}] (步进)")
+    Log.d(TAG, "CONTROL_AE_COMPENSATION_STEP = ${step.numerator}/${step.denominator} = ${"%.4f".format(stepValue)} EV/步")
+    Log.d(TAG, "  有效 EV 范围: ${"%.1f".format(evMin)} EV — ${"%.1f".format(evMax)} EV")
+    Log.d(TAG, "  总余量: ${"%.1f".format(evMax - evMin)} EV")
     
     val discreteSteps = (rng.upper - rng.lower) + 1
-    Log.d(TAG, "  Discrete positions: $discreteSteps (including 0)")
+    Log.d(TAG, "  离散位置: $discreteSteps (含 0)")
     
     val sliderPositions: List<Pair<Int, Double>> = (rng.lower..rng.upper step max(1, discreteSteps / 10))
         .map { stepIdx -> stepIdx to stepIdx * stepValue }
     
-    Log.d(TAG, "  Sample slider positions (step → EV):")
+    Log.d(TAG, "  采样滑块位置(步进 → EV):")
     sliderPositions.take(11).forEach { (idx, ev) ->
         val marker = when {
             idx == rng.lower -> " (MIN)"
@@ -1214,49 +1214,47 @@ compensationRange?.let { rng ->
             idx == rng.upper -> " (MAX)"
             else -> ""
         }
-        Log.d(TAG, "    step=$idx → EV=${"%+.2f".format(ev)}$marker")
+        Log.d(TAG, "    步进=$idx → EV=${"%+.2f".format(ev)}$marker")
     }
 } ?: run {
-    Log.w(TAG, "AE compensation info unavailable")
+    Log.w(TAG, "AE 补偿信息不可用")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. 如何在 Android Camera Parameters 中查看?**
 
-Navigate to **Control / 3A Modes** and look at the "Exposure Compensation" card. The card shows the effective EV range as a double-ended label (e.g. "−4 EV to +4 EV"), the step size (e.g. "1/3 EV steps"), and a live draggable slider with 21 discrete notches for the example above. Dragging the slider applies the compensation in real time and the preview brightens or darkens immediately. Below the slider the raw integer step value and effective EV value are displayed side by side, so you can see the step-to-EV multiplication in action.
+前往 **Control / 3A Modes**,查看 "Exposure Compensation" 卡片。卡片以双向标签显示有效 EV 范围(如 "−4 EV 至 +4 EV")、步进(如 "1/3 EV 步进")及一条实时可拖滑块,对上例有 21 个离散刻度。拖动滑块实时应用补偿,预览立即变亮或变暗。滑块下方并排显示原始整数步进值与有效 EV 值,可见步进到 EV 的乘法过程。
 
-**6. Common pitfalls**
+**6. 常见坑**
 
-Units, units, units. The number-one mistake: treating the `Range&lt;Int&gt;` values as *stops* directly. A developer sees `[-12, +12]`, shows a slider with labels "−12 EV" through "+12 EV", and the slider's maximum effect is only +4 EV (because step is 1/3). The user complains: "Why is the +12 EV setting only +4 stops?" The fix is simple: multiply `sliderInt × step.numerator / step.denominator` before formatting the EV label, and set the slider's internal max to `range.upper`, not to the human-readable stop count. UI sliders should store the integer step internally and display the converted EV value to the user.
+单位、单位、单位。头号错误:把 `Range&lt;Int&gt;` 值直接当 *档*。开发者看到 `[-12, +12]`,显示标签 "−12 EV" 到 "+12 EV" 的滑块,而滑块最大效果只有 +4 EV(因为步进是 1/3)。用户抱怨:"为什么 +12 EV 设置只有 +4 档?" 修复简单:在格式化 EV 标签前乘 `sliderInt × step.numerator / step.denominator`,把滑块内部最大设为 `range.upper` 而非人类可读档数。UI 滑块内部存整数步进,向用户显示换算后的 EV 值。
 
-Second pitfall: compensation persists across requests. Unlike ISO or shutter time, AE compensation is a sticky state within the 3A algorithm on most HALs. If you set compensation = +6 for one still capture and then forget to reset it to 0 for the next capture, the next preview and capture will all be 2 stops bright. Always return compensation to 0 after a one-off shot, or explicitly set it in every repeating request rather than relying on the HAL's default state.
+第二个坑:补偿跨请求持久。与 ISO 或快门时长不同,AE 补偿在多数 HAL 上是 3A 算法内的粘滞状态。若为某次静态拍摄设补偿 = +6 后忘了为下次拍摄重置 0,下一次预览和拍摄都会亮 2 档。一次性拍摄后总是把补偿归 0,或显式在每个 repeating request 中设置,而非依赖 HAL 默认状态。
 
----
-
-## Scaler Category
+## 缩放器类别
 
 ### SCALER_STREAM_CONFIGURATION_MAP
 
-**1. What is it?**
+**1. 它是什么?**
 
-`SCALER_STREAM_CONFIGURATION_MAP` is a `android.hardware.camera2.params.StreamConfigurationMap` object — the single most important data structure in all of Camera2 for discovering supported output. It contains:
-- `getOutputSizes(int format)` — supported resolutions for `ImageFormat.JPEG`, `ImageFormat.YUV_420_888`, `ImageFormat.RAW_SENSOR`, etc.
-- `getOutputSizes(Class<T> klass)` — supported resolutions for `SurfaceTexture` (preview), `MediaRecorder`, `MediaCodec`, `RenderScript.Allocation`.
-- `getHighSpeedVideoSizes()` / `getHighSpeedVideoFpsRanges()` — resolutions and framerates for constrained high-speed video (120 fps, 240 fps, etc.).
-- `getValidOutputFormatsForInput()` — input formats supported for reprocessing on `PRIVATE_REPROCESSING` or `YUV_REPROCESSING` devices.
-- `getOutputMinFrameDuration(int format, Size size)` — fastest possible frame interval (nanoseconds) for this format/size pair, i.e., max fps = 1e9 / minFrameDuration.
+`SCALER_STREAM_CONFIGURATION_MAP` 是一个 `android.hardware.camera2.params.StreamConfigurationMap` 对象 —— 整个 Camera2 中用于发现支持的输出的最重要数据结构。它包含:
+- `getOutputSizes(int format)` —— `ImageFormat.JPEG`、`ImageFormat.YUV_420_888`、`ImageFormat.RAW_SENSOR` 等支持的分辨率。
+- `getOutputSizes(Class<T> klass)` —— `SurfaceTexture`(预览)、`MediaRecorder`、`MediaCodec`、`RenderScript.Allocation` 支持的分辨率。
+- `getHighSpeedVideoSizes()` / `getHighSpeedVideoFpsRanges()` —— 受限高速视频(120 fps、240 fps 等)的分辨率和帧率。
+- `getValidOutputFormatsForInput()` —— `PRIVATE_REPROCESSING` 或 `YUV_REPROCESSING` 设备上支持作为再处理输入的格式。
+- `getOutputMinFrameDuration(int format, Size size)` —— 此格式/尺寸对的最快可能帧间隔(纳秒),即 max fps = 1e9 / minFrameDuration。
 
-This map is the authoritative source for "what resolutions can I configure"; never use hardcoded 1920×1080 or 3840×2160 values without checking the map first.
+此映射是"我可以配置哪些分辨率"的权威来源;切勿在不先检查映射的情况下使用硬编码的 1920×1080 或 3840×2160 值。
 
-**2. Why does it exist?**
+**2. 它为何存在?**
 
-Camera2 supports 8+ output formats × 30+ possible surface classes × vendor-specific resolutions. Before `StreamConfigurationMap` existed (Camera1 era), developers had to iterate through the `getSupportedPictureSizes()` / `getSupportedPreviewSizes()` lists separately for each surface class and manually cross-match aspect ratios. The unified map solves this by returning, for every format-surface pair, the exact resolution list the HAL can drive. Min-frame-duration data lets you determine whether 4K60 is possible or if 4K30 is the ceiling on a given device.
+Camera2 支持 8+ 种输出格式 × 30+ 种可能的 Surface 类 × 厂商特定分辨率。在 `StreamConfigurationMap` 出现之前(Camera1 时代),开发者必须为每种 Surface 类分别遍历 `getSupportedPictureSizes()` / `getSupportedPreviewSizes()` 列表,并手动交叉匹配宽高比。统一映射通过为每个格式-Surface 对返回 HAL 能驱动的精确分辨率列表解决了这一问题。最小帧时长数据让你能确定某设备上 4K60 是否可行,或 4K30 是否是上限。
 
-**3. Which devices support it?**
+**3. 哪些设备支持它?**
 
-All valid Camera2 devices. LEGACY-level devices generate the map internally by wrapping Camera1's `Parameters.getSupported*Sizes()` methods, which can occasionally cause LEGACY quirks (resolutions reported but not drivable, or vice-versa). FULL-level devices guarantee every size in the map is actually drivable at its listed min-frame-duration. High-speed sizes are only populated for devices with `CONSTRAINED_HIGH_SPEED_VIDEO` capability.
+所有有效的 Camera2 设备。LEGACY 级设备通过包装 Camera1 的 `Parameters.getSupported*Sizes()` 方法在内部生成映射,这偶尔会导致 LEGACY 怪异行为(报告了分辨率但无法驱动,或反之)。FULL 级设备保证映射中的每个尺寸在其列出的最小帧时长下确实可驱动。高速尺寸仅在具有 `CONSTRAINED_HIGH_SPEED_VIDEO` 能力的设备上才会填充。
 
-**4. How do I query it?**
+**4. 如何查询它?**
 
 ```kotlin
 val configMap: StreamConfigurationMap? = characteristics.get(
@@ -1266,7 +1264,7 @@ val configMap: StreamConfigurationMap? = characteristics.get(
 configMap?.let { map ->
     Log.d(TAG, "Stream Configuration Map summary:")
     
-    // JPEG (still photos)
+    // JPEG(静态照片)
     val jpegSizes = map.getOutputSizes(ImageFormat.JPEG)?.sortedByDescending { it.width * it.height }
         ?: emptyArray()
     Log.d(TAG, "  JPEG still sizes (${jpegSizes.size}): " +
@@ -1275,26 +1273,26 @@ configMap?.let { map ->
                    "down to ${jpegSizes.last().width}×${jpegSizes.last().height}"
                else "none")
     
-    // YUV_420_888 (image analysis)
+    // YUV_420_888(图像分析)
     val yuvSizes = map.getOutputSizes(ImageFormat.YUV_420_888)?.sortedByDescending { it.width * it.height }
         ?: emptyArray()
     Log.d(TAG, "  YUV_420_888 sizes (${yuvSizes.size}): " +
                if (yuvSizes.isNotEmpty()) "${yuvSizes.first()} (max)" else "none")
     
-    // SurfaceTexture (preview)
+    // SurfaceTexture(预览)
     val previewSizes = map.getOutputSizes(SurfaceTexture::class.java)
         ?.sortedByDescending { it.width * it.height } ?: emptyArray()
     Log.d(TAG, "  Preview (SurfaceTexture) sizes (${previewSizes.size}): " +
                if (previewSizes.isNotEmpty()) "${previewSizes.first()} (max)" else "none")
     
-    // RAW10/RAW12 (if supported)
+    // RAW10/RAW12(若支持)
     if (characteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
             ?.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW) == true) {
         val rawSizes = map.getOutputSizes(ImageFormat.RAW_SENSOR)
         Log.d(TAG, "  RAW_SENSOR sizes (${rawSizes?.size ?: 0}): ${rawSizes?.joinToString() ?: "none"}")
     }
     
-    // Max frame rates
+    // 最大帧率
     jpegSizes.firstOrNull()?.let { maxJpeg ->
         val ns = map.getOutputMinFrameDuration(ImageFormat.JPEG, maxJpeg)
         val fps = 1_000_000_000.0 / ns.toDouble()
@@ -1306,7 +1304,7 @@ configMap?.let { map ->
         Log.d(TAG, "  1080p preview min frame: ${ns}ns (${"%.0f".format(1e9 / ns)} fps max)")
     }
     
-    // High-speed video
+    // 高速视频
     val hsCaps = characteristics.get(
         CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES
     )?.contains(
@@ -1319,7 +1317,7 @@ configMap?.let { map ->
         Log.d(TAG, "  High-speed FPS ranges: ${hsRanges?.joinToString() ?: "none"}")
     }
     
-    // Aspect ratio matching helper demonstration
+    // 宽高比匹配辅助演示
     val sensor = characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)!!
     val sensorAr = sensor.width().toDouble() / sensor.height().toDouble()
     val ratios = setOf(4.0/3.0, 16.0/9.0, 18.0/9.0, 1.0, 20.0/9.0, sensorAr)
@@ -1331,13 +1329,13 @@ configMap?.let { map ->
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. 如何在 Android Camera Parameters 中查看?**
 
-Go to **Streams / Formats**. The tab opens with a format selector chip bar (JPEG, YUV, RAW, Preview SurfaceTexture, MediaRecorder, ...). Selecting a format renders the supported resolutions sorted by pixel count descending. Each resolution row shows: pixel dimensions, megapixels, aspect ratio badge, and the min-frame-duration-derived max FPS. Tapping any resolution opens a detail sheet with `getOutputMinFrameDuration()` for that specific format-size pair, plus a "Try this size in preview" button that live-switches the companion app's preview to the selected resolution so you can confirm it actually works. The Streams tab also has a dedicated "High Speed" sub-tab for `getHighSpeedVideoSizes()` when the capability is present.
+前往 **Streams / Formats**。该标签页以格式选择器芯片条打开(JPEG、YUV、RAW、Preview SurfaceTexture、MediaRecorder……)。选择一种格式会按像素数降序渲染支持的分辨率。每个分辨率行显示:像素尺寸、百万像素数、宽高比徽章,以及由最小帧时长推导出的最大 FPS。点击任意分辨率会打开详情页,显示该特定格式-尺寸对的 `getOutputMinFrameDuration()`,以及一个"在预览中尝试此尺寸"按钮,可实时将配套应用的预览切换到所选分辨率,以便你确认它确实可用。当能力存在时,Streams 标签页还有一个专用的"High Speed"子标签页用于 `getHighSpeedVideoSizes()`。
 
-**6. Common pitfalls**
+**6. 常见坑**
 
-Rotation / orientation in aspect ratio math. The camera's natural orientation is landscape: `SENSOR_ORIENTATION = 90` means the sensor's pixel rows run portrait relative to the device's portrait screen. A `getOutputSizes()` call for JPEG returns `3840×2160` (landscape) but on a portrait-oriented back camera this appears to the user as 2160×3840 (portrait). If your UI computes aspect ratios using the raw `Size.width / Size.height` values without accounting for 90°/270° rotation, you will swap 16:9 and 9:16 and label 3840×2160 as "widescreen" when it should match the screen's 9:19.5 aspect ratio. Correct code:
+宽高比计算中的旋转/方向。摄像头自然方向为横向:`SENSOR_ORIENTATION = 90` 意味着传感器的像素行相对于设备的竖屏是竖向排列的。对 JPEG 的 `getOutputSizes()` 调用返回 `3840×2160`(横向),但在竖向的后置摄像头上,这对用户表现为 2160×3840(竖向)。如果你的 UI 使用原始 `Size.width / Size.height` 值计算宽高比而不考虑 90°/270° 旋转,你会把 16:9 和 9:16 颠倒,把 3840×2160 标为"宽屏",而它本应匹配屏幕的 9:19.5 宽高比。正确代码:
 
 ```kotlin
 fun Size.aspectRatioForDisplay(sensorOrientationDeg: Int): Double {
@@ -1347,27 +1345,27 @@ fun Size.aspectRatioForDisplay(sensorOrientationDeg: Int): Double {
 }
 ```
 
-Second pitfall: LEGACY-wrapped HALs report sizes in the StreamConfigurationMap that Camera1 cannot actually drive. A common pattern is `LEGACY` map listing 4K JPEG when the maximum Camera1 can produce is 1080p. If `INFO_SUPPORTED_HARDWARE_LEVEL == LEGACY`, treat the maximum JPEG size with suspicion; prefer `Parameters.getSupportedPictureSizes()` or verify by actually creating an `ImageReader` and performing one test capture before exposing it in the UI.
+第二个坑:LEGACY 包装的 HAL 在 StreamConfigurationMap 中报告了 Camera1 实际无法驱动的尺寸。常见模式是 `LEGACY` 映射列出 4K JPEG,而 Camera1 能产生的最大值是 1080p。如果 `INFO_SUPPORTED_HARDWARE_LEVEL == LEGACY`,应对最大 JPEG 尺寸持怀疑态度;优先使用 `Parameters.getSupportedPictureSizes()`,或通过实际创建 `ImageReader` 并执行一次测试拍摄来验证,然后再在 UI 中暴露它。
 
 ---
 
 ### SCALER_AVAILABLE_MAX_DIGITAL_ZOOM
 
-**1. What is it?**
+**1. 它是什么?**
 
-`SCALER_AVAILABLE_MAX_DIGITAL_ZOOM` is a single `Float` representing the maximum allowable crop ratio for digital zoom. A value of `10.0f` means you can crop to 1/10th of the active array in each dimension (the crop region's width and height are no smaller than 1/10th of the active array's width and height). This is *purely digital zoom* — it is a ISP crop + upscale operation with inherent quality loss. For example, zoom = 2.0× means: crop the active array to 50% width × 50% height, then scale it back up to output stream size using the ISP's scaler block.
+`SCALER_AVAILABLE_MAX_DIGITAL_ZOOM` 是单个 `Float`,表示数字变焦允许的最大裁剪比率。值 `10.0f` 意味着你可以在每个维度上裁剪到活动数组的 1/10(裁剪区域的宽度和高度不小于活动数组宽度和高度的 1/10)。这是*纯数字变焦* —— 是 ISP 裁剪 + 放大操作,固有地存在质量损失。例如,zoom = 2.0× 意味着:将活动数组裁剪到 50% 宽 × 50% 高,然后使用 ISP 的缩放器块将其放大回输出流尺寸。
 
-This key defines the valid range of the `CaptureRequest.SCALER_CROP_REGION` rectangle's inverse size.
+此键定义了 `CaptureRequest.SCALER_CROP_REGION` 矩形逆尺寸的有效范围。
 
-**2. Why does it exist?**
+**2. 它为何存在?**
 
-Without an explicit max zoom ratio, developers would crop the active array to arbitrary sizes. Cropping to 1 pixel × 1 pixel and asking the HAL to upscale to 4K output is mathematically legal but produces a 0.0-MP image. The HAL uses minimum-dimension limits (each output surface has a minimum output size, typically ≥64 px on each axis) and the max-zoom key communicates the combined constraints as a single developer-friendly ratio.
+没有明确的变焦最大比率,开发者会把活动数组裁剪到任意尺寸。裁剪到 1 像素 × 1 像素并让 HAL 放大到 4K 输出在数学上合法,但产生的是 0.0 MP 的图像。HAL 使用最小尺寸限制(每个输出 Surface 有最小输出尺寸,通常每轴 ≥64 px),而 max-zoom 键将组合约束作为单个对开发者友好的比率传达。
 
-**3. Which devices support it?**
+**3. 哪些设备支持它?**
 
-All hardware levels. The value is always ≥ 1.0. LIMITED devices typically ship with max zoom between 4× and 8×. FULL devices and devices with `LOGICAL_MULTI_CAMERA` capability often ship with 10×, 20×, or even 100× max digital zoom to match the marketing zoom specifications. No capability flag prerequisites.
+所有硬件级别。值始终 ≥ 1.0。LIMITED 设备通常出厂最大变焦在 4× 到 8× 之间。FULL 设备和具有 `LOGICAL_MULTI_CAMERA` 能力的设备通常出厂时为 10×、20× 甚至 100× 最大数字变焦,以匹配营销变焦规格。无能力标志先决条件。
 
-**4. How do I query it?**
+**4. 如何查询它?**
 
 ```kotlin
 val maxDigitalZoom: Float? = characteristics.get(
@@ -1406,42 +1404,42 @@ maxDigitalZoom?.let { maxZoom ->
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. 如何在 Android Camera Parameters 中查看?**
 
-Navigate to **Zoom / Crop Region**. The card titled "Maximum Digital Zoom" shows the ratio (e.g. "10.0×") and a visual crop-rectangle preview that is draggable and pinchable up to exactly this maximum. The companion app draws a "quality gradient" on the zoom slider: the zoom ratio at which physical cameras switch (based on focal lengths) is marked as the quality transition line; below that line the zoom is optical (green) and above that line the slider turns amber (digital, quality degradation). You can visually compare 1×, 3× optical, and 10× digital zoom side by side in the preview.
+导航到 **Zoom / Crop Region**。标题为"Maximum Digital Zoom"的卡片显示比率(如"10.0×")以及一个可拖动、可双指捏合直至恰好此最大值的可视裁剪矩形预览。配套应用在变焦滑块上绘制"质量梯度":物理摄像头切换的变焦比率(基于焦距)被标记为质量过渡线;该线以下变焦是光学的(绿色),该线以上滑块变为琥珀色(数字,质量下降)。你可以在预览中并排视觉对比 1×、3× 光学和 10× 数字变焦。
 
-**6. Common pitfalls**
+**6. 常见坑**
 
-Treating max digital zoom as "quality zoom". Marketing materials advertise "100× Space Zoom" but this key tells you the *digital* zoom ceiling. 100× zoom on a 48MP active array crops to roughly 480×360 pixels and upscales 100× — the result has fewer than 0.17 megapixels of real information, blurred beyond recognition except for bright point light sources against dark backgrounds (the moon, stars). Correct UI: mark zoom values on the slider with color coding. Green region = pure optical zoom positions (switching between physical cameras at the focal length sweet spots). Yellow = small digital crop (1×–3× optical-camera base, still reasonable). Red = heavy digital zoom (5×+) that is effectively marketing-only and produces unusable detail at anything other than the moon.
+把最大数字变焦当作"高质量变焦"。营销材料宣传"100× Space Zoom",但此键告诉你的是*数字*变焦上限。48MP 活动数组上 100× 变焦裁剪到大约 480×360 像素并放大 100× —— 结果只有不到 0.17 百万像素的真实信息,除了暗背景下的亮点光源(月亮、星星)外模糊得无法辨认。正确 UI:用颜色编码标记滑块上的变焦值。绿色区域 = 纯光学变焦位置(在焦距最佳点切换物理摄像头)。黄色 = 小幅数字裁剪(1×–3× 光学摄像头基础,仍然合理)。红色 = 重度数字变焦(5×+),实际上只是营销噱头,在月亮以外的任何东西上都产生不可用的细节。
 
-Second pitfall: zoom math sign error. The crop rectangle for zoom ratio z is computed as:
+第二个坑:变焦数学符号错误。变焦比率 z 的裁剪矩形计算为:
 ```
 cropWidth  = activeWidth  / z
 cropHeight = activeHeight / z
 ```
-Common mistake is `crop = size * z` which produces a crop rectangle LARGER than the active array. The HAL will then clamp the crop to the active array, so zoom appears stuck at 1× for values of z > 1. Always **divide** active array size by zoom ratio.
+常见错误是 `crop = size * z`,这会产生比活动数组更大的裁剪矩形。HAL 随后将裁剪钳制到活动数组,所以变焦在 z > 1 的值上看起来卡在 1×。始终用活动数组尺寸**除以**变焦比率。
 
 ---
 
 ### SCALER_CROPPING_TYPE
 
-**1. What is it?**
+**1. 它是什么?**
 
-`SCALER_CROPPING_TYPE` is an `Int` enum describing how the HAL validates the `SCALER_CROP_REGION` rectangle you submit in each CaptureRequest. Two values:
-- `SCALER_CROPPING_TYPE_CENTER_ONLY` — the crop region is *always centered* within the active array, regardless of the (left, top) you submit. The HAL ignores the offset and centers the crop automatically.
-- `SCALER_CROPPING_TYPE_FREEFORM` — the crop region may be placed anywhere inside the active array with arbitrary (left, top) as long as the dimensions match the zoom scale.
+`SCALER_CROPPING_TYPE` 是一个 `Int` 枚举,描述 HAL 如何验证你在每个 CaptureRequest 中提交的 `SCALER_CROP_REGION` 矩形。两个值:
+- `SCALER_CROPPING_TYPE_CENTER_ONLY` —— 裁剪区域*始终居中*于活动数组内,无论你提交什么 (left, top)。HAL 忽略偏移并自动将裁剪居中。
+- `SCALER_CROPPING_TYPE_FREEFORM` —— 裁剪区域可放置在活动数组内任意位置,具有任意 (left, top),只要尺寸匹配变焦缩放即可。
 
-The distinction is critical for face-tracked zoom, action sports framing, and any application where you want the crop to move off-center to follow a moving subject.
+这一区别对人脸跟踪变焦、运动体育取景以及任何希望裁剪偏离中心以跟随移动主体的应用至关重要。
 
-**2. Why does it exist?**
+**2. 它为何存在?**
 
-CENTER_ONLY cropping exists because it is cheap in hardware. The ISP scaler needs only a single division operation per frame to compute the crop. Freeform cropping adds a programmable offset register to the scaler pipeline, which adds gate count to the ISP silicon. Budget SoCs (MediaTek Helio G-series, Snapdragon 4-series) ship with CENTER_ONLY to save cost. The key lets the framework advertise which kind of scaler is on the silicon so the application can gracefully degrade.
+CENTER_ONLY 裁剪存在是因为它在硬件上便宜。ISP 缩放器每帧只需一次除法运算即可计算裁剪。自由裁剪向缩放器流水线添加可编程偏移寄存器,这增加了 ISP 硅片的门数。预算 SoC(MediaTek Helio G 系列、Snapdragon 4 系列)出厂配备 CENTER_ONLY 以节省成本。此键让框架通告硅片上是哪种缩放器,以便应用可以优雅降级。
 
-**3. Which devices support it?**
+**3. 哪些设备支持它?**
 
-All hardware levels. FULL-level devices almost always have FREEFORM because the CDD strongly recommends it for FULL conformance. LIMITED devices split roughly 50/50 FREEFORM vs. CENTER_ONLY depending on SoC vintage and cost. LEGACY devices always report CENTER_ONLY (Camera1 API never had a "move crop offset" API). Roughly 60% of active 2020–2024 mid-range Android devices ship with CENTER_ONLY.
+所有硬件级别。FULL 级设备几乎总是具有 FREEFORM,因为 CDD 强烈推荐它以符合 FULL 要求。LIMITED 设备按 SoC 年代和成本大致 50/50 分为 FREEFORM 与 CENTER_ONLY。LEGACY 设备始终报告 CENTER_ONLY(Camera1 API 从未有"移动裁剪偏移"的 API)。约 60% 的 2020–2024 活跃中端 Android 设备出厂配备 CENTER_ONLY。
 
-**4. How do I query it?**
+**4. 如何查询它?**
 
 ```kotlin
 val croppingType: Int? = characteristics.get(
@@ -1486,49 +1484,49 @@ croppingType?.let { type ->
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. 如何在 Android Camera Parameters 中查看?**
 
-Open **Zoom / Crop Region**. The top-right of the screen shows a badge: either "FREEFORM CROP" (green badge with "Arbitrary position OK") or "CENTER ONLY" (amber badge with "Fixed center position"). The draggable crop-rectangle overlay enforces the actual HAL behavior: if the type is CENTER_ONLY, dragging the rectangle springs back to the center with an animated bounce, and a toast explains "CENTER_ONLY: offset is ignored by the HAL." If FREEFORM, you can drag the crop rectangle anywhere inside the active array bounds and the live preview re-crops accordingly.
+打开 **Zoom / Crop Region**。屏幕右上角显示徽章:要么是"FREEFORM CROP"(绿色徽章,带"Arbitrary position OK"),要么是"CENTER ONLY"(琥珀色徽章,带"Fixed center position")。可拖动的裁剪矩形叠加层强制执行实际的 HAL 行为:如果类型是 CENTER_ONLY,拖动矩形会弹回中心并带有动画反弹,toast 解释"CENTER_ONLY: offset is ignored by the HAL."。如果是 FREEFORM,你可以将裁剪矩形拖到活动数组边界内的任意位置,实时预览相应地重新裁剪。
 
-**6. Common pitfalls**
+**6. 常见坑**
 
-Implementing face-tracked zoom on CENTER_ONLY devices. The naïve approach: detect face at (x=60% of frame, y=30%), then build a `SCALER_CROP_REGION` centered at those coordinates with zoom 2.0×. Result: on CENTER_ONLY HALs, the HAL drops the offset and centers the crop — the face appears in the same (60%, 30%) position of the cropped image instead of being framed center. Users report: "Face tracking does nothing." The correct fallback on CENTER_ONLY devices is to (a) zoom centered as always via `CROP_REGION`, and (b) implement the lateral face-tracking **after** the stream as a GPU transformation (crop + translate the preview texture, and crop + translate the JPEG bytes post-capture with Bitmap region decode). This requires keeping the full stream in a buffer for the post-crop, which has memory cost. Alternatively, disable face-tracking UI entirely on CENTER_ONLY devices.
+在 CENTER_ONLY 设备上实现人脸跟踪变焦。天真做法:在 (x=60% of frame, y=30%) 检测到人脸,然后构建以这些坐标为中心、变焦 2.0× 的 `SCALER_CROP_REGION`。结果:在 CENTER_ONLY HAL 上,HAL 丢弃偏移并将裁剪居中 —— 人脸出现在裁剪图像的相同 (60%, 30%) 位置,而不是被居中取景。用户报告:"人脸跟踪毫无作用。"CENTER_ONLY 设备上的正确回退是:(a) 通过 `CROP_REGION` 像往常一样居中变焦,(b) 在流**之后**作为 GPU 变换实现横向人脸跟踪(裁剪 + 平移预览纹理,并在拍摄后用 Bitmap region decode 裁剪 + 平移 JPEG 字节)。这需要将完整流保留在缓冲区中以供后裁剪,有内存成本。或者,在 CENTER_ONLY 设备上完全禁用人脸跟踪 UI。
 
 ---
 
-## Request Category
+## 请求类别
 
 ### REQUEST_AVAILABLE_CAPABILITIES
 
-**1. What is it?**
+**1. 它是什么?**
 
-`REQUEST_AVAILABLE_CAPABILITIES` is the single most important metadata key. It is an `IntArray` containing capability flags that describe which advanced features the HAL supports. Every advanced feature in Camera2 has a matching flag. The most important flags:
+`REQUEST_AVAILABLE_CAPABILITIES` 是单个最重要的元数据键。它是一个 `IntArray`,包含描述 HAL 支持哪些高级功能的能力标志。Camera2 中的每个高级功能都有匹配的标志。最重要的标志:
 
-| Flag | Meaning |
+| Flag | 含义 |
 |---|---|
-| `BACKWARD_COMPATIBLE` | Default baseline; always present. |
-| `MANUAL_SENSOR` | Manual ISO, exposure time, frame duration, lens focus distance. |
-| `MANUAL_POST_PROCESSING` | Manual color correction gains/transform, tonemap curve, lens shading, edge mode, noise reduction mode. |
-| `RAW` | `ImageReader` with `ImageFormat.RAW_SENSOR` (RAW10/12/16) output. |
-| `PRIVATE_REPROCESSING` | Feed a `PRIVATE`-format Image back into the session as input for zero-shutter-lag reprocessing. |
-| `YUV_REPROCESSING` | Feed a `YUV_420_888` Image back into the session as input. |
-| `DEPTH_OUTPUT` | Output `DEPTH16` or `DEPTH_POINT_CLOUD` buffers via dedicated depth stream. |
-| `LOGICAL_MULTI_CAMERA` | This camera ID is backed by multiple physical sensors; the HAL can switch between them transparently during zoom. |
-| `BURST_CAPTURE` | The HAL can process a full-size burst of ≥20 full-size frames per second without dropping. |
-| `CONSTRAINED_HIGH_SPEED_VIDEO` | High-speed recording ≥120 fps via constrained high-speed session. |
-| `MOTION_TRACKING` | Camera can produce motion tracking frames for AR-style stabilized output. |
+| `BACKWARD_COMPATIBLE` | 默认基线;始终存在。 |
+| `MANUAL_SENSOR` | 手动 ISO、曝光时长、帧时长、镜头对焦距离。 |
+| `MANUAL_POST_PROCESSING` | 手动颜色校正增益/变换、色调映射曲线、镜头阴影、边缘模式、降噪模式。 |
+| `RAW` | `ImageReader` 输出 `ImageFormat.RAW_SENSOR`(RAW10/12/16)。 |
+| `PRIVATE_REPROCESSING` | 将 `PRIVATE` 格式 Image 作为输入喂回会话,用于零快门延迟再处理。 |
+| `YUV_REPROCESSING` | 将 `YUV_420_888` Image 作为输入喂回会话。 |
+| `DEPTH_OUTPUT` | 通过专用深度流输出 `DEPTH16` 或 `DEPTH_POINT_CLOUD` 缓冲区。 |
+| `LOGICAL_MULTI_CAMERA` | 此 camera ID 由多个物理传感器支撑;HAL 可在变焦期间透明地在它们之间切换。 |
+| `BURST_CAPTURE` | HAL 能在不丢帧的情况下每秒处理 ≥20 张全尺寸帧的连拍。 |
+| `CONSTRAINED_HIGH_SPEED_VIDEO` | 通过受限高速会话进行 ≥120 fps 的高速录制。 |
+| `MOTION_TRACKING` | 摄像头能产生用于 AR 风格稳定输出的运动跟踪帧。 |
 
-Every feature-gate in your app should check this array. The combination `MANUAL_SENSOR + MANUAL_POST_PROCESSING` is what defines a "pro mode" capable device.
+应用中的每个功能门控都应检查此数组。组合 `MANUAL_SENSOR + MANUAL_POST_PROCESSING` 定义了"专业模式" capable 设备。
 
-**2. Why does it exist?**
+**2. 它为何存在?**
 
-`INFO_SUPPORTED_HARDWARE_LEVEL` buckets devices into coarse tiers (LEGACY / LIMITED / FULL / LEVEL_3 / EXTERNAL). But hardware level is *cumulative* and non-granular: FULL implies MANUAL_SENSOR, RAW, and BURST_CAPTURE — but LIMITED devices can have MANUAL_SENSOR *without* RAW, or RAW without BURST_CAPTURE. Samsung's mid-range A-series 2023 devices are LIMITED + MANUAL_SENSOR + RAW (partial FULL feature set without BURST_CAPTURE or full tonemap control). Without per-capability flags, developers would have to check hardware level and lose access to these partial LIMITED features. The capability array is the fine-grained switch.
+`INFO_SUPPORTED_HARDWARE_LEVEL` 将设备分入粗略层级(LEGACY / LIMITED / FULL / LEVEL_3 / EXTERNAL)。但硬件级别是*累积的*且非细粒度的:FULL 意味着 MANUAL_SENSOR、RAW 和 BURST_CAPTURE —— 但 LIMITED 设备可以有 MANUAL_SENSOR *但没有* RAW,或 RAW 但没有 BURST_CAPTURE。三星中端 A 系列 2023 设备是 LIMITED + MANUAL_SENSOR + RAW(部分 FULL 功能集,没有 BURST_CAPTURE 或完整色调映射控制)。没有每能力标志,开发者将不得不检查硬件级别并失去对这些部分 LIMITED 功能的访问。能力数组是细粒度开关。
 
-**3. Which devices support it?**
+**3. 哪些设备支持它?**
 
-Every camera ID on every hardware level. `BACKWARD_COMPATIBLE` is always included; it is impossible for the array to be empty. The full list of flags grows with each Android release: Android 11 added ULTRA_HIGH_RESOLUTION_SENSOR capability, Android 12 added DYNAMIC_RANGE_TEN_BIT, etc. New flags on older devices are not present — so always check `.contains()` with null safety.
+每个硬件级别上的每个 camera ID。`BACKWARD_COMPATIBLE` 始终包含;数组不可能为空。完整标志列表随每个 Android 版本增长:Android 11 添加了 ULTRA_HIGH_RESOLUTION_SENSOR 能力,Android 12 添加了 DYNAMIC_RANGE_TEN_BIT 等。旧设备上不存在新标志 —— 所以始终用 null 安全检查 `.contains()`。
 
-**4. How do I query it?**
+**4. 如何查询它?**
 
 ```kotlin
 val capabilities: IntArray? = characteristics.get(
@@ -1581,7 +1579,7 @@ capabilities?.let { caps ->
             && has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_BURST_CAPTURE)
     Log.d(TAG, "    Implied FULL-level from caps: $impliedFull")
     
-    // UI gating: show/hide entire screens based on caps
+    // UI 门控:基于 caps 显示/隐藏整个屏幕
     Log.d(TAG, "  UI feature gating recommendations:")
     Log.d(TAG, "    Manual ISO/SS button: ${has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR)}")
     Log.d(TAG, "    Manual WB/tonemap:   ${has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_POST_PROCESSING)}")
@@ -1604,33 +1602,33 @@ private fun hwLevelToString(level: Int?): String = when (level) {
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. 如何在 Android Camera Parameters 中查看?**
 
-Navigate to **Overview / Hardware Level**. The capability list is the second card on this screen, rendered as a grid of on/off switches (green = supported, gray = unsupported) with a short name and the integer flag value in parentheses. Tapping any capability opens an info dialog explaining exactly which UI screens in the app are gated on that flag, with screenshots of those screens appearing/disappearing. This is the canonical screen in the companion app because every other screen's visibility flows from this card. The hardware-level card sits directly above it, showing the relationship: the "Full implies" checklist shows which flags are expected for each hardware bucket, highlighting any mismatches (e.g., a LIMITED device that happens to have FULL-level capabilities flagged).
+导航到 **Overview / Hardware Level**。能力列表是此屏幕上的第二张卡片,渲染为开/关开关网格(绿色 = 支持,灰色 = 不支持),带短名称和括号中的整数标志值。点击任何能力会打开信息对话框,准确解释应用中哪些 UI 屏幕受该标志门控,并附有这些屏幕出现/消失的截图。这是配套应用中的规范屏幕,因为每个其他屏幕的可见性都源自此卡片。硬件级别卡片就在其上方,显示关系:"Full implies"检查清单显示每个硬件桶预期有哪些标志,突出显示任何不匹配(例如,一个碰巧有 FULL 级能力标志的 LIMITED 设备)。
 
-**6. Common pitfalls**
+**6. 常见坑**
 
-Checking hardware level instead of capabilities. The anti-pattern: `if (hwLevel == FULL) { showManualControls() }`. Problem: roughly 25% of 2021–2024 LIMITED devices (e.g. Samsung A53, A54, Xiaomi Redmi Note 12 Pro, Motorola Edge 30 Neo) ship with MANUAL_SENSOR even though their hardware level is LIMITED. The anti-pattern hides manual ISO on those devices for no reason — users with capable mid-range phones get gimped features. Correct gating is *always* capability-based: `if (caps.contains(MANUAL_SENSOR)) { showManualControls() }`. Hardware level is useful for logging only, not for feature gating.
+检查硬件级别而非能力。反模式:`if (hwLevel == FULL) { showManualControls() }`。问题:约 25% 的 2021–2024 LIMITED 设备(如 Samsung A53、A54、Xiaomi Redmi Note 12 Pro、Motorola Edge 30 Neo)出厂配备 MANUAL_SENSOR,即使其硬件级别是 LIMITED。反模式在这些设备上无故隐藏手动 ISO —— 拥有能干中端手机的用户得到残缺的功能。正确门控*始终*基于能力:`if (caps.contains(MANUAL_SENSOR)) { showManualControls() }`。硬件级别仅用于日志记录,不用于功能门控。
 
-A second pitfall: capabilities array grows with Android version. On Android 13 a new flag `ULTRA_HIGH_RESOLUTION_SENSOR` was added. If your app is compiled with targetSdk=33 and you check `caps.contains(ULTRA_HIGH_RESOLUTION_SENSOR)` on a device running Android 11, the flag simply isn't in the array (it was not defined yet). The `.contains()` call correctly returns false — no crash. But if you use a `when` statement with a full enumeration without an `else` branch, the compiler does not warn you. Always include an else branch for unknown future capability flags.
+第二个坑:能力数组随 Android 版本增长。Android 13 上添加了新标志 `ULTRA_HIGH_RESOLUTION_SENSOR`。如果你的应用用 targetSdk=33 编译,并在运行 Android 11 的设备上检查 `caps.contains(ULTRA_HIGH_RESOLUTION_SENSOR)`,该标志不在数组中(它当时尚未定义)。`.contains()` 调用正确返回 false —— 不会崩溃。但如果你使用带完整枚举但没有 `else` 分支的 `when` 语句,编译器不会警告你。始终为未知的未来能力标志包含 else 分支。
 
 ---
 
 ### REQUEST_PARTIAL_RESULT_COUNT
 
-**1. What is it?**
+**1. 它是什么?**
 
-`REQUEST_PARTIAL_RESULT_COUNT` is a single `Int` describing how many *partial* `CaptureResult` callbacks the HAL fires per frame, in addition to the final `TotalCaptureResult` at frame-end. A value of `1` means no partials — only the final total result is delivered. A value greater than 1 (typical values: 4, 5, 6, or 8 on FULL devices) means `onCaptureProgressed()` is fired N-1 times with progressively more fields populated as the ISP hardware completes each pipeline stage. The fields arrive in a fixed order matching the HAL3 pipeline: AE state + sensitivity land in partial 1 (read from sensor timing registers early), AF state + focus distances land in partial 3–4 (after lens converges), AWB state + color correction gains land last in partial 5, and everything else arrives together in the TotalCaptureResult.
+`REQUEST_PARTIAL_RESULT_COUNT` 是单个 `Int`,描述 HAL 每帧触发多少个*部分* `CaptureResult` 回调,以及帧末的最终 `TotalCaptureResult`。值 `1` 表示没有部分结果 —— 只交付最终总结果。值大于 1(典型值:FULL 设备上为 4、5、6 或 8)意味着 `onCaptureProgressed()` 被触发 N-1 次,随着 ISP 硬件完成每个流水线阶段,逐渐填充更多字段。字段以匹配 HAL3 流水线的固定顺序到达:AE 状态 + 灵敏度在部分 1 中到达(早期从传感器时序寄存器读取),AF 状态 + 对焦距离在部分 3–4 中到达(镜头收敛后),AWB 状态 + 颜色校正增益最后在部分 5 中到达,其他一切在 TotalCaptureResult 中一起到达。
 
-**2. Why does it exist?**
+**2. 它为何存在?**
 
-Low-latency responsiveness. A full-resolution still capture frame on a 50MP sensor takes 40–80 ms end-to-end. If the AE algorithm decides it needs to increase ISO by +2 stops to maintain exposure target, that decision is known after 10 ms (partial 1) but applications without partials only learn it 30–70 ms later when the full result arrives. That 60 ms lag makes manual UI sliders feel "sticky." Partials allow UI-heavy applications (manual camera, cinematography monitor viewfinder) to update AE status indicators, focus peaking overlays, and AWB temperature readouts much earlier than the frame-final callback.
+低延迟响应。50MP 传感器上的全分辨率静态拍摄帧端到端需要 40–80 ms。如果 AE 算法决定需要增加 ISO +2 档以维持曝光目标,该决定在 10 ms 后(部分 1)就已知,但没有部分结果的应用只能在 30–70 ms 后完整结果到达时才得知。那 60 ms 延迟使手动 UI 滑块感觉"粘滞"。部分结果允许 UI 密集型应用(手动相机、电影摄影监视器取景器)比帧最终回调更早地更新 AE 状态指示器、峰值对焦叠加层和 AWB 色温读数。
 
-**3. Which devices support it?**
+**3. 哪些设备支持它?**
 
-The key exists on all devices. Values of 1 (no partials) are typical on LEGACY and ~50% of LIMITED devices. FULL hardware level requires at least N ≥ 4 per CDD. LEVEL_3 devices typically offer N = 8 or more with more granular stage reporting. The CDD guarantees that the number of partial results returned per frame is *exactly* N-1, followed by one TotalCaptureResult — never a different count.
+所有设备上都存在此键。值 1(无部分结果)在 LEGACY 和约 50% 的 LIMITED 设备上典型。FULL 硬件级别按 CDD 要求至少 N ≥ 4。LEVEL_3 设备通常提供 N = 8 或更多,具有更细粒度的阶段报告。CDD 保证每帧返回的部分结果数*恰好*为 N-1,后跟一个 TotalCaptureResult —— 绝不会有不同数量。
 
-**4. How do I query it?**
+**4. 如何查询它?**
 
 ```kotlin
 val partialCount: Int? = characteristics.get(
@@ -1669,39 +1667,39 @@ partialCount?.let { count ->
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. 如何在 Android Camera Parameters 中查看?**
 
-Go to **Request / Results**. The first card is "Partial Results" with the integer count prominently displayed. A live "per-frame timing" diagram below plots a horizontal timeline for each of the last 8 frames: the left end is capture start, the right end is TotalCaptureResult arrival, and dots in between show each partial callback arrival with its key populated. If count = 1 you see one dot per frame at the far right; if count = 5 you see 4 evenly-spaced dots plus a final total dot. Tapping each dot opens a flyout listing which keys were present in that partial for the selected frame.
+前往 **Request / Results**。第一张卡片是"Partial Results",整数计数显著显示。下方的实时"每帧时序"图为最后 8 帧的每一帧绘制水平时间线:左端是拍摄开始,右端是 TotalCaptureResult 到达,中间的点显示每个部分回调到达及其填充的键。如果 count = 1,每帧在最右端看到一个点;如果 count = 5,你看到 4 个均匀间隔的点加一个最终总结果点。点击每个点会打开弹出框,列出所选帧该部分中存在哪些键。
 
-**6. Common pitfalls**
+**6. 常见坑**
 
-Assuming every key is populated in every partial. On a FULL device with count = 5, partial 1 contains AE-related keys only. If you read `CONTROL_AF_STATE` from partial 1, the value will be `null` (the key is not present yet). The correct pattern is always null-safe access per key with fallback: in each `onCaptureProgressed()`, check the keys you need individually and update UI only if they are non-null. The TotalCaptureResult at frame-end always contains every available key, so update UI fields for which you only received partials *again* from the total result. If you only read from partials and never read the total result, some UI fields never populate.
+假设每个键在每个部分中都已填充。在 count = 5 的 FULL 设备上,部分 1 仅包含 AE 相关键。如果你从部分 1 读取 `CONTROL_AF_STATE`,值将为 `null`(键尚不存在)。正确模式是始终对每个键进行 null 安全访问并带回退:在每个 `onCaptureProgressed()` 中,单独检查你需要的键,仅当它们非 null 时才更新 UI。帧末的 TotalCaptureResult 始终包含每个可用键,所以对你仅从部分结果收到*再次*从总结果更新 UI 字段。如果你只从部分结果读取而从不读取总结果,某些 UI 字段永远不会填充。
 
-Second pitfall: assuming the partial N has the same keys across devices. A Pixel 8 populates AF state in partial 3, but a Samsung S24 populates it in partial 2. The CDD only guarantees "progressively more fields per partial" — not a fixed ordering. Code that switches on partial index `if (partial == 3) updateAfIndicator()` will fail on devices with a different schedule. Correct code is key-based, not index-based: `result[CaptureResult.CONTROL_AF_STATE]?.let { updateAfIndicator(it) }`.
+第二个坑:假设部分 N 在不同设备上具有相同的键。Pixel 8 在部分 3 中填充 AF 状态,但 Samsung S24 在部分 2 中填充它。CDD 只保证"每个部分逐渐更多字段" —— 不是固定排序。基于部分索引切换的代码 `if (partial == 3) updateAfIndicator()` 在具有不同时间表的设备上会失败。正确代码基于键而非索引:`result[CaptureResult.CONTROL_AF_STATE]?.let { updateAfIndicator(it) }`。
 
 ---
 
 ### REQUEST_MAX_NUM_OUTPUT_STREAMS
 
-**1. What is it?**
+**1. 它是什么?**
 
-`REQUEST_MAX_NUM_OUTPUT_STREAMS` is an `IntArray` with exactly **3 elements** describing the maximum number of output streams (surfaces/ImageReaders) of each *stall class* that can be created simultaneously in one `CameraCaptureSession`. Stall classes are:
+`REQUEST_MAX_NUM_OUTPUT_STREAMS` 是一个 `IntArray`,恰好有 **3 个元素**,描述可在一个 `CameraCaptureSession` 中同时创建的每个*停滞类*输出流(Surface/ImageReader)的最大数量。停滞类有:
 
-- **Index 0 (RAW)** — maximum number of RAW-SENSOR-format output streams (RAW10/12/16 ImageReaders). These consume extreme ISP/CPHY bus bandwidth; the limit is typically 1 on RAW-capable devices, 0 on devices without RAW capability.
-- **Index 1 (Non-stalling processables)** — maximum number of non-stalling, processable streams (YUV_420_888 ImageReader, PRIVATE-format surfaces like SurfaceTexture/MediaRecorder/MediaCodec, RenderScript Allocations). These are typically limited to 3–5 concurrent surfaces.
-- **Index 2 (Stalling processables)** — maximum number of *stalling* processable streams (JPEG ImageReader, HEIC/JPEG_R output). Stalling formats are encoded in hardware and require a dedicated encoder pipeline block; the limit is typically 1 for JPEG alone, or 2 if you share encoder capacity across JPEG + YUV.
+- **索引 0(RAW)** —— RAW-SENSOR 格式输出流(RAW10/12/16 ImageReader)的最大数量。这些消耗大量 ISP/CPHY 总线带宽;在支持 RAW 的设备上限制通常为 1,在不支持 RAW 的设备上为 0。
+- **索引 1(非停滞可处理)** —— 非停滞、可处理流(YUV_420_888 ImageReader、PRIVATE 格式 Surface 如 SurfaceTexture/MediaRecorder/MediaCodec、RenderScript Allocation)的最大数量。这些通常限制为 3–5 个并发 Surface。
+- **索引 2(停滞可处理)** —— *停滞*可处理流(JPEG ImageReader、HEIC/JPEG_R 输出)的最大数量。停滞格式在硬件中编码,需要专用编码器流水线块;限制通常 JPEG 单独为 1,或在 JPEG + YUV 之间共享编码器容量时为 2。
 
-If you create more surfaces than the per-index limit, the `createCaptureSession()` call returns a failure via `onConfigureFailed()`.
+如果你创建的 Surface 数量超过每索引限制,`createCaptureSession()` 调用会通过 `onConfigureFailed()` 返回失败。
 
-**2. Why does it exist?**
+**2. 它为何存在?**
 
-Each output stream in a camera session consumes hardware resources: MIPI-DPHY bandwidth, ISP writeback pipeline ports, JPEG encoder queue slots, and DRAM. A single camera session trying to output RAW + 1080p preview + 4K video + 4K JPEG + face-analysis YUV + machine-learning-pipeline YUV simultaneously exceeds the physical bandwidth of the camera bus on all but LEVEL_3 devices. Rather than have each device fail in a different way (sometimes silent corruption, sometimes session failure after 2 minutes), the CDD requires devices to publish explicit per-stall-class limits upfront.
+相机会话中的每个输出流消耗硬件资源:MIPI-DPHY 带宽、ISP 回写流水线端口、JPEG 编码器队列槽和 DRAM。单个相机会话尝试同时输出 RAW + 1080p 预览 + 4K 视频 + 4K JPEG + 人脸分析 YUV + 机器学习流水线 YUV 超出了除 LEVEL_3 设备外所有设备的相机总线物理带宽。CDD 要求设备预先发布明确的每停滞类限制,而不是让每个设备以不同方式失败(有时静默损坏,有时 2 分钟后会话失败)。
 
-**3. Which devices support it?**
+**3. 哪些设备支持它?**
 
-All valid Camera2 devices. The 3-element-array contract is part of the base Camera2 specification. LEGACY-level devices have tight limits: often `[0, 2, 1]` meaning no RAW, maximum 2 non-stall (preview + YUV analysis), maximum 1 JPEG. FULL devices are typically `[1, 4, 2]` or `[1, 5, 2]`. LEVEL_3 cinema-grade chips go as high as `[2, 10, 3]`.
+所有有效 Camera2 设备。3 元素数组契约是基础 Camera2 规范的一部分。LEGACY 级设备限制紧张:通常 `[0, 2, 1]` 表示无 RAW、最多 2 个非停滞(预览 + YUV 分析)、最多 1 个 JPEG。FULL 设备通常为 `[1, 4, 2]` 或 `[1, 5, 2]`。LEVEL_3 电影级芯片高达 `[2, 10, 3]`。
 
-**4. How do I query it?**
+**4. 如何查询它?**
 
 ```kotlin
 val maxStreams: IntArray? = characteristics.get(
@@ -1752,35 +1750,35 @@ maxStreams?.let { max ->
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. 如何在 Android Camera Parameters 中查看?**
 
-Navigate to **Streams / Limits**. The first card renders the three-element array as three large number tiles: RAW (red), NON-STALL (green), STALL (blue). Below the tiles, the app shows a "Session Builder" sandbox where you can tap add buttons to add surfaces to a hypothetical session (preview, video, JPEG, YUV analysis, RAW, face detection) and see in real time whether each stall class count exceeds the limit. A session that exceeds the limit gets a red banner and the OK/FAIL status is displayed at the bottom. This is the quickest way to prototype a multi-surface session configuration.
+导航到 **Streams / Limits**。第一张卡片将三元素数组渲染为三个大数字磁贴:RAW(红色)、NON-STALL(绿色)、STALL(蓝色)。磁贴下方,应用显示一个"Session Builder"沙盒,你可以点击添加按钮向假设会话添加 Surface(预览、视频、JPEG、YUV 分析、RAW、人脸检测),并实时查看每个停滞类计数是否超过限制。超过限制的会话会显示红色横幅,底部显示 OK/FAIL 状态。这是原型化多 Surface 会话配置的最快方式。
 
-**6. Common pitfalls**
+**6. 常见坑**
 
-Adding a second JPEG `ImageReader`. Many developers add one JPEG reader for thumbnails at 1080p and a second JPEG reader for full-res at 48MP. But `JPEG` is a stalling format with a typical limit of 1. Session creation fails on 60% of devices. Correct pattern: use a *single* full-res JPEG `ImageReader` and generate thumbnails post-capture by decoding the full JPEG to a 1080×1080 thumbnail via `BitmapFactory` with `inSampleSize`. The disk/CPU cost of re-encoding a thumbnail is negligible compared to the cost of a second encoder pipeline.
+添加第二个 JPEG `ImageReader`。许多开发者为 1080p 缩略图添加一个 JPEG reader,为 48MP 全分辨率添加第二个 JPEG reader。但 `JPEG` 是停滞格式,典型限制为 1。60% 的设备上会话创建失败。正确模式:使用*单个*全分辨率 JPEG `ImageReader`,通过 `BitmapFactory` 用 `inSampleSize` 将全 JPEG 解码为 1080×1080 缩略图,拍摄后生成缩略图。重新编码缩略图的磁盘/CPU 成本与第二个编码器流水线的成本相比可忽略。
 
-Second pitfall: confusing stall classes. A `MediaRecorder` surface is non-stalling (index 1), even though `MediaRecorder` internally produces a stalling H.264/H.265 output. The stall-class taxonomy counts the *camera-facing* side of the surface, not the downstream consumer. Camera-facing `MediaRecorder` is PRIVATE-format and non-stalling; only `JPEG`/`HEIC` `ImageReaders` consume the stalling encoder slot. When building your stream-plan accounting, treat `MediaRecorder`, `MediaCodec`, `SurfaceTexture`, and `SurfaceHolder` all as class 1. Treat only `ImageFormat.JPEG`, `JPEG_R`, `HEIC` ImageReaders as class 2.
+第二个坑:混淆停滞类。`MediaRecorder` Surface 是非停滞的(索引 1),即使 `MediaRecorder` 内部产生停滞的 H.264/H.265 输出。停滞类分类计算 Surface 的*面向相机*一侧,而非下游消费者。面向相机的 `MediaRecorder` 是 PRIVATE 格式且非停滞;只有 `JPEG`/`HEIC` `ImageReader` 消耗停滞编码器槽。在构建流计划核算时,将 `MediaRecorder`、`MediaCodec`、`SurfaceTexture` 和 `SurfaceHolder` 全部视为类 1。仅将 `ImageFormat.JPEG`、`JPEG_R`、`HEIC` ImageReader 视为类 2。
 
 ---
 
-## Flash Category
+## 闪光灯类别
 
 ### FLASH_INFO_AVAILABLE
 
-**1. What is it?**
+**1. 它是什么?**
 
-`FLASH_INFO_AVAILABLE` is a single `Boolean` indicating whether the camera module has a flash LED (torch/strobe) physically soldered to it. `true` = flash hardware exists; `false` = no flash hardware. This is the canonical boolean for whether the app may try to use torch mode, flash fire, or any flash-related CaptureRequest keys. On multi-camera logical devices, each physical camera can independently have or lack a flash: the ultra-wide rear camera often has no flash, the main wide-angle does have one, and the telephoto sometimes shares the wide-angle's flash via a light-guide.
+`FLASH_INFO_AVAILABLE` 是单个 `Boolean`,指示相机模组是否物理焊接了闪光灯 LED(手电筒/频闪)。`true` = 闪光灯硬件存在;`false` = 无闪光灯硬件。这是应用是否可以尝试使用手电筒模式、闪光触发或任何与闪光相关的 CaptureRequest 键的规范布尔值。在多摄像头逻辑设备上,每个物理摄像头可独立有或无闪光灯:超广角后置摄像头通常无闪光灯,主广角有,长焦有时通过导光板共享广角的闪光灯。
 
-**2. Why does it exist?**
+**2. 它为何存在?**
 
-Without this boolean, every call to `CaptureRequest.FLASH_MODE = TORCH` or `FLASH_MODE = SINGLE` would need to be wrapped in a try/catch for `CameraAccessException`. Since flash is absent on approximately 25% of camera IDs (selfie cameras, ultra-wide rear cameras, USB webcams, foldable under-display cameras), a static boolean is vastly cheaper and safer than a dynamic exception on every attempted call.
+没有此布尔值,每次调用 `CaptureRequest.FLASH_MODE = TORCH` 或 `FLASH_MODE = SINGLE` 都需要用 try/catch 包裹 `CameraAccessException`。由于约 25% 的 camera ID 上没有闪光灯(自拍相机、超广角后置摄像头、USB 摄像头、折叠屏下摄像头),静态布尔值比每次尝试调用时的动态异常便宜得多、安全得多。
 
-**3. Which devices support it?**
+**3. 哪些设备支持它?**
 
-All camera IDs on every device report this boolean. No capability flags required. LEGACY, LIMITED, FULL, LEVEL_3, and EXTERNAL devices all have the key. USB cameras typically return `false` unless the camera module includes a built-in LED ring.
+每个设备上的所有 camera ID 都报告此布尔值。无需能力标志。LEGACY、LIMITED、FULL、LEVEL_3 和 EXTERNAL 设备都有此键。USB 摄像头通常返回 `false`,除非摄像头模组包含内置 LED 环。
 
-**4. How do I query it?**
+**4. 如何查询它?**
 
 ```kotlin
 val flashAvailable: Boolean? = characteristics.get(
@@ -1816,35 +1814,35 @@ if (hasFlash) {
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. 如何在 Android Camera Parameters 中查看?**
 
-Navigate to **Flash / Info**. The top card is "Flash Available" with a simple boolean badge: green "PRESENT" when true, red "ABSENT" when false. Below, the **Flash / Control** tab is enabled only when the boolean is true, showing a live TORCH toggle button and flash mode selector buttons. If `FLASH_INFO_AVAILABLE = false`, the Control tab shows a disabled state and an explanation card: "No flash LED — torch is not available on this camera."
+导航到 **Flash / Info**。顶部卡片是"Flash Available",带简单布尔徽章:true 时绿色"PRESENT",false 时红色"ABSENT"。下方,**Flash / Control** 标签页仅在布尔值为 true 时启用,显示实时 TORCH 切换按钮和闪光模式选择器按钮。如果 `FLASH_INFO_AVAILABLE = false`,Control 标签页显示禁用状态和解释卡片:"No flash LED — torch is not available on this camera."
 
-**6. Common pitfalls**
+**6. 常见坑**
 
-Number one: null check + global true assumption. Developers write `val hasFlash = characteristics.get(FLASH_INFO_AVAILABLE)` and forget ` ?: false`, so the variable is `Boolean?` instead of `Boolean`. Passing this nullable to `if (hasFlash)` works in Kotlin (auto-cast), but `if (!hasFlash)` is a compile error or, worse, on a `null` value the Elvis operator fallback in your UI code is skipped and the torch button is shown. Always `val hasFlash = characteristics.get(...) == true` or `val hasFlash = characteristics.get(...) ?: false`. The first pattern (exact `== true`) is safer because it rejects both null and false uniformly.
+首要:null 检查 + 全局 true 假设。开发者写 `val hasFlash = characteristics.get(FLASH_INFO_AVAILABLE)` 并忘了 ` ?: false`,所以变量是 `Boolean?` 而非 `Boolean`。将此可空值传给 `if (hasFlash)` 在 Kotlin 中可行(自动转换),但 `if (!hasFlash)` 是编译错误,或更糟,在 `null` 值上 UI 代码中的 Elvis 操作符回退被跳过,手电筒按钮被显示。始终 `val hasFlash = characteristics.get(...) == true` 或 `val hasFlash = characteristics.get(...) ?: false`。第一种模式(精确 `== true`)更安全,因为它统一拒绝 null 和 false。
 
-Second pitfall: selfie camera + torch toggle. The user switches to the front camera and the app still shows the torch button. Tapping it throws `CameraAccessException: setTorchMode failed: The camera device has no flash unit`. Always re-query `FLASH_INFO_AVAILABLE` every time the user switches cameras — do not cache the value from the previous back-facing camera. Every camera ID has its own independent flash hardware. The correct lifecycle callback is: inside `openCamera(cameraId)` → query characteristics → set flash button visibility based on the new camera's boolean, before the user can interact with the viewfinder.
+第二个坑:自拍相机 + 手电筒切换。用户切换到前置摄像头,应用仍显示手电筒按钮。点击它抛出 `CameraAccessException: setTorchMode failed: The camera device has no flash unit`。每次用户切换摄像头时始终重新查询 `FLASH_INFO_AVAILABLE` —— 不要缓存上一个后置摄像头的值。每个 camera ID 有自己独立的闪光灯硬件。正确的生命周期回调是:在 `openCamera(cameraId)` 内 → 查询 characteristics → 基于新摄像头的布尔值设置闪光灯按钮可见性,在用户可与取景器交互之前。
 
 ---
 
 ### FLASH_INFO_STRENGTH_MAXIMUM_LEVEL
 
-**1. What is it?**
+**1. 它是什么?**
 
-`FLASH_INFO_STRENGTH_MAXIMUM_LEVEL` is a single `Int` describing the maximum brightness level for linear torch and flash control, introduced in Android 13 (API level 33). A value of `0` means only ON/OFF control is supported (binary torch via `FLASH_MODE_TORCH` / `FLASH_MODE_OFF`). A value of `10` means 10 linear brightness steps (0 = off, 1 = 10% brightness, …, 10 = 100% brightness). A value of `100` means 100 linear steps (1% per step). The corresponding request key in CaptureRequest is `FLASH_STRENGTH_DEFAULT_LEVEL` which accepts any integer from 0 to MAX.
+`FLASH_INFO_STRENGTH_MAXIMUM_LEVEL` 是单个 `Int`,描述线性手电筒和闪光灯控制的最大亮度级别,在 Android 13(API 级别 33)中引入。值 `0` 表示仅支持 ON/OFF 控制(通过 `FLASH_MODE_TORCH` / `FLASH_MODE_OFF` 的二进制手电筒)。值 `10` 表示 10 个线性亮度步进(0 = 关,1 = 10% 亮度,……,10 = 100% 亮度)。值 `100` 表示 100 个线性步进(每步 1%)。CaptureRequest 中对应的请求键是 `FLASH_STRENGTH_DEFAULT_LEVEL`,接受 0 到 MAX 之间的任意整数。
 
-The corresponding request key in CaptureResult is `FLASH_STATE` combined with `FLASH_STRENGTH_LEVEL` per frame for monitoring.
+CaptureResult 中对应的请求键是 `FLASH_STATE` 结合每帧的 `FLASH_STRENGTH_LEVEL` 用于监视。
 
-**2. Why does it exist?**
+**2. 它为何存在?**
 
-Previous Android versions offered only binary flash control. Users wanted a torch dimmer for close-up photography (overexposed at 100% power) and for video recording (adjustable fill light). OEMs had implemented variable-torch functionality in their stock camera apps via vendor-private metadata keys for years. Android 13 standardized the API so the same slider works across Pixel, Samsung, Xiaomi, and OnePlus.
+之前的 Android 版本仅提供二进制闪光灯控制。用户想要用于近距离摄影(100% 功率下过曝)和视频录制(可调补光)的手电筒调光器。OEM 多年来通过厂商私有元数据键在其默认相机应用中实现了可变手电筒功能。Android 13 标准化了 API,使同一滑块在 Pixel、Samsung、Xiaomi 和 OnePlus 上都能工作。
 
-**3. Which devices support it?**
+**3. 哪些设备支持它?**
 
-All devices running Android 13 or later that have `FLASH_INFO_AVAILABLE = true`. Devices *with* flash but running Android 12 or earlier report the key but the value is 0 (no dimmer, only ON/OFF). Not all Android 13 flash-equipped devices have a linear dimmer in hardware: approximately 60% of 2023 devices ship with MAX_LEVEL ≥ 1, the remaining 40% (budget devices) have MAX_LEVEL = 0.
+所有运行 Android 13 或更高版本且 `FLASH_INFO_AVAILABLE = true` 的设备。*有*闪光灯但运行 Android 12 或更早的设备报告此键但值为 0(无调光器,仅 ON/OFF)。并非所有 Android 13 配备闪光的设备在硬件上都有线性调光器:约 60% 的 2023 设备出厂 MAX_LEVEL ≥ 1,其余 40%(预算设备)MAX_LEVEL = 0。
 
-**4. How do I query it?**
+**4. 如何查询它?**
 
 ```kotlin
 val flashAvailable = characteristics.get(
@@ -1888,35 +1886,35 @@ when {
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. 如何在 Android Camera Parameters 中查看?**
 
-Open **Flash / Control**. The strength level appears as "Max Level" tile at the top of the control card. When the level is > 0, a live `SeekBar` appears below the torch toggle, with labels "0% / 25% / 50% / 75% / 100%" mapped to integer values 0, max/4, max/2, 3max/4, max. Dragging the slider instantly changes torch brightness in the real world, so you can verify the dimming is actually linear (non-linear drivers produce jumps in brightness rather than a smooth ramp). If level is 0 the slider is hidden and only the ON/OFF toggle is shown.
+打开 **Flash / Control**。强度级别在控制卡片顶部显示为"Max Level"磁贴。当级别 > 0 时,手电筒切换下方会出现实时 `SeekBar`,标签"0% / 25% / 50% / 75% / 100%"映射到整数值 0、max/4、max/2、3max/4、max。拖动滑块会立即改变真实世界中的手电筒亮度,以便你验证调光实际上是线性的(非线性驱动程序会在亮度上产生跳跃而非平滑渐变)。如果级别为 0,滑块被隐藏,仅显示 ON/OFF 切换。
 
-**6. Common pitfalls**
+**6. 常见坑**
 
-Using `FLASH_STRENGTH_DEFAULT_LEVEL` on older Android versions. The key is `@RequiresApi(33)`. If your `minSdk` is 28 or 30, calling `builder.set(FLASH_STRENGTH_DEFAULT_LEVEL, 5)` on Android 12 throws `NoSuchFieldError` at runtime because the key doesn't exist in that SDK's CameraMetadata class. Correct code is guarded with `if (Build.VERSION.SDK_INT >= 33 && maxStrengthLevel > 0) { builder.set(...) }` *and* `characteristics.get(...)` for the key returns non-null. Never assume because you set `targetSdk=34` that all devices support the key.
+在较旧 Android 版本上使用 `FLASH_STRENGTH_DEFAULT_LEVEL`。此键是 `@RequiresApi(33)`。如果你的 `minSdk` 是 28 或 30,在 Android 12 上调用 `builder.set(FLASH_STRENGTH_DEFAULT_LEVEL, 5)` 会在运行时抛出 `NoSuchFieldError`,因为该键不存在于该 SDK 的 CameraMetadata 类中。正确代码用 `if (Build.VERSION.SDK_INT >= 33 && maxStrengthLevel > 0) { builder.set(...) }` 保护,*并且* `characteristics.get(...)` 对该键返回非 null。切勿因为你设置了 `targetSdk=34` 就假设所有设备都支持此键。
 
-Second pitfall: non-linear dimming. The CDD describes the levels as "linear perceived brightness" but some budget devices map MAX_LEVEL = 10 onto PWM duty cycles logarithmically: step 1 = 0.1% brightness, step 2 = 0.5%, step 10 = 100%. The user perceives the bottom half of the slider as "no change" and the top half as "sudden jump to full." There is no metadata key describing the brightness curve; the only reliable way to get linear-perceived output is to measure with a light meter on a per-device basis and ship a per-OEM correction curve for known-bad devices, or accept that some OEMs cheat on the linearity contract.
+第二个坑:非线性调光。CDD 将级别描述为"线性感知亮度",但某些预算设备将 MAX_LEVEL = 10 对数映射到 PWM 占空比:步进 1 = 0.1% 亮度,步进 2 = 0.5%,步进 10 = 100%。用户感知滑块下半部分为"无变化",上半部分为"突然跳到全亮"。没有元数据键描述亮度曲线;获得线性感知输出的唯一可靠方法是按设备用测光仪测量,并为已知不良设备提供按 OEM 的校正曲线,或接受某些 OEM 在线性契约上作弊。
 
 ---
 
-## JPEG Category
+## JPEG 类别
 
 ### JPEG_AVAILABLE_THUMBNAIL_SIZES
 
-**1. What is it?**
+**1. 它是什么?**
 
-`JPEG_AVAILABLE_THUMBNAIL_SIZES` is an array of `android.util.Size` objects, each representing a valid `(width, height)` resolution for the embedded EXIF thumbnail that the JPEG encoder writes alongside the full-size main image. A special sentinel value `Size(0, 0)` is present when the encoder supports writing *no* thumbnail (zero bytes, saving ~30–50 KB per JPEG file). Standard sizes on modern devices are typically `[0×0, 96×96, 160×120, 176×144, 256×144]`. The corresponding request key is `CaptureRequest.JPEG_THUMBNAIL_SIZE` which you must set to one of the sizes from this list; any other size is undefined behavior per CDD.
+`JPEG_AVAILABLE_THUMBNAIL_SIZES` 是 `android.util.Size` 对象数组,每个代表 JPEG 编码器与全尺寸主图像一起写入的嵌入式 EXIF 缩略图的有效 `(width, height)` 分辨率。当编码器支持写入*无*缩略图(零字节,每个 JPEG 文件节省约 30–50 KB)时,存在特殊哨兵值 `Size(0, 0)`。现代设备上的标准尺寸通常为 `[0×0, 96×96, 160×120, 176×144, 256×144]`。对应的请求键是 `CaptureRequest.JPEG_THUMBNAIL_SIZE`,你必须设置为从此列表中的尺寸之一;按 CDD,任何其他尺寸是未定义行为。
 
-**2. Why does it exist?**
+**2. 它为何存在?**
 
-Gallery apps and image file managers use EXIF thumbnails to render grid views of thousands of photos without decoding the 12–48 MB full-size JPEG. Decoding 5000×5000 JPEGs for a 48×48 grid cell is prohibitively expensive (decoding time ~200 ms per photo vs. 0.1 ms per thumbnail). Hardware JPEG encoders on modern SoCs can embed thumbnails in hardware at zero CPU cost, but the encoder's thumbnail scaler only supports a small set of fixed sizes — typically powers of 2 or 3GPP MMS standard sizes.
+相册应用和图像文件管理器使用 EXIF 缩略图渲染数千张照片的网格视图,而无需解码 12–48 MB 的全尺寸 JPEG。为 48×48 网格单元解码 5000×5000 JPEG 代价过高(每张照片解码时间约 200 ms,而每个缩略图 0.1 ms)。现代 SoC 上的硬件 JPEG 编码器可以零 CPU 成本在硬件中嵌入缩略图,但编码器的缩略图缩放器仅支持一小组固定尺寸 —— 通常是 2 的幂或 3GPP MMS 标准尺寸。
 
-**3. Which devices support it?**
+**3. 哪些设备支持它?**
 
-All devices that support the JPEG format (effectively every camera ID in existence). The array always contains at least two elements: the `0×0` sentinel plus at least one real thumbnail size. FULL-level devices guarantee every size in the list actually works. LEGACY wrappers sometimes list sizes that the encoder silently rejects — verifying with one test capture on LEGACY devices is recommended.
+所有支持 JPEG 格式的设备(实际上是现存每个 camera ID)。数组始终至少包含两个元素:`0×0` 哨兵加上至少一个真实缩略图尺寸。FULL 级设备保证列表中的每个尺寸都确实可用。LEGACY 包装器有时列出编码器静默拒绝的尺寸 —— 建议在 LEGACY 设备上通过一次测试拍摄验证。
 
-**4. How do I query it?**
+**4. 如何查询它?**
 
 ```kotlin
 val thumbnailSizes: Array<Size>? = characteristics.get(
@@ -1963,33 +1961,33 @@ thumbnailSizes?.let { sizes ->
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. 如何在 Android Camera Parameters 中查看?**
 
-Navigate to **JPEG / Thumbnails**. The entire card renders each supported size as a small rectangular preview box scaled to the actual aspect ratio, with the pixel dimensions printed inside. Tapping any size performs a real still capture with that thumbnail size selected, then displays the extracted EXIF thumbnail next to the full-size image so you can visually compare thumbnail quality across sizes. A 0×0 option appears as a disabled-looking "No thumbnail" row at the bottom; tapping it performs a capture and verifies that the EXIF contains no 0x0002-IFD0 thumbnail tag.
+导航到 **JPEG / Thumbnails**。整张卡片将每个支持的尺寸渲染为按实际宽高比缩放的小矩形预览框,框内打印像素尺寸。点击任何尺寸会以该缩略图尺寸执行真实静态拍摄,然后显示提取的 EXIF 缩略图与全尺寸图像并排,以便你视觉对比不同尺寸的缩略图质量。0×0 选项在底部显示为禁用外观的"No thumbnail"行;点击它执行拍摄并验证 EXIF 不包含 0x0002-IFD0 缩略图标签。
 
-**6. Common pitfalls**
+**6. 常见坑**
 
-Setting a thumbnail size that is not in the available list. Developers naively request a 256×256 square thumbnail because it fits their gallery grid nicely. On a LEGACY device the encoder silently drops the thumbnail (no error, EXIF thumbnail tag empty). On certain Snapdragon 845/855 HALs setting a non-list size for thumbnail causes the *full JPEG* output to be corrupted: the image has a 16-pixel black stripe down the left edge or the bottom 10% of the scan lines are pure black. The fix is simple: always pick a Size from the `JPEG_AVAILABLE_THUMBNAIL_SIZES` array. If you really need a 256×256 thumbnail for your server upload, set `JPEG_THUMBNAIL_SIZE` to the closest supported size (say, `0×0` for no embedded thumbnail) then post-process the saved JPEG bytes with `ExifInterface` to write your custom thumbnail via `setThumbnail()` before file close.
+设置不在可用列表中的缩略图尺寸。开发者天真地请求 256×256 方形缩略图,因为它很好地适合其相册网格。在 LEGACY 设备上,编码器静默丢弃缩略图(无错误,EXIF 缩略图标签为空)。在某些 Snapdragon 845/855 HAL 上,为缩略图设置非列表尺寸会导致*完整 JPEG* 输出损坏:图像左边缘有 16 像素黑条,或底部 10% 扫描线为纯黑。修复简单:始终从 `JPEG_AVAILABLE_THUMBNAIL_SIZES` 数组中选取 Size。如果你确实需要服务器上传的 256×256 缩略图,将 `JPEG_THUMBNAIL_SIZE` 设置为最接近的支持尺寸(比如 `0×0` 表示无嵌入式缩略图),然后在文件关闭前用 `ExifInterface` 后处理保存的 JPEG 字节,通过 `setThumbnail()` 写入自定义缩略图。
 
-Second pitfall: aspect ratio mismatch. The thumbnail size must match the main image aspect ratio closely, or the hardware scaler letterboxes the thumbnail with black borders. If your main image is 4:3 (4000×3000) and your thumbnail is 16:9 (256×144), the result is a 256×144 thumbnail with 24-pixel black top/bottom bars and the actual image data squashed into the middle 96 pixels. Users report "thumbnails look squashed in my gallery." The fix is to select the thumbnail size whose aspect ratio most closely matches the main JPEG resolution's aspect ratio *for each capture*, not a one-time app default.
+第二个坑:宽高比不匹配。缩略图尺寸必须与主图像宽高比紧密匹配,否则硬件缩放器用黑边对缩略图进行信箱化。如果你的主图像是 4:3(4000×3000),缩略图是 16:9(256×144),结果是 256×144 缩略图,上下有 24 像素黑条,实际图像数据被压缩到中间 96 像素。用户报告"缩略图在我的相册里看起来被压扁了"。修复是为*每次拍摄*选择宽高比最接近主 JPEG 分辨率宽高比的缩略图尺寸,而非一次性应用默认值。
 
 ---
 
 ### JPEG_MAX_SIZE
 
-**1. What is it?**
+**1. 它是什么?**
 
-`JPEG_MAX_SIZE` is a single `Int` representing the maximum number of *bytes* that a single JPEG output buffer from this camera will ever occupy. Typical values for 2024 flagships: ~30–50 MB for 50–208 MP Bayer sensors. 12 MP mid-range sensors typically report ~12–16 MB. RAW-SENSOR output does not use this key; RAW buffer size is computed from `pixelArray × bytesPerPixel` directly. The JPEG encoder guarantees that the maximum-complexity image (grainy, high-detail, worst-case entropy) encoded at `JPEG_QUALITY = 100` produces no more bytes than `JPEG_MAX_SIZE`.
+`JPEG_MAX_SIZE` 是单个 `Int`,表示此相机单个 JPEG 输出缓冲区将占用的最大*字节数*。2024 旗舰的典型值:50–208 MP Bayer 传感器约 30–50 MB。12 MP 中端传感器通常报告约 12–16 MB。RAW-SENSOR 输出不使用此键;RAW 缓冲区大小直接从 `pixelArray × bytesPerPixel` 计算。JPEG 编码器保证在 `JPEG_QUALITY = 100` 下编码的最大复杂度图像(颗粒状、高细节、最坏情况熵)产生的字节数不超过 `JPEG_MAX_SIZE`。
 
-**2. Why does it exist?**
+**2. 它为何存在?**
 
-Direct `ByteBuffer` allocation for JPEG capture: some advanced applications pre-allocate a pool of ByteBuffers and hand them to the camera via `ImageReader.attachBuffer()` rather than having the framework allocate per-capture. This eliminates GC pauses during burst capture. Without knowing the maximum buffer size, the developer would have to guess and either waste memory (allocate 128 MB per buffer) or corrupt data (allocate 8 MB and get a 14 MB high-quality JPEG that overruns the buffer).
+为 JPEG 拍摄直接 `ByteBuffer` 分配:某些高级应用预分配 ByteBuffer 池,通过 `ImageReader.attachBuffer()` 交给相机,而非让框架按拍摄分配。这消除了连拍期间的 GC 暂停。在不知道最大缓冲区大小的情况下,开发者不得不猜测,要么浪费内存(每个缓冲区分配 128 MB),要么损坏数据(分配 8 MB 并得到 14 MB 高质量 JPEG 覆盖缓冲区)。
 
-**3. Which devices support it?**
+**3. 哪些设备支持它?**
 
-All hardware levels. FULL-level CDD requires the value to be within 10% of the actual worst-case max. LEGACY devices sometimes under-report `JPEG_MAX_SIZE` (reporting 8 MB when a 100%-quality 12 MP JPEG reaches 10 MB); buffer pools on LEGACY should use 125% of the reported value with a 2 MB safety margin.
+所有硬件级别。FULL 级 CDD 要求值在实际最坏情况最大值的 10% 以内。LEGACY 设备有时少报 `JPEG_MAX_SIZE`(100% 质量 12 MP JPEG 达到 10 MB 时报告 8 MB);LEGACY 上的缓冲区池应使用报告值的 125% 并加 2 MB 安全余量。
 
-**4. How do I query it?**
+**4. 如何查询它?**
 
 ```kotlin
 val jpegMaxBytes: Int? = characteristics.get(
@@ -2026,7 +2024,7 @@ jpegMaxBytes?.let { maxBytes ->
     
     Log.d(TAG, "  Buffer pool sizing recommendation:")
     val burstCapacity = 20
-    val poolBytesPerBuffer = (maxBytes * 1.10).toLong()  // 10% safety margin
+    val poolBytesPerBuffer = (maxBytes * 1.10).toLong()  // 10% 安全余量
     Log.d(TAG, "    Per buffer: $poolBytesPerBuffer bytes")
     Log.d(TAG, "    $burstCapacity-buffer burst pool total: " +
                "${poolBytesPerBuffer * burstCapacity / (1024.0 * 1024.0)} MB")
@@ -2043,43 +2041,43 @@ jpegMaxBytes?.let { maxBytes ->
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. 如何在 Android Camera Parameters 中查看?**
 
-Navigate to **JPEG / Encoder**. The maximum size is displayed as "Max JPEG size" both in bytes and megabytes. The companion app performs a live benchmark: captures 3 JPEGs at quality = 100, captures 3 at quality = 50, captures 3 at quality = 25, and renders a bar chart with each JPEG's actual byte count, plus a red dashed line at `JPEG_MAX_SIZE`. This lets you visually verify that all captured sizes are below the HAL-reported ceiling, and gives you a rough estimate of actual average JPEG size (typically 40–60% of max for most real-world scenes).
+导航到 **JPEG / Encoder**。最大尺寸以字节和兆字节显示为"Max JPEG size"。配套应用执行实时基准测试:在质量 = 100 下拍摄 3 张 JPEG,在质量 = 50 下拍摄 3 张,在质量 = 25 下拍摄 3 张,并渲染柱状图显示每张 JPEG 的实际字节数,以及在 `JPEG_MAX_SIZE` 处的红色虚线。这让你视觉验证所有拍摄尺寸都低于 HAL 报告的上限,并给出实际平均 JPEG 大小的粗略估计(对大多数真实世界场景通常为最大值的 40–60%)。
 
-**6. Common pitfalls**
+**6. 常见坑**
 
-Using `JPEG_MAX_SIZE` as the default `ImageReader` max size parameter. The `ImageReader.newInstance(width, height, format, maxImages)` constructor takes the number of images, not the buffer byte size. Developers read `JPEG_MAX_SIZE = 16_000_000` and mistakenly call `ImageReader.newInstance(w, h, JPEG, 16_000_000)` — requesting 16 million JPEG buffers. The result is either OOM on `newInstance` or a framework-side limit clamp. Correct: `ImageReader.newInstance(w, h, ImageFormat.JPEG, 5)` reserves 5 image slots. `JPEG_MAX_SIZE` is used for pre-calculating total expected memory *if* you pre-allocate `ByteBuffer` objects yourself.
+把 `JPEG_MAX_SIZE` 用作默认 `ImageReader` 最大尺寸参数。`ImageReader.newInstance(width, height, format, maxImages)` 构造函数接受图像数量,而非缓冲区字节数。开发者读取 `JPEG_MAX_SIZE = 16_000_000` 并错误调用 `ImageReader.newInstance(w, h, JPEG, 16_000_000)` —— 请求 1600 万个 JPEG 缓冲区。结果要么 `newInstance` 上 OOM,要么框架侧限制钳制。正确:`ImageReader.newInstance(w, h, ImageFormat.JPEG, 5)` 预留 5 个图像槽。`JPEG_MAX_SIZE` 用于*如果*你自己预分配 `ByteBuffer` 对象时预计算总预期内存。
 
-Second pitfall: HEIC format uses a different key. On Android 10+ devices with `ImageFormat.HEIC` support (Pixel 4+, Samsung One UI 2.0+), HEIC output is often 20–40% the size of JPEG for the same quality. `JPEG_MAX_SIZE` describes JPEG only; for HEIC you must allocate a `JPEG_R` or `HEIC` ImageReader and use the `SCALER_STREAM_CONFIGURATION_MAP.getOutputSizes(ImageFormat.HEIC)` sizes combined with a HEIC-specific worst-case Bpp estimate (~1.0 bytes per pixel). No metadata key currently reports HEIC maximum byte size per frame — measure with a complex test scene manually.
+第二个坑:HEIC 格式使用不同键。在支持 `ImageFormat.HEIC` 的 Android 10+ 设备上(Pixel 4+、Samsung One UI 2.0+),相同质量下 HEIC 输出通常是 JPEG 大小的 20–40%。`JPEG_MAX_SIZE` 仅描述 JPEG;对于 HEIC,你必须分配 `JPEG_R` 或 `HEIC` ImageReader,并使用 `SCALER_STREAM_CONFIGURATION_MAP.getOutputSizes(ImageFormat.HEIC)` 尺寸结合 HEIC 特定的最坏情况 Bpp 估计(约 1.0 字节每像素)。目前没有元数据键报告每帧 HEIC 最大字节数 —— 用复杂测试场景手动测量。
 
 ---
 
-## Info Category
+## 信息类别
 
 ### INFO_SUPPORTED_HARDWARE_LEVEL
 
-**1. What is it?**
+**1. 它是什么?**
 
-`INFO_SUPPORTED_HARDWARE_LEVEL` is the coarse-tier bucketing enum. Five standard values:
+`INFO_SUPPORTED_HARDWARE_LEVEL` 是粗略层级分桶枚举。五个标准值:
 
-- `INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY` (2) — Camera2 API is a *wrapper* around the old Camera1 HAL. No per-frame control, limited to Camera1-era functionality. ~5% of 2020+ active devices, most pre-2017 phones.
-- `INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED` (0) — Native Camera2 HAL implementing the base feature set plus *some* advanced features (e.g., MANUAL_SENSOR without MANUAL_POST_PROCESSING). Most mid-range phones 2017–present.
-- `INFO_SUPPORTED_HARDWARE_LEVEL_FULL` (1) — Supports all mandatory standard Camera2 features: MANUAL_SENSOR, MANUAL_POST_PROCESSING, RAW output, BURST_CAPTURE ≥ 20 fps. Flagship devices typically.
-- `INFO_SUPPORTED_HARDWARE_LEVEL_3` (3) — Adds reprocessing input streams (YUV/PRIVATE → → ISP → output), depth-focused enhancements, custom tonemap curves ≥ 64 control points. Cinema-grade / Pixel Visual Core devices.
-- `INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL` (4) — External USB / HDMI camera. Feature set is variable and negotiated dynamically; some keys change when the camera is hot-plugged.
+- `INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY` (2) —— Camera2 API 是旧 Camera1 HAL 的*包装器*。无逐帧控制,限于 Camera1 时代功能。2020+ 活跃设备的约 5%,大多数 2017 年前的手机。
+- `INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED` (0) —— 原生 Camera2 HAL,实现基础功能集加*某些*高级功能(如 MANUAL_SENSOR 但无 MANUAL_POST_PROCESSING)。大多数 2017 年至今的中端手机。
+- `INFO_SUPPORTED_HARDWARE_LEVEL_FULL` (1) —— 支持所有强制标准 Camera2 功能:MANUAL_SENSOR、MANUAL_POST_PROCESSING、RAW 输出、BURST_CAPTURE ≥ 20 fps。通常是旗舰设备。
+- `INFO_SUPPORTED_HARDWARE_LEVEL_3` (3) —— 添加再处理输入流(YUV/PRIVATE → → ISP → 输出)、聚焦深度增强、自定义色调映射曲线 ≥ 64 控制点。电影级 / Pixel Visual Core 设备。
+- `INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL` (4) —— 外部 USB / HDMI 摄像头。功能集可变并动态协商;某些键在摄像头热插拔时改变。
 
-The tier is *cumulative*: LEVEL_3 ⊇ FULL ⊇ LIMITED ⊇ LEGACY in features.
+层级是*累积的*:LEVEL_3 ⊇ FULL ⊇ LIMITED ⊇ LEGACY 在功能上。
 
-**2. Why does it exist?**
+**2. 它为何存在?**
 
-Before `INFO_SUPPORTED_HARDWARE_LEVEL` was finalized in Lollipop MR1, developers had to check 10+ individual capabilities to get a rough tier for device analytics. The hardware level provides a one-number bucket that app analytics dashboards can use ("X% of our DAUs are LIMITED"). Note the earlier caution: *feature gating must still check individual capabilities*, not just this bucket.
+在 `INFO_SUPPORTED_HARDWARE_LEVEL` 于 Lollipop MR1 最终确定之前,开发者必须检查 10+ 个独立能力以获得设备分析的粗略层级。硬件级别提供了一个单数字桶,应用分析仪表板可使用("X% 的 DAU 是 LIMITED")。注意前面的警告:*功能门控仍必须检查单独能力*,而非仅此桶。
 
-**3. Which devices support it?**
+**3. 哪些设备支持它?**
 
-Every camera ID. LEGACY is never returned for post-2019 devices. LIMITED is the median hardware level for 2020–2024 phones (roughly 65% of active devices). FULL accounts for ~25%, LEVEL_3 ~5%, EXTERNAL ~5%.
+每个 camera ID。2019 年后的设备从不返回 LEGACY。LIMITED 是 2020–2024 手机的中位硬件级别(约 65% 活跃设备)。FULL 约占 25%,LEVEL_3 约 5%,EXTERNAL 约 5%。
 
-**4. How do I query it?**
+**4. 如何查询它?**
 
 ```kotlin
 val hwLevel: Int? = characteristics.get(
@@ -2133,35 +2131,35 @@ hwLevel?.let { level ->
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. 如何在 Android Camera Parameters 中查看?**
 
-Navigate to **Overview / Hardware Level**. The hardware level is rendered as a large tier badge at the top with a color code: LEGACY = gray, LIMITED = amber, FULL = green, LEVEL_3 = blue, EXTERNAL = purple. Below the badge is a tier-capability checklist that compares which capabilities are *required* by CDD for that tier vs. which capabilities are *actually present* on the device, highlighting any discrepancies (e.g., a LIMITED device that happens to have RAW capability is marked as "LIMITED+").
+导航到 **Overview / Hardware Level**。硬件级别渲染为顶部的大层级徽章并带颜色代码:LEGACY = 灰色,LIMITED = 琥珀色,FULL = 绿色,LEVEL_3 = 蓝色,EXTERNAL = 紫色。徽章下方是层级-能力检查清单,对比 CDD 为该层级*要求*哪些能力 vs. 设备上*实际存在*哪些能力,突出显示任何差异(例如,碰巧有 RAW 能力的 LIMITED 设备被标记为"LIMITED+")。
 
-**6. Common pitfalls**
+**6. 常见坑**
 
-Writing code that requires FULL hardware level to function. This excludes ~70% of active mid-range LIMITED devices that have MANUAL_SENSOR and RAW capability but no BURST_CAPTURE or full tonemap control. The correct architecture is: each feature (manual ISO, RAW, manual WB) has its own individual capability check in the capability array. The hardware level is for analytics only: log it, display it, but never `if (hwLevel != FULL) return`.
+编写需要 FULL 硬件级别才能运行的代码。这排除了约 70% 的活跃中端 LIMITED 设备,这些设备有 MANUAL_SENSOR 和 RAW 能力但没有 BURST_CAPTURE 或完整色调映射控制。正确架构是:每个功能(手动 ISO、RAW、手动 WB)在能力数组中有自己的单独能力检查。硬件级别仅用于分析:记录它、显示它,但从不 `if (hwLevel != FULL) return`。
 
-LEGACY devices are the second pitfall. On LEGACY the entire Camera2 API is an emulation wrapper around Camera1. Per-frame CaptureRequests are batched 3–10 at a time; setting a different AE compensation value for each frame in a burst applies them all in a batch, not per frame. Any burst or per-frame animation (smooth focus-pull) must have a LEGACY fallback path: post-process the frames instead of relying on per-frame CaptureRequest values.
+LEGACY 设备是第二个坑。在 LEGACY 上,整个 Camera2 API 是围绕 Camera1 的模拟包装器。逐帧 CaptureRequest 被批量处理 3–10 个一次;在连拍中为每帧设置不同 AE 补偿值会批量应用它们,而非逐帧。任何连拍或逐帧动画(平滑拉焦)必须有 LEGACY 回退路径:后处理帧而非依赖逐帧 CaptureRequest 值。
 
 ---
 
 ### INFO_DEVICE_STATE_ORIENTATIONS
 
-**1. What is it?**
+**1. 它是什么?**
 
-`INFO_DEVICE_STATE_ORIENTATIONS` is an `IntArray` (introduced in Android 12, API level 31) listing all the *sensor orientation values* this camera ID can report when the device is folded, unfolded, or otherwise reconfigured. Standard values are `0`, `90`, `180`, `270` — the same degrees used in `SENSOR_ORIENTATION`. For a typical non-foldable phone, the array contains exactly one element `[90]` for back cameras and `[270]` for front cameras (fixed orientation). For a foldable like the Pixel Fold or Galaxy Z Fold, the array is `[90, 270]` for the rear-display selfie mode: when the user closes the fold and uses the rear screen as a viewfinder, the camera's effective sensor orientation *flips* to match the new viewing direction.
+`INFO_DEVICE_STATE_ORIENTATIONS` 是一个 `IntArray`(在 Android 12,API 级别 31 中引入),列出当设备折叠、展开或以其他方式重新配置时,此 camera ID 可报告的所有*传感器方向值*。标准值为 `0`、`90`、`180`、`270` —— 与 `SENSOR_ORIENTATION` 中使用的度数相同。对于典型非折叠手机,数组对后置摄像头恰好包含一个元素 `[90]`,对前置摄像头 `[270]`(固定方向)。对于像 Pixel Fold 或 Galaxy Z Fold 这样的折叠屏,数组为 `[90, 270]` 用于后屏自拍模式:当用户合上折叠并使用后屏作为取景器时,摄像头的有效传感器方向*翻转*以匹配新的观看方向。
 
-The companion `SENSOR_ORIENTATION` key still reports the current orientation for the current device fold state. This key advertises the *full set* of possible values across all device states so you can pre-allocate UI rotation code paths.
+配套的 `SENSOR_ORIENTATION` 键仍报告当前设备折叠状态的当前方向。此键通告跨所有设备状态的*完整可能值集*,以便你可以预分配 UI 旋转代码路径。
 
-**2. Why does it exist?**
+**2. 它为何存在?**
 
-Before foldables, `SENSOR_ORIENTATION` was guaranteed to be a static constant for the device lifetime. You queried it once in `onCreate()` and cached the value. On foldables the same physical camera sensor can face two different logical directions (rear = away from the big inner screen, front-facing when the user activates "rear screen selfies"), so `SENSOR_ORIENTATION` changes dynamically between 90° and 270°. If your app caches the old rotation value and never re-queries, the preview is rotated 180° when the user folds the device. The `INFO_DEVICE_STATE_ORIENTATIONS` key gives you advance warning: "this camera's orientation can change, here are the possible values."
+在折叠屏出现之前,`SENSOR_ORIENTATION` 保证是设备生命周期的静态常量。你在 `onCreate()` 中查询一次并缓存值。在折叠屏上,同一物理摄像头传感器可面向两个不同的逻辑方向(后置 = 背离大内屏,当用户激活"后屏自拍"时面向前),所以 `SENSOR_ORIENTATION` 在 90° 和 270° 之间动态变化。如果你的应用缓存旧旋转值且从不重新查询,当用户折叠设备时预览旋转 180°。`INFO_DEVICE_STATE_ORIENTATIONS` 键给你预先警告:"此摄像头的方向可能改变,这里是可能的值。"
 
-**3. Which devices support it?**
+**3. 哪些设备支持它?**
 
-All foldable/flip devices running Android 12 and later. Non-foldable devices running Android 12+ still report this key, but with a single-element array (the same value as `SENSOR_ORIENTATION`). On pre-Android 12 devices the key is absent (null), indicating only one static orientation ever. No capability flag prerequisite.
+所有运行 Android 12 及更高版本的折叠/翻盖设备。运行 Android 12+ 的非折叠设备仍报告此键,但为单元素数组(与 `SENSOR_ORIENTATION` 相同的值)。在 Android 12 之前的设备上,键不存在(null),表示仅有一个静态方向。无能力标志先决条件。
 
-**4. How do I query it?**
+**4. 如何查询它?**
 
 ```kotlin
 val currentOrientation: Int = characteristics.get(
@@ -2203,40 +2201,40 @@ possibleOrientations?.let { orients ->
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. 如何在 Android Camera Parameters 中查看?**
 
-Open **Info / Device State**. The card "Supported Orientations" shows the array as multiple orientation compass graphics (each showing a small phone silhouette rotated to match the degree value). On a foldable device, physically folding the device while the app is open causes the `SENSOR_ORIENTATION` value on the **Overview / Cameras** card to flip, and the Info card highlights which possible orientation is currently active with a green border. A small "fold state" indicator at the top-right of the screen also updates in real time (FOLDED / UNFOLDED / HALF-FOLDED / TENT).
+打开 **Info / Device State**。卡片"Supported Orientations"将数组显示为多个方向罗盘图形(每个显示旋转以匹配度数值的小手机剪影)。在折叠设备上,在应用打开时物理折叠设备会导致 **Overview / Cameras** 卡片上的 `SENSOR_ORIENTATION` 值翻转,Info 卡片用绿色边框突出显示当前激活的可能方向。屏幕右上角的小"折叠状态"指示器也实时更新(FOLDED / UNFOLDED / HALF-FOLDED / TENT)。
 
-**6. Common pitfalls**
+**6. 常见坑**
 
-Caching `SENSOR_ORIENTATION` as a top-level `val`. Classic code pattern:
+将 `SENSOR_ORIENTATION` 缓存为顶层 `val`。经典代码模式:
 ```kotlin
 private val sensorRotation = cameraManager
     .getCameraCharacteristics(camId)[SENSOR_ORIENTATION] ?: 90
 ```
-This works on non-foldables and breaks on foldables. After unfolding a Pixel Fold the rotation flips but your `val` holds the stale 90° value. The preview is then upside down until the process is killed. The fix: use a `var` that gets updated in a `DeviceStateManager.DeviceStateCallback` (added in Android 12) or simply re-query `characteristics[SENSOR_ORIENTATION]` inside every `onSurfaceTextureChanged()` callback.
+这在非折叠设备上可行,在折叠设备上失效。展开 Pixel Fold 后旋转翻转,但你的 `val` 持有过时的 90° 值。预览然后倒置,直到进程被杀死。修复:使用在 `DeviceStateManager.DeviceStateCallback`(Android 12 中添加)中更新的 `var`,或简单地在每个 `onSurfaceTextureChanged()` 回调内重新查询 `characteristics[SENSOR_ORIENTATION]`。
 
-A second pitfall: saving JPEGs with a stale EXIF orientation tag. The EXIF orientation tag must match the current orientation at capture time. If you compute the EXIF tag once at session-open time and fold the device mid-session, the next JPEG has the wrong EXIF orientation and displays rotated. Re-compute the EXIF tag from `SENSOR_ORIENTATION` + `display.rotation` for every single capture, not once per session.
+第二个坑:用过时的 EXIF 方向标签保存 JPEG。EXIF 方向标签必须匹配拍摄时的当前方向。如果你在会话打开时计算一次 EXIF 标签并在会话中途折叠设备,下一个 JPEG 有错误的 EXIF 方向并旋转显示。为每次拍摄从 `SENSOR_ORIENTATION` + `display.rotation` 重新计算 EXIF 标签,而非每会话一次。
 
 ---
 
 ### INFO_VERSION
 
-**1. What is it?**
+**1. 它是什么?**
 
-`INFO_VERSION` is an `IntArray` with exactly 2 elements reporting the Camera HAL implementation version as `[MAJOR, MINOR]`. Values like `[3, 2]` mean HAL 3.2. `[3, 5]` means HAL 3.5. The Camera HAL specification versions roughly correlate with Android releases: HAL 3.2 appeared with Android 9, HAL 3.4 with Android 11, HAL 3.5 with Android 12, HAL 3.6 with Android 13, and HAL 3.8+ with Android 14.
+`INFO_VERSION` 是一个 `IntArray`,恰好 2 个元素,以 `[MAJOR, MINOR]` 形式报告 Camera HAL 实现版本。值 `[3, 2]` 表示 HAL 3.2。`[3, 5]` 表示 HAL 3.5。Camera HAL 规范版本大致与 Android 版本相关:HAL 3.2 随 Android 9 出现,HAL 3.4 随 Android 11,HAL 3.5 随 Android 12,HAL 3.6 随 Android 13,HAL 3.8+ 随 Android 14。
 
-Each subsequent HAL 3.x revision adds additional mandatory metadata keys and tightens behavior guarantees. For example, HAL 3.2 requires correct `SCALER_CROP_REGION` with aspect-ratio preservation behavior that was previously optional. HAL 3.5 requires accurate `SENSOR_DYNAMIC_WHITE_LEVEL` for staggered-HDR sensors, and HAL 3.8 adds mandatory UHRS (Ultra-High Resolution Sensor) bayer-pattern exposure controls.
+每个后续 HAL 3.x 修订添加额外强制元数据键并收紧行为保证。例如,HAL 3.2 要求正确 `SCALER_CROP_REGION` 的宽高比保持行为,之前是可选的。HAL 3.5 要求 staggered-HDR 传感器准确的 `SENSOR_DYNAMIC_WHITE_LEVEL`,HAL 3.8 添加强制 UHRS(Ultra-High Resolution Sensor)bayer 模式曝光控制。
 
-**2. Why does it exist?**
+**2. 它为何存在?**
 
-Workaround routing for known HAL bugs. For example: all devices running HAL 3.1 shipped with a specific bug where submitting more than one JPEG surface in a session caused `onConfigFailed` regardless of `REQUEST_MAX_NUM_OUTPUT_STREAMS`. Rather than shipping a giant `Build.MODEL` blocklist of affected phones, you check `INFO_VERSION < [3, 2]` and apply the workaround globally.
+针对已知 HAL 错误的变通路由。例如:所有运行 HAL 3.1 的设备都有一个特定错误,在会话中提交多个 JPEG Surface 会导致 `onConfigFailed`,无论 `REQUEST_MAX_NUM_OUTPUT_STREAMS` 如何。与其发布受影响手机的巨大 `Build.MODEL` 黑名单,不如检查 `INFO_VERSION < [3, 2]` 并全局应用变通。
 
-**3. Which devices support it?**
+**3. 哪些设备支持它?**
 
-All Camera2 devices running HAL 3.0 and later (i.e., every LEGACY/LIMITED/FULL/LEVEL_3 device from Android 5.0 forward). External USB cameras sometimes report `[1, 0]` for UVC 1.0, `[1, 5]` for UVC 1.5.
+所有运行 HAL 3.0 及更高版本的 Camera2 设备(即从 Android 5.0 起的每个 LEGACY/LIMITED/FULL/LEVEL_3 设备)。外部 USB 摄像头有时报告 `[1, 0]` 表示 UVC 1.0,`[1, 5]` 表示 UVC 1.5。
 
-**4. How do I query it?**
+**4. 如何查询它?**
 
 ```kotlin
 val version: IntArray? = characteristics.get(
@@ -2293,32 +2291,32 @@ version?.let { v ->
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. 如何在 Android Camera Parameters 中查看?**
 
-Navigate to **Info / Version**. The HAL version appears as a large "HAL 3.5" pill at the top. Below the version is a "Android Release Compatibility" card showing which Android version's guarantees roughly match the HAL version. Further below is a table of all known HAL workarounds with their HAL minimum version, a description of the bug, and a toggle switch showing whether the workaround is currently enabled. Tapping a HAL row shows the CDD change summary for that minor revision (e.g., HAL 3.4 changelog: "Added mandatory LOGICAL_MULTI_CAMERA fused focal-length reporting").
+导航到 **Info / Version**。HAL 版本在顶部显示为大的"HAL 3.5"药丸。版本下方是"Android Release Compatibility"卡片,显示哪个 Android 版本的保证大致匹配 HAL 版本。再下方是所有已知 HAL 变通的表格,带其 HAL 最低版本、错误描述,以及显示变通当前是否启用的切换开关。点击 HAL 行显示该次修订的 CDD 更改摘要(如 HAL 3.4 更改日志:"Added mandatory LOGICAL_MULTI_CAMERA fused focal-length reporting")。
 
-**6. Common pitfalls**
+**6. 常见坑**
 
-Equating HAL version with Android SDK version. A Samsung A54 launched on Android 13 *can* ship with HAL 3.4 (Android 11-era guarantees) because the CDD does not force new HAL versions on all devices that launch on newer Android. Conversely, a Pixel 4a originally launched on Android 10 (HAL 3.5) and was updated through Android 14; after the update the HAL version remains 3.5 even though the SDK version is 34. Always check the HAL key, never `Build.VERSION.SDK_INT`, for HAL-specific behavior.
+将 HAL 版本等同于 Android SDK 版本。在 Android 13 上发布的 Samsung A54 *可以*出厂配备 HAL 3.4(Android 11 时代保证),因为 CDD 不强制在所有更新 Android 版本上发布的设备使用新 HAL 版本。反之,最初在 Android 10(HAL 3.5)上发布的 Pixel 4a 通过 Android 14 更新;更新后 HAL 版本保持 3.5,即使 SDK 版本是 34。对于 HAL 特定行为,始终检查 HAL 键,从不 `Build.VERSION.SDK_INT`。
 
-Second pitfall: assuming the same major.minor value means identical behavior across vendors. HAL 3.4 on Snapdragon means slightly different guarantee compliance than HAL 3.4 on Exynos — the CDD has "SHOULD" items in addition to "MUST" items, and vendors pick and choose which "SHOULD" items to implement. When debugging a per-vendor issue, combine HAL version + `Build.BRAND` + hardware level + capabilities to narrow down the workaround activation.
+第二个坑:假设相同的 major.minor 值在不同供应商间意味着相同行为。Snapdragon 上的 HAL 3.4 意味着与 Exynos 上的 HAL 3.4 略有不同的保证合规 —— CDD 除了"MUST"项外还有"SHOULD"项,供应商挑选要实现哪些"SHOULD"项。调试每供应商问题时,结合 HAL 版本 + `Build.BRAND` + 硬件级别 + 能力来缩小变通激活范围。
 
 ---
 
-## Extending This Reference
+## 扩展本参考
 
-This encyclopedia covers the ~30 most essential metadata keys for everyday Camera2 application development. The complete `CameraCharacteristics` class contains over 120 keys in the `Characteristics.*` family alone, plus another 200+ in CaptureRequest and CaptureResult. If you would like to add entries to this encyclopedia, follow these steps:
+本百科涵盖日常 Camera2 应用开发约 30 个最关键的元数据键。完整 `CameraCharacteristics` 类仅在 `Characteristics.*` 家族中就包含超过 120 个键,加上 CaptureRequest 和 CaptureResult 中的另外 200+ 个。如果你想向本百科添加条目,请按以下步骤:
 
-1. **Pick a key from a missing category.** Popular candidates for future expansion include:
-   - **Statistics category:** `STATISTICS_INFO_AVAILABLE_FACE_DETECT_MODES`, `STATISTICS_INFO_MAX_FACE_COUNT`, `STATISTICS_INFO_HISTOGRAM_BUCKET_COUNT`, `STATISTICS_INFO_MAX_LENS_SHADING_MAP_SIZE`.
-   - **Sync category:** `SYNC_MAX_LATENCY` (per-frame vs. multi-frame sync for multi-camera), `SYNC_INFO_TYPE` (APPROXIMATE vs. CALIBRATED).
-   - **Depth category:** `DEPTH_DEPTH_IS_EXCLUSIVE`, `DEPTH_AVAILABLE_DEPTH_STREAM_CONFIGURATIONS`, `DEPTH_AVAILABLE_DEPTH_MIN_FRAME_DURATIONS`.
-   - **Disting category (Android 14+):** `DISTORTION_CORRECTION_AVAILABLE_MODES` (for geometric calibration on ultrawide lenses).
+1. **从缺失类别中选取一个键。** 未来扩展的热门候选包括:
+   - **Statistics 类别:** `STATISTICS_INFO_AVAILABLE_FACE_DETECT_MODES`、`STATISTICS_INFO_MAX_FACE_COUNT`、`STATISTICS_INFO_HISTOGRAM_BUCKET_COUNT`、`STATISTICS_INFO_MAX_LENS_SHADING_MAP_SIZE`。
+   - **Sync 类别:** `SYNC_MAX_LATENCY`(多摄像头的逐帧 vs. 多帧同步)、`SYNC_INFO_TYPE`(APPROXIMATE vs. CALIBRATED)。
+   - **Depth 类别:** `DEPTH_DEPTH_IS_EXCLUSIVE`、`DEPTH_AVAILABLE_DEPTH_STREAM_CONFIGURATIONS`、`DEPTH_AVAILABLE_DEPTH_MIN_FRAME_DURATIONS`。
+   - **Disting 类别(Android 14+):** `DISTORTION_CORRECTION_AVAILABLE_MODES`(用于超广角镜头的几何标定)。
 
-2. **Follow the 6-point structure exactly.** Even if sections seem redundant (e.g., "Which devices support it" for a key that requires a capability flag), keep all six sections so every entry has the same lookup cadence.
+2. **严格遵循 6 点结构。** 即使章节看似冗余(如,需要能力标志的键的"哪些设备支持它"),保留所有六个章节,使每个条目有相同查阅节奏。
 
-3. **Submit a PR to the Android Camera Parameters repository.** The companion app at [github.com/zoozooll/AndroidCameraParameters](https://github.com/zoozooll/AndroidCameraParameters) implements an inspector for every key added to this encyclopedia. Each new metadata entry must include a matching app-inspection tab (or update to an existing tab) so that the "How can I inspect it" section remains accurate for all users.
+3. **向 Android Camera Parameters 仓库提交 PR。** 配套应用 [github.com/zoozooll/AndroidCameraParameters](https://github.com/zoozooll/AndroidCameraParameters) 为添加到本百科的每个键实现一个检查器。每个新元数据条目必须包含匹配的应用检查标签页(或对现有标签页的更新),以便"如何在 Android Camera Parameters 中查看"章节对所有用户保持准确。
 
-4. **Include device-tested pitfall data.** The "Common pitfalls" section is the highest value part of each entry. Capture screenshots from at least two different OEMs (e.g. Pixel + Samsung, Samsung + Xiaomi) demonstrating the pitfall, then describe the behavior difference. Pitfalls based purely on CDD reading (without actual device failure reports) are of limited use.
+4. **包含设备测试的坑数据。** "常见坑"章节是每个条目最高价值的部分。从至少两个不同 OEM(如 Pixel + Samsung、Samsung + Xiaomi)捕获展示坑的截图,然后描述行为差异。纯粹基于 CDD 阅读的坑(没有实际设备故障报告)用途有限。
 
-5. **Keep Kotlin snippets null-safe.** Every `characteristics.get()` call must be followed by either a `?.let { ... } ?: run { ... }` block or an explicit fallback. Snippets must compile against `compileSdk = 34` and target a minSdk of 21. Snippets using newer keys (Android 12+) require a surrounding `Build.VERSION.SDK_INT` guard block.
+5. **保持 Kotlin 代码片段 null 安全。** 每个 `characteristics.get()` 调用后必须跟 `?.let { ... } ?: run { ... }` 块或显式回退。代码片段必须能针对 `compileSdk = 34` 编译,目标 minSdk 为 21。使用较新键(Android 12+)的代码片段需要周围的 `Build.VERSION.SDK_INT` 保护块。

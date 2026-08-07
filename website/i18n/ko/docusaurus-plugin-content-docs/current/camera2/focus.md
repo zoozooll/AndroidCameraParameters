@@ -1,172 +1,172 @@
 ---
 sidebar_position: 15
-title: "Chapter 15: Focus"
-description: Master both automatic and manual focus in Android Camera2. Understand AF modes, the AF state machine, one-shot trigger-and-capture sequences, manual focus with LENS_FOCUS_DISTANCE diopters, hyperfocal distance, and building a focus SeekBar slider in Kotlin.
-keywords: [android camera2 focus, LENS_FOCUS_DISTANCE, CONTROL_AF_TRIGGER, CONTROL_AF_STATE_FOCUSED_LOCKED, AF mode continuous picture, manual focus diopters, hyperfocal distance camera2]
+title: "제15장: 초점"
+description: 안드로이드 Camera2에서 자동 및 수동 초점을 마스터하세요. AF 모드, AF 상태 머신, 원샷 트리거 및 캡처 시퀀스, LENS_FOCUS_DISTANCE 디옵터를 이용한 수동 초점, 과초점 거리, 그리고 Kotlin으로 초점 SeekBar 슬라이더를 만드는 방법을 이해합니다.
+keywords: [안드로이드 camera2 초점, LENS_FOCUS_DISTANCE, CONTROL_AF_TRIGGER, CONTROL_AF_STATE_FOCUSED_LOCKED, AF 모드 continuous picture, 수동 초점 디옵터, 과초점 거리 camera2]
 ---
 
-# Chapter 15: Focus
+# 제15장: 초점
 
-Exposure controls brightness. **Focus controls what is sharp.** A perfectly-exposed photo with soft focus is a failed photo. In this chapter, you'll learn how smartphone focus systems work, how to drive Auto Focus (AF) reliably via Camera2, and how to implement a silky-smooth manual focus slider using `LENS_FOCUS_DISTANCE`.
+노출이 밝기를 조절한다면, **초점은 선명함을 조절합니다.** 노출은 완벽하지만 초점이 흐릿한 사진은 실패한 사진입니다. 이 장에서는 스마트폰 초점 시스템의 작동 원리, Camera2를 통한 신뢰할 수 있는 자동 초점(AF) 구동 방법, 그리고 `LENS_FOCUS_DISTANCE`를 사용하여 매끄러운 수동 초점 슬라이더를 구현하는 방법을 배웁니다.
 
-The [Android Camera Parameters app](https://github.com/zoozooll/AndroidCameraParameters) demonstrates all of this in its Focus panel — you can watch the AF state machine transition live and drag the manual focus slider to see the lens rack from infinity to minimum focus distance.
-
----
-
-## Auto Focus (AF) in Modern Smartphones
-
-Before diving into API specifics, let's understand the three physical focus mechanisms smartphones use.
-
-### 1. Contrast-Detect AF (CDAF) — Passive Scan
-
-The software technique: analyze the image frame, look for maximum edge contrast (sharp edges = highest spatial frequency), and move the lens until peak contrast is found.
-
-- **Advantage:** Works on any camera hardware (no special pixels needed)
-- **Disadvantage:** Slow. The lens must *hunt* back and forth across the focus range. Scene text labels like "AF SCANNING" in the Camera2 state map to this.
-
-### 2. Phase-Detect AF (PDAF) — Active Scan
-
-Special photodiodes on the sensor are split into two halves. The phase difference between left/right halves directly measures *how far and which direction* the lens must move — no hunting required. Flagship phones today use Dual-Pixel PDAF where *every* pixel does phase detection.
-
-- **Advantage:** Extremely fast (< 100ms lock in good light); works reliably in video
-- **Disadvantage:** Struggles in low-light (not enough photons to compute phase reliably), and has minimum focus distance limits
-
-### 3. Laser AF / ToF AF (Active) — Range Finder
-
-A dedicated hardware module fires an infrared laser pulse, times the reflection, and directly reports subject distance to the ISP. Very common on mid-range to premium phones.
-
-- **Advantage:** Blazing-fast lock on any target, even in pure darkness (if target reflects IR)
-- **Disadvantage:** Limited effective range (~50cm–5m max), fails on glass or IR-transparent objects
-
-Real phones combine **all three**: PDAF for fast coarse lock, CDAF for fine-tuning, and Laser AF for low-light or close-up scenes. Camera2 exposes this unified pipeline as a single abstract state machine.
+[Android Camera Parameters 앱](https://github.com/zoozooll/AndroidCameraParameters)의 Focus 패널에서 이 모든 것을 직접 확인할 수 있습니다. AF 상태 머신의 변화를 실시간으로 관찰하고 수동 초점 슬라이더를 드래그하여 렌즈가 무한대에서 최소 초점 거리까지 움직이는 모습을 볼 수 있습니다.
 
 ---
 
-## AF Modes: CONTROL_AF_MODE
+## 현대 스마트폰의 자동 초점 (AF)
 
-Camera2 defines these AF modes in `CameraMetadata`:
+API 세부 사항으로 들어가기 전에, 스마트폰이 사용하는 세 가지 물리적 초점 메커니즘을 이해해 봅시다.
 
-| Mode (CONTROL_AF_MODE_*) | Behavior | Use Case |
+### 1. 대비 검출 AF (CDAF) — 패시브 스캔
+
+소프트웨어 기법입니다. 이미지 프레임을 분석하여 최대 엣지 대비(선명한 엣지 = 가장 높은 공간 주파수)를 찾고, 피크 대비가 발견될 때까지 렌즈를 움직입니다.
+
+- **장점:** 어떤 카메라 하드웨어에서도 작동합니다(특수 픽셀 불필요).
+- **단점:** 느립니다. 렌즈가 초점 범위를 앞뒤로 *왔다 갔다(hunt)* 해야 합니다. Camera2 상태 맵의 "AF SCANNING" 같은 레이블이 여기에 해당합니다.
+
+### 2. 위상차 검출 AF (PDAF) — 액티브 스캔
+
+센서의 특수 포토다이오드가 두 개로 나뉘어 있습니다. 왼쪽/오른쪽 절반 사이의 위상차를 통해 렌즈를 *얼마나 멀리, 어느 방향으로* 움직여야 하는지 직접 측정하므로 왔다 갔다 할 필요가 없습니다. 최신 플래그십 폰은 *모든* 픽셀이 위상차 검출을 수행하는 듀얼 픽셀 PDAF를 사용합니다.
+
+- **장점:** 매우 빠릅니다(좋은 조명에서 100ms 미만). 비디오에서 안정적으로 작동합니다.
+- **단점:** 저조도(위상 계산을 위한 광자 부족)에서 어려움을 겪으며, 최소 초점 거리 제한이 있습니다.
+
+### 3. 레이저 AF / ToF AF (액티브) — 거리 측정기
+
+전용 하드웨어 모듈이 적외선 레이저 펄스를 쏘고 반사되는 시간을 측정하여 ISP에 피사체 거리를 직접 보고합니다. 중급기에서 프리미엄 폰에 매우 흔하게 탑재됩니다.
+
+- **장점:** 어떤 대상이든, 심지어 완전한 어둠 속에서도(대상에 적외선이 반사된다면) 번개처럼 빠른 잠금이 가능합니다.
+- **단점:** 유효 거리가 제한적이며(~50cm–5m 최대), 유리나 적외선을 투과시키는 물체에서는 실패합니다.
+
+실제 폰은 **이 세 가지를 모두 결합**합니다: 빠른 대략적인 잠금을 위한 PDAF, 미세 조정을 위한 CDAF, 그리고 저조도나 근접 장면을 위한 레이저 AF를 사용합니다. Camera2는 이 통합된 파이프라인을 단일 추상 상태 머신으로 노출합니다.
+
+---
+
+## AF 모드: CONTROL_AF_MODE
+
+Camera2는 `CameraMetadata`에 다음과 같은 AF 모드를 정의합니다.
+
+| 모드 (CONTROL_AF_MODE_*) | 동작 | 유스케이스 |
 |-------------------------|----------|----------|
-| `OFF` | No AF at all. You set `LENS_FOCUS_DISTANCE` manually. | Manual focus, focus stacking, astrophotography (infinity lock) |
-| `AUTO` | One-shot AF. Does nothing until you send `CONTROL_AF_TRIGGER = START`, then scans once and locks. | Classic point-and-shoot still photography |
-| `MACRO` | Same as AUTO but biased toward near-subject detection. | Close-ups, document scanning, "food mode" |
-| `CONTINUOUS_PICTURE` | Constantly refocuses, but **pauses refocusing when you trigger a still capture** to avoid focus shift during the shot. | Still photography default |
-| `CONTINUOUS_VIDEO` | Constantly refocuses — never pauses. May hunt visibly but keeps video in focus. | Video recording, video chats |
-| `EDOF` | Extended Depth of Field: software/firmware-simulated deep focus. No physical lens movement. | Budget devices without moving lens actuators |
+| `OFF` | AF를 완전히 끕니다. `LENS_FOCUS_DISTANCE`를 수동으로 설정합니다. | 수동 초점, 초점 스태킹, 천체 사진 (무한대 고정) |
+| `AUTO` | 단발성(One-shot) AF. `CONTROL_AF_TRIGGER = START`를 보낼 때까지 아무것도 안 하다가, 한 번 스캔하고 잠급니다. | 전형적인 포인트 앤 슛 스틸 사진 |
+| `MACRO` | AUTO와 같지만 근접 피사체 검출에 최적화되어 있습니다. | 접사, 문서 스캔, "음식 모드" |
+| `CONTINUOUS_PICTURE` | 지속적으로 초점을 맞추지만, **스틸 캡처를 트리거하면 초점 이동을 방지하기 위해 일시 정지**합니다. | 스틸 사진 기본값 |
+| `CONTINUOUS_VIDEO` | 지속적으로 초점을 맞추며 절대 멈추지 않습니다. 눈에 띄게 왔다 갔다 할 수 있지만 비디오 초점을 유지합니다. | 비디오 녹화, 화상 채팅 |
+| `EDOF` | 확장된 피사계 심도: 소프트웨어/펌웨어로 시뮬레이션된 깊은 초점. 물리적 렌즈 이동이 없습니다. | 렌즈 액추에이터가 없는 저가형 기기 |
 
-**Two critical notes:**
+**두 가지 중요한 참고 사항:**
 
-1. `EDOF` devices (cheap phones, selfie cameras) have a *fixed* focal plane. You will never get `FOCUSED_LOCKED` from them — the best you get is `PASSIVE_SCAN` → `PASSIVE_FOCUSED` → `INACTIVE`. The [Android Camera Parameters app](https://play.google.com/store/apps/details?id=com.minininja.cameraparams) explicitly shows "Fixed Focus" for these cameras.
+1. **EDOF 기기**(저가형 폰, 셀카 카메라)는 초점 평면이 *고정*되어 있습니다. 이들로부터는 절대 `FOCUSED_LOCKED`를 받을 수 없습니다. 얻을 수 있는 최선은 `PASSIVE_SCAN` → `PASSIVE_FOCUSED` → `INACTIVE`입니다. [Android Camera Parameters 앱](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)은 이러한 카메라에 대해 "Fixed Focus"라고 명시적으로 표시합니다.
 
-2. `CONTINUOUS_*` modes return to `INACTIVE` after idle rather than staying locked. Don't expect `FOCUSED_LOCKED` in continuous mode — that's only for `AUTO`/`MACRO` + explicit trigger.
+2. **CONTINUOUS_*** 모드는 잠금 상태를 유지하는 대신 유휴 상태 후에 `INACTIVE`로 돌아갑니다. 연속 모드에서 `FOCUSED_LOCKED`를 기대하지 마세요. 그것은 오직 `AUTO`/`MACRO` + 명시적 트리거에서만 나타납니다.
 
 ---
 
-## The AF State Machine
+## AF 상태 머신 (The AF State Machine)
 
-Camera2 reports AF status via `CaptureResult.CONTROL_AF_STATE`. Understanding these states is *make-or-break* for reliable still capture sequences.
+Camera2는 `CaptureResult.CONTROL_AF_STATE`를 통해 AF 상태를 보고합니다. 이 상태들을 이해하는 것은 신뢰할 수 있는 스틸 캡처 시퀀스를 위해 매우 중요합니다.
 
 ```mermaid
 stateDiagram-v2
-    [*] --> INACTIVE: Preview starts, AF OFF
-    INACTIVE --> PASSIVE_SCAN: CONTINUOUS_PICTURE/VIDEO mode
-    INACTIVE --> ACTIVE_SCAN: AUTO/MACRO mode + TRIGGER=START
-    PASSIVE_SCAN --> PASSIVE_FOCUSED: Peak contrast found
-    PASSIVE_SCAN --> PASSIVE_UNFOCUSED: Scene too low-contrast
-    PASSIVE_FOCUSED --> PASSIVE_SCAN: Scene changes (continuous mode)
-    ACTIVE_SCAN --> FOCUSED_LOCKED: Locked focus (SUCCESS!)
-    ACTIVE_SCAN --> NOT_FOCUSED_LOCKED: Gave up but locked anyway
-    FOCUSED_LOCKED --> INACTIVE: TRIGGER=CANCEL or mode change
-    NOT_FOCUSED_LOCKED --> INACTIVE: TRIGGER=CANCEL or mode change
-    PASSIVE_FOCUSED --> INACTIVE: Mode switched to OFF/AUTO
-    PASSIVE_UNFOCUSED --> INACTIVE: Mode switched to OFF/AUTO
-    INACTIVE --> INACTIVE: Manual LENS_FOCUS_DISTANCE changes
+    [*] --> INACTIVE: 미리보기 시작, AF OFF
+    INACTIVE --> PASSIVE_SCAN: CONTINUOUS_PICTURE/VIDEO 모드
+    INACTIVE --> ACTIVE_SCAN: AUTO/MACRO 모드 + TRIGGER=START
+    PASSIVE_SCAN --> PASSIVE_FOCUSED: 피크 대비 발견
+    PASSIVE_SCAN --> PASSIVE_UNFOCUSED: 장면 대비가 너무 낮음
+    PASSIVE_FOCUSED --> PASSIVE_SCAN: 장면 변경 (연속 모드)
+    ACTIVE_SCAN --> FOCUSED_LOCKED: 초점 잠김 (성공!)
+    ACTIVE_SCAN --> NOT_FOCUSED_LOCKED: 포기했지만 어쨌든 잠금
+    FOCUSED_LOCKED --> INACTIVE: TRIGGER=CANCEL 또는 모드 변경
+    NOT_FOCUSED_LOCKED --> INACTIVE: TRIGGER=CANCEL 또는 모드 변경
+    PASSIVE_FOCUSED --> INACTIVE: 모드가 OFF/AUTO로 전환됨
+    PASSIVE_UNFOCUSED --> INACTIVE: 모드가 OFF/AUTO로 전환됨
+    INACTIVE --> INACTIVE: 수동 LENS_FOCUS_DISTANCE 변경
     note right of FOCUSED_LOCKED
-        ONLY state where still capture
-        is guaranteed to be in-focus.
-        Wait for this before AE precapture.
+        스틸 캡처의 초점이 보장되는
+        유일한 상태입니다.
+        AE 프리캡처 전에 이 상태를 기다리세요.
     end note
     note left of ACTIVE_SCAN
-        Combined PDAF + CDAF + Laser
-        Typical duration: 50ms – 400ms
-        budget phones: up to 2s in low light
+        PDAF + CDAF + 레이저 결합
+        전형적인 소요 시간: 50ms – 400ms
+        저가형 폰: 저조도에서 최대 2초
     end note
 ```
 
-State reference table:
+상태 참조표:
 
-| CONTROL_AF_STATE | Meaning | Next Action |
+| CONTROL_AF_STATE | 의미 | 다음 행동 |
 |------------------|---------|-------------|
-| `INACTIVE` (0) | AF is off, idle, or continuous mode not currently scanning | If in AUTO mode: send TRIGGER_START |
-| `PASSIVE_SCAN` (1) | Continuous mode is passively scanning | Wait; don't trigger still capture yet |
-| `PASSIVE_FOCUSED` (2) | Continuous found focus, but NOT locked (can drift) | Safe to trigger still in CONTINUOUS_PICTURE (it will lock) |
-| `ACTIVE_SCAN` (3) | Explicit trigger started a scan | Just wait... |
-| `NOT_FOCUSED_LOCKED` (4) | Failed to find focus, but lens is locked anyway | User-warning prompt; optionally retry or capture anyway |
-| `FOCUSED_LOCKED` (5) | **SUCCESS.** Focus found and hardware-locked. | Proceed immediately to AE precapture trigger |
-| `PASSIVE_UNFOCUSED` (6) | Continuous couldn't lock, still scanning | Improve lighting or different target |
+| `INACTIVE` (0) | AF 꺼짐, 유휴, 또는 연속 모드가 현재 스캔 중이 아님 | AUTO 모드라면: TRIGGER_START 전송 |
+| `PASSIVE_SCAN` (1) | 연속 모드가 수동적으로 스캔 중임 | 대기. 아직 스틸 캡처를 트리거하지 마세요. |
+| `PASSIVE_FOCUSED` (2) | 연속 모드가 초점을 찾았으나 잠기지는 않음 (이동 가능) | CONTINUOUS_PICTURE에서는 안전하게 트리거 가능 (잠길 것임) |
+| `ACTIVE_SCAN` (3) | 명시적 트리거로 스캔 시작됨 | 그냥 기다리세요... |
+| `NOT_FOCUSED_LOCKED` (4) | 초점 찾기 실패했으나 렌즈 잠김 | 사용자에게 경고. 다시 시도하거나 그냥 촬영. |
+| `FOCUSED_LOCKED` (5) | **성공.** 초점을 찾았고 하드웨어적으로 잠김. | 즉시 AE 프리캡처 트리거로 진행 |
+| `PASSIVE_UNFOCUSED` (6) | 연속 모드가 잠금 실패, 여전히 스캔 중 | 조명 개선 또는 다른 타겟 조준 |
 
-**Non-negotiable rule for still photography:** *Never* submit a still capture (especially with flash!) until you see `FOCUSED_LOCKED`. Skip this step, and you will ship an app that intermittently produces soft photos.
+**스틸 사진 촬영의 불문율:** `FOCUSED_LOCKED`를 확인하기 전에는 *절대* 스틸 캡처(특히 플래시와 함께!)를 제출하지 마세요. 이 단계를 건너뛰면 간헐적으로 초점이 나간 사진을 찍는 앱을 출시하게 됩니다.
 
 ---
 
-## Focus Distance: Diopters, Not Meters
+## 초점 거리: 미터가 아닌 디옵터
 
-Here's the second "gotcha" that trips Camera2 developers (after the shutter-in-nanoseconds surprise):
+Camera2 개발자들이 (나노초 단위 셔터 이후로) 두 번째로 당황하는 부분입니다.
 
-**`LENS_FOCUS_DISTANCE` uses diopters (D), not meters.** Diopters are the *mathematical reciprocal* of focus distance:
+**`LENS_FOCUS_DISTANCE`는 미터(m)가 아닌 디옵터(D)를 사용합니다.** 디옵터는 초점 거리의 *수학적 역수*입니다.
 
 ```
-Focus Distance (meters) = 1.0 / Diopters
-Diopters = 1.0 / Focus Distance (meters)
+초점 거리 (미터) = 1.0 / 디옵터
+디옵터 = 1.0 / 초점 거리 (미터)
 ```
 
-| Diopters (LENS_FOCUS_DISTANCE) | Physical Focus Distance |
+| 디옵터 (LENS_FOCUS_DISTANCE) | 물리적 초점 거리 |
 |--------------------------------|-------------------------|
-| **0.0** | **Infinity** (∞) — stars, distant mountains |
-| 0.1 | 10 meters |
-| 0.25 | 4 meters |
-| 0.5 | 2 meters |
-| 1.0 | 1 meter |
-| 2.0 | 0.5 meter (50 cm) |
-| 5.0 | 0.2 meter (20 cm) |
-| 10.0 | 0.1 meter (10 cm) |
-| 20.0 | 0.05 meter (5 cm) |
+| **0.0** | **무한대** (∞) — 별, 먼 산 |
+| 0.1 | 10 미터 |
+| 0.25 | 4 미터 |
+| 0.5 | 2 미터 |
+| 1.0 | 1 미터 |
+| 2.0 | 0.5 미터 (50 cm) |
+| 5.0 | 0.2 미터 (20 cm) |
+| 10.0 | 0.1 미터 (10 cm) |
+| 20.0 | 0.05 미터 (5 cm) |
 
-Why diopters? Because the lens actuator moves linearly with *optical power*, not physical distance. A focus sweep from 0.0D → 20.0D corresponds to uniform lens movement, whereas a "meters" sweep from 10m → 5cm would be highly non-linear.
+왜 디옵터일까요? 렌즈 액추에이터가 물리적 거리가 아닌 *광학적 힘(optical power)*에 따라 선형적으로 움직이기 때문입니다. 0.0D → 20.0D의 초점 스윕은 균일한 렌즈 움직임에 대응하지만, 10m → 5cm의 "미터" 스윕은 매우 비선형적이게 됩니다.
 
-### Query Minimum Focus Distance
+### 최소 초점 거리 확인하기
 
-Every lens has a closest focus distance (you cannot physically focus an object pressed against the glass). Query it:
+모든 렌즈에는 가장 가까운 초점 거리가 있습니다(유리에 바짝 붙은 물체에는 물리적으로 초점을 맞출 수 없습니다). 이를 쿼리해 봅시다.
 
 ```kotlin
-// Maximum useful diopter value for this lens
+// 이 렌즈의 최대 유효 디옵터 값
 val maxDiopters = characteristics.get(
     CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE
-) ?: 0.0f // 0.0f = fixed-focus EDOF lens (no focus control at all!)
+) ?: 0.0f // 0.0f = 고정 초점 EDOF 렌즈 (초점 제어 불가!)
 
 if (maxDiopters == 0.0f) {
-    Log.w("Focus", "This is a fixed-focus lens. Manual AF disabled.")
+    Log.w("Focus", "이 카메라는 고정 초점 렌즈입니다. 수동 AF가 비활성화됩니다.")
 } else {
-    // Valid diopter range is [0.0f .. maxDiopters]
-    Log.d("Focus", "Focus range: 0.0D (inf) → $maxDiopters D (${1/maxDiopters}m close)")
+    // 유효한 디옵터 범위는 [0.0f .. maxDiopters]입니다.
+    Log.d("Focus", "초점 범위: 0.0D (무한대) → $maxDiopters D (${1/maxDiopters}m 근접)")
 }
 ```
 
-Typical values:
-- Budget phone rear camera: ~10D (10 cm minimum focus)
-- Flagship wide camera: ~15–25D (4–7 cm minimum)
-- Macro camera: ~30–50D (2–3 cm minimum)
-- Front selfie camera: Often 0.0D (fixed focus, EDOF)
+일반적인 값들:
+- 보급형 폰 후면 카메라: ~10D (10 cm 최소 초점)
+- 플래그십 광각 카메라: ~15–25D (4–7 cm 최소)
+- 매크로 카메라: ~30–50D (2–3 cm 최소)
+- 전면 셀카 카메라: 종종 0.0D (고정 초점, EDOF)
 
-### Hyperfocal Distance (Concept)
+### 과초점 거리 (개념)
 
-Landscape photographers love this: set focus to the **hyperfocal distance**, and everything from half that distance to infinity is "acceptably sharp." On a phone with f/1.8 aperture and a standard wide lens, hyperfocal is roughly 0.5–1.0 meter.
+풍경 사진작가들이 좋아하는 개념입니다. 초점을 **과초점 거리(hyperfocal distance)**로 설정하면, 그 거리의 절반부터 무한대까지 모든 것이 "수용 가능한 정도로 선명하게" 보입니다. f/1.8 조리개와 표준 광각 렌즈를 가진 폰에서 과초점 거리는 대략 0.5–1.0 미터입니다.
 
-**Rule of thumb for smartphones:** Setting `LENS_FOCUS_DISTANCE = 2.0D` (50 cm focus distance) approximates hyperfocal on most wide-angle phone lenses. Good for landscape and street photography where you don't want to wait for AF.
+**스마트폰을 위한 경험 법칙:** `LENS_FOCUS_DISTANCE = 2.0D` (50 cm 초점 거리)로 설정하면 대부분의 광각 폰 렌즈에서 과초점 거리와 비슷해집니다. 풍경이나 스트리트 사진 촬영 시 AF를 기다리고 싶지 않을 때 좋습니다.
 
 ```kotlin
-// Pre-set hyperfocal "everything sharp" preset
+// "모든 것이 선명한" 과초점 거리 근사치 프리셋
 const val HYPERFOCAL_DIOPTERS_APPROX = 2.0f
 
 fun setHyperfocal(builder: CaptureRequest.Builder, characteristics: CameraCharacteristics) {
@@ -179,15 +179,15 @@ fun setHyperfocal(builder: CaptureRequest.Builder, characteristics: CameraCharac
 }
 ```
 
-Want to calculate precise hyperfocal for your exact lens? You'll also need `LENS_INFO_AVAILABLE_FOCAL_LENGTHS` (focal length in mm) and the sensor's physical pixel pitch. For 95% of smartphone use cases, 2.0D is close enough.
+본인 렌즈의 정확한 과초점 거리를 계산하고 싶으신가요? `LENS_INFO_AVAILABLE_FOCAL_LENGTHS`(mm 단위 초점 거리)와 센서의 물리적 픽셀 피치가 추가로 필요합니다. 하지만 95%의 스마트폰 사용 사례에서는 2.0D면 충분히 가깝습니다.
 
 ---
 
-## Complete Example 1: One-Shot AF Trigger-and-Capture
+## 전체 예제 1: 원샷 AF 트리거 후 캡처
 
-This is the bread-and-butter still-photography flow for `AUTO` / `MACRO` mode. It's also the exact sequence the 3A orchestration in Chapter 17 will reuse.
+이것이 `AUTO` / `MACRO` 모드에서 스틸 사진을 찍는 가장 기본적인 흐름입니다. 17장의 3A 오케스트레이션에서 재사용할 시퀀스이기도 합니다.
 
-**Goal:** User taps "Capture" → drive AF to locked focus → once locked, submit the still capture.
+**목표:** 사용자가 "촬영"을 누름 → AF를 구동하여 초점 잠금 → 잠긴 후 스틸 캡처 제출.
 
 ```kotlin
 class AutoFocusCaptureHelper(
@@ -200,17 +200,17 @@ class AutoFocusCaptureHelper(
     private var capturePlanned = false
 
     fun triggerAutoFocusAndCapture(onCaptureComplete: () -> Unit) {
-        // ---- STEP 1: Build repeating request with explicit AF trigger ----
+        // ---- 1단계: 명시적 AF 트리거를 포함한 반복 요청 빌드 ----
         val triggerRequest = captureSession.device.createCaptureRequest(
             CameraDevice.TEMPLATE_PREVIEW
         ).apply {
             addTarget(previewSurface)
 
-            // Use AUTO mode to guarantee LOCKED state at the end
+            // 마지막에 LOCKED 상태를 보장하기 위해 AUTO 모드 사용
             set(CaptureRequest.CONTROL_AF_MODE,
                 CameraMetadata.CONTROL_AF_MODE_AUTO)
 
-            // Fire the one-shot AF trigger NOW
+            // 지금 원샷 AF 트리거 발사
             set(CaptureRequest.CONTROL_AF_TRIGGER,
                 CameraMetadata.CONTROL_AF_TRIGGER_START)
         }
@@ -218,7 +218,7 @@ class AutoFocusCaptureHelper(
         afTriggered = true
         capturePlanned = true
 
-        // ---- STEP 2: Subscribe our state-tracking callback ----
+        // ---- 2단계: 상태 추적 콜백 구독 ----
         captureSession.setRepeatingRequest(
             triggerRequest.build(),
             object : CameraCaptureSession.CaptureCallback() {
@@ -229,10 +229,10 @@ class AutoFocusCaptureHelper(
                 ) {
                     val afState = result.get(CaptureResult.CONTROL_AF_STATE)
                         ?: return
-                    Log.d("AF", "AF state: $afState")
+                    Log.d("AF", "AF 상태: $afState")
 
                     when (afState) {
-                        // --- SUCCESS PATH ---
+                        // --- 성공 경로 ---
                         CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED -> {
                             if (capturePlanned) {
                                 capturePlanned = false
@@ -240,24 +240,24 @@ class AutoFocusCaptureHelper(
                                 onCaptureComplete()
                             }
                         }
-                        // --- FAILURE PATH: could not lock, but we'll try anyway ---
+                        // --- 실패 경로: 잠금 실패했으나 어쨌든 시도 ---
                         CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED -> {
-                            Log.w("AF", "AF couldn't lock — capturing anyway (blurry?)")
+                            Log.w("AF", "AF 잠금 실패 — 그래도 촬영 (흐릿할 수 있음)")
                             if (capturePlanned) {
                                 capturePlanned = false
                                 submitStillCapture()
                                 onCaptureComplete()
                             }
                         }
-                        // --- STILL SCANNING: ignore ---
+                        // --- 스캔 중: 무시 ---
                         CaptureResult.CONTROL_AF_STATE_ACTIVE_SCAN,
                         CaptureResult.CONTROL_AF_STATE_PASSIVE_SCAN -> {
-                            // Still working, don't do anything yet
+                            // 아직 진행 중, 아무것도 하지 않음
                         }
                     }
                 }
             },
-            null // Handler on current thread
+            null // 현재 스레드의 핸들러
         )
     }
 
@@ -268,10 +268,10 @@ class AutoFocusCaptureHelper(
             addTarget(previewSurface)
             addTarget(jpegReaderSurface)
 
-            // Keep AF locked for this still — do NOT release the trigger yet
+            // 이 촬영을 위해 AF 잠금 유지 — 아직 트리거를 해제하지 마세요.
             set(CaptureRequest.CONTROL_AF_MODE,
                 CameraMetadata.CONTROL_AF_MODE_AUTO)
-            // Leave AF_TRIGGER as-is (START remains until we explicitly CANCEL)
+            // AF_TRIGGER는 그대로 둡니다 (명시적으로 CANCEL할 때까지 START 상태 유지)
 
             set(CaptureRequest.JPEG_QUALITY, 95)
         }
@@ -284,7 +284,7 @@ class AutoFocusCaptureHelper(
                     request: CaptureRequest,
                     result: TotalCaptureResult
                 ) {
-                    // Photo captured — now release AF lock, go back to continuous
+                    // 사진 캡처됨 — 이제 AF 잠금 해제, 연속 모드로 복귀
                     resetFocusToContinuous()
                 }
             },
@@ -308,17 +308,17 @@ class AutoFocusCaptureHelper(
 }
 ```
 
-**Critical detail:** You cancel the trigger *after* the still capture completes — not before. Cancel too early, and the lens unlocks during the shot, producing a soft photo.
+**중요한 디테일:** 스틸 캡처가 완료된 *후*에 트리거를 취소합니다. 너무 일찍 취소하면 촬영 중에 렌즈 잠금이 풀려 흐릿한 사진이 찍힐 수 있습니다.
 
-**Timeout safeguard (not shown):** Real apps add a 2–3 second timeout on the AF scan. If `ACTIVE_SCAN` runs for 3 seconds and never reaches `FOCUSED_LOCKED`, cancel and surface a "Tap to focus on a high-contrast area" user hint.
+**타임아웃 보호 (표시되지 않음):** 실제 앱에서는 AF 스캔에 2~3초의 타임아웃을 추가합니다. 만약 `ACTIVE_SCAN`이 3초 동안 지속되고 `FOCUSED_LOCKED`에 도달하지 못하면, 취소하고 사용자에게 "대비가 높은 영역을 탭하여 초점을 맞추세요"라는 힌트를 띄웁니다.
 
 ---
 
-## Complete Example 2: Manual Focus SeekBar Slider
+## 전체 예제 2: 수동 초점 SeekBar 슬라이더
 
-This is the user-facing Manual Focus feature you've seen in pro camera apps. A SeekBar maps the physical 0.0D → maxD focus range smoothly.
+Pro 카메라 앱에서 볼 수 있는 사용자용 수동 초점 기능입니다. SeekBar가 물리적 0.0D → maxD 초점 범위를 매끄럽게 매핑합니다.
 
-### Layout (res/layout/fragment_manual_focus.xml)
+### 레이아웃 (res/layout/fragment_manual_focus.xml)
 
 ```xml
 <LinearLayout
@@ -332,7 +332,7 @@ This is the user-facing Manual Focus feature you've seen in pro camera apps. A S
         android:id="@+id/tvFocusLabel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Focus: ∞ (infinity)"
+        android:text="초점: ∞ (무한대)"
         android:textSize="14sp"/>
 
     <SeekBar
@@ -343,7 +343,7 @@ This is the user-facing Manual Focus feature you've seen in pro camera apps. A S
 </LinearLayout>
 ```
 
-### Kotlin: Fragment / Activity Wiring
+### Kotlin: Fragment / Activity 연동
 
 ```kotlin
 class ManualFocusController(
@@ -353,7 +353,7 @@ class ManualFocusController(
     private val captureSessionProvider: () -> CameraCaptureSession?,
     private val previewSurface: Surface
 ) {
-    // Slider uses 1000 integer steps for sub-diopter precision
+    // 슬라이더는 소수점 디옵터 정밀도를 위해 1000개의 정수 단계를 사용합니다.
     private val sliderSteps = 1000
     private val maxDiopters = characteristics.get(
         CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE
@@ -364,22 +364,22 @@ class ManualFocusController(
     init {
         if (maxDiopters == 0.0f) {
             seekBar.isEnabled = false
-            labelView.text = "Fixed Focus (No manual AF)"
+            labelView.text = "고정 초점 (수동 AF 불가)"
         } else {
             bindSeekBar()
-            applyFocus(0.0f) // Start at infinity
+            applyFocus(0.0f) // 무한대에서 시작
         }
     }
 
     private fun bindSeekBar() {
-        // Convert slider int [0..1000] ↔ diopters [0.0 .. maxDiopters]
+        // 슬라이더 정수 [0..1000] ↔ 디옵터 [0.0 .. maxDiopters] 변환
         seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             private var lastUpdate = 0L
 
             override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
                 if (!fromUser) return
 
-                // Throttle to ~30fps (33ms) — avoids overwhelming HAL with requests
+                // 약 30fps(33ms)로 조절(throttle) — HAL에 요청이 몰리는 것을 방지
                 val now = SystemClock.elapsedRealtime()
                 if (now - lastUpdate < 33L) return
                 lastUpdate = now
@@ -388,11 +388,11 @@ class ManualFocusController(
                 applyFocus(diopters)
             }
             override fun onStartTrackingTouch(seekBar: SeekBar) {
-                // Switch to full manual AF mode immediately when user starts dragging
+                // 사용자가 드래그를 시작하면 즉시 완전 수동 AF 모드로 전환
                 switchToManualMode()
             }
             override fun onStopTrackingTouch(seekBar: SeekBar) {
-                // Apply final exact value to remove throttle error
+                // 조절 오차를 제거하기 위해 최종 정확한 값을 적용
                 val diopters = seekBar.progress.toFloat() / sliderSteps.toFloat() * maxDiopters
                 applyFocus(diopters, force = true)
             }
@@ -400,7 +400,7 @@ class ManualFocusController(
     }
 
     private fun switchToManualMode() {
-        // CONTROL_AF_MODE_OFF disables AF motor auto-drive
+        // CONTROL_AF_MODE_OFF는 AF 모터 자동 구동을 비활성화합니다.
         val session = captureSessionProvider() ?: return
         val request = session.device.createCaptureRequest(
             CameraDevice.TEMPLATE_PREVIEW
@@ -415,16 +415,16 @@ class ManualFocusController(
     fun applyFocus(diopters: Float, force: Boolean = false) {
         currentDiopters = diopters.coerceIn(0.0f, maxDiopters)
 
-        // Update label: show "∞" for < 0.1D, "X.Y m" otherwise
+        // 레이블 업데이트: < 0.1D는 "∞", 그 외에는 "X.Y m" 표시
         labelView.text = when {
-            currentDiopters < 0.1f -> "Focus: ∞ (infinity)"
+            currentDiopters < 0.1f -> "초점: ∞ (무한대)"
             else -> {
                 val meters = 1.0f / currentDiopters
-                String.format("Focus: %.1f D  (%.2f m)", currentDiopters, meters)
+                String.format("초점: %.1f D  (%.2f m)", currentDiopters, meters)
             }
         }
 
-        // Build and submit a repeating request with the new focus distance
+        // 새로운 초점 거리로 반복 요청 빌드 및 제출
         val session = captureSessionProvider() ?: return
         val request = session.device.createCaptureRequest(
             CameraDevice.TEMPLATE_PREVIEW
@@ -434,11 +434,11 @@ class ManualFocusController(
             set(CaptureRequest.LENS_FOCUS_DISTANCE, currentDiopters)
         }
 
-        // Use setRepeatingRequest so every preview frame honours the new focus
+        // 모든 미리보기 프레임이 새로운 초점을 따르도록 setRepeatingRequest 사용
         session.setRepeatingRequest(request.build(), null, null)
     }
 
-    // --- Preset helpers ---
+    // --- 프리셋 헬퍼 ---
     fun setInfinity() { seekBar.progress = 0; applyFocus(0.0f, true) }
     fun setHyperfocalApprox() {
         val d = min(2.0f, maxDiopters)
@@ -450,34 +450,34 @@ class ManualFocusController(
 }
 ```
 
-**Key implementation details:**
+**핵심 구현 디테일:**
 
-1. **Throttle.** SeekBars fire `onProgressChanged` up to 200Hz. Submitting a `setRepeatingRequest` on every event floods the HAL with work, causing lag. A 33ms throttle caps updates to ~30fps — plenty smooth for the lens motor's physical speed.
+1. **스로틀링(Throttle).** SeekBar는 `onProgressChanged`를 최대 200Hz로 발생시킵니다. 매 이벤트마다 `setRepeatingRequest`를 제출하면 HAL에 부하가 걸려 지연이 발생합니다. 33ms 스로틀링은 업데이트를 약 30fps로 제한하며, 이는 렌즈 모터의 물리적 속도에 비해 충분히 부드럽습니다.
 
-2. **Switch to CONTROL_AF_MODE_OFF early.** If you're in `CONTINUOUS_PICTURE` and set `LENS_FOCUS_DISTANCE` without disabling AF, the AF algorithm will *fight you* — snapping focus back to what it thinks is right a frame later. The switch must happen first, in `onStartTrackingTouch`.
+2. **일찍 CONTROL_AF_MODE_OFF로 전환.** 만약 `CONTINUOUS_PICTURE` 상태에서 AF를 끄지 않고 `LENS_FOCUS_DISTANCE`를 설정하면, AF 알고리즘이 여러분과 *싸우게* 됩니다. 한 프레임 뒤에 다시 초점을 원래대로 돌려버릴 것입니다. 전환은 `onStartTrackingTouch`에서 가장 먼저 일어나야 합니다.
 
-3. **Update via `setRepeatingRequest`**, not one-off `capture()`. Manual focus needs to stick on *every* preview frame until the user moves the slider again.
+3. **`setRepeatingRequest`를 통한 업데이트**, 일회성 `capture()`가 아닙니다. 수동 초점은 사용자가 슬라이더를 다시 움직일 때까지 *모든* 미리보기 프레임에서 유지되어야 합니다.
 
-4. **Force-apply on release.** The throttle skips intermediate positions; when the user lifts their finger, apply the exact final slider value.
+4. **손을 뗄 때 강제 적용.** 스로틀링은 중간 위치를 건너뛸 수 있습니다. 사용자가 손가락을 뗄 때 정확한 최종 슬라이더 값을 적용하세요.
 
 ---
 
-## Focus Regions (Touch-to-Focus)
+## 초점 영역 (터치하여 초점 맞추기)
 
-Modern camera apps let you *tap the viewfinder* to pick a focus target. Camera2 implements this via `CONTROL_AF_REGIONS` — a list of rectangles (in the active-array coordinate space) with weights.
+최신 카메라 앱은 *뷰파인더를 탭하여* 초점 대상을 선택할 수 있게 합니다. Camera2는 이를 위해 가중치가 있는 사각형 목록(활성 어레이 좌표계 기준)인 `CONTROL_AF_REGIONS`를 사용합니다.
 
 ```kotlin
-// Convert a Viewfinder (x,y) tap into a CameraCharacteristics Sensor coordinate region
+// 뷰파인더 (x,y) 탭을 CameraCharacteristics 센서 좌표 영역으로 변환
 fun createTapFocusRegion(viewfinderWidth: Int, viewfinderHeight: Int,
                          tapX: Float, tapY: Float,
                          characteristics: CameraCharacteristics): MeteringRectangle {
     val activeArray = characteristics.get(
         CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE
     )!!
-    // Normalize tap [0..1] in each axis
+    // 각 축에서 탭 [0..1] 정규화
     val nx = tapX / viewfinderWidth.toFloat()
     val ny = tapY / viewfinderHeight.toFloat()
-    // Map to sensor active array, create a 200×200 region centered on the tap
+    // 센서 활성 어레이에 매핑, 탭 중심으로 200×200 영역 생성
     val cx = (nx * activeArray.width()).toInt()
     val cy = (ny * activeArray.height()).toInt()
     val rSize = 200
@@ -488,52 +488,52 @@ fun createTapFocusRegion(viewfinderWidth: Int, viewfinderHeight: Int,
     )
 }
 
-// Attach region to a request builder
+// 요청 빌더에 영역 부착
 fun applyTapFocus(builder: CaptureRequest.Builder, region: MeteringRectangle) {
     builder.set(CaptureRequest.CONTROL_AF_REGIONS, arrayOf(region))
-    builder.set(CaptureRequest.CONTROL_AE_REGIONS, arrayOf(region)) // Couple AE spot too!
+    builder.set(CaptureRequest.CONTROL_AE_REGIONS, arrayOf(region)) // AE 스팟도 함께 연결!
     builder.set(CaptureRequest.CONTROL_AF_TRIGGER,
-        CameraMetadata.CONTROL_AF_TRIGGER_CANCEL) // Cancel any prior lock
+        CameraMetadata.CONTROL_AF_TRIGGER_CANCEL) // 이전 잠금 취소
     builder.set(CaptureRequest.CONTROL_AF_TRIGGER,
-        CameraMetadata.CONTROL_AF_TRIGGER_START)  // Trigger scan on new region
+        CameraMetadata.CONTROL_AF_TRIGGER_START)  // 새 영역에서 스캔 트리거
 }
 ```
 
-**Pro tip:** Always couple `CONTROL_AE_REGIONS` to match `CONTROL_AF_REGIONS`. The user tapped on a face because they want that face *both* in focus *and* correctly exposed — not focused on the face but metered for the bright sky behind it.
+**전문가 팁:** 항상 `CONTROL_AE_REGIONS`를 `CONTROL_AF_REGIONS`와 쌍으로 구성하세요. 사용자가 얼굴을 탭했다면 그 얼굴에 초점이 맞으면서 *동시에* 노출도 정확하기를 원할 것입니다. 얼굴에 초점은 맞았는데 뒤에 있는 밝은 하늘에 맞춰 노출이 측정되는 것은 원치 않을 것입니다.
 
 ---
 
-## Troubleshooting Focus Issues
+## 초점 문제 해결 (Troubleshooting)
 
-| Symptom | Root Cause | Fix |
+| 증상 | 근본 원인 | 해결 방법 |
 |---------|-----------|-----|
-| AF state never moves past ACTIVE_SCAN | Low-contrast scene (white wall, pure blue sky) or hardware failure | Timeout after ~3s; prompt user; fall back to hyperfocal preset |
-| Manual focus slider does nothing | Forgot to set `CONTROL_AF_MODE = OFF` → AF is fighting you | Call `switchToManualMode()` in onStartTrackingTouch |
-| Still capture comes out blurry despite FOCUSED_LOCKED | Cancelled AF trigger *before* still capture completed | Cancel only in `onCaptureCompleted` of the *still* request |
-| Front camera ignores focus commands | Fixed-focus EDOF lens (`MINIMUM_FOCUS_DISTANCE == 0`) | Graceful degradation: disable focus UI for that camera |
-| Video AF "hunts" a lot | Using `CONTINUOUS_PICTURE` instead of `CONTINUOUS_VIDEO` for video recording | Switch mode to CONTINUOUS_VIDEO when MediaRecorder starts |
+| AF 상태가 ACTIVE_SCAN에서 더 이상 변하지 않음 | 저대비 장면(하얀 벽, 순수 파란 하늘) 또는 하드웨어 오류 | 약 3초 후 타임아웃 처리. 사용자에게 알림. 과초점 프리셋으로 폴백. |
+| 수동 초점 슬라이더가 아무 반응 없음 | `CONTROL_AF_MODE = OFF` 설정을 잊음 → AF가 방해 중 | onStartTrackingTouch에서 `switchToManualMode()` 호출 |
+| FOCUSED_LOCKED인데도 스틸 캡처가 흐릿함 | 스틸 캡처가 완료되기 *전*에 AF 트리거를 취소함 | *스틸* 요청의 `onCaptureCompleted`에서만 취소 처리 |
+| 전면 카메라가 초점 명령을 무시함 | 고정 초점 EDOF 렌즈 (`MINIMUM_FOCUS_DISTANCE == 0`) | 단계적 기능 저하: 해당 카메라의 초점 UI 비활성화 |
+| 비디오 AF가 너무 많이 "왔다 갔다" 함 | 비디오 녹화에 `CONTINUOUS_PICTURE` 대신 `CONTINUOUS_VIDEO`를 사용 중인지 확인 | MediaRecorder 시작 시 모드를 CONTINUOUS_VIDEO로 전환 |
 
 ---
 
-## Summary
+## 요약
 
-Focus in Camera2 is a state machine you must drive explicitly, not a "set and forget" setting:
+Camera2의 초점은 단순히 값을 설정하고 잊는 것이 아니라 명시적으로 구동해야 하는 상태 머신입니다.
 
-- **AF Hardware:** Smartphones combine Contrast-Detect AF, Phase-Detect AF (Dual-Pixel), and Laser AF for fast reliable locks.
-- **Modes:** `AUTO` (one-shot, locks), `CONTINUOUS_PICTURE` (refocuses, pauses for stills), `CONTINUOUS_VIDEO` (always refocusing), `MACRO`, `OFF` (manual). EDOF lenses have no moving focus.
-- **States:** Wait for `FOCUSED_LOCKED` (not just `PASSIVE_FOCUSED`) before high-value still captures.
-- **Diopters:** `LENS_FOCUS_DISTANCE` uses reciprocal distance (0.0D = ∞, 10D = 10 cm). Range is `[0.0 .. LENS_INFO_MINIMUM_FOCUS_DISTANCE]`.
-- **One-shot AF capture:** `TRIGGER = START` → wait `FOCUSED_LOCKED` → submit still → then `CANCEL`.
-- **Manual focus slider:** SeekBar with 1000 steps, throttled to 30fps; switch mode to `AF_MODE_OFF` first so the auto algorithm doesn't fight your manual setting.
-- **Touch-to-Focus uses `CONTROL_AF_REGIONS`** in sensor active-array coordinates. Couple with `AE_REGIONS` for pro results.
+- **AF 하드웨어:** 스마트폰은 빠르고 신뢰할 수 있는 잠금을 위해 대비 검출 AF, 위상차 검출 AF(듀얼 픽셀), 레이저 AF를 결합합니다.
+- **모드:** `AUTO`(원샷, 잠김), `CONTINUOUS_PICTURE`(리포커싱, 스틸 시 정지), `CONTINUOUS_VIDEO`(항상 리포커싱), `MACRO`, `OFF`(수동). EDOF 렌즈는 초점 이동이 없습니다.
+- **상태:** 가치 있는 스틸 캡처 전에는 (단순히 `PASSIVE_FOCUSED`가 아닌) `FOCUSED_LOCKED`를 기다리세요.
+- **디옵터:** `LENS_FOCUS_DISTANCE`는 역수 거리를 사용합니다 (0.0D = ∞, 10D = 10 cm). 범위는 `[0.0 .. LENS_INFO_MINIMUM_FOCUS_DISTANCE]`입니다.
+- **원샷 AF 캡처:** `TRIGGER = START` → `FOCUSED_LOCKED` 대기 → 스틸 제출 → 그 후 `CANCEL`.
+- **수동 초점 슬라이더:** 1000단계 SeekBar, 30fps로 조절(throttle). 자동 알고리즘과 충돌하지 않도록 먼저 `AF_MODE_OFF`로 전환하세요.
+- **터치 초점은 `CONTROL_AF_REGIONS`**를 센서 활성 어레이 좌표로 사용합니다. 프로다운 결과를 위해 `AE_REGIONS`와 결합하세요.
 
-## What's Next
+## 다음 단계
 
-Brightness ✓ Sharpness ✓. Now let's fix the **color**. In **Chapter 16: White Balance & Color**, we cover:
+밝기 ✓ 선명도 ✓. 이제 **색상**을 고쳐봅시다. **제16장: 화이트 밸런스 및 색상**에서는 다음 내용을 다룹니다.
 
-- Auto White Balance (AWB) and the 7 presets (Incandescent → Shade)
-- Manual color correction with `COLOR_CORRECTION_GAINS` (4-channel R/G/B/G) and `COLOR_CORRECTION_TRANSFORM` (3×3 RGB matrix)
-- Color temperature concept (2000K candle → 10000K shade) and how it maps to white balance
-- Working code for a warm-tone "sunset look" preset and full manual AWB off-mode
+- 자동 화이트 밸런스(AWB)와 7가지 프리셋 (백열등 → 그늘)
+- `COLOR_CORRECTION_GAINS`(4채널 R/G/B/G) 및 `COLOR_CORRECTION_TRANSFORM`(3×3 RGB 행렬)을 이용한 수동 색상 보정
+- 색온도 개념(2000K 촛불 → 10000K 그늘)과 화이트 밸런스 매핑 방법
+- 따뜻한 톤의 "일몰 느낌" 프리셋 및 전체 수동 AWB off-모드를 위한 작동 코드
 
-Color is the final leg of the manual-controls trilogy.
+색상은 수동 제어 3부작의 마지막 단계입니다.

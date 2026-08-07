@@ -1,262 +1,262 @@
 ---
 sidebar_position: 2
-title: "Chapter 2: Understanding Smartphone Cameras"
-description: "Explore the camera module hardware inside every smartphone: the lens, image sensor, ISP processor, the difference between RAW and JPEG, multi-camera designs, and the complete journey from photons to a stored photo."
-keywords: [smartphone camera, camera module, camera lens, image sensor, ISP, RAW vs JPEG, multi-camera]
+title: "第2章：理解智慧型手機相機"
+description: "探索每支智慧型手機內部相機模組的硬體：鏡頭、影像感光元件、ISP 處理器、RAW 與 JPEG 的差異、多鏡頭設計，以及從光子到儲存照片的完整旅程。"
+keywords: [智慧型手機相機, 相機模組, 相機鏡頭, 影像感光元件, ISP, RAW 與 JPEG, 多鏡頭]
 ---
 
-# Chapter 2: Understanding Smartphone Cameras
+# 第2章：理解智慧型手機相機
 
-Before writing a single line of Camera2 API code, you must understand the physical hardware that your code will be commanding. A smartphone camera is not just "a lens pointed at a sensor." It is a tightly integrated, sealed, precision-engineered assembly containing optics, actuators, filters, semiconductors, and high-speed data buses. This chapter explains every component from the glass that first catches light to the flash memory chip where your final photo is stored.
+在撰寫第一行 Camera2 API 程式碼之前，你必須理解你的程式碼將要指揮的實體硬體。智慧型手機相機不僅僅是「一個對準感光元件的鏡頭」。它是一個高度整合、密封、精密工程的元件，包含光學元件、致動器、濾鏡、半導體和高速資料匯流排。本章將解釋每一個元件，從最初接收光線的玻璃，到最終照片儲存的快閃記憶體晶片。
 
-The goal of this chapter is to build a mental model of the camera pipeline as a physical system. When later chapters ask you to configure a capture request with `CONTROL_AE_TARGET_FPS_RANGE` or `SENSOR_SENSITIVITY`, you will understand exactly which piece of hardware those parameters affect and why the values matter.
+本章的目標是幫助你建立把相機管線視為一個實體系統的心智模型。當後續章節要求你使用 `CONTROL_AE_TARGET_FPS_RANGE` 或 `SENSOR_SENSITIVITY` 配置擷取請求時，你會清楚地理解這些參數究竟影響哪個硬體部件，以及為什麼這些數值很重要。
 
-## The Camera Module: A Sealed Optical Assembly
+## 相機模組：一個密封的光學元件
 
-When you look at the back of a modern flagship phone — imagine a Pixel 10 or Galaxy S26 Ultra — you see a raised rectangular island protruding 2 to 4 millimeters from the rear glass. That island is not a single camera. One rectangular island houses three separate circular modules: the largest at the bottom is the primary wide, a smaller one above it is the 3× periscope telephoto, and the medium-sized one to the left is the 0.5× ultra-wide. Each circular "bump" within that island is a complete, independent camera module.
+當你檢視現代旗艦手機的背面——例如 Pixel 10 或 Galaxy S26 Ultra——你會看到一個凸起的矩形島嶼，從後置玻璃表面突出約 2 到 4 公釐。這個島嶼並非單一相機。一個矩形島嶼內包含三個獨立的圓形模組：底部最大的那個是主廣角，上方較小的那個是 3× 潛望長焦，左側中等大小的那個是 0.5× 超廣角。島嶼內的每個圓形「凸起」都是一個完整、獨立的相機模組。
 
-A camera module is a hermetically sealed unit manufactured in a dust-free clean room. It contains, stacked in order from the outside world inward:
+相機模組是在無塵潔淨室中製造的密封單元。它由以下部分構成，按從外部到內部的順序排列：
 
-1. **Protective cover glass**: A scratch-resistant sapphire or Gorilla Glass window that seals the module and keeps dust out.
-2. **Lens barrel**: A cylindrical stack of 4 to 6 individual glass (or sometimes plastic aspheric) lens elements, held in precise alignment by thin plastic spacers.
-3. **Voice Coil Motor (VCM)**: An electromagnetic actuator that moves the entire lens barrel forward or backward along the optical axis by fractions of a millimeter to achieve autofocus. Some premium VCMs can also shift the lens perpendicular to the axis for optical image stabilization (OIS).
-4. **Infrared (IR) cut filter**: A thin, coated glass wafer placed directly in front of the sensor. It blocks infrared light (which the silicon sensor is sensitive to but the human eye is not) so that recorded colors match what humans perceive.
-5. **Sensor die**: The silicon CMOS image sensor chip itself, wire-bonded to a substrate. The active pixel array faces upward toward the lens.
-6. **Flexible Printed Circuit (FPC)**: A thin, bendable ribbon cable that carries power, ground, control signals (I2C), and high-speed image data (MIPI CSI-2) from the module to the phone's mainboard.
-7. **Board-to-board connector**: A tiny, high-density plug at the end of the FPC that snaps into a mating receptacle on the phone's main PCB.
+1. **保護蓋板玻璃**：一塊耐刮擦的藍寶石或 Gorilla Glass 視窗，用於密封模組並防止灰塵進入。
+2. **鏡筒**：一個由 4 至 6 片單獨的玻璃（有時是塑膠非球面）鏡片組成的圓柱形堆疊，透過薄塑膠隔片保持精確對齊。
+3. **音圈馬達 (VCM)**：一種電磁致動器，可將整個鏡筒沿光軸向前或向後移動零點幾公釐以實現自動對焦。一些高階 VCM 還能讓鏡頭沿垂直於光軸的方向移動，以實現光學防手震 (OIS)。
+4. **紅外線 (IR) 截止濾鏡**：一片薄薄的鍍膜玻璃晶圓，直接放置在感光元件前方。它阻擋紅外光（矽感光元件對紅外敏感，但人眼不敏感），使記錄的顏色與人眼所感知的相符。
+5. **感光元件裸晶**：矽基 CMOS 影像感光元件晶片本身，透過打線接合連接到基板上。有效像素陣列朝上面對鏡頭。
+6. **柔性印刷電路板 (FPC)**：一條薄而柔軟的排線，將電源、接地、控制訊號 (I2C) 和高速影像資料 (MIPI CSI-2) 從模組傳輸到手機主機板。
+7. **板對板連接器**：位於 FPC 末端的一個微小、高密度插頭，可插入手機主 PCB 上對應的插座。
 
-The entire assembly — from cover glass to connector — is typically 5 to 8 millimeters thick for a conventional rear camera, and 10 to 14 millimeters long (inside the phone, oriented horizontally) for a periscope telephoto. The modules are calibrated individually at the factory: lens alignment, sensor tilt, color shading, and autofocus infinity position are all measured and stored in one-time-programmable (OTP) memory on the module itself. The Camera2 API reads this calibration data at device boot so your app does not have to account for unit-to-unit manufacturing variation.
+整個元件——從蓋板玻璃到連接器——對於傳統的後置相機，厚度通常為 5 到 8 公釐；對於潛望長焦，長度（在手機內部水平方向上）為 10 到 14 公釐。模組在工廠逐一校準：鏡頭對齊、感光元件傾斜、顏色陰影和對焦無限遠位置都會被測量並儲存在模組自身的一次性可程式設計 (OTP) 記憶體中。Camera2 API 在裝置開機時讀取這些校準資料，因此你的應用程式無需考慮製造單元間的差異。
 
-## The Lens: Focal Length, Aperture, and Stabilization
+## 鏡頭：焦距、光圈和防手震
 
-The lens is the first component that light encounters. Its job is to bend incoming light rays so they converge into a sharp image exactly on the plane of the image sensor.
+鏡頭是光線遇到的第一個元件。它的工作是彎曲入射光線，使其精確匯聚在影像感光元件所在的平面上，形成清晰的影像。
 
-### Focal Length and Full-Frame Equivalence
+### 焦距和全片幅等效
 
-Focal length determines the field of view (how much of the scene fits in the frame) and magnification (how large distant subjects appear). Smartphone camera specs always advertise **full-frame equivalent focal lengths**. This is a convention that normalizes across different sensor sizes so consumers can compare apples to apples. A full-frame sensor is the 36mm × 24mm size historically used in 35mm film SLR cameras.
+焦距決定了視場角（場景中有多少能進入畫面）和放大倍率（遠處被攝物看起來有多大）。智慧型手機相機規格總是宣傳**全片幅等效焦距**。這是一種將不同感光元件尺寸進行歸一化的慣例，以便消費者能夠在同等條件下進行比較。全片幅感光元件是歷史上 35mm 軟片單眼相機使用的 36mm × 24mm 尺寸。
 
-Common full-frame equivalent focal lengths on smartphones:
+智慧型手機上常見的全片幅等效焦距：
 
-- **10–18mm (Ultra-wide)**: 100° to 130° diagonal field of view. Used for landscapes, architecture, group selfies, and close-up macro shots.
-- **22–28mm (Wide / Primary)**: The default "normal" camera on every phone. ~75° field of view, similar to human peripheral vision but flatter.
-- **45–80mm (Telephoto, 2× to 3×)**: Narrow 30° to 50° field of view. Used for portraits (natural-looking face proportions, less perspective distortion) and general zoom.
-- **100–240mm (Periscope telephoto, 5× to 10×)**: 10° to 25° field of view. The prism-bent periscope design allows long focal lengths without making the phone 2 centimeters thick.
+- **10–18mm（超廣角）**：100° 至 130° 對角視場角。用於風景、建築、團體自拍和近距離微距拍攝。
+- **22–28mm（廣角/主鏡頭）**：每支手機的預設「標準」相機。約 75° 視場角，類似於人眼周邊視覺但更平坦。
+- **45–80mm（長焦，2× 至 3×）**：30° 至 50° 的窄視場角。用於人像（自然的人物面部比例、較少的透視畸變）和一般變焦。
+- **100–240mm（潛望長焦，5× 至 10×）**：10° 至 25° 視場角。稜鏡折彎的潛望設計允許較長的焦距，而不會讓手機厚達 2 公分。
 
-Here is how light travels through a typical 5-element wide-angle lens assembly:
+以下是光線穿過典型 5 片廣角鏡頭組件的路徑：
 
 ```mermaid
 graph LR
-    A[Incoming Light Rays] --> B[Element 1\nAspherical\nConvex]
-    B --> C[Element 2\nConcave\nChromatic Correction]
-    C --> D[Element 3\nConvex]
-    D --> E[Element 4\nConcave\nDistortion Control]
-    E --> F[Element 5\nPlanoconvex]
-    F --> G[Focal Plane\nImage Sensor]
+    A["入射光線"] --> B["鏡片 1<br/>非球面<br/>凸透鏡"]
+    B --> C[鏡片 2<br/>凹透鏡<br/>色差校正]
+    C --> D[鏡片 3<br/>凸透鏡]
+    D --> E[鏡片 4<br/>凹透鏡<br/>畸變控制]
+    E --> F[鏡片 5<br/>平凸透鏡]
+    F --> G[焦平面<br/>影像感光元件]
 ```
 
-### Aperture
+### 光圈
 
-The aperture is the size of the opening through which light passes inside the lens. It is described as an **f-number** (or f-stop): the focal length divided by the diameter of the aperture. A **smaller f-number means a wider hole, which means more light** reaches the sensor.
+光圈是鏡頭內部光線通過的開口大小。它用 **f 值**（或 f 號）描述：焦距除以光圈直徑。**較小的 f 值意味著較大的開口，意味著更多光線**到達感光元件。
 
-- f/1.4 to f/1.8: Very wide aperture. Typical flagship primary cameras. Excellent in low light.
-- f/2.0 to f/2.4: Moderate aperture. Typical ultra-wide and telephoto cameras on most phones.
-- f/2.8 to f/4.0: Narrow aperture. Found on lower-cost front cameras and some periscope modules.
+- f/1.4 至 f/1.8：非常大的光圈。典型旗艦主鏡頭。在低光環境下表現優異。
+- f/2.0 至 f/2.4：中等光圈。大多數手機上的典型超廣角和長焦相機。
+- f/2.8 至 f/4.0：窄光圈。見於低成本前置相機和某些潛望模組。
 
-The aperture is usually fixed in smartphone cameras. A few 2020-era Samsung flagships featured a **variable aperture mechanism** with a dual-diaphragm that could mechanically switch between f/1.5 and f/2.4. This is extremely rare today because VCM-based focus and multi-frame computational HDR have made variable aperture unnecessary for most use cases.
+智慧型手機相機的光圈通常是固定的。少數 2020 年代的三星旗艦採用了**可變光圈機構**，具有雙隔膜，可在 f/1.5 和 f/2.4 之間機械切換。如今這極為罕見，因為基於 VCM 的對焦和多幀運算 HDR 已使可變光圈在大多數使用場景下不再必要。
 
-### Optical Image Stabilization (OIS)
+### 光學防手震 (OIS)
 
-When you hold a phone, your hands naturally shake by tiny angular amounts — on the order of 0.1° to 0.5° at 1/30th of a second. Over a long enough exposure, this shake causes the entire image to blur. **Optical Image Stabilization (OIS)** solves this problem by physically moving either the lens barrel (lens-shift OIS) or the sensor die itself (sensor-shift OIS) to counteract the detected motion. A tiny gyroscope inside the camera module (or shared from the phone's main IMU) measures angular velocity 1,000 to 8,000 times per second, and the OIS actuator moves the optics accordingly. OIS can typically compensate for 3 to 5 stops of handshake, meaning an exposure that would have required 1/60s to stay sharp can now be shot at 1/8s or 1/4s with equal sharpness.
+當你握住手機時，手會自然產生微小的角度抖動——在 1/30 秒內大約 0.1° 至 0.5°。在足夠長的曝光時間內，這種抖動會導致整個影像模糊。**光學防手震 (OIS)** 透過物理移動鏡筒（鏡頭位移 OIS）或感光元件裸晶本身（感光元件位移 OIS）來抵消偵測到的運動，從而解決此問題。相機模組內的一個微型陀螺儀（或來自手機主 IMU 的共享訊號）每秒測量角速度 1,000 至 8,000 次，OIS 致動器相應地移動光學元件。OIS 通常可以補償 3 到 5 級手震，這意味著原本需要 1/60 秒才能保持清晰的曝光，現在可以在 1/8 秒或 1/4 秒拍攝而保持同等清晰度。
 
-## The Image Sensor: Where Light Becomes Electricity
+## 影像感光元件：光變電的地方
 
-The image sensor is a silicon chip containing millions of individual light detectors called **photodiodes**, arranged in a precise rectangular grid. Every smartphone sensor today is a **CMOS (Complementary Metal-Oxide-Semiconductor)** type.
+影像感光元件是一塊矽晶片，包含數百萬個獨立的稱為**光電二極體**的光偵測器，排列成精確的矩形網格。如今每個智慧型手機感光元件都是 **CMOS（互補金屬氧化物半導體）** 類型。
 
-### Pixel Size and Megapixels
+### 像素尺寸和像素數
 
-Each individual photodiode + readout circuit is called a **pixel**. The physical size of each pixel (measured in micrometers, μm) is arguably more important than the total megapixel count. A larger pixel captures more photons per unit time, which means less shot noise and better low-light performance.
+每個獨立的光電二極體 + 讀出電路稱為一個**像素**。每個像素的實體尺寸（以微米 μm 為單位測量）可以說比總像素數更重要。較大的像素在單位時間內捕獲更多光子，這意味著較少的散粒雜訊和更好的低光效能。
 
-Common pixel sizes in 2026 smartphones:
+2026 年智慧型手機中常見的像素尺寸：
 
-- **0.6μm to 0.8μm**: Very small pixels. Used in 108MP to 200MP high-resolution sensors. These rely entirely on pixel binning for acceptable noise.
-- **1.0μm to 1.2μm**: Mid-size. Used in 48MP to 64MP sensors with default 4:1 binning to 12MP–16MP output.
-- **2.0μm to 2.4μm**: Large "flagship" pixels. Used in dedicated 12MP–16MP sensors (Google Pixel, iPhone Pro) or as the binned output of 48MP sensors in "high quality" mode.
+- **0.6μm 至 0.8μm**：非常小的像素。用於 108MP 至 200MP 高解析度感光元件。它們完全依賴像素合併來獲得可接受的雜訊水平。
+- **1.0μm 至 1.2μm**：中等尺寸。用於 48MP 至 64MP 感光元件，預設 4:1 合併為 12MP–16MP 輸出。
+- **2.0μm 至 2.4μm**：大型「旗艦」像素。用於專用 12MP–16MP 感光元件（Google Pixel、iPhone Pro），或作為 48MP 感光元件在「高品質」模式下合併後的輸出。
 
-Pixel binning is the technique of combining the charge from adjacent 2×2 (or 3×3, or 4×4) pixels into a single "super pixel" during readout. A 48MP sensor with 0.8μm individual pixels, when binned 4-to-1, behaves like a 12MP sensor with 1.6μm effective pixels — dramatically improving signal-to-noise ratio. The Camera2 API exposes both the full-resolution raw mode and the default binned mode as separate stream configurations.
+像素合併是在讀出期間將相鄰 2×2（或 3×3，或 4×4）像素的電荷合併為一個「超級像素」的技術。一個具有 0.8μm 單像素的 48MP 感光元件，當 4:1 合併時，行為類似一個具有 1.6μm 有效像素的 12MP 感光元件——顯著提高了訊號雜訊比。Camera2 API 將全解析度原始模式和預設合併模式作為單獨的串流配置公開。
 
-The megapixel count math is straightforward: a 48MP sensor has an active array of approximately 8,000 × 6,000 photodiodes = 48,000,000 individual light sensors.
+像素數的計算很簡單：一個 48MP 感光元件具有約 8,000 × 6,000 個光電二極體的有效陣列 = 48,000,000 個獨立的光偵測器。
 
-### Sensor Size Classifications
+### 感光元件尺寸分類
 
-Sensor size follows a legacy inch-based notation dating back to 1950s Vidicon television tubes. The format is "1/X inch" where X is the divisor; smaller X means a larger sensor:
+感光元件尺寸遵循可追溯到 1950 年代 Vidicon 電視攝像管的舊式英吋記法。格式為「1/X 英吋」，其中 X 是除數；X 越小，感光元件越大：
 
-- 1/3.06" to 1/2.55": Small sensors, typical for front cameras and budget ultra-wides (~5MP to 13MP).
-- 1/1.7" to 1/1.3": Large mobile sensors, flagships primary cameras (48MP, 50MP, 108MP).
-- 1-inch (Type 1): Very large for a phone. Found in the Xiaomi 13 Ultra, Sharp Aquos R series, and Sony Xperia Pro-I. Approximately 13.2mm × 8.8mm active area — approaching the size of some Micro Four Thirds cameras.
+- 1/3.06" 至 1/2.55"：小尺寸感光元件，典型用於前置相機和廉價超廣角（約 5MP 至 13MP）。
+- 1/1.7" 至 1/1.3"：大型行動感光元件，旗艦主鏡頭（48MP、50MP、108MP）。
+- 1 英吋（Type 1）：對手機而言非常大。見於 Xiaomi 13 Ultra、Sharp Aquos R 系列和 Sony Xperia Pro-I。有效區域約 13.2mm × 8.8mm——接近某些 Micro Four Thirds 相機的尺寸。
 
-A larger sensor, given equal megapixel count, always has larger individual pixels. That is why the "one-inch sensor" phones produce noticeably better low-light photos.
+在像素數相同的情況下，較大的感光元件總是有較大的單一像素。這就是「一英吋感光元件」手機在低光下表現明顯更好的原因。
 
-### The Bayer Color Filter Array (CFA)
+### 拜耳彩色濾鏡陣列 (CFA)
 
-A raw silicon photodiode is colorblind — it only measures total photon intensity, not wavelength. To record color, manufacturers deposit a tiny **color filter** on top of each individual pixel. The almost-universal pattern is the **Bayer RGGB filter array**: 50% green pixels, 25% red, and 25% blue, arranged in a repeating 2×2 tile. The human eye is more sensitive to green light, so doubling the green sampling improves perceived luminance resolution and noise performance.
+原始的矽光電二極體是色盲的——它只測量總光子強度，不測量波長。為了記錄顏色，製造商在每個單獨像素上方沉積一層微小的**彩色濾鏡**。幾乎通用的模式是**拜耳 RGGB 濾鏡陣列**：50% 綠色像素，25% 紅色，25% 藍色，以重複的 2×2 平鋪排列。人眼對綠光更敏感，因此將綠色取樣加倍可提高感知的亮度解析度和雜訊效能。
 
 ```mermaid
 graph LR
-    subgraph "4x4 Bayer Pattern (RGGB)"
+    subgraph "4x4 拜耳圖案 (RGGB)"
         direction TB
         A1[R] --- A2[G] --- A3[R] --- A4[G]
         B1[G] --- B2[B] --- B3[G] --- B4[B]
         C1[R] --- C2[G] --- C3[R] --- C4[G]
         D1[G] --- D2[B] --- D3[G] --- D4[B]
     end
-    E[IR Cut Filter\nBlocks Infrared] --> F[Color Filter Array\nBayer RGGB Deposited on Glass]
-    F --> G[Silicon Photodiodes\nConvert Photons→Electrons]
+    E["IR 截止濾鏡<br/>阻擋紅外光"] --> F["彩色濾鏡陣列<br/>拜耳 RGGB 沉積在玻璃上"]
+    F --> G[矽光電二極體<br/>將光子轉換為電子]
 ```
 
-After readout, the sensor data is a mosaic of separate red, green, and blue values — not a full-color image yet. The step that fills in the missing color information for each pixel is called **demosaicing** (or debayering) and it is the first major computational step performed in the ISP.
+讀出後，感光元件資料是獨立紅、綠、藍值的馬賽克——還不是完整的彩色影像。為每個像素填補缺失顏色資訊的步驟稱為**去馬賽克**（或去拜耳），這是 ISP 中執行的第一個主要運算步驟。
 
-### Rolling Shutter vs Global Shutter
+### 捲簾快門 vs 全域快門
 
-Nearly every smartphone image sensor uses a **rolling shutter**. The sensor does not expose or read all pixels at once. Instead, it exposes and reads the pixel array row by row, from top to bottom, one horizontal line at a time. A typical 48MP sensor rolling readout takes approximately 15 to 25 milliseconds for a full-frame capture.
+幾乎每個智慧型手機影像感光元件都使用**捲簾快門**。感光元件不會同時曝光或讀取所有像素。相反，它從上到下逐行曝光和讀取像素陣列，一次一行。一個典型的 48MP 感光元件捲簾讀出對於全幀擷取大約需要 15 到 25 毫秒。
 
-Rolling shutter produces characteristic distortions on very fast-moving subjects: a spinning airplane propeller or a ceiling fan appears bent or wavy; the top and bottom of a vertically-panned building lean in opposite directions (the "jello effect" in video). Global shutter sensors, by contrast, expose every pixel simultaneously and read them all at once after the exposure ends. Global shutter is used in machine vision, action cameras, and some specialized front-facing IR face-unlock sensors, but the global shutter pixel design has lower light sensitivity and higher cost, so it is not used in main smartphone cameras.
+捲簾快門在非常快速移動的物體上會產生特徵性失真：旋轉的飛機螺旋槳或吊扇看起來彎曲或呈波浪狀；垂直搖拍建築的頂部和底部向相反方向傾斜（影片中的「果凍效應」）。相比之下，全域快門感光元件同時曝光所有像素，並在曝光結束後一次性讀取。全域快門用於機器視覺、運動相機和某些專用前置 IR 臉部解鎖感光元件，但全域快門的像素設計光靈敏度較低、成本較高，因此不用於主智慧型手機相機。
 
-## The ISP: Image Signal Processor
+## ISP：影像訊號處理器
 
-The **ISP (Image Signal Processor)** is a dedicated hardware block (either a separate chip or, more commonly today, an integrated part of the main SoC alongside the CPU and GPU) whose sole job is to transform the raw, mosaic'd, noisy, distorted data streaming off the sensor into a visually pleasing color image.
+**ISP（影像訊號處理器）** 是一個專用硬體區塊（獨立晶片，或更常見的是與 CPU 和 GPU 一起整合在主 SoC 中的部分），其唯一的工作是將從感光元件流出的原始、馬賽克化、有雜訊、有失真的資料轉換為視覺上令人愉悅的彩色影像。
 
-The ISP runs a fixed, hardwired pipeline of image processing stages at extremely high throughput. A modern 48MP sensor running at 30 frames per second sends 1.44 billion pixels per second to the ISP. The ISP must process every single pixel through all stages in under 33 milliseconds per frame to keep up.
+ISP 以極高的吞吐量執行一條固定的、硬接線的影像處理階段管線。一個現代 48MP 感光元件以每秒 30 幀執行時，每秒向 ISP 傳送 14.4 億個像素。ISP 必須在每幀 33 毫秒內處理每個像素通過所有階段才能跟上。
 
-The canonical ISP pipeline stages, in order, are:
+規範的 ISP 管線階段，按順序如下：
 
-1. **Hot Pixel Correction**: Factory-calibrated "stuck" pixels (always bright or always dark) are replaced with interpolated values from neighbors.
-2. **Demosaic / Debayer**: The Bayer RGGB mosaic is converted into a full RGB image by estimating the missing two color channels at each pixel location from surrounding pixels using edge-aware interpolation algorithms.
-3. **Noise Reduction (Temporal + Spatial)**: Random shot noise and sensor read noise are suppressed. Spatial NR blurs flat regions while preserving edges. Temporal NR merges information from previous video frames (if available) for even cleaner results.
-4. **Lens Shading Correction (Vignetting Correction)**: The corners of the image are naturally darker because light must pass through the lens at a steeper angle. The ISP applies a per-pixel digital gain ramp, brighter at the corners, to flatten the illumination. Calibration data for this ramp is stored in the module's OTP.
-5. **Geometric Distortion Correction**: Ultra-wide and fisheye lenses produce barrel distortion (straight lines bow outward). The ISP remaps pixel coordinates using a stored polynomial lens model to produce a rectilinear image where straight lines actually appear straight. This step inherently crops 5–10% of the outer pixel ring.
-6. **Color Correction Matrix (CCM)**: The raw sensor RGB spectral response does not match the human eye's trichromatic response. A 3×3 matrix multiplication converts sensor-native RGB into standard sRGB or DCI-P3 color space. The CCM coefficients are tuned per-module per-illuminant (daylight, tungsten, fluorescent).
-7. **Tone Curve Adjustment**: A non-linear S-shaped tone mapping curve is applied to the linear RGB data to compress the high-dynamic-range sensor signal into the low-dynamic-range output (typically 8-bit sRGB gamma-encoded). This step is what makes the image "pop" — contrast increases in the midtones, highlights are rolled off, shadows are lifted.
-8. **Edge Enhancement / Sharpening**: A subtle unsharp mask is applied to recover high-frequency detail softened by the noise reduction and optical low-pass filter. The sharpening amount is carefully controlled to avoid introducing halos.
+1. **壞點校正**：工廠校準的「卡死」像素（始終亮或始終暗）被替換為相鄰像素的插值。
+2. **去馬賽克 / 去拜耳**：透過使用邊緣感知插值演算法從周圍像素估計每個像素位置缺失的兩個顏色通道，將拜耳 RGGB 馬賽克轉換為完整的 RGB 影像。
+3. **降噪（時間 + 空間）**：抑制隨機的散粒雜訊和感光元件讀出雜訊。空間降噪在保留邊緣的同時平滑平坦區域。時間降噪（如果可用）合併來自先前影片幀的資訊以獲得更乾淨的結果。
+4. **鏡頭陰影校正（暗角校正）**：影像角落自然較暗，因為光線必須以更陡的角度穿過鏡頭。ISP 套用逐像素的數位增益斜坡，在角落處更亮，以使照明平坦。此斜坡的校準資料儲存在模組的 OTP 中。
+5. **幾何畸變校正**：超廣角和魚眼鏡頭產生桶形畸變（直線向外彎曲）。ISP 使用儲存的多項式鏡頭模型重新映射像素座標，生成直線實際顯示為直線的 rectilinear 影像。此步驟固有地裁剪外圈 5–10% 的像素。
+6. **顏色校正矩陣 (CCM)**：原始感光元件的 RGB 光譜響應與人眼的三色響應不匹配。3×3 矩陣乘法將感光元件原生 RGB 轉換為標準 sRGB 或 DCI-P3 顏色空間。CCM 係數按每個模組、每種光源（日光、鎢絲燈、螢光燈）進行調校。
+7. **色調曲線調整**：對線性 RGB 資料套用非線性的 S 形色調映射曲線，將高動態範圍感光元件訊號壓縮到低動態範圍輸出（通常是 8 位元 sRGB gamma 編碼）。這一步使影像「突出」——中間調對比度增加，高光被捲離，陰影被提升。
+8. **邊緣增強 / 銳化**：套用細微的非銳化遮罩以恢復被降噪和光學低通濾波器軟化的高頻細節。銳化量被精心控制以避免引入光暈。
 
 ```mermaid
 flowchart TD
-    A[Raw Bayer Data\nfrom Sensor] --> B[Hot Pixel Correction]
-    B --> C[Demosaic / Debayer\nBayer → Full RGB]
-    C --> D[Noise Reduction\nSpatial + Temporal]
-    D --> E[Lens Shading Correction\nFix Vignetting]
-    E --> F[Geometric Distortion\nCorrect Fisheye / Barrel]
-    F --> G[Color Correction Matrix\nsRGB / P3 Color Space]
-    G --> H[Tone Curve Adjustment\nGamma + S-Curve]
-    H --> I[Edge Enhancement / Sharpening]
-    I --> J[Final Processed Image\n→ JPEG Encoder / Display]
+    A["來自感光元件的<br/>原始拜耳資料"] --> B["壞點校正"]
+    B --> C[去馬賽克 / 去拜耳<br/>拜耳 → 完整 RGB]
+    C --> D[降噪<br/>空間 + 時間]
+    D --> E[鏡頭陰影校正<br/>修復暗角]
+    E --> F[幾何畸變<br/>校正魚眼 / 桶形]
+    F --> G[顏色校正矩陣<br/>sRGB / P3 顏色空間]
+    G --> H[色調曲線調整<br/>Gamma + S 曲線]
+    H --> I[邊緣增強 / 銳化]
+    I --> J[最終處理後影像<br/>→ JPEG 編碼器 / 顯示器]
 ```
 
-The ISP's processing quality is a major differentiator between phone manufacturers. Google, Samsung, Apple, and Xiaomi each tune their ISP pipelines with different artistic priorities: some favor natural colors, some oversaturated "punchy" output, some aggressive noise reduction vs retained detail. The Camera2 API gives you some control over individual ISP stage strengths (via the Android tonemap and color correction controls), but most of the detailed stage parameters are locked behind vendor proprietary APIs.
+ISP 的處理品質是手機製造商之間的主要差異化因素。Google、Samsung、Apple 和 Xiaomi 各自以不同的藝術優先級調校其 ISP 管線：一些偏好自然色彩，一些偏好過飽和的「鮮豔」輸出，一些在降噪與保留細節之間取捨不同。Camera2 API 讓你可以部分控制單個 ISP 階段的強度（透過 Android tonemap 和顏色校正控制項），但大多數詳細的階段參數被鎖定在廠商專有 API 之後。
 
-## RAW vs JPEG: Two Paths from Sensor to Storage
+## RAW vs JPEG：從感光元件到儲存的兩條路徑
 
-The ISP pipeline above produces a processed image. But the Camera2 API also allows you to bypass the ISP entirely and read the raw sensor data directly. This is the critical distinction between RAW and JPEG output.
+上述 ISP 管線產生處理後的影像。但 Camera2 API 還允許你完全繞過 ISP 並直接讀取原始感光元件資料。這是 RAW 和 JPEG 輸出之間的關鍵區別。
 
-### RAW Format
+### RAW 格式
 
-A **RAW file** (on Android this means a DNG file, Digital Negative) contains exactly what the sensor measured before any ISP processing runs. It is a 10-bit, 12-bit, or 14-bit per pixel Bayer mosaic — still in the original RGGB pattern, still with vignetting, still with noise, still linear. The RAW file also contains metadata tags specifying the exact color filter array pattern, the sensor's color profile, black level, white level, and the lens model.
+**RAW 檔案**（在 Android 上這意味著 DNG 檔案，即 Digital Negative）包含 ISP 處理執行之前感光元件測量到的精確資料。它是每個像素 10 位元、12 位元或 14 位元的拜耳馬賽克——仍然在原始 RGGB 圖案中，仍然有暗角，仍然有雜訊，仍然是線性的。RAW 檔案還包含元資料標籤，指定確切的彩色濾鏡陣列圖案、感光元件的顏色設定檔、黑電平、白電平和鏡頭模型。
 
-- **Bit depth**: RAW10 = 10 bits per channel = 1,024 levels. RAW12 = 4,096 levels. RAW14 = 16,384 levels. Compare this to JPEG's 8 bits = 256 levels.
-- **File size**: 20–40 MB per 48MP photo. Uncompressed or near-lossless compressed.
-- **Use case**: Professional post-production editing. The extra stops of headroom allow an editor to "rescue" overexposed highlights (by 2 to 3 stops of EV) or lift underexposed shadows without banding.
+- **位元深度**：RAW10 = 每通道 10 位元 = 1,024 級。RAW12 = 4,096 級。RAW14 = 16,384 級。相比之下 JPEG 的 8 位元 = 256 級。
+- **檔案大小**：每張 48MP 照片 20–40 MB。未壓縮或近無損壓縮。
+- **使用場景**：專業後期製作編輯。額外的級位裕量允許編輯器「挽救」過曝的高光（2 到 3 級 EV）或提升欠曝的陰影而不會出現條帶。
 
-### JPEG Format
+### JPEG 格式
 
-A **JPEG file** is the fully-cooked output of the ISP. Every single one of the 8 ISP stages above has already been applied to the pixel data. Then the image is converted from RGB to YCbCr 4:2:0 chroma-subsampled color space and compressed with a lossy Discrete Cosine Transform algorithm at roughly a 10:1 to 20:1 compression ratio.
+**JPEG 檔案**是 ISP 的完全加工輸出。上述 8 個 ISP 階段中的每一個都已套用於像素資料。然後影像從 RGB 轉換為 YCbCr 4:2:0 色度子取樣色彩空間，並以大約 10:1 到 20:1 的壓縮比使用有損離散餘弦轉換演算法進行壓縮。
 
-- **Bit depth**: Always 8 bits per channel = 256 levels per color.
-- **File size**: 2–5 MB for a 12MP–48MP photo, depending on JPEG quality level.
-- **Use case**: Instant sharing, social media, any workflow where the photo is "done" as shot. Adjustments in a mobile editor degrade the image quickly because only 256 levels remain.
+- **位元深度**：始終為每通道 8 位元 = 每色 256 級。
+- **檔案大小**：12MP–48MP 照片 2–5 MB，取決於 JPEG 品質級別。
+- **使用場景**：即時分享、社群媒體，以及任何照片「已完成」的工作流程。在行動編輯器中的調整會迅速降低影像品質，因為只剩下 256 級。
 
-### Comparison Table: RAW vs JPEG
+### 對比表：RAW vs JPEG
 
-| Feature | RAW (DNG) | JPEG |
+| 特性 | RAW (DNG) | JPEG |
 |---------|-----------|------|
-| ISP Processing Applied | None — all stages skipped | All 8 stages applied and irreversible |
-| Color Depth | 10–14 bit (1,024–16,384 levels) | 8 bit (256 levels) |
-| White Balance | Tagged in metadata, fully changeable in post | Baked into pixels — minor edits only |
-| Exposure Latitude | ±2 to 3 stops recoverable | ±1/2 stop at best before banding |
-| File Size (48MP) | 25–40 MB | 3–6 MB |
-| Color Space | Sensor-native linear RGB | sRGB or Display P3 gamma-encoded |
-| Sharpening / Noise Reduction | None — editor's choice | Applied; can't be undone |
-| Typical Workflow | Adobe Lightroom / Capture One workflow | Direct share to Instagram / Messages |
+| 套用的 ISP 處理 | 無——所有階段都跳過 | 全部 8 個階段已套用且不可逆 |
+| 色彩深度 | 10–14 位元 (1,024–16,384 級) | 8 位元 (256 級) |
+| 白平衡 | 在元資料中標記，後期完全可更改 | 已嵌入像素——僅可微調 |
+| 曝光寬容度 | ±2 至 3 級可恢復 | 出現條帶前最多 ±1/2 級 |
+| 檔案大小 (48MP) | 25–40 MB | 3–6 MB |
+| 色彩空間 | 感光元件原生線性 RGB | sRGB 或 Display P3 gamma 編碼 |
+| 銳化 / 降噪 | 無——編輯者的選擇 | 已套用；無法撤銷 |
+| 典型工作流程 | Adobe Lightroom / Capture One 工作流程 | 直接分享到 Instagram / Messages |
 
-## Multi-Camera Phones: Why Not One Giant Zoom Lens?
+## 多鏡頭手機：為什麼不是一個巨大的變焦鏡頭？
 
-A traditional point-and-shoot camera uses a single zoom lens with moving internal groups that continuously change focal length from wide to telephoto. Why can't a smartphone do the same? Physics. A 10× zoom lens that covers 24mm–240mm full-frame equivalent with a constant f/2.8 aperture requires an optical path roughly 5 centimeters (2 inches) long. A smartphone is, at most, 0.9 centimeters thick. The math simply does not fit.
+傳統的隨身相機使用一個帶有移動內部鏡組的變焦鏡頭，可以連續改變焦距從廣角到長焦。為什麼智慧型手機不能這樣做？物理。一個 10× 變焦鏡頭，覆蓋 24mm–240mm 全片幅等效焦距並具有恆定 f/2.8 光圈，需要大約 5 公分（2 英吋）長的光路。一支智慧型手機最多只有 0.9 公分厚。數學上根本不成立。
 
-The smartphone industry solved this not with a zoom lens, but with **multiple fixed-focal-length cameras**, each optimized for a different purpose, and a "smooth zoom" computational system that fades from one camera to the next at specific zoom ratios.
+智慧型手機行業不是用變焦鏡頭解決這個問題，而是採用**多個定焦相機**，每個針對不同用途最佳化，外加一個「平滑變焦」運算系統，在特定變焦比例處從一個相機淡入到下一個。
 
-A typical 2026 flagship rear camera island contains:
+一個典型的 2026 年旗艦後置相機島嶼包含：
 
-1. **Ultra-Wide (0.5× zoom, ~13mm eq, ~120° FOV)**: Short focal length, large depth of field. Ideal for landscapes, architecture, group shots, and close-focus macro when repositioned via software.
-2. **Wide / Primary (1× zoom, ~24mm eq, ~75° FOV)**: The default. The largest sensor, the widest aperture, the best OIS. Used for 80% of everyday photos.
-3. **Telephoto / Periscope (3× to 10× optical, ~72mm to ~240mm eq)**: A conventional telephoto lens (3×) sits directly above its sensor. A periscope telephoto (5×, 10×) uses a 45° prism near the phone's edge to reflect light 90°, so the lens barrel runs horizontally inside the phone's body rather than vertically through its thickness.
-4. **ToF / Depth Sensor**: A near-infrared laser dot projector (or, on iPhones, a structured-light LiDAR scanner) that pulses 30,000+ IR dots onto the scene and measures their round-trip time to produce a per-pixel depth map. Used for accurate portrait bokeh, augmented reality occlusion, and fast autofocus in low light.
+1. **超廣角（0.5× 變焦，約 13mm 等效，約 120° FOV）**：短焦距，大景深。非常適合風景、建築、團體照，以及透過軟體重新定位時的近焦微距。
+2. **廣角 / 主鏡頭（1× 變焦，約 24mm 等效，約 75° FOV）**：預設相機。最大的感光元件、最寬的光圈、最好的 OIS。用於 80% 的日常照片。
+3. **長焦 / 潛望（3× 至 10× 光學，約 72mm 至約 240mm 等效）**：傳統長焦鏡頭 (3×) 直接位於其感光元件上方。潛望長焦 (5×, 10×) 在手機邊緣附近使用 45° 稜鏡將光線反射 90°，使鏡筒在手機機身內水平執行而不是垂直穿過其厚度。
+4. **ToF / 深度感光元件**：一個近紅外雷射點投影器（或在 iPhone 上的結構光 LiDAR 掃描儀），向場景投射 30,000+ 個 IR 點並測量其往返時間以產生逐像素深度圖。用於精確的人像背景虛化、擴增實境遮擋和低光下的快速自動對焦。
 
 ```mermaid
 graph TB
-    subgraph "Phone Rear Camera Island"
-        A[Rear Glass Cover]
+    subgraph "手機後置相機島嶼"
+        A["後置玻璃蓋板"]
     end
-    A --> B[Ultra-Wide Camera\n13mm eq / 120° FOV]
-    A --> C[Wide / Primary Camera\n24mm eq / f/1.6 + OIS]
-    A --> D[5× Periscope Telephoto\n120mm eq / Prism-Refracted]
-    A --> E[ToF Depth Sensor\nLaser Dot Projector]
+    A --> B[超廣角相機<br/>13mm 等效 / 120° FOV]
+    A --> C[廣角 / 主相機<br/>24mm 等效 / f/1.6 + OIS]
+    A --> D[5× 潛望長焦<br/>120mm 等效 / 稜鏡折射]
+    A --> E[ToF 深度感光元件<br/>雷射點投影器]
 ```
 
-When you perform a pinch-zoom gesture in the camera app, the HAL (Hardware Abstraction Layer) smoothly switches the active physical camera at pre-determined thresholds. For example, zooming from 0.5× to 1.0× fades from the ultra-wide to the wide. At 2.9× the app is still digitally cropping the wide camera. At 3.0×, the HAL switches the active source to the periscope telephoto camera. Between those zoom ratios, a sophisticated image-fusing algorithm uses both cameras simultaneously to maintain a seamless transition.
+當你在相機應用程式中執行捏合變焦手勢時，HAL（硬體抽象層）會在預定的閾值處平滑切換活動的實體相機。例如，從 0.5× 變焦到 1.0× 會從超廣角淡入到廣角。在 2.9× 時，應用程式仍然在數位裁切廣角相機。在 3.0× 時，HAL 將活動源切換到潛望長焦相機。在這些變焦比例之間，一個複雜的影像融合演算法同時使用兩個相機以保持無縫過渡。
 
-## The Full Journey: From Photon to Saved Photo, Millisecond by Millisecond
+## 完整旅程：從光子到儲存的照片，逐毫秒
 
-Here is the complete, numbered timeline of what physically happens inside a smartphone during a single still photo capture, starting from the moment the user's finger lifts off the virtual shutter button. The numbers are representative of a 2026 flagship capturing a 12MP default-mode JPEG in daylight:
+以下是單張靜態照片擷取期間智慧型手機內部實體發生的完整編號時間線，從使用者手指離開虛擬快門按鈕的那一刻開始。這些數字代表了 2026 年旗艦在日光下擷取 12MP 預設模式 JPEG 的典型情況：
 
-- **0 ms**: User taps shutter. The Camera2 API framework receives the `CaptureRequest` with `TEMPLATE_STILL_CAPTURE`.
-- **0–2 ms**: The 3A algorithm (Auto-Focus, Auto-Exposure, Auto-White-Balance) converges to its final values.
-- **2–6 ms**: The voice coil motor (VCM) energizes its coil, physically moving the lens barrel by 0.2mm to the exact focus distance the AF algorithm calculated.
-- **6–21 ms (15 ms exposure)**: The global reset releases the sensor pixels' charge. For 15 milliseconds, photodiodes accumulate photon-generated electrons. The rolling shutter reads out row-by-row during and after this window.
-- **18–28 ms**: The sensor outputs the raw Bayer data over the MIPI CSI-2 high-speed serial bus. A typical configuration is 4 data lanes at 2.5 Gbps per lane = 10 Gbps total bandwidth, which comfortably handles a 12MP frame's raw bit depth plus blanking intervals.
-- **28–31 ms**: The ISP's 8-stage pipeline processes the frame through hotpixel correction, demosaic, noise reduction, lens shading, geometric correction, color matrix, tone curve, and sharpening. This happens entirely in hardware — no CPU involvement at the pixel level.
-- **31–33 ms**: The processed YUV image is sent to the hardware JPEG encoder, which applies lossy DCT compression at quality level 90–95 and writes the JFIF file headers (EXIF, thumbnail, GPS coordinates if tagged).
-- **33–40 ms**: The completed JPEG blob is written via the MediaStore content provider into the app's files directory, for example `/data/data/com.yourpackagename/files/DCIM/Camera/IMG_20260806_151042.jpg`. The MediaScanner is notified, and the photo appears in the system gallery.
+- **0 ms**：使用者點擊快門。Camera2 API 框架接收帶有 `TEMPLATE_STILL_CAPTURE` 的 `CaptureRequest`。
+- **0–2 ms**：3A 演算法（自動對焦、自動曝光、自動白平衡）收斂到最終值。
+- **2–6 ms**：音圈馬達 (VCM) 給線圈通電，實體上將鏡筒移動 0.2mm 至 AF 演算法計算的精確對焦距離。
+- **6–21 ms（15 ms 曝光）**：全域復位釋放感光元件像素的電荷。在 15 毫秒內，光電二極體累積光子產生的電子。捲簾快門在此視窗期間和之後逐行讀出。
+- **18–28 ms**：感光元件透過 MIPI CSI-2 高速序列匯流排輸出原始拜耳資料。典型配置是 4 條資料通道，每通道 2.5 Gbps = 總頻寬 10 Gbps，可輕鬆處理 12MP 幀的原始位元深度加上消隱間隔。
+- **28–31 ms**：ISP 的 8 階段管線透過壞點校正、去馬賽克、降噪、鏡頭陰影、幾何校正、顏色矩陣、色調曲線和銳化處理該幀。這完全在硬體中發生——像素級別無 CPU 參與。
+- **31–33 ms**：處理後的 YUV 影像被傳送到硬體 JPEG 編碼器，該編碼器以品質級別 90–95 套用有損 DCT 壓縮並寫入 JFIF 檔案標頭（EXIF、縮圖，如有標記則包含 GPS 座標）。
+- **33–40 ms**：完成的 JPEG 二進位大型物件透過 MediaStore 內容提供者寫入應用程式的檔案目錄，例如 `/data/data/com.yourpackagename/files/DCIM/Camera/IMG_20260806_151042.jpg`。MediaScanner 被通知，照片出現在系統圖庫中。
 
 ```mermaid
 sequenceDiagram
-    participant User
-    participant UI as App UI
-    participant VCM as VCM / Focus Actuator
-    participant Sensor as Image Sensor
-    participant MIPI as MIPI CSI-2 Bus
-    participant ISP as ISP Pipeline
-    participant JPEG as JPEG Encoder
-    participant Storage as Flash Storage
+    participant User as 使用者
+    participant UI as 應用 UI
+    participant VCM as VCM / 對焦致動器
+    participant Sensor as 影像感光元件
+    participant MIPI as MIPI CSI-2 匯流排
+    participant ISP as ISP 管線
+    participant JPEG as JPEG 編碼器
+    participant Storage as 快閃儲存
 
-    User->>UI: 0ms: Tap Shutter Button
-    UI->>VCM: 2ms: Move lens to AF distance
-    VCM-->>UI: 6ms: Focus locked
-    UI->>Sensor: 6ms: Start exposure
-    Note over Sensor: 6ms–21ms: 15ms exposure rolling readout
-    Sensor->>MIPI: 18ms–28ms: Stream RAW Bayer @ 10Gbps
-    MIPI->>ISP: 28ms: Full frame received
-    Note over ISP: 28ms–31ms: 8-stage pipeline processing
-    ISP->>JPEG: 31ms: Send YUV frame
-    JPEG-->>ISP: 33ms: JPEG compressed
-    ISP->>Storage: 33ms–40ms: Write JPEG + EXIF
-    Storage-->>UI: 40ms: File saved OK
-    UI-->>User: 40ms: Show thumbnail animation
+    User->>UI: 0ms：點擊快門按鈕
+    UI->>VCM: 2ms：將鏡頭移至 AF 距離
+    VCM-->>UI: 6ms：對焦鎖定
+    UI->>Sensor: 6ms：開始曝光
+    Note over Sensor: 6ms–21ms：15ms 曝光捲簾讀出
+    Sensor->>MIPI: 18ms–28ms：以 10Gbps 串流傳輸 RAW 拜耳
+    MIPI->>ISP: 28ms：接收完整幀
+    Note over ISP: 28ms–31ms：8 階段管線處理
+    ISP->>JPEG: 31ms：傳送 YUV 幀
+    JPEG-->>ISP: 33ms：JPEG 壓縮完成
+    ISP->>Storage: 33ms–40ms：寫入 JPEG + EXIF
+    Storage-->>UI: 40ms：檔案儲存成功
+    UI-->>User: 40ms：顯示縮圖動畫
 ```
 
-The entire process takes approximately 40 milliseconds end-to-end for a daylight still photo. In low light the exposure time itself lengthens (potentially to several seconds for Night Mode multi-frame capture), and the timeline scales proportionally.
+整個過程對於日光靜態照片端到端大約需要 40 毫秒。在低光環境下，曝光時間本身會延長（對於夜景模式多幀擷取可能長達數秒），時間線也會按比例延長。
 
-## Summary
+## 總結
 
-You now have a complete physical picture of the smartphone camera system. You know that each rear camera bump is a sealed module containing a lens barrel with multiple elements, a VCM autofocus actuator, an IR-cut filter, a CMOS sensor with a Bayer RGGB color filter array, and a flex cable carrying MIPI CSI-2 data. You understand focal length equivalence, aperture, and OIS. You know how the ISP's 8-stage pipeline transforms a raw Bayer mosaic into a finished JPEG, and you can distinguish RAW (sensor-native, 10–14 bit, post-processing headroom) from JPEG (ISP-processed, 8-bit, share-ready). You understand why modern phones use 3+ fixed cameras instead of a zoom lens, and you have walked through the exact millisecond-by-millisecond timeline of a single photo capture.
+你現在對智慧型手機相機系統有了完整的實體圖景。你知道每個後置相機凸起都是一個密封模組，包含一個多片鏡筒、一個 VCM 自動對焦致動器、一個 IR 截止濾鏡、一個帶有拜耳 RGGB 彩色濾鏡陣列的 CMOS 感光元件，以及一條傳輸 MIPI CSI-2 資料的柔性排線。你理解焦距等效、光圈和 OIS。你知道 ISP 的 8 階段管線如何將原始拜耳馬賽克轉換為最終的 JPEG，並且你能區分 RAW（感光元件原生，10–14 位元，後期處理裕量）和 JPEG（ISP 處理過，8 位元，可即時分享）。你理解為什麼現代手機使用 3 個以上定焦相機而不是變焦鏡頭，並且你已經走過了單張照片擷取的精確逐毫秒時間線。
 
-## What's Next
+## 下一步
 
-In Chapter 3, we move from the physical hardware to what that hardware is capable of producing. We will explore the real-world features of modern smartphone photography: HDR multi-frame bracketing, portrait bokeh via stereo / ToF / ML, Night Sight multi-frame long exposures, slow-motion high-speed video capture, ultra-wide distortion correction, and periscope telephoto. You will learn how computational photography — the fusion of optics, sensors, multi-frame signal processing, and on-device machine learning — creates imagery that no single lens/sensor combination could ever produce on its own.
+在第 3 章中，我們將從實體硬體轉向該硬體能夠產生的成果。我們將探索現代智慧型手機攝影的實際功能：HDR 多幀包圍、透過立體 / ToF / ML 實現的人像背景虛化、Night Sight 多幀長曝光、慢動作高速影片擷取、超廣角畸變校正和潛望長焦。你將學習運算攝影——光學、感光元件、多幀訊號處理和裝置端機器學習的融合——如何創造出任何單一鏡頭/感光元件組合都無法獨立產生的影像。

@@ -1,4 +1,4 @@
----
+﻿---
 sidebar_position: 19
 title: "Chapter 19: High-Speed Video"
 description: "Build 120fps and 240fps slow-motion capture with CameraConstrainedHighSpeedCaptureSession, createHighSpeedRequestList, and StreamConfigurationMap FPS ranges in Android Camera2 API"
@@ -25,17 +25,17 @@ The **Constrained High-Speed Capture Session** solves all of these problems by c
 ```mermaid
 flowchart TD
     subgraph Standard["Standard CaptureSession (30/60 FPS)"]
-        S1["App Builds CaptureRequest\nper frame via Builder"] --> S2["Binder IPC to CameraService\n(1 call per frame)"]
-        S2 --> S3["CameraService Validates +\nDispatches to HAL"]
-        S3 --> S4["HAL Schedules Frame\non Sensor ISP Pipeline"]
-        S4 --> S5["Frame Output\n→ Surface / MediaCodec"]
+        S1["App Builds CaptureRequest<br/>per frame via Builder"] --> S2["Binder IPC to CameraService<br/>(1 call per frame)"]
+        S2 --> S3["CameraService Validates +<br/>Dispatches to HAL"]
+        S3 --> S4["HAL Schedules Frame<br/>on Sensor ISP Pipeline"]
+        S4 --> S5["Frame Output<br/>→ Surface / MediaCodec"]
     end
 
     subgraph HighSpeed["CameraConstrainedHighSpeedCaptureSession (120/240 FPS)"]
-        H1["App Calls createHighSpeedRequestList()\nONCE — builds burst list"] --> H2["HAL Pre-Validates ALL Frames\nin Burst List (timings, sizes, FPS)"]
-        H2 --> H3["Burst List Loaded into\nHAL Hardware Scheduler"]
-        H3 --> H4["Scheduler Drives Sensor + ISP\nDirectly — No Per-Frame Binder"]
-        H4 --> H5["240 Frames/sec Output\n→ MediaCodec Video Encoder"]
+        H1["App Calls createHighSpeedRequestList()<br/>ONCE — builds burst list"] --> H2["HAL Pre-Validates ALL Frames<br/>in Burst List (timings, sizes, FPS)"]
+        H2 --> H3["Burst List Loaded into<br/>HAL Hardware Scheduler"]
+        H3 --> H4["Scheduler Drives Sensor + ISP<br/>Directly — No Per-Frame Binder"]
+        H4 --> H5["240 Frames/sec Output<br/>→ MediaCodec Video Encoder"]
     end
 ```
 
@@ -237,17 +237,17 @@ Every line here is deliberate and directly maps to a research-doc constraint:
 ```mermaid
 flowchart LR
     subgraph NormalPipeline["Normal 30/60 FPS Recording Pipeline"]
-        NP1[Sensor 30fps Readout] --> NP2[Full ISP Pipeline:\nDemosaic + NR + Color + Tone]
-        NP2 --> NP3[Framework Queue\neach CaptureRequest via Binder]
-        NP3 --> NP4[Hardware JPEG/HEVC\nEncoder Block]
-        NP4 --> NP5[File Writer /\nNetwork Streamer]
+        NP1[Sensor 30fps Readout] --> NP2[Full ISP Pipeline:<br/>Demosaic + NR + Color + Tone]
+        NP2 --> NP3[Framework Queue<br/>each CaptureRequest via Binder]
+        NP3 --> NP4[Hardware JPEG/HEVC<br/>Encoder Block]
+        NP4 --> NP5[File Writer /<br/>Network Streamer]
     end
 
     subgraph HSPipeline["240 FPS Constrained High-Speed Pipeline"]
-        HP1[Sensor 240fps Readout\nvia MIPI D-PHY High-Speed Mode] --> HP2[Minimal / Fast ISP:\nBinning + Lite Noise Reduction\n(No Heavy Tone Mapping)]
-        HP2 --> HP3["HAL Hardware Scheduler\nBurst List (pre-validated)\n← NO binder per-frame"]
-        HP3 --> HP4["Dedicated HEVC/H.264\nEncoder (High-Throughput Mode)"]
-        HP4 --> HP5[MediaRecorder Muxes\nAudio + MP4 Container]
+        HP1[Sensor 240fps Readout<br/>via MIPI D-PHY High-Speed Mode] --> HP2[Minimal / Fast ISP:<br/>Binning + Lite Noise Reduction<br/>(No Heavy Tone Mapping)]
+        HP2 --> HP3["HAL Hardware Scheduler<br/>Burst List (pre-validated)<br/>← NO binder per-frame"]
+        HP3 --> HP4["Dedicated HEVC/H.264<br/>Encoder (High-Throughput Mode)"]
+        HP4 --> HP5[MediaRecorder Muxes<br/>Audio + MP4 Container]
     end
 
     style HSPipeline fill:#fff4dd,stroke:#c58111

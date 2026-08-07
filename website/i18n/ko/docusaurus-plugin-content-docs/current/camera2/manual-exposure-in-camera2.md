@@ -1,466 +1,104 @@
 ---
 sidebar_position: 14
-title: "Chapter 14: Manual Exposure in Camera2"
-description: Take full creative control of exposure with the Android Camera2 API. Learn to disable auto-exposure, set manual ISO via SENSOR_SENSITIVITY, control shutter speed in nanoseconds with SENSOR_EXPOSURE_TIME, and build working Kotlin examples for timelapses, long exposures, and bracketing.
-keywords: [android camera2 manual exposure, SENSOR_SENSITIVITY, SENSOR_EXPOSURE_TIME, CONTROL_MODE_OFF, CONTROL_AE_MODE_OFF, exposure bracketing, long exposure camera2, timelapse camera2]
+title: "제14장: Camera2에서의 수동 노출"
+description: "안드로이드 Camera2 API를 사용하여 수동 노출을 구현하세요. 3A 자동화를 비활성화하고, SENSOR_SENSITIVITY와 SENSOR_EXPOSURE_TIME을 제어하며, 노출 브래키팅 시리즈를 캡처하고 OEM 노즈 감소 최적화 손실과 같은 중요한 트레이드오프를 이해합니다."
+keywords: [안드로이드 camera2 수동 노출, SENSOR_EXPOSURE_TIME, SENSOR_SENSITIVITY, CONTROL_AE_MODE_OFF, 노출 브래키팅, 장노출 안드로이드, 수동 카메라 Kotlin]
 ---
 
-# Chapter 14: Manual Exposure in Camera2
+# 제14장: Camera2에서의 수동 노출
 
-With the photographic theory of Chapter 13 under your belt, it's time to translate concepts into code. In this chapter, you'll learn how to **completely take over** the camera's auto-exposure (AE) system and set the ISO and shutter speed manually with the Camera2 API.
+13장에서 노출 삼각형(ISO, 셔터 속도, 조리개)에 대한 이론적 기반을 다졌습니다. 이제 그 지식을 활용해 안드로이드 폰을 진정한 수동 카메라로 바꿔볼 시간입니다.
 
-The [Android Camera Parameters app](https://github.com/zoozooll/AndroidCameraParameters) demonstrates every technique in this chapter — you can follow along live by switching to Manual mode in the app and adjusting the ISO and Shutter sliders to see real-time results.
+Camera2 API를 사용하면 셔터를 1/8000초로 고정해 날아가는 벌새의 날개를 멈추거나, 30초 동안 열어두어 밤하늘의 별 궤적을 담을 수 있습니다. 하지만 하드웨어를 직접 제어하는 만큼, 안드로이드 시스템이 제공하던 "자동 보정 마법"을 일부 포기해야 하는 중요한 주의사항도 있습니다.
 
----
-
-## The Big Switch: From AUTO → MANUAL
-
-By default, every `CaptureRequest` you submit runs under the camera's built-in 3A auto-pipeline (Auto Exposure, Auto Focus, Auto White Balance). To go manual, you must **explicitly disable** the pipeline.
-
-There are two levels of override:
-
-| Level | Setting | What Happens |
-|-------|---------|-------------|
-| 1. Disable AE only | `CONTROL_AE_MODE = OFF` | ISO + shutter become manual; AF and AWB still auto-run |
-| 2. Disable entire 3A | `CONTROL_MODE = OFF` | **All** 3A algorithms halt; every 3A parameter must be set manually |
-
-For reliable manual exposure, set **both**. Disabling only `CONTROL_AE_MODE` on some devices still leaves OEM post-processing "helping" behind the scenes. Setting `CONTROL_MODE = OFF` is the cleanest, most predictable path.
-
-```mermaid
-stateDiagram-v2
-    [*] --> AUTO_MODE: Default Preview Starts
-    AUTO_MODE --> MANUAL_PREP: User toggles Manual Exposure
-    MANUAL_PREP --> VALIDATE_RANGES: Query SENSOR_INFO_EXPOSURE_TIME_RANGE
-    VALIDATE_RANGES --> BUILD_REQUEST: Clamp ISO &amp; Shutter to valid range
-    BUILD_REQUEST --> SUBMIT_REQUEST: set(CONTROL_MODE, OFF)
-    SUBMIT_REQUEST --> APPLY_FRAME_1: CaptureSession.capture()
-    APPLY_FRAME_1 --> APPLY_FRAME_N: New values settle (~3–5 frames)
-    APPLY_FRAME_N --> LOCKED_EXPOSURE: Preview now runs at fixed values
-    LOCKED_EXPOSURE --> AUTO_MODE: User re-enables Auto
-    note right of VALIDATE_RANGES
-        Always query hardware caps!
-        Shutter: 1/8000s to 10s typical
-        ISO: 100 to 6400 typical
-    end note
-    note right of SUBMIT_REQUEST
-        CONTROL_AE_MODE = OFF
-        SENSOR_SENSITIVITY = iso
-        SENSOR_EXPOSURE_TIME = ns
-    end note
-```
-
-**Transition latency:** When you submit a manual capture request, the new ISO/shutter values do not appear on the *next* frame. CMOS sensors have pipeline latency — the *current* frame is already being exposed with the old settings. Expect **3–5 frames of transition** before values settle. The [Android Camera Parameters app](https://play.google.com/store/apps/details?id=com.minininja.cameraparams) explicitly waits for `CaptureResult` to confirm the requested values match the applied values before reporting "locked."
+[Android Camera Parameters 앱](https://github.com/zoozooll/AndroidCameraParameters)의 **Sensor** 탭에서 여러분의 기기가 수동 노출을 지원하는지(`MANUAL_SENSOR` 기능) 지금 확인해 보세요.
 
 ---
 
-## Manual Controls in Camera2 API
+## 1. 3A 자동화 비활성화하기
 
-### SENSOR_SENSITIVITY (ISO)
-
-Camera2 expresses ISO as `CaptureRequest.SENSOR_SENSITIVITY` — an integer that directly maps to the ISO arithmetic scale. On most devices, this is a 1:1 mapping:
-
-| Photographer's ISO | SENSOR_SENSITIVITY value |
-|-------------------|--------------------------|
-| 100 | 100 |
-| 400 | 400 |
-| 3200 | 3200 |
-| 6400 | 6400 |
-
-**Always query the valid range.** Do not hardcode values:
+수동 노출을 하려면 먼저 안드로이드의 "지능형 뇌"인 **3A 파이프라인**(Auto Exposure, Auto Focus, Auto White-balance) 중 노출 부분을 꺼야 합니다.
 
 ```kotlin
-val sensorSensitivityRange = characteristics.get(
-    CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE
-)
-val minIso = sensorSensitivityRange?.lower ?: 100
-val maxIso = sensorSensitivityRange?.upper ?: 6400
+// 캡처 요청 빌더에서 AE(자동 노출)를 OFF로 설정
+builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
 ```
 
-Some ultra-premium phones report a range like 50–12800, while budget devices may lock you to 100–3200. Values outside the range are clamped by the HAL — which defeats your manual-control purpose.
+**중요:** 일부 기기에서는 `CONTROL_AE_MODE`를 끄는 것만으로는 부족할 수 있습니다. `CONTROL_MODE` 자체를 `OFF`로 설정하여 모든 자동 기능을 수동으로 전환해야 할 수도 있습니다.
 
-### SENSOR_EXPOSURE_TIME (Shutter in Nanoseconds)
+---
 
-Here's the first "gotcha" that trips every new Camera2 developer: **shutter speed is stored as nanoseconds (ns), not seconds.** Humans think in 1/60s; the HAL thinks in 16666666 ns.
+## 2. ISO 설정: SENSOR_SENSITIVITY
 
-Converting between them is straightforward arithmetic:
+Camera2에서 ISO는 **Sensitivity**라고 불립니다. 단위는 정수이며, 일반적인 범위는 100에서 6400 사이입니다.
 
 ```kotlin
-// Seconds → Nanoseconds (multiply by 1,000,000,000)
-fun secondsToNs(seconds: Double): Long = (seconds * 1_000_000_000.0).toLong()
-
-// Nanoseconds → Seconds for user display
-fun nsToSeconds(ns: Long): Double = ns.toDouble() / 1_000_000_000.0
-
-// Human-friendly string formatter (e.g., "1/60s" or "2.5s")
-fun formatShutter(ns: Long): String {
-    val seconds = nsToSeconds(ns)
-    return when {
-        seconds >= 1.0 -> String.format("%.1fs", seconds)
-        else -> {
-            val fraction = (1.0 / seconds).toInt()
-            "1/${fraction}s"
-        }
-    }
-}
+val isoValue = 400
+builder.set(CaptureRequest.SENSOR_SENSITIVITY, isoValue)
 ```
 
-**Common conversions for reference:**
+기기가 지원하는 정확한 범위를 확인하려면 `CameraCharacteristics`에서 `SENSOR_INFO_SENSITIVITY_RANGE`를 쿼리해야 합니다. 범위를 벗어난 값을 넣으면 무시되거나 충돌이 발생할 수 있습니다.
 
-| Human Shutter | Nanoseconds (ns) |
-|--------------|-------------------|
-| 1/8000s | 125,000 |
-| 1/1000s | 1,000,000 |
-| 1/500s | 2,000,000 |
-| 1/120s (24fps 180° rule) | 8,333,333 |
-| 1/60s | 16,666,666 |
-| 1/30s | 33,333,333 |
-| 1/15s | 66,666,666 |
-| 1s | 1,000,000,000 |
-| 2s | 2,000,000,000 |
-| 10s | 10,000,000,000 |
-| 30s | 30,000,000,000 |
+---
 
-**Again, query the hardware range:**
+## 3. 셔터 속도 설정: SENSOR_EXPOSURE_TIME
+
+이 부분이 처음 접하는 개발자들을 가장 당황스럽게 만듭니다. Camera2에서 노출 시간은 "초"가 아니라 **나노초(Nanoseconds)** 단위를 사용합니다.
+
+- 1초 = 1,000,000,000 나노초 (10억 ns)
+- 1/60초 ≈ 16,666,666 나노초
+- 1/1000초 = 1,000,000 나노초
 
 ```kotlin
-val exposureTimeRange = characteristics.get(
-    CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE
-)
-val minShutterNs = exposureTimeRange?.lower ?: 1_000_000L   // 1/1000s floor
-val maxShutterNs = exposureTimeRange?.upper ?: 10_000_000_000L  // 10s ceiling
+// 1/125초 노출 설정 예시
+val shutterSpeedNanos = 1_000_000_000L / 125
+builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, shutterSpeedNanos)
 ```
 
-On devices supporting ultra-long exposure (e.g., some Sony Xperia and Google Pixel models), `SENSOR_INFO_EXPOSURE_TIME_RANGE.upper` can exceed 30,000,000,000 ns (30s). Respect this limit — requests beyond the maximum are silently clamped.
+**팁:** 64비트 정수인 `Long` 타입을 사용해야 오버플로우를 방지할 수 있습니다.
 
 ---
 
-## ⚠️ Critical: Manual Mode Quality Degradation
+## 4. 수동 노출 시 잃게 되는 것 (중요!)
 
-**This is the most important warning in the chapter.** Do not skip it.
+이것은 연구 프로젝트와 실무에서 매우 중요한 포인트입니다. `CONTROL_AE_MODE_OFF`를 설정하는 순간, 삼성이나 구글 같은 제조사가 공들여 만든 **"다중 프레임 노이즈 감소"**와 **"HDR 합성"** 기능이 비활성화됩니다.
 
-When you set `CONTROL_MODE = OFF` (full manual override), you are not just disabling the AE/AF/AWB *algorithms* — on nearly all Android devices, you are also **disabling the OEM's proprietary computational post-processing** that normally runs inside the 3A pipeline.
+- **자동 모드:** 셔터를 누르면 폰이 몰래 10장을 찍어 노이즈를 지우고 예쁜 JPEG를 만듭니다.
+- **수동 모드:** 정직하게 딱 한 장만 찍습니다. 따라서 동일한 ISO 1600이라도 자동 모드보다 수동 모드 결과물에 노이즈가 훨씬 더 많아 보일 수 있습니다.
 
-Specifically, research and HAL3 analysis reveals that disabling 3A typically turns off:
-
-| Processing Step | AUTO Mode | MANUAL Mode (CONTROL_MODE = OFF) |
-|-----------------|-----------|-----------------------------------|
-| Multi-frame noise reduction | ✓ Active — noise-reduced output | ✗ OFF — visible raw sensor noise |
-| Adaptive tone-mapping / HDR merge | ✓ Active — highlights + shadows recovered | ✗ OFF — single-frame curve only |
-| Local contrast enhancement (MiraVision, etc.) | ✓ Varies by scene | ✗ Flat generic curve |
-| Face metering / scene detection | ✓ Weights exposure to faces | ✗ Ignored |
-| Lens shading / vignetting correction | ✓ Calibrated per-lens | ✗ Often reduced or off |
-
-**Result:** A manual-mode photo at ISO 3200 and 1/15s will look *visibly worse* (noisier, flatter contrast) than the same scene captured in AUTO mode with the *identical* ISO and shutter the HAL chose.
-
-**What can you do?** Two realistic options:
-
-1. **Post-process yourself.** Since you've disabled OEM processing, you can apply your own denoising (e.g., OpenCV bilateral filter, MediaPipe denoiser, or custom-trained CNN) in your processing pipeline. RAW capture (see later chapters) + custom RAW development gives maximum artistic control.
-
-2. **Use manual AE overrides instead of CONTROL_MODE = OFF.** If you only need to *lock* specific values while keeping OEM processing enabled, try setting `CONTROL_AE_MODE = ON` but pin `SENSOR_SENSITIVITY` and `SENSOR_EXPOSURE_TIME` on a request-by-request basis. Support for this mixed-mode is device-dependent — test thoroughly.
-
-The [Android Camera Parameters app](https://github.com/zoozooll/AndroidCameraParameters) has a toggle in the Manual panel that switches between both approaches and lets you visually compare the quality difference.
+이를 보완하려면 직접 여러 장을 찍어 합성하는 로직을 짜거나(계산 사진학), RAW 파일로 저장하여 후처리를 해야 합니다.
 
 ---
 
-## Complete Example 1: Locked Exposure for Timelapse
+## 5. 실전 예제: 노출 브래키팅 (Exposure Bracketing)
 
-A classic use case for manual exposure is **timelapse photography**. In AUTO mode, the camera subtly adjusts exposure from frame to frame as clouds move or light changes. The resulting video flickers horribly. Locking ISO + shutter eliminates this.
-
-**Goal:** ISO 100, 1/60s (16,666,666 ns) — locked for every frame.
+HDR 합성을 위해 서로 다른 밝기의 사진 3장을 연속으로 찍는 코드의 핵심 부분입니다.
 
 ```kotlin
-class TimelapseManualExposure(
-    private val characteristics: CameraCharacteristics,
-    private val captureSession: CameraCaptureSession,
-    private val imageReaderSurface: Surface,
-    private val previewSurface: Surface
-) {
-    companion object {
-        private const val TARGET_ISO = 100
-        private const val TARGET_SHUTTER_NS = 16_666_666L // 1/60s
-    }
+val requests = mutableListOf<CaptureRequest>()
 
-    fun captureTimelapseFrame(frameCallback: ImageReader.OnImageAvailableListener) {
-        try {
-            // ---- STEP 1: Validate requested values are in hardware range ----
-            val isoRange = characteristics.get(
-                CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE
-            )
-            val shutterRange = characteristics.get(
-                CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE
-            )
+// 1. 어둡게 (-2 EV)
+requests.add(createRequest(iso = 100, shutter = 1_000_000_000L / 1000))
+// 2. 중간 (0 EV)
+requests.add(createRequest(iso = 100, shutter = 1_000_000_000L / 250))
+// 3. 밝게 (+2 EV)
+requests.add(createRequest(iso = 100, shutter = 1_000_000_000L / 60))
 
-            val clampedIso = isoRange?.let {
-                TARGET_ISO.coerceIn(it.lower, it.upper)
-            } ?: TARGET_ISO
-
-            val clampedShutter = shutterRange?.let {
-                TARGET_SHUTTER_NS.coerceIn(it.lower, it.upper)
-            } ?: TARGET_SHUTTER_NS
-
-            // ---- STEP 2: Build CaptureRequest with manual exposure ----
-            val requestBuilder = captureSession.device.createCaptureRequest(
-                CameraDevice.TEMPLATE_STILL_CAPTURE
-            ).apply {
-                addTarget(previewSurface)
-                addTarget(imageReaderSurface)
-
-                // --- THE KEY LINES: Disable 3A and pin values ---
-                set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_OFF)
-                set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_OFF)
-                set(CaptureRequest.SENSOR_SENSITIVITY, clampedIso)
-                set(CaptureRequest.SENSOR_EXPOSURE_TIME, clampedShutter)
-
-                // Optional: Pin AWB to Daylight for consistent color too
-                set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_DAYLIGHT)
-
-                // Still-capture JPEG quality
-                set(CaptureRequest.JPEG_QUALITY, 95)
-            }
-
-            // ---- STEP 3: Submit the still capture ----
-            captureSession.capture(
-                requestBuilder.build(),
-                object : CameraCaptureSession.CaptureCallback() {
-                    override fun onCaptureCompleted(
-                        session: CameraCaptureSession,
-                        request: CaptureRequest,
-                        result: TotalCaptureResult
-                    ) {
-                        // Verify the HAL actually applied our values (it may clamp!)
-                        val appliedIso = result.get(CaptureResult.SENSOR_SENSITIVITY)
-                        val appliedShutter = result.get(CaptureResult.SENSOR_EXPOSURE_TIME)
-                        Log.d("Timelapse", "Applied: ISO=$appliedIso, Shutter=${formatShutter(appliedShutter!!)}")
-                    }
-                },
-                null // Run on current thread's Handler
-            )
-
-        } catch (e: CameraAccessException) {
-            Log.e("Timelapse", "Manual capture failed", e)
-        }
-    }
-}
+// 연사 촬영 실행
+captureSession.captureBurst(requests, null, backgroundHandler)
 ```
 
-**Key points:**
-
-- Always use `coerceIn()` against the hardware ranges. If a budget phone min ISO is 120, your request for 100 silently becomes 120. `onCaptureCompleted()` confirms what was *actually* applied.
-- For a timelapse, submit this request every N seconds (e.g., every 5s for a 300× speedup at 30fps output).
-- Pinning `CONTROL_AWB_MODE_DAYLIGHT` is optional but recommended for timelapses — otherwise AWB may still subtly drift white balance between frames even when exposure is locked.
+이렇게 찍은 3장의 사진을 나중에 서버나 라이브러리로 보내 합치면 나만의 HDR 사진이 됩니다.
 
 ---
 
-## Complete Example 2: Long Exposure for Night Photography
+## 요약
 
-**Goal:** ISO 3200, 2 seconds (2,000,000,000 ns) — smooth water trails, bright night sky.
+- **수동 노출**을 위해 `CONTROL_AE_MODE`를 `OFF`로 설정합니다.
+- **ISO**는 `SENSOR_SENSITIVITY`이며 정수 값을 씁니다.
+- **셔터 속도**는 `SENSOR_EXPOSURE_TIME`이며 **나노초(ns)** 단위를 씁니다.
+- 수동 모드에서는 제조사의 **자동 보정 기능이 꺼지므로** 노이즈에 주의해야 합니다.
 
-**Critical hardware requirement:** The device must support `SENSOR_INFO_EXPOSURE_TIME_RANGE.upper >= 2,000,000,000 ns`. Many mid-range phones max out at ~1/8s to 1s.
+## 다음 단계
 
-```kotlin
-class NightLongExposure(
-    private val characteristics: CameraCharacteristics,
-    private val captureSession: CameraCaptureSession,
-    private val previewSurface: Surface,
-    private val jpegReaderSurface: Surface,
-    private val rawReaderSurface: Surface? // Optional RAW capture
-) {
-    fun shootLongExposure(onPhotoSaved: (path: String) -> Unit) {
-        val shutterNs = 2_000_000_000L  // 2 seconds
-        val targetIso = 3200
-
-        // --- Validate the hardware can even do this ---
-        val shutterRange = characteristics.get(
-            CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE
-        )
-        if (shutterRange == null || shutterRange.upper < shutterNs) {
-            throw UnsupportedOperationException(
-                "Device does not support 2s exposure. Max = " +
-                "${shutterRange?.upper?.let { nsToSeconds(it) } ?: "unknown"}s"
-            )
-        }
-
-        val requestBuilder = captureSession.device.createCaptureRequest(
-            CameraDevice.TEMPLATE_STILL_CAPTURE
-        ).apply {
-            addTarget(previewSurface)
-            addTarget(jpegReaderSurface)
-            // If you configured a RAW-capable OutputConfiguration earlier:
-            rawReaderSurface?.let { addTarget(it) }
-
-            // Manual exposure override
-            set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_OFF)
-            set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_OFF)
-            set(CaptureRequest.SENSOR_SENSITIVITY, targetIso)
-            set(CaptureRequest.SENSOR_EXPOSURE_TIME, shutterNs)
-
-            // --- Critical for long exposures ---
-            // Disable optical/digital video stabilization (they conflict >1s)
-            set(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE,
-                CameraMetadata.LENS_OPTICAL_STABILIZATION_MODE_OFF)
-            // No flash for long exposure shots
-            set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_OFF)
-        }
-
-        captureSession.capture(
-            requestBuilder.build(),
-            object : CameraCaptureSession.CaptureCallback() {
-                override fun onCaptureStarted(
-                    session: CameraCaptureSession,
-                    request: CaptureRequest,
-                    timestamp: Long
-                ) {
-                    super.onCaptureStarted(session, request, timestamp)
-                    // Notify UI: "Exposure started — hold very still for 2 seconds"
-                    Log.d("LongExposure", "Exposure started @ $timestamp")
-                }
-
-                override fun onCaptureCompleted(
-                    session: CameraCaptureSession,
-                    request: CaptureRequest,
-                    result: TotalCaptureResult
-                ) {
-                    // ImageReader.OnImageAvailableListener fires separately to save the JPEG
-                    Log.d("LongExposure", "Long exposure capture complete")
-                }
-            },
-            null
-        )
-    }
-}
-```
-
-**Long exposure tips:**
-
-1. **Turn off OIS.** Optical image stabilization in most lenses tries to compensate for camera shake *during* the exposure. For exposures >0.5s, the OIS actuators can saturate and cause visible drift. Disable it and use a tripod.
-
-2. **Expect a freeze.** The camera will not output preview frames while a 2-second exposure is running. Your UI should show an explicit "EXPOSING…" indicator.
-
-3. **RAW is better.** High ISO (3200) + long exposure produces thermal noise (the sensor warms up). Save a RAW frame and use a desktop RAW developer with frame averaging — or implement your own multi-frame long exposure by averaging 8 × 0.25s frames instead of 1 × 2s frame (reduces thermal noise dramatically).
-
----
-
-## Complete Example 3: 3-Shot Exposure Bracketing
-
-**Goal:** Same ISO, 3 different exposures at −1 EV, 0 EV, +1 EV. The user later merges them into an HDR photo.
-
-From Chapter 13, we know each EV step doubles/halves light. At a fixed ISO, each EV step = multiply/divide shutter speed by 2.
-
-```kotlin
-class ExposureBracketing(
-    private val characteristics: CameraCharacteristics,
-    private val captureSession: CameraCaptureSession,
-    private val previewSurface: Surface,
-    private val jpegReaderSurface: Surface
-) {
-    data class BracketFrame(
-        val label: String,
-        val evShift: Double,  // -1.0, 0.0, +1.0
-        val shutterNs: Long,
-        val iso: Int
-    )
-
-    fun captureBracketSeries(baseIso: Int, baseShutterNs: Long) {
-        val isoRange = characteristics.get(
-            CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE
-        )
-        val shutterRange = characteristics.get(
-            CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE
-        )
-
-        // Build bracket plan: multiply shutter by 2^(evStep)
-        val frames = listOf(-1.0, 0.0, +1.0).map { ev ->
-            val multiplier = Math.pow(2.0, ev)
-            val rawShutter = (baseShutterNs.toDouble() * multiplier).toLong()
-            val clampedShutter = shutterRange?.let {
-                rawShutter.coerceIn(it.lower, it.upper)
-            } ?: rawShutter
-            val clampedIso = isoRange?.let {
-                baseIso.coerceIn(it.lower, it.upper)
-            } ?: baseIso
-            BracketFrame("EV${if (ev > 0) "+" else ""}${ev.toInt()}", ev, clampedShutter, clampedIso)
-        }
-
-        Log.d("Bracket", "Plan: ${frames.map { "${it.label} ISO${it.iso} ${formatShutter(it.shutterNs)}" }}")
-
-        // Submit each frame as a burst using captureBurst() for atomicity
-        val requestList = frames.map { frame ->
-            captureSession.device.createCaptureRequest(
-                CameraDevice.TEMPLATE_STILL_CAPTURE
-            ).apply {
-                addTarget(previewSurface)
-                addTarget(jpegReaderSurface)
-
-                set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_OFF)
-                set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_OFF)
-                set(CaptureRequest.SENSOR_SENSITIVITY, frame.iso)
-                set(CaptureRequest.SENSOR_EXPOSURE_TIME, frame.shutterNs)
-
-                // Tag each request so we can sort frames in the callback
-                setTag(frame.label)
-            }.build()
-        }
-
-        captureSession.captureBurst(
-            requestList,
-            object : CameraCaptureSession.CaptureCallback() {
-                override fun onCaptureCompleted(
-                    session: CameraCaptureSession,
-                    request: CaptureRequest,
-                    result: TotalCaptureResult
-                ) {
-                    val tag = request.tag as? String ?: "?"
-                    Log.d("Bracket", "$tag complete — ready for HDR merge")
-                }
-            },
-            null
-        )
-    }
-}
-```
-
-**Why `captureBurst()` instead of three separate `capture()` calls?** `captureBurst()` submits the entire list atomically. The HAL guarantees no other preview frames get interleaved, and focus/white-balance state won't drift between frames.
-
-**Want 5 or 7 brackets?** Just change `listOf(-2.0, -1.0, 0.0, +1.0, +2.0)` — the math scales. Many professional HDR apps shoot 9 brackets for extreme dynamic range scenes.
-
-**Merge step:** Once you have the three JPEG (or RAW) frames, you can merge them using:
-- Android's built-in HDR pipeline via `CameraExtensionSession` (see HDR chapter)
-- A 3rd-party library like OpenCV's `createMergeDebevec()` / `createMergeRobertson()` for true exposure fusion
-- Google's Photo Sphere HDR library
-
----
-
-## Troubleshooting Common Failures
-
-| Problem | Likely Cause | Fix |
-|---------|-------------|-----|
-| Manual values seem ignored, still looks auto | `CONTROL_MODE` not set to OFF, or values clamped | Set both CONTROL_MODE and CONTROL_AE_MODE to OFF; verify applied values in `onCaptureCompleted()` |
-| 2s long exposure request errors immediately | Device can't do 2s exposure | Check `SENSOR_INFO_EXPOSURE_TIME_RANGE.upper`; reduce exposure time or use ISO bump instead |
-| Preview stutters or lags when switching manual | Too many `setRepeatingRequest()` calls | Use throttled slider listener (every 30–50 ms); only update repeating request, not still captures |
-| Long exposure photo is all black at ISO 100 2s | Scene actually needs more light at ISO 100 | Increase ISO or extend shutter; 2s ISO 100 = EV 0 baseline, not "night bright" |
-| Manual shots noisier than Auto at same ISO | OEM NR disabled by CONTROL_MODE = OFF | Expected behavior! See "Manual Mode Quality Degradation" section. Post-process, or use partial manual via AE_LOCK |
-
----
-
-## Summary
-
-You now have the tools to wrest full control of exposure from the Camera2 HAL:
-
-- **Disable 3A pipeline** with `CONTROL_MODE = OFF` + `CONTROL_AE_MODE = OFF` for fully manual control
-- **Map ISO → `SENSOR_SENSITIVITY`** (1:1 mapping on most hardware; always query the range)
-- **Map seconds ↔ nanoseconds** for `SENSOR_EXPOSURE_TIME` with simple 10⁹ conversion
-- **Timelapse lock:** Fixed ISO 100 + 1/60s repeated for every frame = zero flicker
-- **Night long exposure:** ISO 3200 + 2s with OIS disabled = bright smooth night scene (on supported hardware)
-- **Exposure bracketing:** Same ISO, shutter ×0.5 / ×1 / ×2 via `captureBurst()` = ready-to-merge HDR input
-- **⚠️ Manual quality tradeoff:** Disabling 3A disables OEM noise reduction and tone-mapping — manual photos often look *worse* at identical ISO than Auto. Plan for post-processing.
-
-## What's Next
-
-Exposure controls *brightness*. **Focus controls sharpness.** In **Chapter 15: Focus**, we cover:
-
-- Auto Focus (AF) states and modes — how passive scan works, the difference between continuous picture vs. video
-- Manual focus with `LENS_FOCUS_DISTANCE` in diopters (0.0 = infinity, 10D = 0.1m)
-- Kotlin code for a one-shot AF trigger-and-capture sequence, and a manual-focus SeekBar slider
-- The AF state machine — when `CONTROL_AF_STATE_FOCUSED_LOCKED` actually fires, and how to wait for it
-
-The blur stops here. (Pun very much intended.)
+밝기를 조절했으니 이제 선명함을 잡을 차례입니다. **제15장: 초점(Focus) 마스터하기**에서는 AF(자동 초점)의 원리와 수동 초점 슬라이더를 만드는 법, 그리고 "무한대 초점"으로 풍경 사진을 찍는 법을 알아봅니다.

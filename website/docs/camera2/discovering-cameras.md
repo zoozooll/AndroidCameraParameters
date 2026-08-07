@@ -31,7 +31,7 @@ The overall algorithm for discovering cameras is straightforward on the surface,
 
 ```mermaid
 flowchart TD
-    A[Start: CameraManager Ready] --> B[Get cameraIdList array]
+    A["Start: CameraManager Ready"] --> B["Get cameraIdList array"]
     B --> C{Is list empty?}
     C -->|Yes| D[Error: No cameras found on device]
     C -->|No| E[Initialize empty camera info list]

@@ -1,172 +1,172 @@
 ---
 sidebar_position: 15
-title: "Chapter 15: Focus"
-description: Master both automatic and manual focus in Android Camera2. Understand AF modes, the AF state machine, one-shot trigger-and-capture sequences, manual focus with LENS_FOCUS_DISTANCE diopters, hyperfocal distance, and building a focus SeekBar slider in Kotlin.
-keywords: [android camera2 focus, LENS_FOCUS_DISTANCE, CONTROL_AF_TRIGGER, CONTROL_AF_STATE_FOCUSED_LOCKED, AF mode continuous picture, manual focus diopters, hyperfocal distance camera2]
+title: "Kapitel 15: Fokus"
+description: Meistern Sie sowohl den automatischen als auch den manuellen Fokus in Android Camera2. Verstehen Sie AF-Modi, die AF-Zustandsmaschine, One-Shot-Trigger-and-Capture-Sequenzen, manuellen Fokus mit LENS_FOCUS_DISTANCE in Dioptrien, hyperfokale Distanz und den Aufbau eines Fokus-SeekBar-Schiebereglers in Kotlin.
+keywords: [Android Camera2 Fokus, LENS_FOCUS_DISTANCE, CONTROL_AF_TRIGGER, CONTROL_AF_STATE_FOCUSED_LOCKED, AF-Modus Continuous Picture, manueller Fokus Dioptrien, hyperfokale Distanz Camera2]
 ---
 
-# Chapter 15: Focus
+# Kapitel 15: Fokus
 
-Exposure controls brightness. **Focus controls what is sharp.** A perfectly-exposed photo with soft focus is a failed photo. In this chapter, you'll learn how smartphone focus systems work, how to drive Auto Focus (AF) reliably via Camera2, and how to implement a silky-smooth manual focus slider using `LENS_FOCUS_DISTANCE`.
+Die Belichtung steuert die Helligkeit. **Der Fokus steuert, was scharf ist.** Ein perfekt belichtetes Foto mit weichem Fokus ist ein misslungenes Foto. In diesem Kapitel erfahren Sie, wie Smartphone-Fokussysteme funktionieren, wie Sie den Autofokus (AF) zuverlässig über Camera2 steuern und wie Sie einen seidenweichen manuellen Fokus-Schieberegler mit `LENS_FOCUS_DISTANCE` implementieren.
 
-The [Android Camera Parameters app](https://github.com/zoozooll/AndroidCameraParameters) demonstrates all of this in its Focus panel — you can watch the AF state machine transition live and drag the manual focus slider to see the lens rack from infinity to minimum focus distance.
-
----
-
-## Auto Focus (AF) in Modern Smartphones
-
-Before diving into API specifics, let's understand the three physical focus mechanisms smartphones use.
-
-### 1. Contrast-Detect AF (CDAF) — Passive Scan
-
-The software technique: analyze the image frame, look for maximum edge contrast (sharp edges = highest spatial frequency), and move the lens until peak contrast is found.
-
-- **Advantage:** Works on any camera hardware (no special pixels needed)
-- **Disadvantage:** Slow. The lens must *hunt* back and forth across the focus range. Scene text labels like "AF SCANNING" in the Camera2 state map to this.
-
-### 2. Phase-Detect AF (PDAF) — Active Scan
-
-Special photodiodes on the sensor are split into two halves. The phase difference between left/right halves directly measures *how far and which direction* the lens must move — no hunting required. Flagship phones today use Dual-Pixel PDAF where *every* pixel does phase detection.
-
-- **Advantage:** Extremely fast (< 100ms lock in good light); works reliably in video
-- **Disadvantage:** Struggles in low-light (not enough photons to compute phase reliably), and has minimum focus distance limits
-
-### 3. Laser AF / ToF AF (Active) — Range Finder
-
-A dedicated hardware module fires an infrared laser pulse, times the reflection, and directly reports subject distance to the ISP. Very common on mid-range to premium phones.
-
-- **Advantage:** Blazing-fast lock on any target, even in pure darkness (if target reflects IR)
-- **Disadvantage:** Limited effective range (~50cm–5m max), fails on glass or IR-transparent objects
-
-Real phones combine **all three**: PDAF for fast coarse lock, CDAF for fine-tuning, and Laser AF for low-light or close-up scenes. Camera2 exposes this unified pipeline as a single abstract state machine.
+Die [App Android Camera Parameters](https://github.com/zoozooll/AndroidCameraParameters) demonstriert all dies in ihrem Fokus-Panel – Sie können die Übergänge der AF-Zustandsmaschine live beobachten und den manuellen Fokus-Schieberegler ziehen, um zu sehen, wie das Objektiv von unendlich bis zur minimalen Fokusdistanz fährt.
 
 ---
 
-## AF Modes: CONTROL_AF_MODE
+## Autofokus (AF) in modernen Smartphones
 
-Camera2 defines these AF modes in `CameraMetadata`:
+Bevor wir in die API-Details eintauchen, lassen Sie uns die drei physikalischen Fokusmechanismen verstehen, die Smartphones verwenden.
 
-| Mode (CONTROL_AF_MODE_*) | Behavior | Use Case |
+### 1. Kontrast-Autofokus (CDAF) — Passiver Scan
+
+Die Softwaretechnik: Analysieren des Bildes, Suchen nach maximalem Kantenkontrast (scharfe Kanten = höchste Ortsfrequenz) und Bewegen des Objektivs, bis der Spitzenkontrast gefunden ist.
+
+- **Vorteil:** Funktioniert auf jeder Kamerahardware (keine speziellen Pixel erforderlich).
+- **Nachteil:** Langsam. Das Objektiv muss über den Fokusbereich hin- und herfahren ("hunten"). Szenentext-Labels wie "AF SCANNING" im Camera2-Status beziehen sich darauf.
+
+### 2. Phasenvergleich-Autofokus (PDAF) — Aktiver Scan
+
+Spezielle Fotodioden auf dem Sensor sind in zwei Hälften geteilt. Die Phasendifferenz zwischen der linken und rechten Hälfte misst direkt, *wie weit und in welche Richtung* sich das Objektiv bewegen muss – kein Suchen erforderlich. Flaggschiff-Telefone verwenden heute Dual-Pixel-PDAF, bei dem *jedes* Pixel die Phasendetektion durchführt.
+
+- **Vorteil:** Extrem schnell (< 100 ms Lock bei gutem Licht); funktioniert zuverlässig bei Videos.
+- **Nachteil:** Hat Schwierigkeiten bei schlechtem Licht (nicht genügend Photonen, um die Phase zuverlässig zu berechnen) und hat Grenzen bei der minimalen Fokusdistanz.
+
+### 3. Laser-AF / ToF-AF (Aktiv) — Entfernungsmesser
+
+Ein dediziertes Hardwaremodul feuert einen Infrarot-Laserpuls ab, misst die Zeit der Reflexion und meldet die Entfernung zum Motiv direkt an den ISP. Sehr verbreitet bei Mittelklasse- bis Premium-Telefonen.
+
+- **Vorteil:** Blitzschneller Lock auf jedes Ziel, selbst in völliger Dunkelheit (wenn das Ziel IR reflektiert).
+- **Nachteil:** Begrenzte effektive Reichweite (~50 cm–5 m max.), versagt bei Glas oder IR-transparenten Objekten.
+
+Echte Telefone kombinieren **alle drei**: PDAF für einen schnellen groben Lock, CDAF für die Feinabstimmung und Laser-AF für Szenen bei wenig Licht oder Nahaufnahmen. Camera2 legt diese vereinheitlichte Pipeline als eine einzige abstrakte Zustandsmaschine offen.
+
+---
+
+## AF-Modi: CONTROL_AF_MODE
+
+Camera2 definiert diese AF-Modi in `CameraMetadata`:
+
+| Modus (CONTROL_AF_MODE_*) | Verhalten | Anwendungsfall |
 |-------------------------|----------|----------|
-| `OFF` | No AF at all. You set `LENS_FOCUS_DISTANCE` manually. | Manual focus, focus stacking, astrophotography (infinity lock) |
-| `AUTO` | One-shot AF. Does nothing until you send `CONTROL_AF_TRIGGER = START`, then scans once and locks. | Classic point-and-shoot still photography |
-| `MACRO` | Same as AUTO but biased toward near-subject detection. | Close-ups, document scanning, "food mode" |
-| `CONTINUOUS_PICTURE` | Constantly refocuses, but **pauses refocusing when you trigger a still capture** to avoid focus shift during the shot. | Still photography default |
-| `CONTINUOUS_VIDEO` | Constantly refocuses — never pauses. May hunt visibly but keeps video in focus. | Video recording, video chats |
-| `EDOF` | Extended Depth of Field: software/firmware-simulated deep focus. No physical lens movement. | Budget devices without moving lens actuators |
+| `OFF` | Überhaupt kein AF. Sie stellen `LENS_FOCUS_DISTANCE` manuell ein. | Manueller Fokus, Focus Stacking, Astrofotografie (Unendlich-Lock) |
+| `AUTO` | One-Shot-AF. Tut nichts, bis Sie `CONTROL_AF_TRIGGER = START` senden, scannt dann einmal und sperrt. | Klassische Point-and-Shoot-Standbildfotografie |
+| `MACRO` | Identisch mit AUTO, aber auf die Erkennung von nahen Motiven ausgerichtet. | Nahaufnahmen, Scannen von Dokumenten, "Food-Modus" |
+| `CONTINUOUS_PICTURE` | Fokussiert ständig neu, **pausiert aber die Neufokussierung, wenn Sie eine Standbildaufnahme auslösen**, um einen Fokus-Shift während der Aufnahme zu vermeiden. | Standard für Standbildfotografie |
+| `CONTINUOUS_VIDEO` | Fokussiert ständig neu – pausiert nie. Kann sichtbar "hunten", hält aber das Video im Fokus. | Videoaufzeichnung, Video-Chats |
+| `EDOF` | Extended Depth of Field: Software/Firmware-simulierter tiefer Fokus. Keine physikalische Objektivbewegung. | Budget-Geräte ohne bewegliche Objektiv-Aktoren |
 
-**Two critical notes:**
+**Zwei wichtige Hinweise:**
 
-1. `EDOF` devices (cheap phones, selfie cameras) have a *fixed* focal plane. You will never get `FOCUSED_LOCKED` from them — the best you get is `PASSIVE_SCAN` → `PASSIVE_FOCUSED` → `INACTIVE`. The [Android Camera Parameters app](https://play.google.com/store/apps/details?id=com.minininja.cameraparams) explicitly shows "Fixed Focus" for these cameras.
+1. **EDOF-Geräte** (günstige Handys, Selfie-Kameras) haben eine *feste* Fokusebene. Sie werden von ihnen niemals `FOCUSED_LOCKED` erhalten – das Beste, was Sie bekommen, ist `PASSIVE_SCAN` → `PASSIVE_FOCUSED` → `INACTIVE`. Die [App Android Camera Parameters](https://play.google.com/store/apps/details?id=com.minininja.cameraparams) zeigt für diese Kameras explizit "Fixed Focus" an.
 
-2. `CONTINUOUS_*` modes return to `INACTIVE` after idle rather than staying locked. Don't expect `FOCUSED_LOCKED` in continuous mode — that's only for `AUTO`/`MACRO` + explicit trigger.
+2. **CONTINUOUS_***-Modi kehren nach dem Leerlauf in den Zustand `INACTIVE` zurück, anstatt gesperrt zu bleiben. Erwarten Sie kein `FOCUSED_LOCKED` im kontinuierlichen Modus – das gibt es nur für `AUTO`/`MACRO` + expliziten Trigger.
 
 ---
 
-## The AF State Machine
+## Die AF-Zustandsmaschine
 
-Camera2 reports AF status via `CaptureResult.CONTROL_AF_STATE`. Understanding these states is *make-or-break* for reliable still capture sequences.
+Camera2 meldet den AF-Status über `CaptureResult.CONTROL_AF_STATE`. Das Verständnis dieser Zustände ist *entscheidend* für zuverlässige Standbild-Aufnahmesequenzen.
 
 ```mermaid
 stateDiagram-v2
-    [*] --> INACTIVE: Preview starts, AF OFF
-    INACTIVE --> PASSIVE_SCAN: CONTINUOUS_PICTURE/VIDEO mode
-    INACTIVE --> ACTIVE_SCAN: AUTO/MACRO mode + TRIGGER=START
-    PASSIVE_SCAN --> PASSIVE_FOCUSED: Peak contrast found
-    PASSIVE_SCAN --> PASSIVE_UNFOCUSED: Scene too low-contrast
-    PASSIVE_FOCUSED --> PASSIVE_SCAN: Scene changes (continuous mode)
-    ACTIVE_SCAN --> FOCUSED_LOCKED: Locked focus (SUCCESS!)
-    ACTIVE_SCAN --> NOT_FOCUSED_LOCKED: Gave up but locked anyway
-    FOCUSED_LOCKED --> INACTIVE: TRIGGER=CANCEL or mode change
-    NOT_FOCUSED_LOCKED --> INACTIVE: TRIGGER=CANCEL or mode change
-    PASSIVE_FOCUSED --> INACTIVE: Mode switched to OFF/AUTO
-    PASSIVE_UNFOCUSED --> INACTIVE: Mode switched to OFF/AUTO
-    INACTIVE --> INACTIVE: Manual LENS_FOCUS_DISTANCE changes
+    [*] --> INACTIVE: Vorschau startet, AF AUS
+    INACTIVE --> PASSIVE_SCAN: CONTINUOUS_PICTURE/VIDEO Modus
+    INACTIVE --> ACTIVE_SCAN: AUTO/MACRO Modus + TRIGGER=START
+    PASSIVE_SCAN --> PASSIVE_FOCUSED: Spitzenkontrast gefunden
+    PASSIVE_SCAN --> PASSIVE_UNFOCUSED: Szene hat zu wenig Kontrast
+    PASSIVE_FOCUSED --> PASSIVE_SCAN: Szene ändert sich (kontinuierlicher Modus)
+    ACTIVE_SCAN --> FOCUSED_LOCKED: Fokus gesperrt (ERFOLG!)
+    ACTIVE_SCAN --> NOT_FOCUSED_LOCKED: Aufgegeben, aber trotzdem gesperrt
+    FOCUSED_LOCKED --> INACTIVE: TRIGGER=CANCEL oder Modusänderung
+    NOT_FOCUSED_LOCKED --> INACTIVE: TRIGGER=CANCEL oder Modusänderung
+    PASSIVE_FOCUSED --> INACTIVE: Modus auf OFF/AUTO gewechselt
+    PASSIVE_UNFOCUSED --> INACTIVE: Modus auf OFF/AUTO gewechselt
+    INACTIVE --> INACTIVE: Manuelle LENS_FOCUS_DISTANCE ändert sich
     note right of FOCUSED_LOCKED
-        ONLY state where still capture
-        is guaranteed to be in-focus.
-        Wait for this before AE precapture.
+        EINZIGER Zustand, in dem die
+        Standbildaufnahme garantiert scharf ist.
+        Warten Sie darauf vor dem AE-Precapture.
     end note
     note left of ACTIVE_SCAN
-        Combined PDAF + CDAF + Laser
-        Typical duration: 50ms – 400ms
-        budget phones: up to 2s in low light
+        Kombination aus PDAF + CDAF + Laser
+        Typische Dauer: 50 ms – 400 ms
+        Budget-Handys: bis zu 2 s bei wenig Licht
     end note
 ```
 
-State reference table:
+Referenztabelle der Zustände:
 
-| CONTROL_AF_STATE | Meaning | Next Action |
+| CONTROL_AF_STATE | Bedeutung | Nächste Aktion |
 |------------------|---------|-------------|
-| `INACTIVE` (0) | AF is off, idle, or continuous mode not currently scanning | If in AUTO mode: send TRIGGER_START |
-| `PASSIVE_SCAN` (1) | Continuous mode is passively scanning | Wait; don't trigger still capture yet |
-| `PASSIVE_FOCUSED` (2) | Continuous found focus, but NOT locked (can drift) | Safe to trigger still in CONTINUOUS_PICTURE (it will lock) |
-| `ACTIVE_SCAN` (3) | Explicit trigger started a scan | Just wait... |
-| `NOT_FOCUSED_LOCKED` (4) | Failed to find focus, but lens is locked anyway | User-warning prompt; optionally retry or capture anyway |
-| `FOCUSED_LOCKED` (5) | **SUCCESS.** Focus found and hardware-locked. | Proceed immediately to AE precapture trigger |
-| `PASSIVE_UNFOCUSED` (6) | Continuous couldn't lock, still scanning | Improve lighting or different target |
+| `INACTIVE` (0) | AF ist aus, im Leerlauf oder kontinuierlicher Modus scannt gerade nicht | Falls im AUTO-Modus: TRIGGER_START senden |
+| `PASSIVE_SCAN` (1) | Kontinuierlicher Modus scannt passiv | Warten; noch keine Standbildaufnahme auslösen |
+| `PASSIVE_FOCUSED` (2) | Kontinuierlicher Modus hat Fokus gefunden, ist aber NICHT gesperrt (kann driften) | Sicher, Standbilder in CONTINUOUS_PICTURE auszulösen (er wird sperren) |
+| `ACTIVE_SCAN` (3) | Expliziter Trigger hat einen Scan gestartet | Einfach warten... |
+| `NOT_FOCUSED_LOCKED` (4) | Fokus wurde nicht gefunden, aber das Objektiv ist trotzdem gesperrt | Benutzernachricht anzeigen; optional erneut versuchen oder trotzdem aufnehmen |
+| `FOCUSED_LOCKED` (5) | **ERFOLG.** Fokus gefunden und hardwareseitig gesperrt. | Sofort mit dem AE-Precapture-Trigger fortfahren |
+| `PASSIVE_UNFOCUSED` (6) | Kontinuierlicher Modus konnte nicht sperren, scannt noch | Beleuchtung verbessern oder anderes Ziel wählen |
 
-**Non-negotiable rule for still photography:** *Never* submit a still capture (especially with flash!) until you see `FOCUSED_LOCKED`. Skip this step, and you will ship an app that intermittently produces soft photos.
+**Unumstößliche Regel für die Standbildfotografie:** Übermitteln Sie *niemals* eine Standbildaufnahme (besonders mit Blitz!), bevor Sie `FOCUSED_LOCKED` sehen. Wenn Sie diesen Schritt überspringen, wird Ihre App zeitweise unscharfe Fotos produzieren.
 
 ---
 
-## Focus Distance: Diopters, Not Meters
+## Fokusdistanz: Dioptrien, nicht Meter
 
-Here's the second "gotcha" that trips Camera2 developers (after the shutter-in-nanoseconds surprise):
+Hier ist die zweite "Falle", über die Camera2-Entwickler stolpern (nach der Überraschung mit dem Verschluss in Nanosekunden):
 
-**`LENS_FOCUS_DISTANCE` uses diopters (D), not meters.** Diopters are the *mathematical reciprocal* of focus distance:
+**`LENS_FOCUS_DISTANCE` verwendet Dioptrien (D), nicht Meter.** Dioptrien sind der *mathematische Kehrwert* der Fokusdistanz:
 
 ```
-Focus Distance (meters) = 1.0 / Diopters
-Diopters = 1.0 / Focus Distance (meters)
+Fokusdistanz (Meter) = 1.0 / Dioptrien
+Dioptrien = 1.0 / Fokusdistanz (Meter)
 ```
 
-| Diopters (LENS_FOCUS_DISTANCE) | Physical Focus Distance |
+| Dioptrien (LENS_FOCUS_DISTANCE) | Physikalische Fokusdistanz |
 |--------------------------------|-------------------------|
-| **0.0** | **Infinity** (∞) — stars, distant mountains |
-| 0.1 | 10 meters |
-| 0.25 | 4 meters |
-| 0.5 | 2 meters |
-| 1.0 | 1 meter |
-| 2.0 | 0.5 meter (50 cm) |
-| 5.0 | 0.2 meter (20 cm) |
-| 10.0 | 0.1 meter (10 cm) |
-| 20.0 | 0.05 meter (5 cm) |
+| **0.0** | **Unendlich** (∞) — Sterne, ferne Berge |
+| 0.1 | 10 Meter |
+| 0.25 | 4 Meter |
+| 0.5 | 2 Meter |
+| 1.0 | 1 Meter |
+| 2.0 | 0,5 Meter (50 cm) |
+| 5.0 | 0,2 Meter (20 cm) |
+| 10.0 | 0,1 Meter (10 cm) |
+| 20.0 | 0,05 Meter (5 cm) |
 
-Why diopters? Because the lens actuator moves linearly with *optical power*, not physical distance. A focus sweep from 0.0D → 20.0D corresponds to uniform lens movement, whereas a "meters" sweep from 10m → 5cm would be highly non-linear.
+Warum Dioptrien? Weil sich der Objektiv-Aktor linear mit der *optischen Leistung* bewegt, nicht mit der physikalischen Distanz. Eine Fokusfahrt von 0,0 D → 20,0 D entspricht einer gleichmäßigen Objektivbewegung, während eine Fahrt in "Metern" von 10 m → 5 cm hochgradig nichtlinear wäre.
 
-### Query Minimum Focus Distance
+### Abfrage der minimalen Fokusdistanz
 
-Every lens has a closest focus distance (you cannot physically focus an object pressed against the glass). Query it:
+Jedes Objektiv hat eine Naheinstellgrenze (Sie können ein Objekt, das direkt am Glas klebt, physikalisch nicht fokussieren). Fragen Sie diese ab:
 
 ```kotlin
-// Maximum useful diopter value for this lens
+// Maximal nützlicher Dioptrienwert für dieses Objektiv
 val maxDiopters = characteristics.get(
     CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE
-) ?: 0.0f // 0.0f = fixed-focus EDOF lens (no focus control at all!)
+) ?: 0.0f // 0.0f = Fixed-Focus EDOF-Objektiv (überhaupt keine Fokussteuerung!)
 
 if (maxDiopters == 0.0f) {
-    Log.w("Focus", "This is a fixed-focus lens. Manual AF disabled.")
+    Log.w("Focus", "Dies ist ein Fixed-Focus-Objektiv. Manueller AF deaktiviert.")
 } else {
-    // Valid diopter range is [0.0f .. maxDiopters]
-    Log.d("Focus", "Focus range: 0.0D (inf) → $maxDiopters D (${1/maxDiopters}m close)")
+    // Gültiger Dioptrienbereich ist [0.0f .. maxDiopters]
+    Log.d("Focus", "Fokusbereich: 0.0 D (Unendl.) → $maxDiopters D (${1/maxDiopters} m Nahbereich)")
 }
 ```
 
-Typical values:
-- Budget phone rear camera: ~10D (10 cm minimum focus)
-- Flagship wide camera: ~15–25D (4–7 cm minimum)
-- Macro camera: ~30–50D (2–3 cm minimum)
-- Front selfie camera: Often 0.0D (fixed focus, EDOF)
+Typische Werte:
+- Rückkamera eines Budget-Handys: ~10 D (10 cm minimale Fokusdistanz)
+- Flaggschiff-Weitwinkelkamera: ~15–25 D (4–7 cm Minimum)
+- Makrokamera: ~30–50 D (2–3 cm Minimum)
+- Front-Selfie-Kamera: Oft 0,0 D (Fixed-Focus, EDOF)
 
-### Hyperfocal Distance (Concept)
+### Hyperfokale Distanz (Konzept)
 
-Landscape photographers love this: set focus to the **hyperfocal distance**, and everything from half that distance to infinity is "acceptably sharp." On a phone with f/1.8 aperture and a standard wide lens, hyperfocal is roughly 0.5–1.0 meter.
+Landschaftsfotografen lieben dies: Stellen Sie den Fokus auf die **hyperfokale Distanz** ein, und alles von der Hälfte dieser Distanz bis unendlich ist "akzeptabel scharf". Bei einem Telefon mit Blende f/1,8 und einem Standard-Weitwinkelobjektiv liegt die hyperfokale Distanz bei etwa 0,5–1,0 Metern.
 
-**Rule of thumb for smartphones:** Setting `LENS_FOCUS_DISTANCE = 2.0D` (50 cm focus distance) approximates hyperfocal on most wide-angle phone lenses. Good for landscape and street photography where you don't want to wait for AF.
+**Faustregel für Smartphones:** Das Einstellen von `LENS_FOCUS_DISTANCE = 2.0 D` (50 cm Fokusdistanz) entspricht bei den meisten Weitwinkelobjektiven von Telefonen annähernd der hyperfokalen Distanz. Gut für Landschafts- und Straßenfotografie, wenn man nicht auf den AF warten möchte.
 
 ```kotlin
-// Pre-set hyperfocal "everything sharp" preset
+// Voreingestellter Näherungswert für hyperfokal "alles scharf"
 const val HYPERFOCAL_DIOPTERS_APPROX = 2.0f
 
 fun setHyperfocal(builder: CaptureRequest.Builder, characteristics: CameraCharacteristics) {
@@ -179,15 +179,15 @@ fun setHyperfocal(builder: CaptureRequest.Builder, characteristics: CameraCharac
 }
 ```
 
-Want to calculate precise hyperfocal for your exact lens? You'll also need `LENS_INFO_AVAILABLE_FOCAL_LENGTHS` (focal length in mm) and the sensor's physical pixel pitch. For 95% of smartphone use cases, 2.0D is close enough.
+Möchten Sie die genaue hyperfokale Distanz für Ihr spezielles Objektiv berechnen? Sie benötigen dazu auch `LENS_INFO_AVAILABLE_FOCAL_LENGTHS` (Brennweite in mm) und den physikalischen Pixelabstand des Sensors. Für 95 % der Smartphone-Anwendungsfälle sind 2,0 D nah genug dran.
 
 ---
 
-## Complete Example 1: One-Shot AF Trigger-and-Capture
+## Vollständiges Beispiel 1: One-Shot AF Trigger-and-Capture
 
-This is the bread-and-butter still-photography flow for `AUTO` / `MACRO` mode. It's also the exact sequence the 3A orchestration in Chapter 17 will reuse.
+Dies ist der Standard-Ablauf der Standbildfotografie für den Modus `AUTO` / `MACRO`. Es ist auch genau die Sequenz, die die 3A-Orchestrierung in Kapitel 17 wiederverwenden wird.
 
-**Goal:** User taps "Capture" → drive AF to locked focus → once locked, submit the still capture.
+**Ziel:** Benutzer tippt auf "Aufnahme" → AF bis zum Sperren des Fokus treiben → sobald gesperrt, die Standbildaufnahme übermitteln.
 
 ```kotlin
 class AutoFocusCaptureHelper(
@@ -200,17 +200,17 @@ class AutoFocusCaptureHelper(
     private var capturePlanned = false
 
     fun triggerAutoFocusAndCapture(onCaptureComplete: () -> Unit) {
-        // ---- STEP 1: Build repeating request with explicit AF trigger ----
+        // ---- SCHRITT 1: Wiederholte Anforderung mit explizitem AF-Trigger erstellen ----
         val triggerRequest = captureSession.device.createCaptureRequest(
             CameraDevice.TEMPLATE_PREVIEW
         ).apply {
             addTarget(previewSurface)
 
-            // Use AUTO mode to guarantee LOCKED state at the end
+            // AUTO-Modus verwenden, um den LOCKED-Zustand am Ende zu garantieren
             set(CaptureRequest.CONTROL_AF_MODE,
                 CameraMetadata.CONTROL_AF_MODE_AUTO)
 
-            // Fire the one-shot AF trigger NOW
+            // Den One-Shot AF-Trigger JETZT abfeuern
             set(CaptureRequest.CONTROL_AF_TRIGGER,
                 CameraMetadata.CONTROL_AF_TRIGGER_START)
         }
@@ -218,7 +218,7 @@ class AutoFocusCaptureHelper(
         afTriggered = true
         capturePlanned = true
 
-        // ---- STEP 2: Subscribe our state-tracking callback ----
+        // ---- SCHRITT 2: Unseren Callback zur Zustandsverfolgung abonnieren ----
         captureSession.setRepeatingRequest(
             triggerRequest.build(),
             object : CameraCaptureSession.CaptureCallback() {
@@ -229,10 +229,10 @@ class AutoFocusCaptureHelper(
                 ) {
                     val afState = result.get(CaptureResult.CONTROL_AF_STATE)
                         ?: return
-                    Log.d("AF", "AF state: $afState")
+                    Log.d("AF", "AF-Status: $afState")
 
                     when (afState) {
-                        // --- SUCCESS PATH ---
+                        // --- ERFOLGSPFAD ---
                         CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED -> {
                             if (capturePlanned) {
                                 capturePlanned = false
@@ -240,24 +240,24 @@ class AutoFocusCaptureHelper(
                                 onCaptureComplete()
                             }
                         }
-                        // --- FAILURE PATH: could not lock, but we'll try anyway ---
+                        // --- FEHLERPFAD: konnte nicht sperren, aber wir versuchen es trotzdem ---
                         CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED -> {
-                            Log.w("AF", "AF couldn't lock — capturing anyway (blurry?)")
+                            Log.w("AF", "AF konnte nicht sperren — Aufnahme erfolgt trotzdem (unscharf?)")
                             if (capturePlanned) {
                                 capturePlanned = false
                                 submitStillCapture()
                                 onCaptureComplete()
                             }
                         }
-                        // --- STILL SCANNING: ignore ---
+                        // --- SCANNT NOCH: ignorieren ---
                         CaptureResult.CONTROL_AF_STATE_ACTIVE_SCAN,
                         CaptureResult.CONTROL_AF_STATE_PASSIVE_SCAN -> {
-                            // Still working, don't do anything yet
+                            // Arbeitet noch, noch nichts unternehmen
                         }
                     }
                 }
             },
-            null // Handler on current thread
+            null // Handler auf aktuellem Thread
         )
     }
 
@@ -268,10 +268,10 @@ class AutoFocusCaptureHelper(
             addTarget(previewSurface)
             addTarget(jpegReaderSurface)
 
-            // Keep AF locked for this still — do NOT release the trigger yet
+            // AF für dieses Standbild gesperrt halten — Trigger noch NICHT freigeben
             set(CaptureRequest.CONTROL_AF_MODE,
                 CameraMetadata.CONTROL_AF_MODE_AUTO)
-            // Leave AF_TRIGGER as-is (START remains until we explicitly CANCEL)
+            // AF_TRIGGER so lassen, wie er ist (START bleibt, bis wir explizit CANCEL senden)
 
             set(CaptureRequest.JPEG_QUALITY, 95)
         }
@@ -284,7 +284,7 @@ class AutoFocusCaptureHelper(
                     request: CaptureRequest,
                     result: TotalCaptureResult
                 ) {
-                    // Photo captured — now release AF lock, go back to continuous
+                    // Foto aufgenommen — nun AF-Lock freigeben, zurück zum kontinuierlichen Modus
                     resetFocusToContinuous()
                 }
             },
@@ -308,15 +308,15 @@ class AutoFocusCaptureHelper(
 }
 ```
 
-**Critical detail:** You cancel the trigger *after* the still capture completes — not before. Cancel too early, and the lens unlocks during the shot, producing a soft photo.
+**Wichtiges Detail:** Sie brechen den Trigger *nach* Abschluss der Standbildaufnahme ab – nicht davor. Wenn Sie ihn zu früh abbrechen, entsperrt sich das Objektiv während der Aufnahme, was zu einem unscharfen Foto führt.
 
-**Timeout safeguard (not shown):** Real apps add a 2–3 second timeout on the AF scan. If `ACTIVE_SCAN` runs for 3 seconds and never reaches `FOCUSED_LOCKED`, cancel and surface a "Tap to focus on a high-contrast area" user hint.
+**Timeout-Absicherung (nicht gezeigt):** Echte Apps fügen dem AF-Scan ein Timeout von 2–3 Sekunden hinzu. Wenn `ACTIVE_SCAN` 3 Sekunden lang läuft und niemals `FOCUSED_LOCKED` erreicht, brechen Sie ab und blenden Sie einen Benutzerhinweis wie "Tippen Sie zum Fokussieren auf einen kontrastreichen Bereich" ein.
 
 ---
 
-## Complete Example 2: Manual Focus SeekBar Slider
+## Vollständiges Beispiel 2: Manueller Fokus-SeekBar-Schieberegler
 
-This is the user-facing Manual Focus feature you've seen in pro camera apps. A SeekBar maps the physical 0.0D → maxD focus range smoothly.
+Dies ist die Funktion für den manuellen Fokus, wie Sie sie aus Pro-Kamera-Apps kennen. Eine SeekBar bildet den physikalischen Fokusbereich von 0,0 D → maxD stufenlos ab.
 
 ### Layout (res/layout/fragment_manual_focus.xml)
 
@@ -332,7 +332,7 @@ This is the user-facing Manual Focus feature you've seen in pro camera apps. A S
         android:id="@+id/tvFocusLabel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Focus: ∞ (infinity)"
+        android:text="Fokus: ∞ (unendlich)"
         android:textSize="14sp"/>
 
     <SeekBar
@@ -343,7 +343,7 @@ This is the user-facing Manual Focus feature you've seen in pro camera apps. A S
 </LinearLayout>
 ```
 
-### Kotlin: Fragment / Activity Wiring
+### Kotlin: Fragment / Activity Verkabelung
 
 ```kotlin
 class ManualFocusController(
@@ -353,7 +353,7 @@ class ManualFocusController(
     private val captureSessionProvider: () -> CameraCaptureSession?,
     private val previewSurface: Surface
 ) {
-    // Slider uses 1000 integer steps for sub-diopter precision
+    // Der Schieberegler verwendet 1000 ganzzahlige Schritte für Präzision unterhalb einer Dioptrie
     private val sliderSteps = 1000
     private val maxDiopters = characteristics.get(
         CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE
@@ -364,22 +364,22 @@ class ManualFocusController(
     init {
         if (maxDiopters == 0.0f) {
             seekBar.isEnabled = false
-            labelView.text = "Fixed Focus (No manual AF)"
+            labelView.text = "Fixed Focus (Kein manueller AF)"
         } else {
             bindSeekBar()
-            applyFocus(0.0f) // Start at infinity
+            applyFocus(0.0f) // Bei unendlich starten
         }
     }
 
     private fun bindSeekBar() {
-        // Convert slider int [0..1000] ↔ diopters [0.0 .. maxDiopters]
+        // Konvertierung Schieberegler int [0..1000] ↔ Dioptrien [0.0 .. maxDiopters]
         seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             private var lastUpdate = 0L
 
             override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
                 if (!fromUser) return
 
-                // Throttle to ~30fps (33ms) — avoids overwhelming HAL with requests
+                // Drosselung auf ~30 fps (33 ms) — vermeidet das Überfluten des HAL mit Anforderungen
                 val now = SystemClock.elapsedRealtime()
                 if (now - lastUpdate < 33L) return
                 lastUpdate = now
@@ -388,11 +388,11 @@ class ManualFocusController(
                 applyFocus(diopters)
             }
             override fun onStartTrackingTouch(seekBar: SeekBar) {
-                // Switch to full manual AF mode immediately when user starts dragging
+                // Sofort in den voll manuellen AF-Modus wechseln, wenn der Benutzer zu ziehen beginnt
                 switchToManualMode()
             }
             override fun onStopTrackingTouch(seekBar: SeekBar) {
-                // Apply final exact value to remove throttle error
+                // Den exakten Endwert anwenden, um Drosselungsfehler zu korrigieren
                 val diopters = seekBar.progress.toFloat() / sliderSteps.toFloat() * maxDiopters
                 applyFocus(diopters, force = true)
             }
@@ -400,7 +400,7 @@ class ManualFocusController(
     }
 
     private fun switchToManualMode() {
-        // CONTROL_AF_MODE_OFF disables AF motor auto-drive
+        // CONTROL_AF_MODE_OFF deaktiviert die automatische Steuerung des Fokusmotors
         val session = captureSessionProvider() ?: return
         val request = session.device.createCaptureRequest(
             CameraDevice.TEMPLATE_PREVIEW
@@ -415,16 +415,16 @@ class ManualFocusController(
     fun applyFocus(diopters: Float, force: Boolean = false) {
         currentDiopters = diopters.coerceIn(0.0f, maxDiopters)
 
-        // Update label: show "∞" for < 0.1D, "X.Y m" otherwise
+        // Label aktualisieren: "∞" für < 0,1 D anzeigen, sonst "X.Y m"
         labelView.text = when {
-            currentDiopters < 0.1f -> "Focus: ∞ (infinity)"
+            currentDiopters < 0.1f -> "Fokus: ∞ (unendlich)"
             else -> {
                 val meters = 1.0f / currentDiopters
-                String.format("Focus: %.1f D  (%.2f m)", currentDiopters, meters)
+                String.format("Fokus: %.1f D  (%.2f m)", currentDiopters, meters)
             }
         }
 
-        // Build and submit a repeating request with the new focus distance
+        // Eine wiederholte Anforderung mit der neuen Fokusdistanz erstellen und übermitteln
         val session = captureSessionProvider() ?: return
         val request = session.device.createCaptureRequest(
             CameraDevice.TEMPLATE_PREVIEW
@@ -434,11 +434,11 @@ class ManualFocusController(
             set(CaptureRequest.LENS_FOCUS_DISTANCE, currentDiopters)
         }
 
-        // Use setRepeatingRequest so every preview frame honours the new focus
+        // setRepeatingRequest verwenden, damit jeder Vorschau-Frame den neuen Fokus berücksichtigt
         session.setRepeatingRequest(request.build(), null, null)
     }
 
-    // --- Preset helpers ---
+    // --- Helfer für Voreinstellungen ---
     fun setInfinity() { seekBar.progress = 0; applyFocus(0.0f, true) }
     fun setHyperfocalApprox() {
         val d = min(2.0f, maxDiopters)
@@ -450,34 +450,34 @@ class ManualFocusController(
 }
 ```
 
-**Key implementation details:**
+**Wichtige Details der Implementierung:**
 
-1. **Throttle.** SeekBars fire `onProgressChanged` up to 200Hz. Submitting a `setRepeatingRequest` on every event floods the HAL with work, causing lag. A 33ms throttle caps updates to ~30fps — plenty smooth for the lens motor's physical speed.
+1. **Drosselung.** SeekBars lösen `onProgressChanged` mit bis zu 200 Hz aus. Das Senden von `setRepeatingRequest` bei jedem Ereignis überflutet den HAL mit Arbeit und führt zu Verzögerungen. Eine Drosselung auf 33 ms begrenzt die Aktualisierungen auf ~30 fps – das ist flüssig genug für die physikalische Geschwindigkeit des Objektivmotors.
 
-2. **Switch to CONTROL_AF_MODE_OFF early.** If you're in `CONTINUOUS_PICTURE` and set `LENS_FOCUS_DISTANCE` without disabling AF, the AF algorithm will *fight you* — snapping focus back to what it thinks is right a frame later. The switch must happen first, in `onStartTrackingTouch`.
+2. **Frühzeitiger Wechsel zu CONTROL_AF_MODE_OFF.** Wenn Sie sich im Modus `CONTINUOUS_PICTURE` befinden und `LENS_FOCUS_DISTANCE` einstellen, ohne den AF zu deaktivieren, wird der AF-Algorithmus *gegen Sie ankämpfen* und den Fokus einen Frame später wieder auf das zurücksetzen, was er für richtig hält. Der Wechsel muss zuerst erfolgen, in `onStartTrackingTouch`.
 
-3. **Update via `setRepeatingRequest`**, not one-off `capture()`. Manual focus needs to stick on *every* preview frame until the user moves the slider again.
+3. **Aktualisierung über `setRepeatingRequest`**, nicht über ein einmaliges `capture()`. Der manuelle Fokus muss bei *jedem* Vorschau-Frame erhalten bleiben, bis der Benutzer den Schieberegler erneut bewegt.
 
-4. **Force-apply on release.** The throttle skips intermediate positions; when the user lifts their finger, apply the exact final slider value.
+4. **Erzwungenes Anwenden beim Loslassen.** Die Drosselung überspringt Zwischenpositionen; wenn der Benutzer den Finger hebt, wenden Sie den exakten finalen Wert des Schiebereglers an.
 
 ---
 
-## Focus Regions (Touch-to-Focus)
+## Fokusbereiche (Touch-to-Focus)
 
-Modern camera apps let you *tap the viewfinder* to pick a focus target. Camera2 implements this via `CONTROL_AF_REGIONS` — a list of rectangles (in the active-array coordinate space) with weights.
+Moderne Kamera-Apps lassen Sie auf den *Sucher tippen*, um ein Fokus-Ziel auszuwählen. Camera2 implementiert dies über `CONTROL_AF_REGIONS` – eine Liste von Rechtecken (im Koordinatenraum des Active Array) mit Gewichtungen.
 
 ```kotlin
-// Convert a Viewfinder (x,y) tap into a CameraCharacteristics Sensor coordinate region
+// Konvertiert ein Tippen auf den Sucher (x,y) in einen Sensor-Koordinatenbereich aus den CameraCharacteristics
 fun createTapFocusRegion(viewfinderWidth: Int, viewfinderHeight: Int,
                          tapX: Float, tapY: Float,
                          characteristics: CameraCharacteristics): MeteringRectangle {
     val activeArray = characteristics.get(
         CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE
     )!!
-    // Normalize tap [0..1] in each axis
+    // Tippen auf jeder Achse auf [0..1] normalisieren
     val nx = tapX / viewfinderWidth.toFloat()
     val ny = tapY / viewfinderHeight.toFloat()
-    // Map to sensor active array, create a 200×200 region centered on the tap
+    // Auf das Sensor-Active-Array abbilden, einen 200×200 Bereich zentriert auf dem Tippen erstellen
     val cx = (nx * activeArray.width()).toInt()
     val cy = (ny * activeArray.height()).toInt()
     val rSize = 200
@@ -488,52 +488,52 @@ fun createTapFocusRegion(viewfinderWidth: Int, viewfinderHeight: Int,
     )
 }
 
-// Attach region to a request builder
+// Bereich an einen Request-Builder anhängen
 fun applyTapFocus(builder: CaptureRequest.Builder, region: MeteringRectangle) {
     builder.set(CaptureRequest.CONTROL_AF_REGIONS, arrayOf(region))
-    builder.set(CaptureRequest.CONTROL_AE_REGIONS, arrayOf(region)) // Couple AE spot too!
+    builder.set(CaptureRequest.CONTROL_AE_REGIONS, arrayOf(region)) // AE-Spot ebenfalls koppeln!
     builder.set(CaptureRequest.CONTROL_AF_TRIGGER,
-        CameraMetadata.CONTROL_AF_TRIGGER_CANCEL) // Cancel any prior lock
+        CameraMetadata.CONTROL_AF_TRIGGER_CANCEL) // Vorherigen Lock aufheben
     builder.set(CaptureRequest.CONTROL_AF_TRIGGER,
-        CameraMetadata.CONTROL_AF_TRIGGER_START)  // Trigger scan on new region
+        CameraMetadata.CONTROL_AF_TRIGGER_START)  // Scan im neuen Bereich auslösen
 }
 ```
 
-**Pro tip:** Always couple `CONTROL_AE_REGIONS` to match `CONTROL_AF_REGIONS`. The user tapped on a face because they want that face *both* in focus *and* correctly exposed — not focused on the face but metered for the bright sky behind it.
+**Profi-Tipp:** Koppeln Sie `CONTROL_AE_REGIONS` immer passend zu `CONTROL_AF_REGIONS`. Der Benutzer hat auf ein Gesicht getippt, weil er dieses Gesicht *sowohl* im Fokus *als auch* korrekt belichtet haben möchte – nicht auf das Gesicht fokussiert, aber auf den hellen Himmel dahinter belichtet.
 
 ---
 
-## Troubleshooting Focus Issues
+## Fehlerbehebung bei Fokusproblemen
 
-| Symptom | Root Cause | Fix |
+| Symptom | Ursache | Lösung |
 |---------|-----------|-----|
-| AF state never moves past ACTIVE_SCAN | Low-contrast scene (white wall, pure blue sky) or hardware failure | Timeout after ~3s; prompt user; fall back to hyperfocal preset |
-| Manual focus slider does nothing | Forgot to set `CONTROL_AF_MODE = OFF` → AF is fighting you | Call `switchToManualMode()` in onStartTrackingTouch |
-| Still capture comes out blurry despite FOCUSED_LOCKED | Cancelled AF trigger *before* still capture completed | Cancel only in `onCaptureCompleted` of the *still* request |
-| Front camera ignores focus commands | Fixed-focus EDOF lens (`MINIMUM_FOCUS_DISTANCE == 0`) | Graceful degradation: disable focus UI for that camera |
-| Video AF "hunts" a lot | Using `CONTINUOUS_PICTURE` instead of `CONTINUOUS_VIDEO` for video recording | Switch mode to CONTINUOUS_VIDEO when MediaRecorder starts |
+| AF-Status geht nie über ACTIVE_SCAN hinaus | Kontrastarme Szene (weiße Wand, rein blauer Himmel) oder Hardwarefehler | Timeout nach ~3 s; Benutzer benachrichtigen; auf hyperfokale Voreinstellung zurückgreifen |
+| Manueller Fokus-Schieberegler bewirkt nichts | Vergessen, `CONTROL_AF_MODE = OFF` zu setzen → AF kämpft gegen Sie an | `switchToManualMode()` in onStartTrackingTouch aufrufen |
+| Standbildaufnahme ist trotz FOCUSED_LOCKED unscharf | AF-Trigger abgebrochen, *bevor* die Standbildaufnahme abgeschlossen war | Erst in `onCaptureCompleted` der *Standbild*-Anforderung abbrechen |
+| Frontkamera ignoriert Fokusbefehle | Fixed-Focus EDOF-Objektiv (`MINIMUM_FOCUS_DISTANCE == 0`) | Graceful Degradation: Fokus-UI für diese Kamera deaktivieren |
+| Video-AF "huntet" sehr stark | `CONTINUOUS_PICTURE` statt `CONTINUOUS_VIDEO` für die Videoaufnahme verwendet | Modus auf CONTINUOUS_VIDEO umschalten, wenn MediaRecorder startet |
 
 ---
 
-## Summary
+## Zusammenfassung
 
-Focus in Camera2 is a state machine you must drive explicitly, not a "set and forget" setting:
+Der Fokus in Camera2 ist eine Zustandsmaschine, die Sie explizit steuern müssen, keine "Set and Forget"-Einstellung:
 
-- **AF Hardware:** Smartphones combine Contrast-Detect AF, Phase-Detect AF (Dual-Pixel), and Laser AF for fast reliable locks.
-- **Modes:** `AUTO` (one-shot, locks), `CONTINUOUS_PICTURE` (refocuses, pauses for stills), `CONTINUOUS_VIDEO` (always refocusing), `MACRO`, `OFF` (manual). EDOF lenses have no moving focus.
-- **States:** Wait for `FOCUSED_LOCKED` (not just `PASSIVE_FOCUSED`) before high-value still captures.
-- **Diopters:** `LENS_FOCUS_DISTANCE` uses reciprocal distance (0.0D = ∞, 10D = 10 cm). Range is `[0.0 .. LENS_INFO_MINIMUM_FOCUS_DISTANCE]`.
-- **One-shot AF capture:** `TRIGGER = START` → wait `FOCUSED_LOCKED` → submit still → then `CANCEL`.
-- **Manual focus slider:** SeekBar with 1000 steps, throttled to 30fps; switch mode to `AF_MODE_OFF` first so the auto algorithm doesn't fight your manual setting.
-- **Touch-to-Focus uses `CONTROL_AF_REGIONS`** in sensor active-array coordinates. Couple with `AE_REGIONS` for pro results.
+- **AF-Hardware:** Smartphones kombinieren Kontrast-AF, Phasenvergleich-AF (Dual-Pixel) und Laser-AF für schnelle, zuverlässige Sperren.
+- **Modi:** `AUTO` (One-Shot, sperrt), `CONTINUOUS_PICTURE` (fokussiert neu, pausiert für Standbilder), `CONTINUOUS_VIDEO` (fokussiert immer neu), `MACRO`, `OFF` (manuell). EDOF-Objektive haben keinen beweglichen Fokus.
+- **Zustände:** Warten Sie auf `FOCUSED_LOCKED` (nicht nur `PASSIVE_FOCUSED`) vor wichtigen Standbildaufnahmen.
+- **Dioptrien:** `LENS_FOCUS_DISTANCE` verwendet die reziproke Distanz (0,0 D = ∞, 10 D = 10 cm). Bereich ist `[0.0 .. LENS_INFO_MINIMUM_FOCUS_DISTANCE]`.
+- **One-Shot AF-Aufnahme:** `TRIGGER = START` → warten auf `FOCUSED_LOCKED` → Standbild übermitteln → dann `CANCEL`.
+- **Manueller Fokus-Schieberegler:** SeekBar mit 1000 Schritten, gedrosselt auf 30 fps; zuerst Modus auf `AF_MODE_OFF` schalten, damit der automatische Algorithmus nicht gegen Ihre manuelle Einstellung ankämpft.
+- **Touch-to-Focus verwendet `CONTROL_AF_REGIONS`** in Koordinaten des Sensor-Active-Arrays. Für Profi-Ergebnisse mit `AE_REGIONS` koppeln.
 
-## What's Next
+## Wie geht es weiter?
 
-Brightness ✓ Sharpness ✓. Now let's fix the **color**. In **Chapter 16: White Balance & Color**, we cover:
+Helligkeit ✓ Schärfe ✓. Kümmern wir uns nun um die **Farbe**. In **Kapitel 16: Weißabgleich & Farbe** behandeln wir:
 
-- Auto White Balance (AWB) and the 7 presets (Incandescent → Shade)
-- Manual color correction with `COLOR_CORRECTION_GAINS` (4-channel R/G/B/G) and `COLOR_CORRECTION_TRANSFORM` (3×3 RGB matrix)
-- Color temperature concept (2000K candle → 10000K shade) and how it maps to white balance
-- Working code for a warm-tone "sunset look" preset and full manual AWB off-mode
+- Automatischer Weißabgleich (AWB) und die 7 Voreinstellungen (Glühlampenlicht → Schatten)
+- Manuelle Farbkorrektur mit `COLOR_CORRECTION_GAINS` (4-Kanal R/G/B/G) und `COLOR_CORRECTION_TRANSFORM` (3×3 RGB-Matrix)
+- Das Konzept der Farbtemperatur (2000 K Kerze → 10000 K Schatten) und wie sie auf den Weißabgleich abgebildet wird
+- Funktionierender Code für eine warmtönige "Sonnenuntergangs-Voreinstellung" und den voll manuellen AWB-Aus-Modus
 
-Color is the final leg of the manual-controls trilogy.
+Farbe ist der letzte Teil der Trilogie der manuellen Steuerungen.

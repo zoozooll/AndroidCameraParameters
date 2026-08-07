@@ -23,7 +23,7 @@ Let us first visualize the problem. This is a real (simplified) structure from a
 
 ```mermaid
 graph TD
-    A[onCreateView] -->|cameraId chosen| B[CameraManager.openCamera]
+    A["onCreateView"] -->|cameraId chosen| B["CameraManager.openCamera"]
     B -->|fires on| C[StateCallback.onOpened<br/>lambda 1]
     C -->|holds cameraDevice| D[createCaptureSession<br/>(outputs = previewSurface + imageReaderSurface)]
     D -->|fires on| E[Session.StateCallback.onConfigured<br/>lambda 2]
@@ -47,7 +47,7 @@ The goal of this chapter is to turn that spaghetti into this:
 
 ```mermaid
 flowchart LR
-    A[openCameraAwait()] --> B[createCaptureSessionAwait()]
+    A["openCameraAwait()"] --> B["createCaptureSessionAwait()"]
     B --> C[setRepeatingRequestFlow()]
     C --> D[aeStateFlow.map().combine(previewFlow)]
     D --> E[UI State<br/>(single emit)]

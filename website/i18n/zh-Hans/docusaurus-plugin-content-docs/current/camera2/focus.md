@@ -1,172 +1,172 @@
 ---
 sidebar_position: 15
-title: "Chapter 15: Focus"
-description: Master both automatic and manual focus in Android Camera2. Understand AF modes, the AF state machine, one-shot trigger-and-capture sequences, manual focus with LENS_FOCUS_DISTANCE diopters, hyperfocal distance, and building a focus SeekBar slider in Kotlin.
-keywords: [android camera2 focus, LENS_FOCUS_DISTANCE, CONTROL_AF_TRIGGER, CONTROL_AF_STATE_FOCUSED_LOCKED, AF mode continuous picture, manual focus diopters, hyperfocal distance camera2]
+title: "第 15 章：对焦"
+description: 在 Android Camera2 中掌握自动和手动对焦。理解 AF 模式、AF 状态机、单次触发拍摄序列、使用 LENS_FOCUS_DISTANCE 屈光度的手动对焦、超焦距，以及在 Kotlin 中构建对焦 SeekBar 滑块。
+keywords: [android camera2 对焦, LENS_FOCUS_DISTANCE, CONTROL_AF_TRIGGER, CONTROL_AF_STATE_FOCUSED_LOCKED, AF 模式连续图片, 手动对焦屈光度, 超焦距 camera2]
 ---
 
-# Chapter 15: Focus
+# 第 15 章：对焦
 
-Exposure controls brightness. **Focus controls what is sharp.** A perfectly-exposed photo with soft focus is a failed photo. In this chapter, you'll learn how smartphone focus systems work, how to drive Auto Focus (AF) reliably via Camera2, and how to implement a silky-smooth manual focus slider using `LENS_FOCUS_DISTANCE`.
+曝光控制亮度。**对焦则控制清晰度。** 曝光完美但对焦模糊的照片是一张废片。在本章中，你将学习智能手机对焦系统的工作原理，如何通过 Camera2 可靠地驱动自动对焦 (AF)，以及如何使用 `LENS_FOCUS_DISTANCE` 实现丝滑的手动对焦滑块。
 
-The [Android Camera Parameters app](https://github.com/zoozooll/AndroidCameraParameters) demonstrates all of this in its Focus panel — you can watch the AF state machine transition live and drag the manual focus slider to see the lens rack from infinity to minimum focus distance.
-
----
-
-## Auto Focus (AF) in Modern Smartphones
-
-Before diving into API specifics, let's understand the three physical focus mechanisms smartphones use.
-
-### 1. Contrast-Detect AF (CDAF) — Passive Scan
-
-The software technique: analyze the image frame, look for maximum edge contrast (sharp edges = highest spatial frequency), and move the lens until peak contrast is found.
-
-- **Advantage:** Works on any camera hardware (no special pixels needed)
-- **Disadvantage:** Slow. The lens must *hunt* back and forth across the focus range. Scene text labels like "AF SCANNING" in the Camera2 state map to this.
-
-### 2. Phase-Detect AF (PDAF) — Active Scan
-
-Special photodiodes on the sensor are split into two halves. The phase difference between left/right halves directly measures *how far and which direction* the lens must move — no hunting required. Flagship phones today use Dual-Pixel PDAF where *every* pixel does phase detection.
-
-- **Advantage:** Extremely fast (< 100ms lock in good light); works reliably in video
-- **Disadvantage:** Struggles in low-light (not enough photons to compute phase reliably), and has minimum focus distance limits
-
-### 3. Laser AF / ToF AF (Active) — Range Finder
-
-A dedicated hardware module fires an infrared laser pulse, times the reflection, and directly reports subject distance to the ISP. Very common on mid-range to premium phones.
-
-- **Advantage:** Blazing-fast lock on any target, even in pure darkness (if target reflects IR)
-- **Disadvantage:** Limited effective range (~50cm–5m max), fails on glass or IR-transparent objects
-
-Real phones combine **all three**: PDAF for fast coarse lock, CDAF for fine-tuning, and Laser AF for low-light or close-up scenes. Camera2 exposes this unified pipeline as a single abstract state machine.
+**Android Camera Parameters** 应用在"对焦"面板中演示了所有这些内容——你可以实时观察 AF 状态机的转换，并拖动手动对焦滑块观察镜头从无穷远推向最近对焦距离。
 
 ---
 
-## AF Modes: CONTROL_AF_MODE
+## 现代智能手机中的自动对焦 (AF)
 
-Camera2 defines these AF modes in `CameraMetadata`:
+在深入探讨 API 细节之前，让我们先了解智能手机使用的三种物理对焦机制。
 
-| Mode (CONTROL_AF_MODE_*) | Behavior | Use Case |
+### 1. 反差检测对焦 (CDAF) — 被动扫描
+
+软件技术：分析图像帧，寻找最大边缘对比度（边缘清晰 = 空间频率最高），并移动镜头直到找到反差峰值。
+
+- **优点：** 适用于任何相机硬件（无需特殊像素）
+- **缺点：** 慢。镜头必须在整个对焦范围内来回*拉风箱 (hunt)*。Camera2 状态映射中的 "AF SCANNING" 等标签即对应于此。
+
+### 2. 相位检测对焦 (PDAF) — 主动扫描
+
+传感器上的特殊光电二极管被一分为二。左右两半之间的相位差可以直接测量镜头必须移动的*距离和方向*——无需拉风箱。现在的旗舰手机使用全像素双核对焦 (Dual-Pixel PDAF)，其中*每一个*像素都参与相位检测。
+
+- **优点：** 极快（在光线充足的情况下 < 100ms 锁定）；在视频中表现可靠
+- **缺点：** 在弱光下表现吃力（光子不足以可靠计算相位），且有最近对焦距离限制
+
+### 3. 激光对焦 / ToF 对焦 (主动) — 测距仪
+
+一个专用的硬件模块发射红外激光脉冲，计时反射，并直接向 ISP 报告主体距离。在中高端手机上非常常见。
+
+- **优点：** 在任何目标上都能实现极速锁定，即使在纯黑环境下也是如此（只要目标反射红外线）
+- **缺点：** 有效范围有限（最大约 50cm–5m），在玻璃或红外透明物体上会失效
+
+真实的手机结合了**这三者**：PDAF 用于快速粗调，CDAF 用于精调，激光对焦用于弱光或近距离场景。Camera2 将这个统一的管线暴露为一个单一的抽象状态机。
+
+---
+
+## AF 模式：CONTROL_AF_MODE
+
+Camera2 在 `CameraMetadata` 中定义了以下 AF 模式：
+
+| 模式 (CONTROL_AF_MODE_*) | 行为 | 用例 |
 |-------------------------|----------|----------|
-| `OFF` | No AF at all. You set `LENS_FOCUS_DISTANCE` manually. | Manual focus, focus stacking, astrophotography (infinity lock) |
-| `AUTO` | One-shot AF. Does nothing until you send `CONTROL_AF_TRIGGER = START`, then scans once and locks. | Classic point-and-shoot still photography |
-| `MACRO` | Same as AUTO but biased toward near-subject detection. | Close-ups, document scanning, "food mode" |
-| `CONTINUOUS_PICTURE` | Constantly refocuses, but **pauses refocusing when you trigger a still capture** to avoid focus shift during the shot. | Still photography default |
-| `CONTINUOUS_VIDEO` | Constantly refocuses — never pauses. May hunt visibly but keeps video in focus. | Video recording, video chats |
-| `EDOF` | Extended Depth of Field: software/firmware-simulated deep focus. No physical lens movement. | Budget devices without moving lens actuators |
+| `OFF` | 完全没有 AF。你手动设置 `LENS_FOCUS_DISTANCE`。 | 手动对焦、景深合成、天文摄影（锁定无穷远） |
+| `AUTO` | 单次 AF。在发送 `CONTROL_AF_TRIGGER = START` 之前不做任何操作，然后扫描一次并锁定。 | 经典的傻瓜式静态摄影 |
+| `MACRO` | 与 AUTO 相同，但偏向于近距离主体检测。 | 近摄、文档扫描、"美食模式" |
+| `CONTINUOUS_PICTURE` | 持续重新对焦，但**在触发静态拍摄时会暂停重新对焦**，以避免在拍摄瞬间焦点发生偏移。 | 静态摄影默认值 |
+| `CONTINUOUS_VIDEO` | 持续重新对焦——从不暂停。可能会有可见的拉风箱过程，但能保持视频清晰。 | 视频录制、视频聊天 |
+| `EDOF` | 增强型景深 (Extended Depth of Field)：软件/固件模拟的深焦。无物理镜头移动。 | 无移动镜头执行器的廉价设备 |
 
-**Two critical notes:**
+**两个关键注意点：**
 
-1. `EDOF` devices (cheap phones, selfie cameras) have a *fixed* focal plane. You will never get `FOCUSED_LOCKED` from them — the best you get is `PASSIVE_SCAN` → `PASSIVE_FOCUSED` → `INACTIVE`. The [Android Camera Parameters app](https://play.google.com/store/apps/details?id=com.minininja.cameraparams) explicitly shows "Fixed Focus" for these cameras.
+1. `EDOF` 设备（廉价手机、前置自拍摄像头）具有*固定*的焦平面。你永远不会从它们那里得到 `FOCUSED_LOCKED` 状态——你最多只能得到 `PASSIVE_SCAN` → `PASSIVE_FOCUSED` → `INACTIVE`。**Android Camera Parameters** 应用会针对这些相机显式显示 "Fixed Focus (固定对焦)"。
 
-2. `CONTINUOUS_*` modes return to `INACTIVE` after idle rather than staying locked. Don't expect `FOCUSED_LOCKED` in continuous mode — that's only for `AUTO`/`MACRO` + explicit trigger.
+2. `CONTINUOUS_*` 模式在空闲后会返回 `INACTIVE`，而不是保持锁定。不要在持续模式下期待 `FOCUSED_LOCKED` —— 那仅适用于 `AUTO`/`MACRO` 配合显式触发的情况。
 
 ---
 
-## The AF State Machine
+## AF 状态机
 
-Camera2 reports AF status via `CaptureResult.CONTROL_AF_STATE`. Understanding these states is *make-or-break* for reliable still capture sequences.
+Camera2 通过 `CaptureResult.CONTROL_AF_STATE` 报告 AF 状态。理解这些状态对于实现可靠的静态捕获序列至关重要。
 
 ```mermaid
 stateDiagram-v2
-    [*] --> INACTIVE: Preview starts, AF OFF
-    INACTIVE --> PASSIVE_SCAN: CONTINUOUS_PICTURE/VIDEO mode
-    INACTIVE --> ACTIVE_SCAN: AUTO/MACRO mode + TRIGGER=START
-    PASSIVE_SCAN --> PASSIVE_FOCUSED: Peak contrast found
-    PASSIVE_SCAN --> PASSIVE_UNFOCUSED: Scene too low-contrast
-    PASSIVE_FOCUSED --> PASSIVE_SCAN: Scene changes (continuous mode)
-    ACTIVE_SCAN --> FOCUSED_LOCKED: Locked focus (SUCCESS!)
-    ACTIVE_SCAN --> NOT_FOCUSED_LOCKED: Gave up but locked anyway
-    FOCUSED_LOCKED --> INACTIVE: TRIGGER=CANCEL or mode change
-    NOT_FOCUSED_LOCKED --> INACTIVE: TRIGGER=CANCEL or mode change
-    PASSIVE_FOCUSED --> INACTIVE: Mode switched to OFF/AUTO
-    PASSIVE_UNFOCUSED --> INACTIVE: Mode switched to OFF/AUTO
-    INACTIVE --> INACTIVE: Manual LENS_FOCUS_DISTANCE changes
+    [*] --> INACTIVE: 预览开始, AF OFF
+    INACTIVE --> PASSIVE_SCAN: CONTINUOUS_PICTURE/VIDEO 模式
+    INACTIVE --> ACTIVE_SCAN: AUTO/MACRO 模式 + TRIGGER=START
+    PASSIVE_SCAN --> PASSIVE_FOCUSED: 找到反差峰值
+    PASSIVE_SCAN --> PASSIVE_UNFOCUSED: 场景对比度太低
+    PASSIVE_FOCUSED --> PASSIVE_SCAN: 场景变化 (持续模式)
+    ACTIVE_SCAN --> FOCUSED_LOCKED: 对焦锁定 (成功！)
+    ACTIVE_SCAN --> NOT_FOCUSED_LOCKED: 放弃寻找但仍然锁定
+    FOCUSED_LOCKED --> INACTIVE: TRIGGER=CANCEL 或 模式更改
+    NOT_FOCUSED_LOCKED --> INACTIVE: TRIGGER=CANCEL 或 模式更改
+    PASSIVE_FOCUSED --> INACTIVE: 切换模式至 OFF/AUTO
+    PASSIVE_UNFOCUSED --> INACTIVE: 切换模式至 OFF/AUTO
+    INACTIVE --> INACTIVE: 手动更改 LENS_FOCUS_DISTANCE
     note right of FOCUSED_LOCKED
-        ONLY state where still capture
-        is guaranteed to be in-focus.
-        Wait for this before AE precapture.
+        这是唯一能保证静态拍摄
+        处于焦点上的状态。
+        在此之后再进行 AE 预捕获。
     end note
     note left of ACTIVE_SCAN
-        Combined PDAF + CDAF + Laser
-        Typical duration: 50ms – 400ms
-        budget phones: up to 2s in low light
+        结合了 PDAF + CDAF + 激光
+        典型耗时: 50ms – 400ms
+        入门手机：在弱光下长达 2s
     end note
 ```
 
-State reference table:
+状态参考表：
 
-| CONTROL_AF_STATE | Meaning | Next Action |
+| CONTROL_AF_STATE | 含义 | 下一步操作 |
 |------------------|---------|-------------|
-| `INACTIVE` (0) | AF is off, idle, or continuous mode not currently scanning | If in AUTO mode: send TRIGGER_START |
-| `PASSIVE_SCAN` (1) | Continuous mode is passively scanning | Wait; don't trigger still capture yet |
-| `PASSIVE_FOCUSED` (2) | Continuous found focus, but NOT locked (can drift) | Safe to trigger still in CONTINUOUS_PICTURE (it will lock) |
-| `ACTIVE_SCAN` (3) | Explicit trigger started a scan | Just wait... |
-| `NOT_FOCUSED_LOCKED` (4) | Failed to find focus, but lens is locked anyway | User-warning prompt; optionally retry or capture anyway |
-| `FOCUSED_LOCKED` (5) | **SUCCESS.** Focus found and hardware-locked. | Proceed immediately to AE precapture trigger |
-| `PASSIVE_UNFOCUSED` (6) | Continuous couldn't lock, still scanning | Improve lighting or different target |
+| `INACTIVE` (0) | AF 已关闭、空闲或持续模式当前未扫描 | 若处于 AUTO 模式：发送 TRIGGER_START |
+| `PASSIVE_SCAN` (1) | 持续模式正在进行被动扫描 | 等待；暂不触发静态捕获 |
+| `PASSIVE_FOCUSED` (2) | 持续模式找到焦点，但未锁定（可能漂移） | 在 CONTINUOUS_PICTURE 模式下可以安全触发拍摄（会自动锁定） |
+| `ACTIVE_SCAN` (3) | 显式触发启动了一次扫描 | 只能等待... |
+| `NOT_FOCUSED_LOCKED` (4) | 未能找到焦点，但镜头仍被锁定 | 提示用户；可选重试或照常拍摄 |
+| `FOCUSED_LOCKED` (5) | **成功。** 找到焦点且硬件已锁定。 | 立即进行 AE 预捕获触发 |
+| `PASSIVE_UNFOCUSED` (6) | 持续模式无法锁定，仍在扫描 | 改善光照或更换目标 |
 
-**Non-negotiable rule for still photography:** *Never* submit a still capture (especially with flash!) until you see `FOCUSED_LOCKED`. Skip this step, and you will ship an app that intermittently produces soft photos.
+**静态摄影不可逾越的规则：** *绝对不要*在看到 `FOCUSED_LOCKED` 之前提交静态拍摄（尤其是使用闪光灯时！）。跳过这一步，你的应用就会间歇性地拍出模糊的照片。
 
 ---
 
-## Focus Distance: Diopters, Not Meters
+## 对焦距离：屈光度，而非米
 
-Here's the second "gotcha" that trips Camera2 developers (after the shutter-in-nanoseconds surprise):
+这是第二个让 Camera2 开发者栽跟头的"坑"（第一个是纳秒级的快门）：
 
-**`LENS_FOCUS_DISTANCE` uses diopters (D), not meters.** Diopters are the *mathematical reciprocal* of focus distance:
+**`LENS_FOCUS_DISTANCE` 使用的是屈光度 (D)，而不是米。** 屈光度是焦距的*数学倒数*：
 
 ```
-Focus Distance (meters) = 1.0 / Diopters
-Diopters = 1.0 / Focus Distance (meters)
+对焦距离 (米) = 1.0 / 屈光度
+屈光度 = 1.0 / 对焦距离 (米)
 ```
 
-| Diopters (LENS_FOCUS_DISTANCE) | Physical Focus Distance |
+| 屈光度 (LENS_FOCUS_DISTANCE) | 物理对焦距离 |
 |--------------------------------|-------------------------|
-| **0.0** | **Infinity** (∞) — stars, distant mountains |
-| 0.1 | 10 meters |
-| 0.25 | 4 meters |
-| 0.5 | 2 meters |
-| 1.0 | 1 meter |
-| 2.0 | 0.5 meter (50 cm) |
-| 5.0 | 0.2 meter (20 cm) |
-| 10.0 | 0.1 meter (10 cm) |
-| 20.0 | 0.05 meter (5 cm) |
+| **0.0** | **无穷远** (∞) — 星星, 远山 |
+| 0.1 | 10 米 |
+| 0.25 | 4 米 |
+| 0.5 | 2 米 |
+| 1.0 | 1 米 |
+| 2.0 | 0.5 米 (50 cm) |
+| 5.0 | 0.2 米 (20 cm) |
+| 10.0 | 0.1 米 (10 cm) |
+| 20.0 | 0.05 米 (5 cm) |
 
-Why diopters? Because the lens actuator moves linearly with *optical power*, not physical distance. A focus sweep from 0.0D → 20.0D corresponds to uniform lens movement, whereas a "meters" sweep from 10m → 5cm would be highly non-linear.
+为什么要用屈光度？因为镜头执行器的移动与*光学倍率*呈线性关系，而非物理距离。从 0.0D 到 20.0D 的对焦扫描对应于均匀的镜头移动，而从 10m 到 5cm 的"米"级扫描则是高度非线性的。
 
-### Query Minimum Focus Distance
+### 查询最小对焦距离
 
-Every lens has a closest focus distance (you cannot physically focus an object pressed against the glass). Query it:
+每只镜头都有最近对焦距离（你不能让镜头对焦在紧贴着玻璃的物体上）。查询该值：
 
 ```kotlin
-// Maximum useful diopter value for this lens
+// 此镜头可用的最大屈光度值
 val maxDiopters = characteristics.get(
     CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE
-) ?: 0.0f // 0.0f = fixed-focus EDOF lens (no focus control at all!)
+) ?: 0.0f // 0.0f = 固定对焦 EDOF 镜头 (完全没有对焦控制！)
 
 if (maxDiopters == 0.0f) {
-    Log.w("Focus", "This is a fixed-focus lens. Manual AF disabled.")
+    Log.w("Focus", "这是一个固定对焦镜头。手动 AF 已禁用。")
 } else {
-    // Valid diopter range is [0.0f .. maxDiopters]
-    Log.d("Focus", "Focus range: 0.0D (inf) → $maxDiopters D (${1/maxDiopters}m close)")
+    // 有效的屈光度范围是 [0.0f .. maxDiopters]
+    Log.d("Focus", "对焦范围: 0.0D (无穷远) → $maxDiopters D (最近对焦 ${1/maxDiopters}m)")
 }
 ```
 
-Typical values:
-- Budget phone rear camera: ~10D (10 cm minimum focus)
-- Flagship wide camera: ~15–25D (4–7 cm minimum)
-- Macro camera: ~30–50D (2–3 cm minimum)
-- Front selfie camera: Often 0.0D (fixed focus, EDOF)
+典型数值：
+- 廉价手机后置摄像头：~10D (10 cm 最近对焦)
+- 旗舰机广角摄像头：~15–25D (4–7 cm 最近对焦)
+- 微距摄像头：~30–50D (2–3 cm 最近对焦)
+- 前置自拍摄像头：通常为 0.0D (固定对焦, EDOF)
 
-### Hyperfocal Distance (Concept)
+### 超焦距 (概念)
 
-Landscape photographers love this: set focus to the **hyperfocal distance**, and everything from half that distance to infinity is "acceptably sharp." On a phone with f/1.8 aperture and a standard wide lens, hyperfocal is roughly 0.5–1.0 meter.
+风景摄影师喜欢这个：将焦点设置为**超焦距**，从该距离的一半到无穷远的所有景物都是"可以接受的清晰"。在光圈为 f/1.8 且使用标准广角镜头的手机上，超焦距大约为 0.5–1.0 米。
 
-**Rule of thumb for smartphones:** Setting `LENS_FOCUS_DISTANCE = 2.0D` (50 cm focus distance) approximates hyperfocal on most wide-angle phone lenses. Good for landscape and street photography where you don't want to wait for AF.
+**智能手机的经验法则：** 将 `LENS_FOCUS_DISTANCE = 2.0D` (50 cm 对焦距离) 设为大多数广角手机镜头的近似超焦距。这非常适合那些不想等待 AF 的风景和街头摄影。
 
 ```kotlin
-// Pre-set hyperfocal "everything sharp" preset
+// 设置超焦距"全清"预设
 const val HYPERFOCAL_DIOPTERS_APPROX = 2.0f
 
 fun setHyperfocal(builder: CaptureRequest.Builder, characteristics: CameraCharacteristics) {
@@ -179,15 +179,15 @@ fun setHyperfocal(builder: CaptureRequest.Builder, characteristics: CameraCharac
 }
 ```
 
-Want to calculate precise hyperfocal for your exact lens? You'll also need `LENS_INFO_AVAILABLE_FOCAL_LENGTHS` (focal length in mm) and the sensor's physical pixel pitch. For 95% of smartphone use cases, 2.0D is close enough.
+想要为你的特定镜头计算精确的超焦距？你还需要 `LENS_INFO_AVAILABLE_FOCAL_LENGTHS` (以 mm 为单位的焦距) 和传感器的物理像素间距。对于 95% 的智能手机用例，2.0D 已经足够接近了。
 
 ---
 
-## Complete Example 1: One-Shot AF Trigger-and-Capture
+## 完整示例 1：单次 AF 触发并拍摄
 
-This is the bread-and-butter still-photography flow for `AUTO` / `MACRO` mode. It's also the exact sequence the 3A orchestration in Chapter 17 will reuse.
+这是 `AUTO` / `MACRO` 模式下静态摄影最基础的流程。它也是第 17 章 3A 编排中将要复用的精确序列。
 
-**Goal:** User taps "Capture" → drive AF to locked focus → once locked, submit the still capture.
+**目标：** 用户点击"拍照" → 驱动 AF 进入锁定对焦 → 一旦锁定，提交静态拍摄。
 
 ```kotlin
 class AutoFocusCaptureHelper(
@@ -200,17 +200,17 @@ class AutoFocusCaptureHelper(
     private var capturePlanned = false
 
     fun triggerAutoFocusAndCapture(onCaptureComplete: () -> Unit) {
-        // ---- STEP 1: Build repeating request with explicit AF trigger ----
+        // ---- 第 1 步：构建带有显式 AF 触发的重复请求 ----
         val triggerRequest = captureSession.device.createCaptureRequest(
             CameraDevice.TEMPLATE_PREVIEW
         ).apply {
             addTarget(previewSurface)
 
-            // Use AUTO mode to guarantee LOCKED state at the end
+            // 使用 AUTO 模式以保证最终达到 LOCKED 状态
             set(CaptureRequest.CONTROL_AF_MODE,
                 CameraMetadata.CONTROL_AF_MODE_AUTO)
 
-            // Fire the one-shot AF trigger NOW
+            // 立即发起一次性 AF 触发
             set(CaptureRequest.CONTROL_AF_TRIGGER,
                 CameraMetadata.CONTROL_AF_TRIGGER_START)
         }
@@ -218,7 +218,7 @@ class AutoFocusCaptureHelper(
         afTriggered = true
         capturePlanned = true
 
-        // ---- STEP 2: Subscribe our state-tracking callback ----
+        // ---- 第 2 步：订阅我们的状态追踪回调 ----
         captureSession.setRepeatingRequest(
             triggerRequest.build(),
             object : CameraCaptureSession.CaptureCallback() {
@@ -229,10 +229,10 @@ class AutoFocusCaptureHelper(
                 ) {
                     val afState = result.get(CaptureResult.CONTROL_AF_STATE)
                         ?: return
-                    Log.d("AF", "AF state: $afState")
+                    Log.d("AF", "AF 状态: $afState")
 
                     when (afState) {
-                        // --- SUCCESS PATH ---
+                        // --- 成功路径 ---
                         CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED -> {
                             if (capturePlanned) {
                                 capturePlanned = false
@@ -240,24 +240,24 @@ class AutoFocusCaptureHelper(
                                 onCaptureComplete()
                             }
                         }
-                        // --- FAILURE PATH: could not lock, but we'll try anyway ---
+                        // --- 失败路径：无法锁定，但我们照常尝试 ---
                         CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED -> {
-                            Log.w("AF", "AF couldn't lock — capturing anyway (blurry?)")
+                            Log.w("AF", "AF 无法锁定 — 照常拍摄 (可能会模糊)")
                             if (capturePlanned) {
                                 capturePlanned = false
                                 submitStillCapture()
                                 onCaptureComplete()
                             }
                         }
-                        // --- STILL SCANNING: ignore ---
+                        // --- 正在扫描：忽略 ---
                         CaptureResult.CONTROL_AF_STATE_ACTIVE_SCAN,
                         CaptureResult.CONTROL_AF_STATE_PASSIVE_SCAN -> {
-                            // Still working, don't do anything yet
+                            // 仍在工作中，暂不执行任何操作
                         }
                     }
                 }
             },
-            null // Handler on current thread
+            null // 在当前线程的处理程序上运行
         )
     }
 
@@ -268,12 +268,12 @@ class AutoFocusCaptureHelper(
             addTarget(previewSurface)
             addTarget(jpegReaderSurface)
 
-            // Keep AF locked for this still — do NOT release the trigger yet
+            // 为这张静态图保持 AF 锁定 — 先不要释放触发器
             set(CaptureRequest.CONTROL_AF_MODE,
                 CameraMetadata.CONTROL_AF_MODE_AUTO)
-            // Leave AF_TRIGGER as-is (START remains until we explicitly CANCEL)
+            // 保持 AF_TRIGGER 现状 (START 状态会保留直到我们显式 CANCEL)
 
-            set(CaptureRequest.JPEG_QUALITY, 95)
+            set(CaptureRequest.JPEG_QUALITY, 95.toByte())
         }
 
         captureSession.capture(
@@ -284,7 +284,7 @@ class AutoFocusCaptureHelper(
                     request: CaptureRequest,
                     result: TotalCaptureResult
                 ) {
-                    // Photo captured — now release AF lock, go back to continuous
+                    // 照片已捕获 — 现在释放 AF 锁定，返回持续对焦
                     resetFocusToContinuous()
                 }
             },
@@ -308,17 +308,17 @@ class AutoFocusCaptureHelper(
 }
 ```
 
-**Critical detail:** You cancel the trigger *after* the still capture completes — not before. Cancel too early, and the lens unlocks during the shot, producing a soft photo.
+**关键细节：** 你必须在静态捕获完成*之后*再取消触发器——而不是在此之前。如果取消得太早，镜头会在拍摄期间解锁，导致照片变模糊。
 
-**Timeout safeguard (not shown):** Real apps add a 2–3 second timeout on the AF scan. If `ACTIVE_SCAN` runs for 3 seconds and never reaches `FOCUSED_LOCKED`, cancel and surface a "Tap to focus on a high-contrast area" user hint.
+**超时保障（未显示）：** 真实的应用会在 AF 扫描上添加一个 2–3 秒的超时。如果 `ACTIVE_SCAN` 运行 3 秒仍未达到 `FOCUSED_LOCKED`，请取消并向用户显示"点击高对比度区域进行对焦"的提示。
 
 ---
 
-## Complete Example 2: Manual Focus SeekBar Slider
+## 完整示例 2：手动对焦 SeekBar 滑块
 
-This is the user-facing Manual Focus feature you've seen in pro camera apps. A SeekBar maps the physical 0.0D → maxD focus range smoothly.
+这就是你在专业相机应用中看到的用户级手动对焦功能。使用 SeekBar 平滑映射 0.0D → maxD 的物理对焦范围。
 
-### Layout (res/layout/fragment_manual_focus.xml)
+### 布局 (res/layout/fragment_manual_focus.xml)
 
 ```xml
 <LinearLayout
@@ -332,7 +332,7 @@ This is the user-facing Manual Focus feature you've seen in pro camera apps. A S
         android:id="@+id/tvFocusLabel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Focus: ∞ (infinity)"
+        android:text="焦点: ∞ (无穷远)"
         android:textSize="14sp"/>
 
     <SeekBar
@@ -343,7 +343,7 @@ This is the user-facing Manual Focus feature you've seen in pro camera apps. A S
 </LinearLayout>
 ```
 
-### Kotlin: Fragment / Activity Wiring
+### Kotlin: Fragment / Activity 代码连接
 
 ```kotlin
 class ManualFocusController(
@@ -353,7 +353,7 @@ class ManualFocusController(
     private val captureSessionProvider: () -> CameraCaptureSession?,
     private val previewSurface: Surface
 ) {
-    // Slider uses 1000 integer steps for sub-diopter precision
+    // 滑块使用 1000 个整数步长以实现亚屈光度精度
     private val sliderSteps = 1000
     private val maxDiopters = characteristics.get(
         CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE
@@ -364,22 +364,22 @@ class ManualFocusController(
     init {
         if (maxDiopters == 0.0f) {
             seekBar.isEnabled = false
-            labelView.text = "Fixed Focus (No manual AF)"
+            labelView.text = "固定对焦 (不支持手动对焦)"
         } else {
             bindSeekBar()
-            applyFocus(0.0f) // Start at infinity
+            applyFocus(0.0f) // 从无穷远开始
         }
     }
 
     private fun bindSeekBar() {
-        // Convert slider int [0..1000] ↔ diopters [0.0 .. maxDiopters]
+        // 转换滑块整数 [0..1000] ↔ 屈光度 [0.0 .. maxDiopters]
         seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             private var lastUpdate = 0L
 
             override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
                 if (!fromUser) return
 
-                // Throttle to ~30fps (33ms) — avoids overwhelming HAL with requests
+                // 节流至约 30fps (33ms) — 避免过多的请求导致 HAL 过载
                 val now = SystemClock.elapsedRealtime()
                 if (now - lastUpdate < 33L) return
                 lastUpdate = now
@@ -388,11 +388,11 @@ class ManualFocusController(
                 applyFocus(diopters)
             }
             override fun onStartTrackingTouch(seekBar: SeekBar) {
-                // Switch to full manual AF mode immediately when user starts dragging
+                // 用户开始拖动时立即切换到全手动对焦模式
                 switchToManualMode()
             }
             override fun onStopTrackingTouch(seekBar: SeekBar) {
-                // Apply final exact value to remove throttle error
+                // 应用最终的精确值以消除节流误差
                 val diopters = seekBar.progress.toFloat() / sliderSteps.toFloat() * maxDiopters
                 applyFocus(diopters, force = true)
             }
@@ -400,7 +400,7 @@ class ManualFocusController(
     }
 
     private fun switchToManualMode() {
-        // CONTROL_AF_MODE_OFF disables AF motor auto-drive
+        // CONTROL_AF_MODE_OFF 禁用对焦马达自动驱动
         val session = captureSessionProvider() ?: return
         val request = session.device.createCaptureRequest(
             CameraDevice.TEMPLATE_PREVIEW
@@ -415,16 +415,16 @@ class ManualFocusController(
     fun applyFocus(diopters: Float, force: Boolean = false) {
         currentDiopters = diopters.coerceIn(0.0f, maxDiopters)
 
-        // Update label: show "∞" for < 0.1D, "X.Y m" otherwise
+        // 更新标签: < 0.1D 显示 "∞", 否则显示 "X.Y m"
         labelView.text = when {
-            currentDiopters < 0.1f -> "Focus: ∞ (infinity)"
+            currentDiopters < 0.1f -> "焦点: ∞ (无穷远)"
             else -> {
                 val meters = 1.0f / currentDiopters
-                String.format("Focus: %.1f D  (%.2f m)", currentDiopters, meters)
+                String.format("焦点: %.1f D  (%.2f m)", currentDiopters, meters)
             }
         }
 
-        // Build and submit a repeating request with the new focus distance
+        // 构建并提交带有新对焦距离的重复请求
         val session = captureSessionProvider() ?: return
         val request = session.device.createCaptureRequest(
             CameraDevice.TEMPLATE_PREVIEW
@@ -434,11 +434,11 @@ class ManualFocusController(
             set(CaptureRequest.LENS_FOCUS_DISTANCE, currentDiopters)
         }
 
-        // Use setRepeatingRequest so every preview frame honours the new focus
+        // 使用 setRepeatingRequest 使每一帧预览都遵循新的焦距
         session.setRepeatingRequest(request.build(), null, null)
     }
 
-    // --- Preset helpers ---
+    // --- 预设辅助函数 ---
     fun setInfinity() { seekBar.progress = 0; applyFocus(0.0f, true) }
     fun setHyperfocalApprox() {
         val d = min(2.0f, maxDiopters)
@@ -450,34 +450,34 @@ class ManualFocusController(
 }
 ```
 
-**Key implementation details:**
+**关键实现细节：**
 
-1. **Throttle.** SeekBars fire `onProgressChanged` up to 200Hz. Submitting a `setRepeatingRequest` on every event floods the HAL with work, causing lag. A 33ms throttle caps updates to ~30fps — plenty smooth for the lens motor's physical speed.
+1. **节流 (Throttle)。** SeekBar 的 `onProgressChanged` 触发频率高达 200Hz。每发生一次事件都提交一次 `setRepeatingRequest` 会导致 HAL 工作过载，产生延迟。33ms 的节流将更新频率限制在约 30fps —— 对于镜头马达的物理运动速度来说这已经足够平滑了。
 
-2. **Switch to CONTROL_AF_MODE_OFF early.** If you're in `CONTINUOUS_PICTURE` and set `LENS_FOCUS_DISTANCE` without disabling AF, the AF algorithm will *fight you* — snapping focus back to what it thinks is right a frame later. The switch must happen first, in `onStartTrackingTouch`.
+2. **尽早切换至 CONTROL_AF_MODE_OFF。** 如果你处于 `CONTINUOUS_PICTURE` 模式下直接设置 `LENS_FOCUS_DISTANCE` 而不禁用 AF，AF 算法会*反击*你——在一帧之后就焦点弹回到它认为正确的位置。必须先在 `onStartTrackingTouch` 中进行切换。
 
-3. **Update via `setRepeatingRequest`**, not one-off `capture()`. Manual focus needs to stick on *every* preview frame until the user moves the slider again.
+3. **通过 `setRepeatingRequest` 更新**，而不是单次的 `capture()`。手动对焦需要应用到*每一帧*预览中，直到用户再次移动滑块。
 
-4. **Force-apply on release.** The throttle skips intermediate positions; when the user lifts their finger, apply the exact final slider value.
+4. **松开时强制应用。** 节流会跳过中间位置；当用户抬起手指时，应用滑块的最终精确值。
 
 ---
 
-## Focus Regions (Touch-to-Focus)
+## 对焦区域 (点击对焦)
 
-Modern camera apps let you *tap the viewfinder* to pick a focus target. Camera2 implements this via `CONTROL_AF_REGIONS` — a list of rectangles (in the active-array coordinate space) with weights.
+现代相机应用允许你*点击取景器*来选择对焦目标。Camera2 通过 `CONTROL_AF_REGIONS` 实现这一点——它是一个包含权重矩形的列表（在活动阵列坐标系中）。
 
 ```kotlin
-// Convert a Viewfinder (x,y) tap into a CameraCharacteristics Sensor coordinate region
+// 将取景器 (x,y) 点击转换为 CameraCharacteristics 传感器坐标区域
 fun createTapFocusRegion(viewfinderWidth: Int, viewfinderHeight: Int,
                          tapX: Float, tapY: Float,
                          characteristics: CameraCharacteristics): MeteringRectangle {
     val activeArray = characteristics.get(
         CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE
     )!!
-    // Normalize tap [0..1] in each axis
+    // 将点击坐标在每个轴上归一化至 [0..1]
     val nx = tapX / viewfinderWidth.toFloat()
     val ny = tapY / viewfinderHeight.toFloat()
-    // Map to sensor active array, create a 200×200 region centered on the tap
+    // 映射至传感器活动阵列，创建一个以点击位置为中心的 200×200 区域
     val cx = (nx * activeArray.width()).toInt()
     val cy = (ny * activeArray.height()).toInt()
     val rSize = 200
@@ -488,52 +488,52 @@ fun createTapFocusRegion(viewfinderWidth: Int, viewfinderHeight: Int,
     )
 }
 
-// Attach region to a request builder
+// 将区域附加至请求构建器
 fun applyTapFocus(builder: CaptureRequest.Builder, region: MeteringRectangle) {
     builder.set(CaptureRequest.CONTROL_AF_REGIONS, arrayOf(region))
-    builder.set(CaptureRequest.CONTROL_AE_REGIONS, arrayOf(region)) // Couple AE spot too!
+    builder.set(CaptureRequest.CONTROL_AE_REGIONS, arrayOf(region)) // 同时耦合 AE 测光点！
     builder.set(CaptureRequest.CONTROL_AF_TRIGGER,
-        CameraMetadata.CONTROL_AF_TRIGGER_CANCEL) // Cancel any prior lock
+        CameraMetadata.CONTROL_AF_TRIGGER_CANCEL) // 取消先前的锁定
     builder.set(CaptureRequest.CONTROL_AF_TRIGGER,
-        CameraMetadata.CONTROL_AF_TRIGGER_START)  // Trigger scan on new region
+        CameraMetadata.CONTROL_AF_TRIGGER_START)  // 在新区域触发扫描
 }
 ```
 
-**Pro tip:** Always couple `CONTROL_AE_REGIONS` to match `CONTROL_AF_REGIONS`. The user tapped on a face because they want that face *both* in focus *and* correctly exposed — not focused on the face but metered for the bright sky behind it.
+**专业建议：** 始终将 `CONTROL_AE_REGIONS` 与 `CONTROL_AF_REGIONS` 配对。用户点击人脸是因为他们希望该人脸*既*在焦点内*又*曝光正确——而不是焦点在脸上，却针对其背后明亮的天空进行了测光。
 
 ---
 
-## Troubleshooting Focus Issues
+## 对焦问题排查
 
-| Symptom | Root Cause | Fix |
+| 症状 | 根本原因 | 解决办法 |
 |---------|-----------|-----|
-| AF state never moves past ACTIVE_SCAN | Low-contrast scene (white wall, pure blue sky) or hardware failure | Timeout after ~3s; prompt user; fall back to hyperfocal preset |
-| Manual focus slider does nothing | Forgot to set `CONTROL_AF_MODE = OFF` → AF is fighting you | Call `switchToManualMode()` in onStartTrackingTouch |
-| Still capture comes out blurry despite FOCUSED_LOCKED | Cancelled AF trigger *before* still capture completed | Cancel only in `onCaptureCompleted` of the *still* request |
-| Front camera ignores focus commands | Fixed-focus EDOF lens (`MINIMUM_FOCUS_DISTANCE == 0`) | Graceful degradation: disable focus UI for that camera |
-| Video AF "hunts" a lot | Using `CONTINUOUS_PICTURE` instead of `CONTINUOUS_VIDEO` for video recording | Switch mode to CONTINUOUS_VIDEO when MediaRecorder starts |
+| AF 状态永远停留在 ACTIVE_SCAN | 低对比度场景（白墙、纯净蓝天）或硬件故障 | 在约 3s 后超时；提示用户；回退到超焦距预设 |
+| 手动对焦滑块无效 | 忘记将 `CONTROL_AF_MODE` 设置为 OFF → AF 正在干扰你 | 在 onStartTrackingTouch 中调用 `switchToManualMode()` |
+| 尽管显示 FOCUSED_LOCKED，静态拍摄仍模糊 | 在静态捕获完成*之前*取消了 AF 触发器 | 仅在*静态*请求的 `onCaptureCompleted` 中执行取消 |
+| 前置摄像头忽略对焦命令 | 固定对焦 EDOF 镜头 (`MINIMUM_FOCUS_DISTANCE == 0`) | 优雅降级：针对该相机禁用对焦 UI |
+| 视频 AF 频繁"拉风箱" | 录制视频时使用了 `CONTINUOUS_PICTURE` 而非 `CONTINUOUS_VIDEO` | 在 MediaRecorder 启动时将模式切换为 CONTINUOUS_VIDEO |
 
 ---
 
-## Summary
+## 小结
 
-Focus in Camera2 is a state machine you must drive explicitly, not a "set and forget" setting:
+Camera2 中的对焦是一个你必须显式驱动的状态机，而非"设置并忘掉"的参数：
 
-- **AF Hardware:** Smartphones combine Contrast-Detect AF, Phase-Detect AF (Dual-Pixel), and Laser AF for fast reliable locks.
-- **Modes:** `AUTO` (one-shot, locks), `CONTINUOUS_PICTURE` (refocuses, pauses for stills), `CONTINUOUS_VIDEO` (always refocusing), `MACRO`, `OFF` (manual). EDOF lenses have no moving focus.
-- **States:** Wait for `FOCUSED_LOCKED` (not just `PASSIVE_FOCUSED`) before high-value still captures.
-- **Diopters:** `LENS_FOCUS_DISTANCE` uses reciprocal distance (0.0D = ∞, 10D = 10 cm). Range is `[0.0 .. LENS_INFO_MINIMUM_FOCUS_DISTANCE]`.
-- **One-shot AF capture:** `TRIGGER = START` → wait `FOCUSED_LOCKED` → submit still → then `CANCEL`.
-- **Manual focus slider:** SeekBar with 1000 steps, throttled to 30fps; switch mode to `AF_MODE_OFF` first so the auto algorithm doesn't fight your manual setting.
-- **Touch-to-Focus uses `CONTROL_AF_REGIONS`** in sensor active-array coordinates. Couple with `AE_REGIONS` for pro results.
+- **AF 硬件：** 智能手机结合了反差检测对焦、相位检测对焦 (Dual-Pixel) 和激光对焦，以实现快速可靠的锁定。
+- **模式：** `AUTO`（单次，锁定）、`CONTINUOUS_PICTURE`（持续重对焦，拍摄时暂停）、`CONTINUOUS_VIDEO`（始终重对焦）、`MACRO`、`OFF`（手动）。EDOF 镜头没有移动对焦件。
+- **状态：** 在进行高价值静态拍摄前，请等待 `FOCUSED_LOCKED`（而不只是 `PASSIVE_FOCUSED`）。
+- **屈光度：** `LENS_FOCUS_DISTANCE` 使用焦距的倒数 (0.0D = ∞, 10D = 10 cm)。范围是 `[0.0 .. LENS_INFO_MINIMUM_FOCUS_DISTANCE]`。
+- **单次 AF 拍摄：** `TRIGGER = START` → 等待 `FOCUSED_LOCKED` → 提交静态拍摄 → 然后执行 `CANCEL`。
+- **手动对焦滑块：** 具有 1000 个步长的 SeekBar，节流至 30fps；必须先切换到 `AF_MODE_OFF` 模式，以免自动算法干扰你的手动设置。
+- **点击对焦使用传感器活动阵列坐标下的 `CONTROL_AF_REGIONS`**。配合 `AE_REGIONS` 使用可获得专业级效果。
 
-## What's Next
+## 下一章
 
-Brightness ✓ Sharpness ✓. Now let's fix the **color**. In **Chapter 16: White Balance & Color**, we cover:
+亮度 ✓ 清晰度 ✓。现在让我们来修正**色彩**。在**第 16 章：白平衡与色彩**中，我们将涵盖：
 
-- Auto White Balance (AWB) and the 7 presets (Incandescent → Shade)
-- Manual color correction with `COLOR_CORRECTION_GAINS` (4-channel R/G/B/G) and `COLOR_CORRECTION_TRANSFORM` (3×3 RGB matrix)
-- Color temperature concept (2000K candle → 10000K shade) and how it maps to white balance
-- Working code for a warm-tone "sunset look" preset and full manual AWB off-mode
+- 自动白平衡 (AWB) 及其 7 个预设模式 (从 Incandescent 到 Shade)
+- 使用 `COLOR_CORRECTION_GAINS` (4 通道 R/G/B/G) 和 `COLOR_CORRECTION_TRANSFORM` (3×3 RGB 矩阵) 进行手动色彩校正
+- 色温概念 (从 2000K 烛光到 10000K 阴影) 及其与白平衡的对应关系
+- 暖色调"日落效果"预设以及全手动 AWB off 模式的 Kotlin 代码
 
-Color is the final leg of the manual-controls trilogy.
+色彩是手动控制三部曲的最后一环。

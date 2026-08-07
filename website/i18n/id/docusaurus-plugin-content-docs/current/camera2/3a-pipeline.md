@@ -1,23 +1,23 @@
 ---
 sidebar_position: 17
-title: "Chapter 17: The 3A Pipeline"
-description: Orchestrate Auto Exposure (AE), Auto Focus (AF), and Auto White Balance (AWB) into a reliable still-photography capture sequence. Learn the precapture trigger, flash modes, AE/AF state machines, and build production-quality Kotlin code that coordinates all three A's before every shot.
-keywords: [android camera2 3a pipeline, precapture trigger, CONTROL_AE_PRECAPTURE_TRIGGER, AE_STATE_PRECAPTURE, CONTROL_AF_TRIGGER_START, flash modes camera2, auto focus auto exposure auto white balance]
+title: "Bab 17: Pipeline 3A"
+description: Orkestrasikan Auto Exposure (AE), Auto Focus (AF), dan Auto White Balance (AWB) ke dalam urutan pengambilan foto diam yang andal. Pelajari pemicu pra-pengambilan (precapture trigger), mode lampu kilat, mesin status AE/AF, dan bangun kode Kotlin kualitas produksi yang mengoordinasikan ketiga A tersebut sebelum setiap bidikan.
+keywords: [android camera2 pipeline 3a, pemicu pra-pengambilan, CONTROL_AE_PRECAPTURE_TRIGGER, AE_STATE_PRECAPTURE, CONTROL_AF_TRIGGER_START, mode lampu kilat camera2, fokus otomatis eksposur otomatis keseimbangan putih otomatis]
 ---
 
-# Chapter 17: The 3A Pipeline
+# Bab 17: Pipeline 3A
 
-We've studied **AE** (Auto Exposure, Chapter 13–14), **AF** (Auto Focus, Chapter 15), and **AWB** (Auto White Balance, Chapter 16) as independent systems. Real photography apps must coordinate all three before each shutter press — and the *order and timing* matter deeply.
+Kita telah mempelajari **AE** (Auto Exposure, Bab 13–14), **AF** (Auto Focus, Bab 15), dan **AWB** (Auto White Balance, Bab 16) sebagai sistem yang independen. Aplikasi fotografi sungguhan harus mengoordinasikan ketiganya sebelum setiap penekanan tombol rana — dan *urutan serta waktunya* sangatlah penting.
 
-A naive implementation that fires `capture()` immediately when the user taps the shutter button produces inconsistent results: sometimes focus, sometimes not; sometimes flash fires, sometimes not; sometimes mid-sweep AWB gives a green-tinted photo. A reliable 3A pipeline eliminates all of that.
+Implementasi naif yang langsung menembakkan `capture()` saat pengguna mengetuk tombol rana akan menghasilkan hasil yang tidak konsisten: terkadang fokus, terkadang tidak; terkadang lampu kilat menyala, terkadang tidak; terkadang AWB di tengah pemindaian memberikan foto berwarna kehijauan. Pipeline 3A yang andal akan menghilangkan semua itu.
 
-The 3A pipeline implementation in this chapter is identical to the flow used internally in the [Android Camera Parameters app](https://github.com/zoozooll/AndroidCameraParameters) and the sequence described in the Android Camera architecture research documents and CSDN articles on professional Camera2 development.
+Implementasi pipeline 3A dalam bab ini identik dengan alur yang digunakan secara internal dalam [aplikasi Android Camera Parameters](https://github.com/zoozooll/AndroidCameraParameters) dan urutan yang dijelaskan dalam dokumen penelitian arsitektur Kamera Android serta artikel CSDN tentang pengembangan Camera2 profesional.
 
 ---
 
-## The Full 3A Orchestration Sequence (Overview)
+## Urutan Orkestrasi 3A Penuh (Ikhtisar)
 
-Before diving into each subsystem, let's visualize the complete state flow. This is a real production sequence — not a simplification.
+Sebelum mendalami setiap subsistem, mari kita visualisasikan alur status yang lengkap. Ini adalah urutan produksi yang sebenarnya — bukan penyederhanaan.
 
 ```mermaid
 sequenceDiagram
@@ -28,134 +28,134 @@ sequenceDiagram
     participant AF as AF Engine
     participant AWB as AWB Engine
 
-    User->>App: Taps "Capture" button
-    App->>HAL: Set AF_MODE = AUTO (or MACRO)
+    User->>App: Mengetuk tombol "Ambil Foto"
+    App->>HAL: Set AF_MODE = AUTO (atau MACRO)
     App->>HAL: CONTROL_AF_TRIGGER = START
-    Note over HAL,AF: Focus scan starts
+    Note over HAL,AF: Pemindaian fokus dimulai
 
-    loop Every preview frame
+    loop Setiap bingkai pratinjau
         HAL-->>App: CaptureResult
-        App->>App: Check AF_STATE
+        App->>App: Periksa AF_STATE
     end
 
-    AF-->>HAL: AF lock achieved
+    AF-->>HAL: Penguncian AF tercapai
     HAL-->>App: AF_STATE = FOCUSED_LOCKED ✓
-    Note over App,AE: Focus stable → proceed to AE precapture
+    Note over App,AE: Fokus stabil → lanjut ke pra-pengambilan AE
 
     App->>HAL: CONTROL_AE_PRECAPTURE_TRIGGER = START
-    Note over HAL,AE: Precapture metering sweep<br/>(if flash mode requires, fires<br/>a preflash for metering)
+    Note over HAL,AE: Pemindaian metering pra-pengambilan<br/>(jika mode lampu kilat memerlukan, nyalakan<br/>lampu kilat awal untuk metering)
 
-    loop Every preview frame
+    loop Setiap bingkai pratinjau
         HAL-->>App: CaptureResult
-        App->>App: Check AE_STATE &amp; FLASH_STATE
+        App->>App: Periksa AE_STATE &amp; FLASH_STATE
     end
 
-    AE-->>HAL: AE converged; final exposure decided
-    HAL-->>App: AE_STATE = CONVERGED (+ FLASH_STATE = READY if needed) ✓
-    AWB-->>HAL: AWB_STATE = CONVERGED (usually already done)
-    Note over App: All 3A converged! SAFE TO CAPTURE
+    AE-->>HAL: AE memusat; eksposur akhir ditentukan
+    HAL-->>App: AE_STATE = CONVERGED (+ FLASH_STATE = READY jika perlu) ✓
+    AWB-->>HAL: AWB_STATE = CONVERGED (biasanya sudah selesai)
+    Note over App: Semua 3A memusat! AMAN UNTUK DIAMBIL
 
-    App->>HAL: Still Capture request (TEMPLATE_STILL_CAPTURE)
-    HAL->>HAL: Fire main flash if needed
-    HAL->>HAL: Expose sensor, read out frame
-    HAL-->>App: JPEG / RAW frame delivered via ImageReader
+    App->>HAL: Permintaan Foto Diam (TEMPLATE_STILL_CAPTURE)
+    HAL->>HAL: Nyalakan lampu kilat utama jika perlu
+    HAL->>HAL: Ekspos sensor, baca bingkai
+    HAL-->>App: Bingkai JPEG / RAW dikirim via ImageReader
 
     App->>HAL: CONTROL_AF_TRIGGER = CANCEL
     App->>HAL: CONTROL_AE_PRECAPTURE_TRIGGER = IDLE
-    App->>HAL: Restore AF_MODE = CONTINUOUS_PICTURE
-    Note over App,HAL: Cleanup: preview resumes normal auto
+    App->>HAL: Kembalikan AF_MODE = CONTINUOUS_PICTURE
+    Note over App,HAL: Pembersihan: pratinjau kembali ke otomatis normal
 ```
 
-**Each step is blocking.** You do not move to step N+1 until the HAL confirms the state required at step N. Never skip steps — that's how you ship an app with intermittent soft focus, bad flash exposures, or blue-tinted photos.
+**Setiap langkah bersifat memblokir.** Anda tidak pindah ke langkah N+1 sampai HAL mengonfirmasi status yang diperlukan pada langkah N. Jangan pernah melewati langkah-langkah tersebut — itulah cara Anda merilis aplikasi dengan fokus yang sesekali meleset, eksposur lampu kilat yang buruk, atau foto berwarna kebiruan.
 
 ---
 
-## AE (Auto Exposure) Deep-Dive
+## Pembahasan Mendalam AE (Auto Exposure)
 
-AE is the most complex of the three A's because it encompasses not just shutter+ISO but **flash metering** and the **precapture trigger**.
+AE adalah yang paling kompleks dari ketiga A tersebut karena mencakup bukan hanya rana+ISO tetapi juga **metering lampu kilat** dan **pemicu pra-pengambilan (precapture trigger)**.
 
-### AE Modes: CONTROL_AE_MODE
+### Mode AE: CONTROL_AE_MODE
 
-| Mode | Behavior | Flash Support |
+| Mode | Perilaku | Dukungan Lampu Kilat |
 |------|----------|--------------|
-| `OFF` | Fully manual (covered in Ch. 14) | None |
-| `ON` | Auto exposure, **flash disabled** (permanent off) | No |
-| `ON_AUTO_FLASH` | Auto exposure, **auto-flash decision** — HAL fires flash only in low light | Auto (most common default) |
-| `ON_ALWAYS_FLASH` | Auto exposure, **flash always fires** (fill flash for backlit portraits) | Always |
-| `ON_AUTO_FLASH_REDEYE` | Auto exposure + flash + red-eye reduction (fires a pre-flash sequence to clamp pupils) | Auto + redeye |
-| `ON_EXTERNAL_FLASH` | External camera accessory flash | External only (rare) |
+| `OFF` | Manual sepenuhnya (dibahas di Bab 14) | Tidak ada |
+| `ON` | Eksposur otomatis, **lampu kilat dinonaktifkan** (mati permanen) | Tidak |
+| `ON_AUTO_FLASH` | Eksposur otomatis, **keputusan lampu kilat otomatis** — HAL menyalakan lampu kilat hanya dalam cahaya rendah | Otomatis (default yang paling umum) |
+| `ON_ALWAYS_FLASH` | Eksposur otomatis, **lampu kilat selalu menyala** (lampu kilat pengisi untuk potret dengan cahaya latar) | Selalu |
+| `ON_AUTO_FLASH_REDEYE` | Eksposur otomatis + lampu kilat + pengurangan mata merah (menyalakan urutan lampu kilat awal untuk mengecilkan pupil) | Otomatis + mata merah |
+| `ON_EXTERNAL_FLASH` | Lampu kilat aksesori kamera eksternal | Eksternal saja (jarang) |
 
-**The default for a normal camera app** is `ON_AUTO_FLASH`. Users expect the phone to "know" when to fire the flash.
+**Default untuk aplikasi kamera normal** adalah `ON_AUTO_FLASH`. Pengguna mengharapkan ponsel untuk "tahu" kapan harus menyalakan lampu kilat.
 
-### AE States & Precapture Trigger
+### Status AE & Pemicu Pra-Pengambilan
 
-Like AF, AE reports its state via `CaptureResult.CONTROL_AE_STATE`:
+Seperti AF, AE melaporkan statusnya melalui `CaptureResult.CONTROL_AE_STATE`:
 
-| State | Meaning |
+| Status | Arti |
 |-------|---------|
-| `INACTIVE` (0) | AE disabled or hasn't started |
-| `SEARCHING` (1) | Actively searching for correct exposure |
-| `CONVERGED` (2) | Exposure is stable. In flash modes, this means *ambient* exposure converged, but a preflash sweep hasn't happened yet. |
-| `LOCKED` (3) | Exposure explicitly locked via `CONTROL_AE_LOCK = true` |
-| `FLASH_REQUIRED` (4) | Converged on ambient, and HAL has decided **flash is needed** for correct shot |
-| `PRECAPTURE` (5) | **Key state.** The precapture sweep is running — HAL is metering (firing preflash pulses, if flash is needed) to calculate final capture exposure + flash power. |
+| `INACTIVE` (0) | AE dinonaktifkan atau belum dimulai |
+| `SEARCHING` (1) | Sedang aktif mencari eksposur yang benar |
+| `CONVERGED` (2) | Eksposur stabil. Dalam mode lampu kilat, ini berarti eksposur *ambien* telah memusat, tetapi pemindaian lampu kilat awal belum terjadi. |
+| `LOCKED` (3) | Eksposur dikunci secara eksplisit melalui `CONTROL_AE_LOCK = true` |
+| `FLASH_REQUIRED` (4) | Memusat pada ambien, dan HAL telah memutuskan **lampu kilat diperlukan** untuk bidikan yang benar |
+| `PRECAPTURE` (5) | **Status utama.** Pemindaian pra-pengambilan sedang berjalan — HAL sedang melakukan metering (menyalakan pulsa lampu kilat awal, jika lampu kilat diperlukan) untuk menghitung eksposur akhir pengambilan + kekuatan lampu kilat. |
 
-### Why the Precapture Trigger Matters
+### Mengapa Pemicu Pra-Pengambilan Itu Penting
 
-The AE engine running on preview frames is *approximate*. The preview pipeline uses smaller buffers, lower bit-depth processing, and doesn't account for the massive light contribution of a main flash firing at capture time.
+Mesin AE yang berjalan pada bingkai pratinjau bersifat *perkiraan*. Pipeline pratinjau menggunakan buffer yang lebih kecil, pemrosesan kedalaman bit yang lebih rendah, dan tidak memperhitungkan kontribusi cahaya masif dari lampu kilat utama yang menyala saat pengambilan gambar.
 
-`CONTROL_AE_PRECAPTURE_TRIGGER = START` tells the HAL:
+`CONTROL_AE_PRECAPTURE_TRIGGER = START` memberi tahu HAL:
 
-> "I'm about to take a real still photo. Stop approximating. Run the full-precision metering pipeline. If I'm in an auto-flash mode, fire one or more low-power preflashes, measure the reflection, and calculate exact final shutter/ISO/flash-power for the capture."
+> "Saya akan mengambil foto diam yang sebenarnya. Berhenti memperkirakan. Jalankan pipeline metering presisi penuh. Jika saya berada dalam mode lampu kilat otomatis, nyalakan satu atau lebih lampu kilat awal berdaya rendah, ukur pantulannya, dan hitung rana/ISO/daya lampu kilat akhir yang tepat untuk pengambilan gambar."
 
-**Skipping precapture = flash photos are randomly overexposed or underexposed.** The HAL simply didn't have a chance to meter for the flash in real time.
+**Melewati pra-pengambilan = foto lampu kilat akan secara acak kelebihan atau kekurangan eksposur.** HAL sama sekali tidak memiliki kesempatan untuk melakukan metering untuk lampu kilat secara real-time.
 
-### AE Regions (Spot Metering)
+### Wilayah AE (Spot Metering)
 
-Just like `CONTROL_AF_REGIONS` for focus, `CONTROL_AE_REGIONS` specifies *where in the scene* to meter. A portrait tap-to-focus should simultaneously apply the same region to AE — the face gets both focus priority AND exposure priority, not metered based on the bright sky background.
+Sama seperti `CONTROL_AF_REGIONS` untuk fokus, `CONTROL_AE_REGIONS` menentukan *di mana dalam adegan* untuk melakukan metering. Ketukan-untuk-fokus (tap-to-focus) pada potret harus secara bersamaan menerapkan wilayah yang sama ke AE — wajah mendapatkan prioritas fokus DAN prioritas eksposur, bukan dimetering berdasarkan latar belakang langit yang cerah.
 
 ```kotlin
-// Use the SAME MeteringRectangle array for both AF and AE regions
+// Gunakan array MeteringRectangle yang SAMA untuk wilayah AF dan AE
 val focusWeightedRegions = arrayOf(userTapRegion)
 builder.set(CaptureRequest.CONTROL_AF_REGIONS, focusWeightedRegions)
 builder.set(CaptureRequest.CONTROL_AE_REGIONS, focusWeightedRegions)
 ```
 
-**Weighting:** Each `MeteringRectangle` has a `weight` (0–1000). Regions with higher weight influence metering more. A "spot metering" mode uses one high-weight rectangle (1000). "Matrix / Evaluative" metering uses many low-weight rectangles spread across the frame.
+**Pembobotan:** Setiap `MeteringRectangle` memiliki `weight` (0–1000). Wilayah dengan bobot lebih tinggi lebih memengaruhi metering. Mode "spot metering" menggunakan satu persegi panjang berbobot tinggi (1000). Metering "Matrix / Evaluative" menggunakan banyak persegi panjang berbobot rendah yang tersebar di seluruh bingkai.
 
 ---
 
-## AWB: The Silent Partner of the Trio
+## AWB: Mitra Diam dari Trio Tersebut
 
-AWB usually converges early and stays converged in most scenes — which is why it's often treated as an afterthought. But its contribution to color accuracy is critical, and it *can* still be searching when you're ready to capture.
+AWB biasanya memusat lebih awal dan tetap memusat di sebagian besar adegan — itulah sebabnya ia sering dianggap sebagai hal sekunder. Namun kontribusinya terhadap akurasi warna sangat kritis, dan ia *bisa saja* masih mencari saat Anda sudah siap untuk mengambil foto.
 
-### AWB States Recap
+### Rekap Status AWB
 
-| AWB State | Capture Decision |
+| Status AWB | Keputusan Pengambilan |
 |-----------|------------------|
-| `INACTIVE` (AWB_MODE = OFF) | OK to proceed (manual gains) |
-| `SEARCHING` | **Wait.** Colors may still shift. Usually < 500ms after major scene change. |
-| `CONVERGED` | ✅ Perfect — proceed |
-| `LOCKED` | ✅ Also perfect — explicitly locked via `CONTROL_AWB_LOCK = true` |
+| `INACTIVE` (AWB_MODE = OFF) | Oke untuk dilanjutkan (gain manual) |
+| `SEARCHING` | **Tunggu.** Warna mungkin masih bergeser. Biasanya < 500ms setelah perubahan adegan besar. |
+| `CONVERGED` | ✅ Sempurna — lanjutkan |
+| `LOCKED` | ✅ Juga sempurna — dikunci secara eksplisit melalui `CONTROL_AWB_LOCK = true` |
 
-### Coupling AWB Lock with AE/AF Locks
+### Menghubungkan Kunci AWB dengan Kunci AE/AF
 
-For critical studio/product photography, lock all three *before* capture:
+Untuk fotografi studio/produk yang kritis, kunci ketiganya *sebelum* pengambilan gambar:
 
 ```kotlin
-// In the still-capture request (not earlier — we want final converged values locked)
+// Dalam permintaan foto diam (tidak lebih awal — kita ingin nilai yang sudah memusat akhir yang dikunci)
 builder.set(CaptureRequest.CONTROL_AWB_LOCK, true)
 builder.set(CaptureRequest.CONTROL_AE_LOCK, true)
-// AF stays locked because we triggered it earlier and haven't cancelled
+// AF tetap terkunci karena kita memicunya lebih awal dan belum membatalkannya
 ```
 
-This guarantees the main capture reuses *exactly* the same color/wb profile that the final precapture metering frame used.
+Ini menjamin pengambilan gambar utama menggunakan profil warna/wb yang *persis* sama dengan yang digunakan bingkai metering pra-pengambilan akhir.
 
 ---
 
-## Complete Production 3A Capture Controller (Kotlin)
+## Pengontrol Pengambilan Gambar 3A Produksi Lengkap (Kotlin)
 
-Now let's assemble it all into a reusable class. This implementation matches the orchestration flow in the Android Camera architecture research documents section on 3A Control Pipeline and the patterns recommended by the Android Camera CSDN series.
+Sekarang mari kita rakit semuanya menjadi kelas yang dapat digunakan kembali. Implementasi ini cocok dengan alur orkestrasi dalam bagian dokumen penelitian arsitektur Kamera Android tentang Pipeline Kontrol 3A dan pola yang direkomendasikan oleh seri CSDN Kamera Android.
 
 ```kotlin
 class ThreeACaptureController(
@@ -165,7 +165,7 @@ class ThreeACaptureController(
     private val jpegReaderSurface: Surface,
     private val mainHandler: Handler
 ) {
-    // ----------- Public API -----------
+    // ----------- API Publik -----------
     interface CaptureListener {
         fun onCaptureStarted() {}
         fun onCaptureSuccess(jpegBytes: ByteArray)
@@ -173,8 +173,8 @@ class ThreeACaptureController(
     }
 
     /**
-     * Orchestrate the full 3A capture sequence:
-     *   AF Trigger → AF Locked → AE Precapture → AE Converged → Still Capture → Cleanup
+     * Orkestrasikan urutan pengambilan gambar 3A penuh:
+     *   Pemicu AF → AF Terkunci → Pra-pengambilan AE → AE Memusat → Foto Diam → Pembersihan
      */
     fun captureStillPhoto(
         aeMode: Int = CameraMetadata.CONTROL_AE_MODE_ON_AUTO_FLASH,
@@ -185,15 +185,15 @@ class ThreeACaptureController(
         beginPhase1_AfTrigger(aeMode)
     }
 
-    // ----------- Internal state -----------
+    // ----------- Status internal -----------
     private var listener: CaptureListener? = null
     private var timeoutRunnable: Runnable? = null
     private var phase: Int = 0
     private lateinit var currentAeMode: Int
 
-    private val SESSION_TIMEOUT_MS = 3500L  // Budget phones need up to ~3s
+    private val SESSION_TIMEOUT_MS = 3500L  // Ponsel anggaran butuh hingga ~3 detik
 
-    // ---- PHASE 1: Trigger AF, wait for FOCUSED_LOCKED ----
+    // ---- FASE 1: Picu AF, tunggu FOCUSED_LOCKED ----
     private fun beginPhase1_AfTrigger(aeMode: Int) {
         currentAeMode = aeMode
         phase = 1
@@ -209,7 +209,7 @@ class ThreeACaptureController(
             set(CaptureRequest.CONTROL_AWB_MODE,
                 CameraMetadata.CONTROL_AWB_MODE_AUTO)
 
-            // Kick off one-shot AF scan
+            // Mulai pemindaian AF satu kali
             set(CaptureRequest.CONTROL_AF_TRIGGER,
                 CameraMetadata.CONTROL_AF_TRIGGER_START)
         }
@@ -218,7 +218,7 @@ class ThreeACaptureController(
         captureSession.setRepeatingRequest(request.build(), captureCallback, mainHandler)
     }
 
-    // ---- PHASE 2: AF locked. Start AE precapture trigger ----
+    // ---- FASE 2: AF terkunci. Mulai pemicu pra-pengambilan AE ----
     private fun beginPhase2_AePrecapture() {
         phase = 2
         val request = captureSession.device.createCaptureRequest(
@@ -226,14 +226,14 @@ class ThreeACaptureController(
         ).apply {
             addTarget(previewSurface)
 
-            // Keep AF locked — do NOT cancel AF trigger yet!
+            // Jaga AF tetap terkunci — JANGAN batalkan pemicu AF dulu!
             set(CaptureRequest.CONTROL_AF_MODE,
                 CameraMetadata.CONTROL_AF_MODE_AUTO)
-            // AF_TRIGGER remains in START state from Phase 1
+            // AF_TRIGGER tetap dalam status START dari Fase 1
 
             set(CaptureRequest.CONTROL_AE_MODE, currentAeMode)
 
-            // ---- THE CRITICAL LINE: Run Precapture ----
+            // ---- BARIS KRITIS: Jalankan Pra-pengambilan ----
             set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER,
                 CameraMetadata.CONTROL_AE_PRECAPTURE_TRIGGER_START)
 
@@ -245,7 +245,7 @@ class ThreeACaptureController(
         captureSession.setRepeatingRequest(request.build(), captureCallback, mainHandler)
     }
 
-    // ---- PHASE 3: AE converged + AWB converged. Fire actual still capture. ----
+    // ---- FASE 3: AE memusat + AWB memusat. Tembakkan pengambilan foto diam sebenarnya. ----
     private fun beginPhase3_StillCapture() {
         phase = 3
         cancelTimeout()
@@ -256,13 +256,13 @@ class ThreeACaptureController(
             addTarget(previewSurface)
             addTarget(jpegReaderSurface)
 
-            // Keep AF locked until AFTER capture completes
+            // Jaga AF tetap terkunci sampai SETELAH pengambilan selesai
             set(CaptureRequest.CONTROL_AF_MODE,
                 CameraMetadata.CONTROL_AF_MODE_AUTO)
 
             set(CaptureRequest.CONTROL_AE_MODE, currentAeMode)
 
-            // Lock both AE and AWB for the still capture to prevent last-frame drift
+            // Kunci AE dan AWB untuk pengambilan foto diam guna mencegah pergeseran di bingkai terakhir
             set(CaptureRequest.CONTROL_AE_LOCK, true)
             set(CaptureRequest.CONTROL_AWB_LOCK, true)
 
@@ -270,7 +270,7 @@ class ThreeACaptureController(
                 CameraMetadata.CONTROL_AWB_MODE_AUTO)
 
             set(CaptureRequest.JPEG_QUALITY, 95)
-            // JPEG orientation: use Display rotation for correct final orientation
+            // Orientasi JPEG: gunakan rotasi Tampilan untuk orientasi akhir yang benar
             val jpegOrient = computeJpegOrientation()
             set(CaptureRequest.JPEG_ORIENTATION, jpegOrient)
         }
@@ -282,14 +282,14 @@ class ThreeACaptureController(
                 result: TotalCaptureResult
             ) {
                 super.onCaptureCompleted(session, request, result)
-                // ImageReader OnImageAvailableListener will handle saving bytes to listener
-                // Now clean up: reset back to normal preview mode
+                // OnImageAvailableListener ImageReader akan menangani penyimpanan byte ke listener
+                // Sekarang bersihkan: setel kembali ke mode pratinjau berkelanjutan
                 resetToContinuousPreview()
             }
         }, mainHandler)
     }
 
-    // ---- Cleanup: Resume normal continuous preview ----
+    // ---- Pembersihan: Lanjutkan pratinjau berkelanjutan normal ----
     private fun resetToContinuousPreview() {
         phase = 0
         val request = captureSession.device.createCaptureRequest(
@@ -302,7 +302,7 @@ class ThreeACaptureController(
             set(CaptureRequest.CONTROL_AWB_MODE,
                 CameraMetadata.CONTROL_AWB_MODE_AUTO)
 
-            // Release all locks & cancel all triggers
+            // Lepaskan semua kunci & batalkan semua pemicu
             set(CaptureRequest.CONTROL_AF_TRIGGER,
                 CameraMetadata.CONTROL_AF_TRIGGER_CANCEL)
             set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER,
@@ -313,7 +313,7 @@ class ThreeACaptureController(
         captureSession.setRepeatingRequest(request.build(), null, mainHandler)
     }
 
-    // ----------- Master Callback: Drives all 3 phases via state inspection -----------
+    // ----------- Callback Master: Menggerakkan ketiga fase melalui inspeksi status -----------
     private val captureCallback = object : CameraCaptureSession.CaptureCallback() {
         override fun onCaptureCompleted(
             session: CameraCaptureSession,
@@ -326,22 +326,22 @@ class ThreeACaptureController(
 
             when (phase) {
                 1 -> {
-                    // ---- PHASE 1: Wait for AF lock ----
+                    // ---- FASE 1: Tunggu penguncian AF ----
                     when (afState) {
                         CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED -> {
-                            Log.d("3A", "✓ AF FOCUSED_LOCKED — moving to AE precapture")
+                            Log.d("3A", "✓ AF FOCUSED_LOCKED — pindah ke pra-pengambilan AE")
                             beginPhase2_AePrecapture()
                         }
                         CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED -> {
-                            Log.w("3A", "⚠ AF NOT_FOCUSED_LOCKED — proceeding anyway (may be soft)")
+                            Log.w("3A", "⚠ AF NOT_FOCUSED_LOCKED — tetap lanjut (mungkin tidak tajam)")
                             beginPhase2_AePrecapture()
                         }
-                        // ACTIVE_SCAN / PASSIVE_SCAN → keep waiting
+                        // ACTIVE_SCAN / PASSIVE_SCAN → tetap menunggu
                     }
                 }
                 2 -> {
-                    // ---- PHASE 2: Wait for AE to converge after precapture ----
-                    // Accept states that mean "AE is done with precapture and ready for capture"
+                    // ---- FASE 2: Tunggu AE memusat setelah pra-pengambilan ----
+                    // Terima status yang berarti "AE selesai dengan pra-pengambilan dan siap untuk pengambilan"
                     val aeReady = (aeState == CaptureResult.CONTROL_AE_STATE_CONVERGED
                                 || aeState == CaptureResult.CONTROL_AE_STATE_LOCKED
                                 || aeState == CaptureResult.CONTROL_AE_STATE_FLASH_REQUIRED)
@@ -350,7 +350,7 @@ class ThreeACaptureController(
                                  || awbState == CaptureResult.CONTROL_AWB_STATE_INACTIVE)
 
                     if (aeReady && awbReady) {
-                        Log.d("3A", "✓ AE=$aeState, AWB=$awbState — firing capture")
+                        Log.d("3A", "✓ AE=$aeState, AWB=$awbState — menembakkan pengambilan foto")
                         beginPhase3_StillCapture()
                     }
                 }
@@ -358,14 +358,14 @@ class ThreeACaptureController(
         }
     }
 
-    // ----------- Timeout protection: Never hang if HAL never converges -----------
+    // ----------- Proteksi waktu habis: Jangan pernah macet jika HAL tidak pernah memusat -----------
     private fun startTimeout(phaseName: String) {
         cancelTimeout()
         timeoutRunnable = Runnable {
-            Log.w("3A", "⏱ Timeout waiting for $phaseName — proceeding with best effort")
+            Log.w("3A", "⏱ Waktu habis menunggu $phaseName — lanjut dengan upaya terbaik")
             when (phase) {
-                1 -> beginPhase2_AePrecapture()  // Proceed with best possible focus
-                2 -> beginPhase3_StillCapture()  // Proceed with best possible exposure
+                1 -> beginPhase2_AePrecapture()  // Lanjut dengan fokus terbaik yang dimungkinkan
+                2 -> beginPhase3_StillCapture()  // Lanjut dengan eksposur terbaik yang dimungkinkan
             }
         }
         mainHandler.postDelayed(timeoutRunnable!!, SESSION_TIMEOUT_MS)
@@ -376,22 +376,22 @@ class ThreeACaptureController(
         timeoutRunnable = null
     }
 
-    // ----------- Utility: Correct JPEG orientation based on display rotation -----------
+    // ----------- Utilitas: Koreksi orientasi JPEG berdasarkan rotasi tampilan -----------
     private fun computeJpegOrientation(): Int {
         val sensorOrient = characteristics.get(
             CameraCharacteristics.SENSOR_ORIENTATION
         ) ?: 0
-        // Combine with Display.rotation (0, 90, 180, 270) from your Activity
-        // Typical impl: return (sensorOrient + displayRotationDegrees) % 360
-        return sensorOrient  // Simplified; wire to your display's rotation
+        // Gabungkan dengan Display.rotation (0, 90, 180, 270) dari Activity Anda
+        // Impl khas: return (sensorOrient + displayRotationDegrees) % 360
+        return sensorOrient  // Disederhanakan; hubungkan ke rotasi tampilan Anda
     }
 }
 ```
 
-### How to Use the Controller
+### Cara Menggunakan Pengontrol
 
 ```kotlin
-// Inside your CameraFragment's capture button click listener
+// Di dalam listener klik tombol pengambilan gambar CameraFragment Anda
 val controller = ThreeACaptureController(
     characteristics = yourCameraCharacteristics,
     captureSession = yourActiveSession,
@@ -408,29 +408,29 @@ controller.captureStillPhoto(
             val file = File(requireContext().filesDir, "photo_${System.currentTimeMillis()}.jpg")
             file.writeBytes(jpegBytes)
             withContext(Dispatchers.Main) {
-                Toast.makeText(requireContext(), "Saved: ${file.name}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Tersimpan: ${file.name}", Toast.LENGTH_SHORT).show()
             }
         }
     }
     override fun onCaptureError(reason: String) {
-        Toast.makeText(requireContext(), "Capture failed: $reason", Toast.LENGTH_LONG).show()
+        Toast.makeText(requireContext(), "Pengambilan gagal: $reason", Toast.LENGTH_LONG).show()
     }
 }
 ```
 
-### Pairing with ImageReader
+### Memasangkan dengan ImageReader
 
-Don't forget the `OnImageAvailableListener` on your JPEG `ImageReader` to actually deliver `jpegBytes` to the listener. The controller above assumes you've already wired this:
+Jangan lupakan `OnImageAvailableListener` pada `ImageReader` JPEG Anda untuk benar-benar mengirimkan `jpegBytes` ke listener. Pengontrol di atas mengasumsikan Anda sudah memasang ini:
 
 ```kotlin
-// Set this up when creating the ImageReader (see Capture Chapter)
+// Siapkan ini saat membuat ImageReader (lihat Bab Pengambilan Gambar)
 jpegImageReader.setOnImageAvailableListener({ reader ->
     val image = reader.acquireLatestImage() ?: return@setOnImageAvailableListener
     image.use {
         val buffer = it.planes[0].buffer
         val bytes = ByteArray(buffer.remaining())
         buffer.get(bytes)
-        // Deliver bytes to your UI / file saver
+        // Kirim byte ke UI / penyimpan file Anda
         lastCaptureListener?.onCaptureSuccess(bytes)
     }
 }, mainHandler)
@@ -438,16 +438,16 @@ jpegImageReader.setOnImageAvailableListener({ reader ->
 
 ---
 
-## Flash-Specific Handling Nuances
+## Nuansa Penanganan Khusus Lampu Kilat
 
-For `ON_AUTO_FLASH` / `ON_ALWAYS_FLASH` / `ON_AUTO_FLASH_REDEYE` modes, the precapture trigger runs preflash pulses. Two important considerations:
+Untuk mode `ON_AUTO_FLASH` / `ON_ALWAYS_FLASH` / `ON_AUTO_FLASH_REDEYE`, pemicu pra-pengambilan menjalankan pulsa lampu kilat awal. Dua pertimbangan penting:
 
-1. **Preflash pulse visibility:** Preflashes are *real flashes* — the user sees them as a low-brightness flash pulse before the main flash. Most modern camera UIs hide this with a "shutter button animation" or by darkening the preview.
+1. **Visibilitas pulsa lampu kilat awal:** Lampu kilat awal adalah *lampu kilat asli* — pengguna melihatnya sebagai pulsa lampu kilat kecerahan rendah sebelum lampu kilat utama. Kebanyakan UI kamera modern menyembunyikan ini dengan "animasi tombol rana" atau dengan menggelapkan pratinjau.
 
-2. **`FLASH_STATE` must READY:** In addition to `AE_STATE = CONVERGED`, verify `CaptureResult.FLASH_STATE = FLASH_STATE_READY` (or `FIRED`) for flash modes before capture. It's possible for AE to converge but the flash charging capacitor to still be ramping up.
+2. **`FLASH_STATE` harus READY:** Selain `AE_STATE = CONVERGED`, verifikasi `CaptureResult.FLASH_STATE = FLASH_STATE_READY` (atau `FIRED`) untuk mode lampu kilat sebelum pengambilan gambar. Ada kemungkinan AE sudah memusat tetapi kapasitor pengisi lampu kilat masih dalam proses pengisian.
 
 ```kotlin
-// Enhanced aeReady check inside Phase 2 callback for flash modes:
+// Pemeriksaan aeReady yang ditingkatkan di dalam callback Fase 2 untuk mode lampu kilat:
 val aeState = result.get(CaptureResult.CONTROL_AE_STATE)
 val flashState = result.get(CaptureResult.FLASH_STATE)
 
@@ -457,14 +457,14 @@ val flashModeWantsFlash = (currentAeMode == CameraMetadata.CONTROL_AE_MODE_ON_AL
 
 val aeReady = when {
     flashModeWantsFlash -> {
-        // HAL must have both AE converged AND flash ready to fire
+        // HAL harus memiliki AE yang memusat DAN lampu kilat yang siap menyala
         (aeState == CaptureResult.CONTROL_AE_STATE_CONVERGED
          || aeState == CaptureResult.CONTROL_AE_STATE_FLASH_REQUIRED) &&
         (flashState == CaptureResult.FLASH_STATE_READY
          || flashState == CaptureResult.FLASH_STATE_FIRED)
     }
     else -> {
-        // No-flash mode: plain AE convergence is enough
+        // Mode tanpa lampu kilat: pemusatan AE biasa sudah cukup
         (aeState == CaptureResult.CONTROL_AE_STATE_CONVERGED
          || aeState == CaptureResult.CONTROL_AE_STATE_LOCKED)
     }
@@ -473,83 +473,83 @@ val aeReady = when {
 
 ---
 
-## The 3A State Transition Machine (Summary Diagram)
+## Mesin Transisi Status 3A (Diagram Ringkasan)
 
-For quick reference when debugging, here's the combined state chart of AE, AF, and AWB showing the expected transitions during a successful capture.
+Untuk referensi cepat saat men-debug, berikut adalah bagan status gabungan AE, AF, dan AWB yang menunjukkan transisi yang diharapkan selama pengambilan gambar yang berhasil.
 
 ```mermaid
 stateDiagram-v2
     direction LR
 
-    state "AF States" as AF {
+    state "Status AF" as AF {
         [*] --> ACTIVE_SCAN: AF_TRIGGER = START
-        ACTIVE_SCAN --> FOCUSED_LOCKED: ✓ Focus found
-        ACTIVE_SCAN --> NOT_FOCUSED_LOCKED: ✗ Couldn't lock
-        FOCUSED_LOCKED --> [*]: Proceed to Phase 2
-        NOT_FOCUSED_LOCKED --> [*]: Proceed (best effort)
+        ACTIVE_SCAN --> FOCUSED_LOCKED: ✓ Fokus ditemukan
+        ACTIVE_SCAN --> NOT_FOCUSED_LOCKED: ✗ Gagal mengunci
+        FOCUSED_LOCKED --> [*]: Lanjut ke Fase 2
+        NOT_FOCUSED_LOCKED --> [*]: Lanjut (upaya terbaik)
     }
 
-    state "AE States" as AE {
-        [*] --> SEARCHING: Preview running
-        SEARCHING --> CONVERGED: Ambient stable
+    state "Status AE" as AE {
+        [*] --> SEARCHING: Pratinjau berjalan
+        SEARCHING --> CONVERGED: Ambien stabil
         CONVERGED --> PRECAPTURE: PRECAPTURE_TRIGGER = START
-        PRECAPTURE --> CONVERGED: Final exposure+flash computed
-        CONVERGED --> FLASH_REQUIRED: (auto-flash mode only)
-        CONVERGED --> [*]: Capture now
-        FLASH_REQUIRED --> [*]: Capture with flash now
+        PRECAPTURE --> CONVERGED: Eksposur akhir + lampu kilat dihitung
+        CONVERGED --> FLASH_REQUIRED: (mode lampu kilat otomatis saja)
+        CONVERGED --> [*]: Ambil sekarang
+        FLASH_REQUIRED --> [*]: Ambil dengan lampu kilat sekarang
     }
 
-    state "AWB States" as AWB {
-        [*] --> SEARCHING: Major scene change
-        SEARCHING --> CONVERGED: Illuminant found
+    state "Status AWB" as AWB {
+        [*] --> SEARCHING: Perubahan adegan besar
+        SEARCHING --> CONVERGED: Iluminan ditemukan
         CONVERGED --> LOCKED: AWB_LOCK = true
-        CONVERGED --> [*]: Capture OK
-        LOCKED --> [*]: Capture OK
+        CONVERGED --> [*]: Pengambilan OK
+        LOCKED --> [*]: Pengambilan OK
     }
 ```
 
-The global controller only proceeds to the still capture when the final "capture OK" state is reached simultaneously on all three sub-states.
+Pengontrol global hanya melanjutkan ke pengambilan foto diam ketika status akhir "pengambilan OK" dicapai secara bersamaan pada ketiga sub-status tersebut.
 
 ---
 
-## Troubleshooting the 3A Pipeline
+## Pemecahan Masalah Pipeline 3A
 
-| Symptom | Root Cause | Fix |
+| Gejala | Akar Masalah | Perbaikan |
 |---------|-----------|-----|
-| Flash photos randomly under/over-exposed | Skipped `AE_PRECAPTURE_TRIGGER = START` | Always run precapture before still capture in any flash mode |
-| Every 5th–10th photo is slightly soft | Proceeded to capture before `FOCUSED_LOCKED` | Block on AF state (our controller does this) |
-| Camera hangs for seconds then crashes | No timeout; HAL stuck in SEARCHING forever | Add the 3500ms timeout + best-effort fallback as shown |
-| Flash fires but photo is still dark | Proceeded before `FLASH_STATE = READY` | Capacitor charging; add FLASH_STATE check in AE ready condition |
-| Portrait of backlit person is underexposed | AE metered the sky, not the face | Couple `CONTROL_AE_REGIONS` to same tap rectangle as `CONTROL_AF_REGIONS` |
-| 2° color tint shift between frames in burst | Forgot `AWB_LOCK = true` before capture burst | Lock AWB on the first converged frame; keep locked through burst |
-| Capture sequence is noticeably slow on budget phone | `TEMPLATE_STILL_CAPTURE` starts cold pipeline | Warm up with a dummy `TEMPLATE_PREVIEW` with identical AE/AF settings first |
+| Foto lampu kilat secara acak kurang/lebih eksposur | Melewatkan `AE_PRECAPTURE_TRIGGER = START` | Selalu jalankan pra-pengambilan sebelum foto diam dalam mode lampu kilat apa pun |
+| Setiap foto ke-5 hingga ke-10 sedikit lembut | Melanjutkan ke pengambilan sebelum `FOCUSED_LOCKED` | Blokir berdasarkan status AF (pengontrol kita melakukan ini) |
+| Kamera macet selama beberapa detik lalu mogok | Tidak ada waktu habis; HAL terjebak di SEARCHING selamanya | Tambahkan waktu habis 3500ms + cadangan upaya terbaik seperti yang ditunjukkan |
+| Lampu kilat menyala tetapi foto tetap gelap | Melanjutkan sebelum `FLASH_STATE = READY` | Kapasitor sedang mengisi; tambahkan pemeriksaan FLASH_STATE dalam kondisi AE ready |
+| Potret orang dengan cahaya latar kurang eksposur | AE melakukan metering pada langit, bukan wajah | Hubungkan `CONTROL_AE_REGIONS` ke persegi panjang ketukan yang sama dengan `CONTROL_AF_REGIONS` |
+| Pergeseran semu warna 2° antar bingkai dalam burst | Lupa `AWB_LOCK = true` sebelum burst pengambilan gambar | Kunci AWB pada bingkai memusat pertama; biarkan terkunci sepanjang burst |
+| Urutan pengambilan terasa lambat pada ponsel anggaran | `TEMPLATE_STILL_CAPTURE` memulai pipeline dingin | Lakukan pemanasan dengan `TEMPLATE_PREVIEW` dummy dengan pengaturan AE/AF identik terlebih dahulu |
 
 ---
 
-## Summary
+## Ringkasan
 
-This chapter tied exposure, focus, and white balance together into a single, reliable **3A capture pipeline** — the exact sequence a professional camera app uses for every shutter press:
+Bab ini menghubungkan eksposur, fokus, dan keseimbangan putih menjadi satu **pipeline pengambilan gambar 3A** yang andal — urutan tepat yang digunakan aplikasi kamera profesional untuk setiap penekanan tombol rana:
 
-1. **Phase 1 (AF):** Set `AF_MODE = AUTO` + `AF_TRIGGER = START`. Wait until `AF_STATE = FOCUSED_LOCKED` (or `NOT_FOCUSED_LOCKED` as fallback).
-2. **Phase 2 (AE Precapture):** Set `AE_PRECAPTURE_TRIGGER = START`. Wait for `AE_STATE = CONVERGED` / `FLASH_REQUIRED` AND `FLASH_STATE = READY` (if flash modes). Also require `AWB_STATE = CONVERGED`.
-3. **Phase 3 (Still Capture):** Submit `TEMPLATE_STILL_CAPTURE` with `AE_LOCK = true`, `AWB_LOCK = true`.
-4. **Phase 4 (Cleanup):** Cancel all triggers, release all locks, restore `AF_MODE = CONTINUOUS_PICTURE`.
+1. **Fase 1 (AF):** Setel `AF_MODE = AUTO` + `AF_TRIGGER = START`. Tunggu sampai `AF_STATE = FOCUSED_LOCKED` (atau `NOT_FOCUSED_LOCKED` sebagai cadangan).
+2. **Fase 2 (Pra-pengambilan AE):** Setel `AE_PRECAPTURE_TRIGGER = START`. Tunggu `AE_STATE = CONVERGED` / `FLASH_REQUIRED` DAN `FLASH_STATE = READY` (jika mode lampu kilat). Juga perlukan `AWB_STATE = CONVERGED`.
+3. **Fase 3 (Foto Diam):** Kirim `TEMPLATE_STILL_CAPTURE` dengan `AE_LOCK = true`, `AWB_LOCK = true`.
+4. **Fase 4 (Pembersihan):** Batalkan semua pemicu, lepaskan semua kunci, kembalikan `AF_MODE = CONTINUOUS_PICTURE`.
 
-Critical supporting concepts:
-- **AE modes:** `ON_AUTO_FLASH` is the sensible default for consumer apps
-- **AE regions** = spot metering; always pair with AF regions on tap-to-focus
-- **AWB converges fast** but always block on `CONVERGED` or `LOCKED` for color-critical work
-- **Timeouts are non-negotiable.** Budget phones and low-light can make AF/AE scan forever; always proceed with a best-effort fallback after ~3.5s.
+Konsep pendukung kritis:
+- **Mode AE:** `ON_AUTO_FLASH` adalah default yang masuk akal untuk aplikasi konsumen
+- **Wilayah AE** = spot metering; selalu pasangkan dengan wilayah AF pada ketukan-untuk-fokus
+- **AWB memusat dengan cepat** tetapi selalu blokir pada `CONVERGED` atau `LOCKED` untuk pekerjaan yang kritis warna
+- **Waktu habis tidak bisa ditawar.** Ponsel anggaran dan cahaya rendah dapat membuat pemindaian AF/AE berlangsung selamanya; selalu lanjutkan dengan cadangan upaya terbaik setelah ~3,5 detik.
 
-## What's Next
+## Apa Selanjutnya
 
-Congratulations on completing the 3A Manual Photography module. You now understand — at a professional level — how to control:
+Selamat telah menyelesaikan modul Fotografi Manual 3A. Anda sekarang memahami — pada tingkat profesional — cara mengontrol:
 
-- **Exposure (Ch. 13–14):** The exposure triangle, ISO + shutter, nanosecond conversions, manual override, long exposure, timelapse lock, bracketing
-- **Focus (Ch. 15):** AF modes, AF state machine, one-shot trigger-and-capture, manual focus diopters, hyperfocal presets, touch-to-focus regions
-- **Color (Ch. 16):** Color temperature, AWB presets, manual COLOR_CORRECTION_GAINS, 3×3 CCM transforms, Kelvin slider implementation
-- **Orchestration (Ch. 17):** The full 3A pipeline with precapture, flash-safe AE convergence, per-phase timeouts, lock/release cleanup
+- **Eksposur (Bab 13–14):** Segitiga eksposur, ISO + rana, konversi nanodetik, pengesampingan manual, eksposur panjang, penguncian timelapse, bracketing
+- **Fokus (Bab 15):** Mode AF, mesin status AF, urutan picu-dan-ambil satu kali, dioptri fokus manual, preset hiperfokal, wilayah ketukan-untuk-fokus
+- **Warna (Bab 16):** Suhu warna, preset AWB, COLOR_CORRECTION_GAINS manual (4-saluran R/G/B/G), transformasi CCM 3×3, implementasi slider Kelvin
+- **Orkestrasi (Bab 17):** Pipeline 3A penuh dengan pra-pengambilan, pemusatan AE yang aman untuk lampu kilat, waktu habis per-fase, pembersihan kunci/rilis
 
-You can now build a complete pro-mode camera app that rivals the capabilities of the [Android Camera Parameters app](https://github.com/zoozooll/AndroidCameraParameters) itself!
+Anda sekarang dapat membangun aplikasi kamera mode pro lengkap yang menyaingi kemampuan dari [aplikasi Android Camera Parameters](https://github.com/zoozooll/AndroidCameraParameters) itu sendiri!
 
-In the upcoming chapters, we shift gears from capture **control** to capture **quality** — covering RAW capture, DNG saving, multi-frame processing, HDR, and computational photography techniques that build on the 3A pipeline you now master.
+Dalam bab-bab mendatang, kita beralih dari **kontrol** pengambilan gambar ke **kualitas** pengambilan gambar — mencakup pengambilan RAW, penyimpanan DNG, pemrosesan multi-bingkai, HDR, dan teknik fotografi komputasional yang dibangun di atas pipeline 3A yang sekarang Anda kuasai.

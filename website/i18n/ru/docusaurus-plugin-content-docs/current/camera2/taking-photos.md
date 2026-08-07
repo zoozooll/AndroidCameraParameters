@@ -1,138 +1,138 @@
 ---
 sidebar_position: 9
-title: "Chapter 9: Taking Photos"
-description: Capture high-quality still photos with Camera2 using ImageReader (JPEG), precapture AE trigger, and CaptureCallback state machine. Save photos with Scoped Storage-compatible MediaStore (Android 10+) and legacy FileOutputStream, always remembering to close the Image buffer.
-keywords: [ImageReader, JPEG capture, precapture AE trigger, MediaStore Scoped Storage, CaptureCallback still photo]
+title: "Глава 9: Съемка фотографий"
+description: Делайте высококачественные снимки с помощью Camera2, используя ImageReader (JPEG), триггер precapture AE и конечный автомат CaptureCallback. Сохраняйте фотографии с помощью MediaStore (Android 10+), совместимого со Scoped Storage, и устаревшего FileOutputStream, всегда закрывая буфер Image.
+keywords: [ImageReader, захват JPEG, триггер precapture AE, MediaStore Scoped Storage, CaptureCallback фото]
 ---
 
-Congratulations on reaching the final chapter of Part II! If you've followed along since Chapter 5, your app now has: permission handling, a dedicated background thread, camera enumeration with `CameraCharacteristics`, robust open/close lifecycle management via `Semaphore`, and a smooth, correctly-oriented live preview rendered through `TextureView`. What's missing? **The ability to tap a button and keep a photo**. That's what this chapter delivers.
+Поздравляем с переходом к финальной главе второй части! Если вы следовали инструкциям начиная с главы 5, в вашем приложении теперь есть: обработка разрешений, выделенный фоновый поток, перечисление камер с помощью `CameraCharacteristics`, надежное управление жизненным циклом через `Semaphore` и плавный, правильно ориентированный живой предпросмотр через `TextureView`. Чего не хватает? **Возможности нажать на кнопку и сохранить фото**. Именно это дает данная глава.
 
-By the end of this chapter, your tutorial project will be a genuinely usable camera application: tap the shutter, the app briefly freezes preview (as it should, to flush the pipeline), a still image is captured with proper auto-exposure convergence, it is saved to the device's shared Pictures directory with correct EXIF orientation metadata, and preview resumes automatically. You can then open the photo in Google Photos or the Android Camera Parameters app ([GitHub](https://github.com/zoozooll/AndroidCameraParameters), [Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)) to inspect EXIF data, resolution, and quality.
+К концу этой главы ваш учебный проект станет полноценным приложением камеры: при нажатии на затвор приложение ненадолго «заморозит» предпросмотр (как и должно быть для очистки конвейера), будет сделан снимок с правильным схождением автоэкспозиции, он будет сохранен в общую папку Pictures устройства с правильными метаданными ориентации EXIF, и предпросмотр возобновится автоматически. После этого вы сможете открыть фото в Google Photos или приложении Android Camera Parameters ([GitHub](https://github.com/zoozooll/AndroidCameraParameters), [Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)), чтобы проверить данные EXIF, разрешение и качество.
 
-The Android Camera Parameters app's manual capture mode uses a more advanced version of the pipeline we build in this chapter: it runs multi-frame burst captures with per-frame custom ISO, exposure time, and lens position — but it all builds on the same `ImageReader` + `CaptureCallback` fundamentals you will learn here.
+Режим ручного захвата в приложении Android Camera Parameters использует более продвинутую версию конвейера, который мы построим в этой главе: он выполняет серийную съемку нескольких кадров с настраиваемыми для каждого кадра ISO, выдержкой и положением линзы — но всё это строится на тех же основах `ImageReader` + `CaptureCallback`, которые вы изучите здесь.
 
-## Why Taking a Photo Is More Complex Than Preview
+## Почему сделать фото сложнее, чем показать предпросмотр
 
-At first glance, "just capture a frame" sounds easy — we already have 60 preview frames per second flowing through the session, why can't we grab one? The answer is that preview frames and still frames are fundamentally different outputs:
+На первый взгляд, «просто захватить кадр» кажется легкой задачей — у нас уже есть 60 кадров предпросмотра в секунду, почему мы не можем взять один из них? Ответ заключается в том, что кадры предпросмотра и фотографии — это принципиально разные выходные данные:
 
-1. **Resolution difference**: Preview is ~1–2 MP (1080p). A still photo should use the sensor's **maximum** resolution (often 50+ MP on modern flagships). You don't want a 2 MP photo when your phone can deliver 50 MP.
-2. **Exposure difference**: `TEMPLATE_PREVIEW` optimizes for low-latency frame rate. `TEMPLATE_STILL_CAPTURE` optimizes for dynamic range, noise reduction, and color accuracy — the still frame needs the highest-quality ISP processing the pipeline can deliver.
-3. **3A convergence**: Before taking a photo, the camera's Auto-Exposure (AE) algorithm needs to be told "we're about to take a still — lock onto the current scene, converge exposure, white balance, and focus, and fire the flash if needed." This is the **precapture trigger** sequence. Skipping it leads to photos that are over/underexposed relative to what preview showed.
-4. **Storage and Scoped Storage**: The preview frame is never persisted. The photo frame must be written to disk as a valid JPEG file, indexed by the MediaStore so gallery apps can see it, and on Android 10+ this must use the Scoped Storage APIs (no arbitrary `File` writes to `/sdcard/DCIM/`).
+1. **Разница в разрешении**: предпросмотр имеет разрешение около 1–2 Мп (1080p). Фотография должна использовать **максимальное** разрешение сенсора (часто 50+ Мп на современных флагманах). Вы же не хотите фото 2 Мп, если ваш телефон может выдать 50 Мп.
+2. **Разница в экспозиции**: `TEMPLATE_PREVIEW` оптимизирует частоту кадров для низкой задержки. `TEMPLATE_STILL_CAPTURE` оптимизирует динамический диапазон, шумоподавление и точность цветопередачи — кадру фотографии нужна обработка ISP самого высокого качества, которую может обеспечить конвейер.
+3. **Схождение 3A**: перед тем как сделать фото, алгоритму автоэкспозиции (AE) камеры нужно сказать: «мы собираемся сделать снимок — зафиксируй текущую сцену, сведи параметры экспозиции, баланса белого и фокуса и включи вспышку, если нужно». Это последовательность **триггера precapture**. Если ее пропустить, фотографии могут получиться переэкспонированными или недоэкспонированными относительно того, что показывал предпросмотр.
+4. **Хранилище и Scoped Storage**: кадр предпросмотра никогда не сохраняется. Фотография должна быть записана на диск в виде валидного JPEG-файла, проиндексирована в MediaStore, чтобы галереи могли ее видеть, а на Android 10+ это должно использовать API Scoped Storage (никаких произвольных записей через `File` в `/sdcard/DCIM/`).
 
-Still capture is a **multi-stage asynchronous state machine**, not a single call. The sequence diagram below shows the exact order and timing you must implement. Do not skip any step.
+Захват фото — это **многоэтапный асинхронный конечный автомат**, а не один вызов. На диаграмме последовательности ниже показан точный порядок и тайминги, которые вы должны реализовать. Не пропускайте ни одного шага.
 
 ```mermaid
 sequenceDiagram
-    actor User as 👤 User
+    actor User as 👤 Пользователь
     participant App as 📱 MainActivity
     participant CB as 🎞️ CaptureCallback
     participant IR as 🖼️ ImageReader
     participant MS as 💾 MediaStore/Pictures
-    User->>App: Taps shutter button
+    User->>App: Нажимает кнопку затвора
     App->>App: lockFocusForCapture() 🔒
     App->>App: stopRepeating() ⏹️
     
-    App->>CB: Capture single request<br/>CONTROL_AE_PRECAPTURE_TRIGGER_START
-    Note over App,CB: Triggers AE flash metering + convergence
-    loop Wait for AE_STATE_CONVERGED or AE_STATE_FLASH_REQUIRED
-        CB-->>App: onCaptureCompleted(partial results)
+    App->>CB: Одиночный запрос захвата<br/>CONTROL_AE_PRECAPTURE_TRIGGER_START
+    Note over App,CB: Запуск замера вспышки AE + схождение
+    loop Ожидание AE_STATE_CONVERGED или AE_STATE_FLASH_REQUIRED
+        CB-->>App: onCaptureCompleted(частичные результаты)
     end
     
-    Note over App,CB: ⏰ AE has converged (or timed out after ~3s)
+    Note over App,CB: ⏰ AE сошлась (или таймаут через ~3 с)
     
-    App->>CB: Capture still request<br/>TEMPLATE_STILL_CAPTURE + JPEG target
-    Note over App,CB: One-shot high-res capture through ISP
+    App->>CB: Запрос на захват фото<br/>TEMPLATE_STILL_CAPTURE + цель JPEG
+    Note over App,CB: Однократный захват высокого рез. через ISP
     
     CB-->>IR: onImageAvailable() 🌠
-    IR->>IR: acquireLatestImage() → Image object
-    IR->>App: planes[0].buffer (raw JPEG ByteBuffer)
+    IR->>IR: acquireLatestImage() → объект Image
+    IR->>App: planes[0].buffer (сырые байты JPEG ByteBuffer)
     App->>MS: MediaStore.createWriteRequest() → OutputStream
-    App->>MS: Write ByteBuffer bytes to OutputStream
-    App->>IR: image.close() ✅ FREE BUFFER
-    App->>MS: close() OutputStream → photo appears in Gallery
+    App->>MS: Запись байтов ByteBuffer в OutputStream
+    App->>IR: image.close() ✅ ОСВОБОЖДЕНИЕ БУФЕРА
+    App->>MS: close() OutputStream → фото появляется в Галерее
     
     App->>App: unlockFocus() 🔓
-    App->>App: setRepeatingRequest() 🔄 Resume preview
+    App->>App: setRepeatingRequest() 🔄 Возобновление предпросмотра
     
-    Note over App,CB: 🎉 Ready for next shutter tap
+    Note over App,CB: 🎉 Готовность к следующему нажатию
 ```
 
-The timing of the precapture trigger is critical: it must be sent BEFORE the still capture, and you must wait for AE to converge (or hit a timeout) before firing the still. If you skip the wait, the photo will use the preview's exposure settings, which may be tuned for high frame rate rather than photo quality.
+Время срабатывания триггера precapture критически важно: он должен быть отправлен ДО захвата фотографии, и вы должны дождаться схождения AE (или наступления таймаута) перед тем, как делать снимок. Если вы пропустите ожидание, фото будет использовать настройки экспозиции предпросмотра, которые могут быть настроены на высокую частоту кадров, а не на качество фотографии.
 
-## Introducing ImageReader: The CPU-Accessible Frame Sink
+## Знакомство с ImageReader: приемник кадров для процессора
 
-In Chapter 8 we fed preview frames to a `SurfaceTexture` (GPU sink). For still capture we need a CPU-accessible sink so we can write the JPEG bytes to disk. That sink is `ImageReader`.
+В главе 8 мы направляли кадры предпросмотра в `SurfaceTexture` (приемник GPU). Для захвата фото нам нужен приемник, доступный процессору (CPU), чтобы мы могли записать байты JPEG на диск. Этим приемником является `ImageReader`.
 
-`ImageReader` is constructed with:
+`ImageReader` создается следующим образом:
 ```kotlin
 val imageReader = ImageReader.newInstance(
-    width,           // Pixel width of still frames (max still size from characteristics)
-    height,          // Pixel height of still frames
-    ImageFormat.JPEG,// Format — JPEG for photos, RAW_SENSOR for DNG RAW, YUV_420_888 for processing
-    maxImages        // How many buffers to allocate in the queue (2–5 typically)
+    width,           // Ширина кадра фото (макс. размер из характеристик)
+    height,          // Высота кадра фото
+    ImageFormat.JPEG,// Формат — JPEG для фото, RAW_SENSOR для DNG RAW, YUV_420_888 для обработки
+    maxImages        // Сколько буферов выделить в очереди (обычно 2–5)
 )
 ```
 
-The four parameters explained:
+Разбор четырех параметров:
 
-1. **width/height**: Use the camera's maximum JPEG size from `SCALER_STREAM_CONFIGURATION_MAP.getOutputSizes(ImageFormat.JPEG)`. Always pick the largest size for the highest-quality photo.
-2. **ImageFormat.JPEG**: The Image Signal Processor (ISP) will run full JPEG encoding pipeline (Huffman coding, quantization, EXIF embedding, JFIF header) before delivering the frame. The `Image.planes[0].buffer` is a **complete, valid JPEG file** — no re-encoding needed; you can write those bytes directly to disk.
-3. **maxImages**: The depth of the internal `BufferQueue`. JPEG buffers are large (5–20 MB each). Set this to **2** for a typical photo capture (one in-flight + one spare). Setting it higher wastes RAM; setting it to **1** and forgetting to `close()` the Image leads to permanent capture deadlock (the queue can never dequeue an empty buffer again).
+1. **width/height**: используйте максимальный размер JPEG камеры из `SCALER_STREAM_CONFIGURATION_MAP.getOutputSizes(ImageFormat.JPEG)`. Всегда выбирайте самый большой размер для получения фотографии наилучшего качества.
+2. **ImageFormat.JPEG**: процессор сигналов изображения (ISP) выполнит полный цикл кодирования JPEG (кодирование Хаффмана, квантование, встраивание EXIF, заголовок JFIF) перед доставкой кадра. Буфер `Image.planes[0].buffer` представляет собой **полный, валидный файл JPEG** — перекодирование не требуется; вы можете записать эти байты прямо на диск.
+3. **maxImages**: глубина внутренней очереди `BufferQueue`. Буферы JPEG имеют большой размер (5–20 МБ каждый). Установите это значение в **2** для типичного захвата фото (один в работе + один запасной). Большее значение тратит память впустую; установка в **1** и забывание вызвать `close()` для Image приведет к вечной блокировке захвата (очередь никогда не сможет извлечь пустой буфер снова).
 
-`ImageReader` exposes two crucial API surfaces:
-- **`imageReader.surface`**: Returns a `Surface` that can be added as a target to CaptureRequests and included in the `CameraCaptureSession` output surface list.
-- **`imageReader.setOnImageAvailableListener(listener, handler)`**: Registers a callback that fires on **every new frame** delivered to this reader. Inside this callback, you call `acquireLatestImage()` (or `acquireNextImage()`) to get the `Image` object.
+`ImageReader` предоставляет два важных API:
+- **`imageReader.surface`**: возвращает `Surface`, которую можно добавить как цель (target) в CaptureRequests и включить в список выходных поверхностей `CameraCaptureSession`.
+- **`imageReader.setOnImageAvailableListener(listener, handler)`**: регистрирует обратный вызов, который срабатывает на **каждый новый кадр**, доставленный в этот ридер. Внутри этого колбэка вы вызываете `acquireLatestImage()` (или `acquireNextImage()`), чтобы получить объект `Image`.
 
-### ⚠️ CRITICAL RULE: Always close the Image
+### ⚠️ КРИТИЧЕСКОЕ ПРАВИЛО: всегда закрывайте Image
 
-If you call `acquireLatestImage()` and do **not** call `image.close()`, that buffer is **permanently removed from the pool**. Once `maxImages` buffers are leaked, `OnImageAvailableListener` stops firing FOREVER (the queue has no empty buffers to dequeue into, so no new frames can arrive). Always use a try/finally block:
+Если вы вызвали `acquireLatestImage()` и **не** вызвали `image.close()`, этот буфер **навсегда удаляется из пула**. Как только будет «утеряно» `maxImages` буферов, `OnImageAvailableListener` перестанет срабатывать НАВСЕГДА (в очереди нет пустых буферов для записи новых кадров). Всегда используйте блок try/finally:
 
 ```kotlin
 val image = imageReader.acquireLatestImage()
 try {
-    // Use image bytes here
+    // Используем байты изображения здесь
 } finally {
-    image.close() // ALWAYS. No exceptions.
+    image.close() // ВСЕГДА. Без исключений.
 }
 ```
 
-This is the single most common Chapter 9 bug: capture works once, then never works again until the app is restarted.
+Это самая распространенная ошибка главы 9: захват срабатывает один раз, а затем перестает работать до перезапуска приложения.
 
-## The Precapture AE State Machine
+## Конечный автомат Precapture AE
 
-The Camera2 3A (Auto-Exposure / Auto-Focus / Auto-White-Balance) system is a per-frame state machine driven by the `CONTROL_AE_PRECAPTURE_TRIGGER` request key. The flow:
+Система 3A (Auto-Exposure / Auto-Focus / Auto-White-Balance) в Camera2 — это покадровый конечный автомат, управляемый ключом запроса `CONTROL_AE_PRECAPTURE_TRIGGER`. Процесс таков:
 
-1. **Stop repeating preview**: `captureSession.stopRepeating()`. We don't want preview frames interleaving with the still pipeline.
-2. **Fire precapture trigger**: Build a single `CaptureRequest` that sets `CONTROL_AE_PRECAPTURE_TRIGGER` to `START`. Submit it with `captureSession.capture()` (NOT `setRepeatingRequest` — it's a one-shot command, not continuous).
-3. **Wait for convergence**: In the `CaptureCallback.onCaptureCompleted()` for the precapture trigger (and subsequent frames), inspect `CaptureResult.CONTROL_AE_STATE`. We are waiting for one of:
-   - `CONTROL_AE_STATE_CONVERGED` ✓ (AE is happy, scene is correctly metered)
-   - `CONTROL_AE_STATE_FLASH_REQUIRED` ✓ (AE determined flash is needed, flash is now charged)
-   - `CONTROL_AE_STATE_LOCKED` ✓ (if user manually locked AE earlier)
-   - A 3000ms timeout fires ✗ (safety valve — some buggy devices never signal convergence).
-4. **Fire still capture**: Build a `TEMPLATE_STILL_CAPTURE` request targeting the `ImageReader`'s Surface. Submit it with `captureSession.capture()`.
-5. **Image arrives**: `OnImageAvailableListener.onImageAvailable()` fires → acquire JPEG bytes → save to disk.
-6. **Unlock and resume**: Build a request that cancels AE trigger (`CONTROL_AE_PRECAPTURE_TRIGGER_CANCEL`), call `unlockFocus()` for AF/AWB, then `setRepeatingRequest(previewRequest, ...)` to restart preview.
+1. **Остановка повторения предпросмотра**: `captureSession.stopRepeating()`. Мы не хотим, чтобы кадры предпросмотра перемешивались с конвейером фотографии.
+2. **Запуск триггера precapture**: создание одиночного запроса `CaptureRequest`, в котором `CONTROL_AE_PRECAPTURE_TRIGGER` установлен в `START`. Отправка его через `captureSession.capture()` (НЕ `setRepeatingRequest` — это разовая команда).
+3. **Ожидание схождения**: в методе `CaptureCallback.onCaptureCompleted()` для триггера precapture (и последующих кадров) проверяем `CaptureResult.CONTROL_AE_STATE`. Мы ждем одно из состояний:
+   - `CONTROL_AE_STATE_CONVERGED` ✓ (AE в порядке, сцена замерена правильно)
+   - `CONTROL_AE_STATE_FLASH_REQUIRED` ✓ (AE определила, что нужна вспышка, она заряжена)
+   - `CONTROL_AE_STATE_LOCKED` ✓ (если пользователь ранее заблокировал AE вручную)
+   - Срабатывание таймаута 3000 мс ✗ (страховка — некоторые проблемные устройства никогда не сообщают о схождении).
+4. **Запуск захвата фото**: создание запроса `TEMPLATE_STILL_CAPTURE`, нацеленного на Surface от `ImageReader`. Отправка через `captureSession.capture()`.
+5. **Прибытие изображения**: срабатывает `OnImageAvailableListener.onImageAvailable()` → получаем байты JPEG → сохраняем на диск.
+6. **Разблокировка и возобновление**: создание запроса, отменяющего триггер AE (`CONTROL_AE_PRECAPTURE_TRIGGER_CANCEL`), вызов `unlockFocus()` для AF/AWB, затем `setRepeatingRequest(previewRequest, ...)` для перезапуска предпросмотра.
 
-Each of the 6 steps corresponds to one state in our `CaptureStateMachine` enum we'll define in the code.
+Каждый из 6 шагов соответствует одному состоянию в нашем перечислении `CaptureStateMachine`, которое мы определим в коде.
 
-## Scoped Storage and MediaStore (Android 10+)
+## Scoped Storage и MediaStore (Android 10+)
 
-From Android 10 (API 29) onward, apps can no longer write arbitrary files to the shared `/sdcard/Pictures` directory using the `java.io.File` API — doing so throws a `FileNotFoundException` with "Permission denied" even if you hold `WRITE_EXTERNAL_STORAGE`. The correct, future-proof approach uses the `MediaStore` content provider:
+Начиная с Android 10 (API 29), приложения больше не могут записывать произвольные файлы в общую папку `/sdcard/Pictures`, используя API `java.io.File` — такая попытка выбросит `FileNotFoundException` с ошибкой «Permission denied», даже если у вас есть разрешение `WRITE_EXTERNAL_STORAGE`. Правильный, ориентированный на будущее подход использует контент-провайдер `MediaStore`:
 
-1. **Prepare a `ContentValues` bundle**: MIME type (`image/jpeg`), relative path (`Pictures/Camera2Tutorial/` — the system creates the directory if needed), display name (timestamped).
-2. **Insert a pending row**: `contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)` returns a `Uri`.
-3. **Open an OutputStream to the Uri**: `contentResolver.openOutputStream(uri)` gives you a `ParcelFileDescriptor`-backed stream.
-4. **Write bytes and close**: The JPEG ByteBuffer from `ImageReader` is copied directly into the OutputStream.
-5. **Make the file visible to gallery apps**: Optional — add `IS_PENDING=0` in the values if you used a pending-write pattern (we'll use the simpler `IS_PENDING=1`-then-update approach for maximum compatibility).
+1. **Подготовка пакета `ContentValues`**: MIME-тип (`image/jpeg`), относительный путь (`Pictures/Camera2Tutorial/` — система создаст папку, если нужно), отображаемое имя (с меткой времени).
+2. **Вставка пустой строки**: `contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)` возвращает `Uri`.
+3. **Открытие OutputStream для этого Uri**: `contentResolver.openOutputStream(uri)` дает вам поток, поддерживаемый дескриптором `ParcelFileDescriptor`.
+4. **Запись байтов и закрытие**: ByteBuffer JPEG из `ImageReader` копируется напрямую в OutputStream.
+5. **Отображение файла в галереях**: опционально — добавьте `IS_PENDING=0` в значения, если использовали паттерн отложенной записи (мы будем использовать более простой подход с обновлением флага `IS_PENDING` для максимальной совместимости).
 
-On API 28 and below, we fall back to the traditional `File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), ...)` path with direct `FileOutputStream`, which still works because legacy storage models apply.
+На API 28 и ниже мы откатываемся к традиционному пути через `File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), ...)` с прямой записью через `FileOutputStream`.
 
-## Full Chapter 9 Code — Photo Capture
+## Полный код главы 9 — Захват фотографий
 
-Here is the complete, end-to-end `MainActivity.kt` incorporating all of the above: the `ImageReader`, the 6-state precapture AE state machine, the shutter button, `MediaStore`/legacy save, and teardown of both session surfaces (preview + jpeg). We also update the layout XML for the shutter button.
+Вот полная версия `MainActivity.kt`, объединяющая всё вышеперечисленное: `ImageReader`, конечный автомат precapture AE из 6 состояний, кнопку затвора, сохранение через `MediaStore`/Legacy и завершение работы обеих поверхностей сеанса (preview + jpeg). Мы также обновим XML-макет для кнопки затвора.
 
-### Updated Layout (activity_main.xml)
+### Обновленный макет (activity_main.xml)
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
@@ -157,7 +157,7 @@ Here is the complete, end-to-end `MainActivity.kt` incorporating all of the abov
         android:padding="8dp"
         android:textColor="#FFFFFFFF"
         android:textSize="12sp"
-        tools:text="Initializing..." />
+        tools:text="Инициализация..." />
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/shutterButton"
@@ -165,16 +165,16 @@ Here is the complete, end-to-end `MainActivity.kt` incorporating all of the abov
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|center_horizontal"
         android:layout_marginBottom="48dp"
-        android:contentDescription="Take photo"
+        android:contentDescription="Сделать фото"
         android:src="@android:drawable/ic_menu_camera"
         app:fabSize="normal" />
 
 </FrameLayout>
 ```
 
-If you don't have Material Components, replace the FAB with a `Button` with `layout_gravity="bottom|center_horizontal"`.
+Если у вас нет Material Components, замените FAB на обычную `Button` с `layout_gravity="bottom|center_horizontal"`.
 
-### Full Kotlin Activity
+### Полный код Activity на Kotlin
 
 ```kotlin
 package com.example.camera2tutorial
@@ -230,16 +230,16 @@ import kotlin.math.min
 
 class MainActivity : AppCompatActivity() {
 
-    // UI
+    // Интерфейс
     private lateinit var textureView: TextureView
     private lateinit var statusTextView: TextView
     private lateinit var shutterButton: FloatingActionButton
 
-    // Threading
+    // Многопоточность
     private lateinit var backgroundThread: HandlerThread
     private lateinit var backgroundHandler: Handler
 
-    // Camera pipeline state
+    // Состояние камеры
     private lateinit var cameraManager: CameraManager
     private var cameraDevice: CameraDevice? = null
     private var captureSession: CameraCaptureSession? = null
@@ -251,31 +251,31 @@ class MainActivity : AppCompatActivity() {
     private lateinit var previewSize: Size
     private lateinit var jpegSize: Size
 
-    // 🆕 Still capture sink
+    // 🆕 Приемник для фото
     private lateinit var imageReader: ImageReader
 
-    // Concurrency
+    // Параллелизм
     private val cameraOpenCloseLock = Semaphore(1)
 
-    // 🆕 Capture state machine
+    // 🆕 Конечный автомат захвата
     private enum class CaptureState {
-        IDLE,                 // Preview running normally
-        WAITING_AE_PRECAPTURE, // AE precapture trigger fired, waiting for converge
-        WAITING_AF_LOCK,      // (optional) used if we add AF trigger too
-        WAITING_STILL_CAPTURE,// Still capture submitted, waiting for ImageReader
-        PICTURE_SAVED         // Photo saved, about to return to IDLE
+        IDLE,                 // Предпросмотр работает обычно
+        WAITING_AE_PRECAPTURE, // Триггер AE precapture запущен, ждем схождения
+        WAITING_AF_LOCK,      // (опционально) используется при добавлении триггера AF
+        WAITING_STILL_CAPTURE,// Запрос на фото отправлен, ждем ImageReader
+        PICTURE_SAVED         // Фото сохранено, возврат в IDLE
     }
     private var captureState: CaptureState = CaptureState.IDLE
     private val precaptureTimeoutHandler: Handler by lazy { Handler(mainLooper) }
     private val precaptureTimeoutRunnable = Runnable {
         if (captureState == CaptureState.WAITING_AE_PRECAPTURE) {
-            Log.w(TAG, "⏰ Precapture AE timeout — proceeding with still anyway")
+            Log.w(TAG, "⏰ Таймаут Precapture AE — делаем снимок как есть")
             captureStillPicture()
         }
     }
 
     // -------------------------------------------------------------------------
-    // Lifecycle + UI hookup
+    // Жизненный цикл + интерфейс
     // -------------------------------------------------------------------------
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -284,7 +284,7 @@ class MainActivity : AppCompatActivity() {
         textureView = findViewById(R.id.textureView)
         statusTextView = findViewById(R.id.statusTextView)
         shutterButton = findViewById(R.id.shutterButton)
-        statusTextView.text = "Initializing..."
+        statusTextView.text = "Инициализация..."
 
         shutterButton.setOnClickListener { takePicture() }
 
@@ -322,7 +322,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     // -------------------------------------------------------------------------
-    // Chapter 6 condensed: camera discovery
+    // Глава 6 (кратко): обнаружение
     // -------------------------------------------------------------------------
     data class CamInfo(val id: String, val facing: Int?, val hw: Int?, val chars: CameraCharacteristics)
 
@@ -357,7 +357,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     // -------------------------------------------------------------------------
-    // Chapter 7 condensed: openCamera
+    // Глава 7 (кратко): openCamera
     // -------------------------------------------------------------------------
     private val deviceCallback = object : CameraDevice.StateCallback() {
         override fun onOpened(cam: CameraDevice) {
@@ -372,42 +372,41 @@ class MainActivity : AppCompatActivity() {
         override fun onError(cam: CameraDevice, err: Int) {
             cameraOpenCloseLock.release()
             cameraDevice?.close(); cameraDevice = null
-            Toast.makeText(this@MainActivity, "Camera error $err", Toast.LENGTH_LONG).show()
+            Toast.makeText(this@MainActivity, "Ошибка камеры $err", Toast.LENGTH_LONG).show()
         }
     }
 
     // -------------------------------------------------------------------------
-    // Session creation (now with 2 surfaces: preview + jpeg)
+    // Создание сеанса (теперь с 2 поверхностями: предпросмотр + jpeg)
     // -------------------------------------------------------------------------
     private fun openCameraAndStartSession(vw: Int, vh: Int) {
         val camId = selectedCameraId ?: return
         if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) return
         if (!cameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
-            Toast.makeText(this, "Camera lock timeout", Toast.LENGTH_SHORT).show(); return
+            Toast.makeText(this, "Таймаут блокировки камеры", Toast.LENGTH_SHORT).show(); return
         }
         val chars = cameraManager.getCameraCharacteristics(camId)
 
-        // Preview size
         previewSize = choosePreviewSize(chars, vw, vh)
-        // 🆕 Still JPEG size (MAXIMUM available for best quality)
+        // 🆕 Максимальный размер JPEG для лучшего качества
         jpegSize = chooseMaxJpegSize(chars)
 
-        // JPEG orientation tag = sensor orientation rotated by device rotation
+        // Тег ориентации JPEG = ориентация сенсора с учетом поворота устройства
         jpegOrientation = computeJpegOrientation()
 
-        // 🆕 Create the ImageReader: width=jpegW, height=jpegH, format=JPEG, 2 buffers
+        // 🆕 Создание ImageReader: ширина=jpegW, высота=jpegH, формат=JPEG, 2 буфера
         imageReader = ImageReader.newInstance(
             jpegSize.width,
             jpegSize.height,
             ImageFormat.JPEG,
             2
         )
-        // 🆕 Hook the JPEG frame available listener
+        // 🆕 Подключение слушателя доступности кадра JPEG
         imageReader.setOnImageAvailableListener(onJpegAvailableListener, backgroundHandler)
 
         configureTransform(vw, vh)
         textureView.surfaceTexture!!.setDefaultBufferSize(previewSize.width, previewSize.height)
-        statusTextView.text = "Session: preview ${previewSize} • JPEG ${jpegSize}"
+        statusTextView.text = "Сеанс: предпросмотр ${previewSize} • JPEG ${jpegSize}"
 
         try { cameraManager.openCamera(camId, deviceCallback, backgroundHandler) }
         catch (e: CameraAccessException) { cameraOpenCloseLock.release() }
@@ -429,17 +428,17 @@ class MainActivity : AppCompatActivity() {
                 previewRequest = previewRequestBuilder!!.build()
                 captureState = CaptureState.IDLE
                 shutterButton.isEnabled = true
-                statusTextView.text = "🎥 Preview — tap shutter to take photo"
+                statusTextView.text = "🎥 Предпросмотр — нажмите на затвор"
                 session.setRepeatingRequest(previewRequest!!, captureCallback, backgroundHandler)
             }
             override fun onConfigureFailed(session: CameraCaptureSession) {
-                Toast.makeText(this@MainActivity, "Session failed", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@MainActivity, "Сбой сеанса", Toast.LENGTH_LONG).show()
             }
         }, backgroundHandler)
     }
 
     // -------------------------------------------------------------------------
-    // 🆕 CaptureCallback + takePicture state machine
+    // 🆕 CaptureCallback + конечный автомат takePicture
     // -------------------------------------------------------------------------
     private val captureCallback = object : CameraCaptureSession.CaptureCallback() {
         override fun onCaptureStarted(
@@ -466,8 +465,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         /**
-         * Called for every partial and completed frame.
-         * When we are waiting for AE precapture to converge, check AE_STATE here.
+         * Вызывается для каждого частичного и завершенного кадра.
+         * Когда мы ждем схождения AE precapture, проверяем AE_STATE здесь.
          */
         private fun process(result: CaptureResult) {
             when (captureState) {
@@ -479,41 +478,39 @@ class MainActivity : AppCompatActivity() {
                         CaptureResult.CONTROL_AE_STATE_CONVERGED,
                         CaptureResult.CONTROL_AE_STATE_FLASH_REQUIRED,
                         CaptureResult.CONTROL_AE_STATE_LOCKED -> {
-                            // ✅ AE is ready — cancel timeout and fire still capture
+                            // ✅ AE готова — отменяем таймаут и делаем снимок
                             precaptureTimeoutHandler.removeCallbacks(precaptureTimeoutRunnable)
                             captureStillPicture()
                         }
-                        // else → CONTROL_AE_STATE_PRECAPTURE / SEARCHING / INACTIVE → keep waiting
+                        // иначе → CONTROL_AE_STATE_PRECAPTURE / SEARCHING / INACTIVE → продолжаем ждать
                     }
                 }
-                else -> { /* No state-tracking needed in IDLE or other states */ }
+                else -> { /* В IDLE или других состояниях отслеживание не нужно */ }
             }
         }
     }
 
-    /** Public shutter click entry point. */
+    /** Точка входа при нажатии на затвор. */
     fun takePicture() {
         if (cameraDevice == null || captureSession == null) return
         if (captureState != CaptureState.IDLE) {
-            Log.d(TAG, "⚠️ Capture in progress — ignoring duplicate shutter tap")
+            Log.d(TAG, "⚠️ Захват уже идет — игнорируем повторное нажатие")
             return
         }
         shutterButton.isEnabled = false
-        statusTextView.text = "📸 Locking exposure..."
+        statusTextView.text = "📸 Фиксация экспозиции..."
         lockFocusAndFirePrecaptureTrigger()
     }
 
     /**
-     * Step 1–3: Stop repeating preview, submit AE precapture trigger, start 3s timeout.
-     * The captureCallback.process() method watches AE_STATE and calls captureStillPicture()
-     * when converged.
+     * Шаги 1–3: Остановка предпросмотра, отправка триггера AE precapture, запуск таймаута 3с.
+     * Метод captureCallback.process() следит за AE_STATE и вызывает captureStillPicture().
      */
     private fun lockFocusAndFirePrecaptureTrigger() {
         val session = captureSession ?: return
         try {
             captureState = CaptureState.WAITING_AE_PRECAPTURE
 
-            // Build a request identical to preview but with AE precapture trigger = START
             previewRequestBuilder?.apply {
                 set(
                     CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER,
@@ -521,35 +518,35 @@ class MainActivity : AppCompatActivity() {
                 )
             }
 
-            // Pause continuous preview frames — use capture() to fire ONE trigger frame
+            // Приостанавливаем предпросмотр — используем capture() для ОДНОГО кадра с триггером
             session.stopRepeating()
             session.capture(previewRequestBuilder!!.build(), captureCallback, backgroundHandler)
 
-            // Safety-valve timeout (3 seconds): some devices never signal AE converged
+            // Страховочный таймаут (3 секунды)
             precaptureTimeoutHandler.postDelayed(precaptureTimeoutRunnable, 3000)
 
         } catch (e: CameraAccessException) {
-            Log.e(TAG, "Precapture trigger failed", e)
+            Log.e(TAG, "Сбой триггера precapture", e)
             unlockFocusAndResumePreview()
         }
     }
 
     /**
-     * Step 4: AE converged (or timed out). Fire the single TEMPLATE_STILL_CAPTURE request
-     * targeting the ImageReader surface → JPEG bytes arrive via onJpegAvailableListener.
+     * Шаг 4: AE сошлась (или вышел таймаут). Отправка запроса TEMPLATE_STILL_CAPTURE 
+     * на поверхность ImageReader → байты JPEG придут в onJpegAvailableListener.
      */
     private fun captureStillPicture() {
         val cam = cameraDevice ?: return
         val session = captureSession ?: return
         captureState = CaptureState.WAITING_STILL_CAPTURE
-        statusTextView.text = "📷 Capturing photo..."
+        statusTextView.text = "📷 Съемка фото..."
 
         try {
-            // 🆕 Use TEMPLATE_STILL_CAPTURE — highest quality ISP pipeline
+            // 🆕 Используем TEMPLATE_STILL_CAPTURE — конвейер ISP самого высокого качества
             val stillBuilder = cam.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
             stillBuilder.addTarget(imageReader.surface)
             stillBuilder.set(CaptureRequest.JPEG_ORIENTATION, jpegOrientation)
-            stillBuilder.set(CaptureRequest.JPEG_QUALITY, 95.toByte()) // 1–100 quality
+            stillBuilder.set(CaptureRequest.JPEG_QUALITY, 95.toByte()) // качество 1–100
 
             val stillCallback = object : CameraCaptureSession.CaptureCallback() {
                 override fun onCaptureCompleted(
@@ -557,8 +554,7 @@ class MainActivity : AppCompatActivity() {
                     req: CaptureRequest,
                     res: TotalCaptureResult
                 ) {
-                    Log.d(TAG, "📨 Still capture metadata delivered")
-                    // Note: the actual JPEG bytes arrive via onJpegAvailableListener, not here.
+                    Log.d(TAG, "📨 Метаданные снимка доставлены")
                 }
             }
 
@@ -566,21 +562,21 @@ class MainActivity : AppCompatActivity() {
             session.capture(stillBuilder.build(), stillCallback, backgroundHandler)
 
         } catch (e: CameraAccessException) {
-            Log.e(TAG, "Still capture failed", e)
+            Log.e(TAG, "Сбой захвата снимка", e)
             unlockFocusAndResumePreview()
         }
     }
 
     /**
-     * Step 5: JPEG bytes available in ImageReader. Acquire latest Image, write its bytes
-     * to MediaStore (or legacy File), CLOSE THE IMAGE, then resume preview.
+     * Шаг 5: байты JPEG доступны в ImageReader. Получаем объект Image, пишем байты 
+     * в MediaStore (или файл), ЗАКРЫВАЕМ IMAGE, затем возобновляем предпросмотр.
      */
     private val onJpegAvailableListener = ImageReader.OnImageAvailableListener { reader ->
         var image: Image? = null
         try {
             image = reader.acquireLatestImage()
             if (image == null) {
-                Log.w(TAG, "acquireLatestImage returned null — buffer dropped")
+                Log.w(TAG, "acquireLatestImage вернул null")
                 return@OnImageAvailableListener
             }
             val buffer = image.planes[0].buffer
@@ -590,37 +586,31 @@ class MainActivity : AppCompatActivity() {
             val savedUri = savePhotoToStorage(bytes)
             captureState = CaptureState.PICTURE_SAVED
 
-            // Switch to main thread for UI updates / toasts
             runOnUiThread {
                 shutterButton.isEnabled = true
                 if (savedUri != null) {
-                    statusTextView.text = "✅ Saved! Uri=$savedUri"
+                    statusTextView.text = "✅ Сохранено! Uri=$savedUri"
                     Toast.makeText(
                         this@MainActivity,
-                        "Photo saved: $savedUri",
+                        "Фото сохранено: $savedUri",
                         Toast.LENGTH_LONG
                     ).show()
                 } else {
-                    statusTextView.text = "❌ Save failed"
-                    Toast.makeText(
-                        this@MainActivity,
-                        "Failed to save photo — check Logcat",
-                        Toast.LENGTH_LONG
-                    ).show()
+                    statusTextView.text = "❌ Ошибка сохранения"
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "onJpegAvailable error", e)
+            Log.e(TAG, "Ошибка в onJpegAvailable", e)
         } finally {
-            image?.close() // ✅ ALWAYS CLOSE THE IMAGE — no exceptions!
+            image?.close() // ✅ ВСЕГДА ЗАКРЫВАЙТЕ IMAGE!
         }
 
-        // Step 6: Resume preview regardless of save success/failure
+        // Шаг 6: Возобновляем предпросмотр в любом случае
         runOnUiThread { unlockFocusAndResumePreview() }
     }
 
     /**
-     * Step 6: Cancel AE precapture trigger, clear focus locks, restart repeating preview.
+     * Шаг 6: Отмена триггера AE precapture, сброс блокировок, запуск предпросмотра.
      */
     private fun unlockFocusAndResumePreview() {
         val session = captureSession ?: return
@@ -643,15 +633,15 @@ class MainActivity : AppCompatActivity() {
 
             if (statusTextView.text.startsWith("📸") ||
                 statusTextView.text.startsWith("📷")) {
-                statusTextView.text = "🎥 Preview — tap shutter to take photo"
+                statusTextView.text = "🎥 Предпросмотр — нажмите на затвор"
             }
         } catch (e: CameraAccessException) {
-            Log.e(TAG, "Failed to resume preview after still capture", e)
+            Log.e(TAG, "Не удалось возобновить предпросмотр", e)
         }
     }
 
     // -------------------------------------------------------------------------
-    // 🆕 savePhotoToStorage: MediaStore (API 29+) + legacy File (API 28+)
+    // 🆕 savePhotoToStorage: MediaStore (API 29+) + прямой файл (API 28-)
     // -------------------------------------------------------------------------
     private fun savePhotoToStorage(jpegBytes: ByteArray): android.net.Uri? {
         val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
@@ -659,37 +649,37 @@ class MainActivity : AppCompatActivity() {
         val relativeDir = "${Environment.DIRECTORY_PICTURES}/Camera2Tutorial"
 
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            // ✅ Scoped Storage via MediaStore (no WRITE_EXTERNAL_STORAGE permission needed!)
+            // ✅ Scoped Storage через MediaStore
             val values = ContentValues().apply {
                 put(MediaStore.Images.Media.DISPLAY_NAME, "$displayName.jpg")
                 put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
                 put(MediaStore.Images.Media.RELATIVE_PATH, relativeDir)
-                put(MediaStore.Images.Media.IS_PENDING, 1) // Mark as pending while writing
+                put(MediaStore.Images.Media.IS_PENDING, 1) // Скрываем файл на время записи
             }
             val resolver = contentResolver
             val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
                 ?: return null
             try {
                 resolver.openOutputStream(uri)?.use { os -> os.write(jpegBytes) }
-                // Clear the PENDING flag so gallery apps can see it now
+                // Снимаем флаг PENDING, чтобы фото появилось в галерее
                 values.clear()
                 values.put(MediaStore.Images.Media.IS_PENDING, 0)
                 resolver.update(uri, values, null, null)
-                Log.d(TAG, "✅ MediaStore saved: $uri")
+                Log.d(TAG, "✅ MediaStore сохранил: $uri")
                 uri
             } catch (e: Exception) {
-                Log.e(TAG, "MediaStore write failed", e)
-                resolver.delete(uri, null, null) // Clean up half-written pending file
+                Log.e(TAG, "Ошибка записи MediaStore", e)
+                resolver.delete(uri, null, null)
                 null
             }
         } else {
-            // 🕰️ Legacy path: direct file write to public Pictures directory
+            // 🕰️ Устаревший путь: прямая запись в публичную папку Pictures
             val dir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "Camera2Tutorial")
             if (!dir.exists()) dir.mkdirs()
             val file = File(dir, "$displayName.jpg")
             try {
                 FileOutputStream(file).use { os -> os.write(jpegBytes) }
-                // Index the file so gallery apps discover it immediately
+                // Индексируем файл, чтобы он сразу появился в галереях
                 val values = ContentValues().apply {
                     put(MediaStore.Images.Media.DATA, file.absolutePath)
                     put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
@@ -698,14 +688,14 @@ class MainActivity : AppCompatActivity() {
                 contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
                 android.net.Uri.fromFile(file)
             } catch (e: Exception) {
-                Log.e(TAG, "Legacy file write failed", e)
+                Log.e(TAG, "Ошибка записи файла", e)
                 null
             }
         }
     }
 
     // -------------------------------------------------------------------------
-    // Sizing + orientation helpers
+    // Помощники по размерам и ориентации
     // -------------------------------------------------------------------------
     private fun choosePreviewSize(chars: CameraCharacteristics, vw: Int, vh: Int): Size {
         val map = chars[CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP]!!
@@ -722,8 +712,7 @@ class MainActivity : AppCompatActivity() {
         val map = chars[CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP]!!
         val choices = map.getOutputSizes(ImageFormat.JPEG).toList()
         val max = choices.maxByOrNull { it.width * it.height }!!
-        Log.d(TAG, "Max JPEG size selected: ${max.width}×${max.height} " +
-            "(from ${choices.size} sizes)")
+        Log.d(TAG, "Выбран макс. размер JPEG: ${max.width}×${max.height}")
         return max
     }
 
@@ -768,7 +757,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     // -------------------------------------------------------------------------
-    // Teardown
+    // Завершение работы
     // -------------------------------------------------------------------------
     private fun closeEverything() {
         try {
@@ -781,7 +770,7 @@ class MainActivity : AppCompatActivity() {
             captureSession = null
             cameraDevice?.close(); cameraDevice = null
             if (this::imageReader.isInitialized) {
-                imageReader.close() // Important — frees the JPEG BufferQueue memory
+                imageReader.close() // Важно — освобождает память JPEG BufferQueue
             }
         } catch (_: InterruptedException) {
         } finally {
@@ -790,13 +779,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     // -------------------------------------------------------------------------
-    // Boilerplate permissions
+    // Разрешения
     // -------------------------------------------------------------------------
     companion object {
         private const val TAG = "Camera2Tutorial"
         private const val REQUEST_CODE_PERMISSIONS = 10
         private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
-        // WRITE_EXTERNAL_STORAGE is only needed pre-Q for legacy file save path
         private val WRITE_EXTERNAL_IF_NEEDED =
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q)
                 arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE)
@@ -817,7 +805,7 @@ class MainActivity : AppCompatActivity() {
             if (allPermissionsGranted()) {
                 initializeCameraManager()
             } else {
-                Toast.makeText(this, "Permissions required", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "Нужны разрешения", Toast.LENGTH_LONG).show()
                 finish()
             }
         }
@@ -825,79 +813,73 @@ class MainActivity : AppCompatActivity() {
 }
 ```
 
-### Reading the Capture State Machine
+### Разбор конечного автомата захвата
 
-Follow the `takePicture()` → `lockFocusAndFirePrecaptureTrigger()` → (AE converged or timeout) → `captureStillPicture()` → `onJpegAvailableListener` → `unlockFocusAndResumePreview()` call chain. Each step's transition is gated by `captureState`. Duplicate taps are ignored (the `if (captureState != IDLE) return` check at the top of `takePicture()`).
+Проследите цепочку вызовов: `takePicture()` → `lockFocusAndFirePrecaptureTrigger()` → (схождение AE или таймаут) → `captureStillPicture()` → `onJpegAvailableListener` → `unlockFocusAndResumePreview()`. Переходы на каждом шаге ограничиваются состоянием `captureState`. Повторные нажатия игнорируются (проверка `if (captureState != IDLE) return` в начале `takePicture()`).
 
-Key specific details:
-- **`JPEG_ORIENTATION`**: Set in the still capture request. Gallery apps read the EXIF orientation tag from the JPEG header to rotate the displayed photo. Without this, landscape photos appear sideways even though the pixel data is correct.
-- **`JPEG_QUALITY = 95`**: Good balance between quality and file size. 100 is lossless in theory but produces 2–3× larger files with minimal visual gain; 80 produces visible compression artifacts in detailed textures.
-- **`IS_PENDING=1 → 0` pattern (API 29+)**: Tells MediaStore "don't let photo editors, gallery apps, or MTP hosts see this file until I'm done writing it." Prevents half-written corrupt files from appearing in Google Photos while the `OutputStream` write is in progress. Always clear the flag.
+Важные детали:
+- **`JPEG_ORIENTATION`**: устанавливается в запросе на захват фото. Галереи читают тег ориентации EXIF из заголовка JPEG, чтобы повернуть отображаемую фотографию. Без этого пейзажные фото будут отображаться боком, хотя данные пикселей верны.
+- **`JPEG_QUALITY = 95`**: хороший баланс между качеством и размером файла. Значение 100 теоретически без потерь, но дает файлы в 2–3 раза больше при минимальном визуальном выигрыше; значение 80 дает видимые артефакты сжатия.
+- **Паттерн `IS_PENDING=1 → 0` (API 29+)**: сообщает MediaStore: «не позволяйте фоторедакторам и галереям видеть этот файл, пока я не закончу запись». Предотвращает появление битых файлов в Google Photos во время записи.
 
-## Verification: Running the Photo Capture Flow
+## Проверка: запуск процесса съемки
 
-Install and launch the Chapter 9 app on a physical Android device (emulator cameras have weird AE state machines and are not representative). Verify each of the following checkpoint behaviors:
+Установите и запустите приложение главы 9 на физическом устройстве. Проверьте следующие контрольные точки:
 
-1. **Preview runs as before**. Status shows *🎥 Preview — tap shutter to take photo*. Shutter FAB is visible and clickable.
-2. **Tap shutter**. Status changes to *📸 Locking exposure...* → *📷 Capturing photo...* → *✅ Saved! Uri=content://media/external/images/media/12345*.
-3. **Preview freezes briefly** (~0.3–1.0 seconds) while AE converges and the still frame is processed. Then preview starts again. This brief freeze is correct and expected behavior.
-4. **Open the device's Gallery / Photos app**. Navigate to the **Pictures → Camera2Tutorial** album. You should see a thumbnail of the photo you took. Open it — it should be full resolution (e.g., 8160×6120 for a 50 MP sensor), correctly oriented, and properly exposed.
-5. **Open the photo in the Android Camera Parameters app's EXIF viewer** ([Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)). Check that the EXIF orientation tag matches the device's rotation at capture time, JPEG quality = 95, and the resolution matches `jpegSize` logged at session startup.
-6. **Rapidly tap shutter 10+ times**. The `captureState != IDLE` guard should swallow duplicate taps during the capture cycle; at the end you should have exactly as many saved photos as completed capture cycles.
+1. **Предпросмотр работает как раньше**. Статус показывает *🎥 Предпросмотр — нажмите на затвор*. Кнопка затвора видна и активна.
+2. **Нажатие на затвор**. Статус меняется на *📸 Фиксация экспозиции...* → *📷 Съемка фото...* → *✅ Сохранено! Uri=...*.
+3. **Предпросмотр ненадолго замирает** (~0,3–1,0 секунды), пока сходится AE и обрабатывается кадр фото. Затем предпросмотр возобновляется. Это нормальное поведение.
+4. **Откройте приложение Галерея / Фото**. Перейдите в альбом **Pictures → Camera2Tutorial**. Вы должны увидеть миниатюру сделанного фото. Откройте его — оно должно быть в полном разрешении (например, 8160×6120 для сенсора 50 Мп), правильно ориентировано и экспонировано.
+5. **Откройте фото в EXIF-вьюере приложения Android Camera Parameters**. Проверьте, что тег ориентации соответствует повороту устройства, качество JPEG = 95, а разрешение совпадает с `jpegSize`, зафиксированным при запуске сеанса.
+6. **Быстро нажмите на затвор 10+ раз**. Проверка `captureState != IDLE` должна отсечь повторные нажатия во время цикла захвата; в итоге у вас должно быть ровно столько сохраненных фото, сколько полных циклов захвата было завершено.
 
-### Logcat Output Reference
+### Пример вывода в Logcat
 
-A successful capture produces Logcat entries roughly in this order:
+Успешный захват порождает записи в Logcat примерно в таком порядке:
 ```
 D/Camera2Tutorial: Max JPEG size selected: 8160×6120 (from 9 sizes)
-D/Camera2Tutorial: 📸 Locking exposure...
-D/Camera2Tutorial: AE_STATE = CONTROL_AE_STATE_SEARCHING
+D/Camera2Tutorial: 📸 Фиксация экспозиции...
 D/Camera2Tutorial: AE_STATE = CONTROL_AE_STATE_SEARCHING
 D/Camera2Tutorial: AE_STATE = CONTROL_AE_STATE_CONVERGED
-D/Camera2Tutorial: 📷 Capturing photo...
-D/Camera2Tutorial: 📨 Still capture metadata delivered
-D/Camera2Tutorial: ✅ MediaStore saved: content://media/external/images/media/9876
-D/Camera2Tutorial: 🎥 Preview — tap shutter to take photo
+D/Camera2Tutorial: 📷 Съемка фото...
+D/Camera2Tutorial: 📨 Метаданные снимка доставлены
+D/Camera2Tutorial: ✅ MediaStore сохранил: content://media/external/images/media/9876
+D/Camera2Tutorial: 🎥 Предпросмотр — нажмите на затвор
 ```
 
-## Troubleshooting Capture Failures
+## Решение проблем с захватом
 
-### captureStillPicture() never fires (stuck on Locking exposure...)
+### captureStillPicture() никогда не вызывается (зависает на Фиксации экспозиции...)
 
-The 3-second timeout should eventually fire and proceed — if even the timeout doesn't fire, the `precaptureTimeoutRunnable` was never posted. Double-check that `lockFocusAndFirePrecaptureTrigger()` calls `precaptureTimeoutHandler.postDelayed(precaptureTimeoutRunnable, 3000)`. If timeout fires every time but `AE_STATE` never appears converged, you may be on a LEGACY-level camera with broken AE state reporting. In that case, add a check: if the hardware level is LEGACY, skip the precapture trigger entirely and jump straight from `takePicture()` to `captureStillPicture()`.
+Таймаут 3 секунды должен сработать и продолжить процесс — если даже таймаут не срабатывает, значит `precaptureTimeoutRunnable` не был запланирован. Проверьте, вызывает ли `lockFocusAndFirePrecaptureTrigger()` метод `precaptureTimeoutHandler.postDelayed(...)`. Если таймаут срабатывает каждый раз, но `AE_STATE` никогда не сходится, возможно, вы на камере уровня LEGACY с некорректными отчетами о состоянии AE. В этом случае добавьте проверку: если уровень аппаратной поддержки — LEGACY, пропустите триггер precapture и переходите сразу от `takePicture()` к `captureStillPicture()`.
 
-### Capture works once, then all subsequent captures never produce onImageAvailable
+### Захват работает один раз, а последующие попытки не вызывают onImageAvailable
 
-You leaked the `Image` by forgetting to call `image.close()`. The `maxImages = 2` pool is exhausted, so no new frames can be delivered until the app process is killed. Verify the `finally { image?.close() }` block in `onJpegAvailableListener`. As a debugging aid, log `imageReader.acquireLatestImage()` returning null — that's the telltale sign of a buffer leak.
+Вы допустили утечку `Image`, забыв вызвать `image.close()`. Пул `maxImages = 2` исчерпан, и новые кадры не могут быть доставлены до перезапуска процесса приложения. Проверьте блок `finally { image?.close() }` в `onJpegAvailableListener`. В качестве помощи при отладке логируйте возврат `null` из `imageReader.acquireLatestImage()`.
 
-### Photo appears sideways in gallery
+### Фото отображается боком в галерее
 
-Your `computeJpegOrientation()` return value is wrong. Test it in all 4 device orientations (portrait, landscape left, reverse landscape, upside-down portrait) on both the back and front cameras. The front camera needs the orientation flipped (mirrored) because `LENS_FACING_FRONT` sensors are mirrored by convention.
+Возвращаемое значение `computeJpegOrientation()` неверно. Протестируйте его во всех 4 ориентациях устройства (портрет, ландшафт влево, обратный ландшафт, перевернутый портрет) на обеих камерах. Для фронтальной камеры требуется зеркальное отображение ориентации, так как сенсоры `LENS_FACING_FRONT` по традиции зеркальны.
 
-### MediaStore throws SecurityException on API 29+
+## Резюме
 
-You forgot to remove `WRITE_EXTERNAL_STORAGE` from the API 29+ permission list AND you're on a device with `requestLegacyExternalStorage=false`. On API 29+, `WRITE_EXTERNAL_STORAGE` grants **nothing** — only MediaStore Uris work. The `WRITE_EXTERNAL_IF_NEEDED` helper correctly omits the permission on Q+.
+Вторая часть завершается на высокой ноте: ваше учебное приложение теперь является **полноценным приложением для фотосъемки**. Вы реализовали:
 
-## Summary
+1. **ImageReader** как приемник JPEG: правильные ширина/высота (макс. размер), `ImageFormat.JPEG`, количество буферов `maxImages = 2`, регистрация `OnImageAvailableListener` и незыблемое правило **всегда закрывать Image в блоке finally**, чтобы предотвратить вечную нехватку буферов.
+2. **Конечный автомат из 6 состояний**: `IDLE → WAITING_AE_PRECAPTURE → (схождение/таймаут) → WAITING_STILL_CAPTURE → PICTURE_SAVED → возврат в IDLE`, защищенный от повторных нажатий и с 3-секундным страховочным таймаутом.
+3. **Поток триггера Precapture AE**: `stopRepeating → session.capture(CONTROL_AE_PRECAPTURE_TRIGGER_START) → обработка AE_STATE до CONVERGED/FLASH_REQUIRED/LOCKED → запуск захвата фото`.
+4. **TEMPLATE_STILL_CAPTURE + настройки качества**: установка тега ориентации EXIF на основе ориентации сенсора и поворота устройства (с корректным зеркалированием фронтальной камеры), `JPEG_QUALITY = 95`.
+5. **Безопасное хранение фото**: паттерн `MediaStore` + `RELATIVE_PATH` + `IS_PENDING=1→0` для Scoped Storage на Android 10+, с откатом к прямому `FileOutputStream` на Android 9 и ниже, плюс немедленная индексация MediaStore.
 
-Part II ends on a high note: your tutorial app is now a **fully functional camera application**. You implemented:
+Этот код является базой для любого серьезного приложения фотосъемки на Camera2. Приложение Android Camera Parameters ([GitHub](https://github.com/zoozooll/AndroidCameraParameters), [Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)) расширяет этот автомат еще на 10+ состояний для триггера AF, блокировки AWB, серийной съемки, вывода RAW (DNG) наряду с JPEG и ручного переопределения ISO/выдержки — но всё это является инкрементальными дополнениями к той же схеме `ImageReader` + `CaptureCallback`, которую вы теперь полностью понимаете.
 
-1. **ImageReader** as the CPU-accessible JPEG sink: correct width/height (max JPEG size), `ImageFormat.JPEG`, `maxImages = 2` buffer count, `OnImageAvailableListener` registration, and the inviolable rule to **always close the Image in a finally block** to prevent permanent buffer starvation.
-2. **The 6-state capture state machine**: `IDLE → WAITING_AE_PRECAPTURE → (converged/timeout) → WAITING_STILL_CAPTURE → PICTURE_SAVED → back to IDLE`, guarded by duplicate-tap suppression and a 3-second safety-valve timeout for devices with broken AE state reporting.
-3. **Precapture AE trigger flow**: `stopRepeating → session.capture(CONTROL_AE_PRECAPTURE_TRIGGER_START) → process AE_STATE in CaptureCallback until CONVERGED/FLASH_REQUIRED/LOCKED → fire still capture`.
-4. **TEMPLATE_STILL_CAPTURE + quality settings**: `JPEG_ORIENTATION` EXIF tag set based on sensor orientation + device rotation (front camera mirrored correctly), `JPEG_QUALITY = 95`.
-5. **Future-proof photo storage**: `MediaStore.Images.Media.EXTERNAL_CONTENT_URI` + `RELATIVE_PATH` + `IS_PENDING=1→0` pattern for Scoped Storage on Android 10+, with a fallback legacy `FileOutputStream` path to `Environment.DIRECTORY_PICTURES` on Android 9 and below, plus immediate MediaStore indexing so gallery apps see the new file right away.
-6. **Symmetric teardown**: `closeEverything()` stops repeating, aborts captures, closes session, closes device, closes `ImageReader` (critical to free 2× 20 MB JPEG buffers), all inside the `Semaphore(1)` critical section.
+## Что дальше (Взгляд в Часть III)
 
-The code in this chapter forms the baseline for any serious Camera2 still photography app. The Android Camera Parameters app ([GitHub](https://github.com/zoozooll/AndroidCameraParameters), [Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)) extends this state machine with 10+ additional states for AF trigger, AWB lock, multi-frame burst capture, RAW (DNG) output alongside JPEG, and manual per-frame ISO/exposure-time override — but every one of those features is an incremental addition to the same `ImageReader` + `CaptureCallback` + state machine pattern you now fully understand.
+На этом завершается **Часть II: Ваше первое приложение на Camera2**. В пяти главах вы построили качественный скелет приложения. Если бы вы остановились здесь и выпустили этот код, у вас уже было бы приложение камеры лучше многих в Play Store.
 
-## What's Next (Looking Ahead to Part III)
+Но истинная мощь API Camera2 скрыта в том, что будет дальше. **В Части III (главы 10–12)** мы глубоко погрузимся во внутреннее устройство API:
+- **Глава 10: Энциклопедия CameraCharacteristics** — все семейства ключей (SENSOR, LENS, SCALER, STATISTICS, CONTROL, INFO, REQUEST, SYNC), их значение и проектирование флагов функций на их основе.
+- **Глава 11: Конвейер Camera2 и архитектура HAL3** — узлы P1, P2 и P3, переобработка, дуальность ключей `CaptureRequest`/`CaptureResult`, фреймворк синхронизации и что на самом деле настраивают шаблоны `TEMPLATE_*`.
+- **Глава 12: Типы захвата, серии и глубокое изучение 3A** — повторяющиеся против одиночных и серий, очереди переобработки ZSL, переходы состояний AF/AE/AWB, ручное управление (`LENS_FOCUS_DISTANCE`, `SENSOR_SENSITIVITY`/`SENSOR_EXPOSURE_TIME`) и таксономия `CONTROL_CAPTURE_INTENT`.
 
-This concludes **Part II: Your First Camera2 App**. In five chapters, you built a production-quality skeleton application with permission handling, threading, camera enumeration, open/close lifecycle, preview rendering, and JPEG still capture. If you stopped here and shipped this code, you'd already have a better camera app than many on the Play Store.
-
-But the Camera2 API's true power lies in what comes next. **Part III (Chapters 10–12)** dives deep into the internals you'll need for a professional camera application:
-- **Chapter 10: The CameraCharacteristics Encyclopedia** — every key family (SENSOR, LENS, SCALER, STATISTICS, CONTROL, INFO, REQUEST, SYNC), what they mean, and how to design feature flags around them.
-- **Chapter 11: The Camera2 Pipeline & HAL3 Architecture** — P1 vs P2 vs P3 nodes, reprocessing, the `CaptureRequest`/`CaptureResult` key duality, sync framework, and what `TEMPLATE_*` actually configures under the hood.
-- **Chapter 12: Capture Types, Bursts, and 3A in Depth** — repeating vs single-shot vs burst, ZSL reprocessing queues, AF/AE/AWB state machine transitions, manual controls (`LENS_FOCUS_DISTANCE`, `SENSOR_SENSITIVITY`/`SENSOR_EXPOSURE_TIME`), and the `CONTROL_CAPTURE_INTENT` taxonomy.
-
-Until then, go take some photos with your Chapter 9 app. Explore a scene with mixed lighting (bright window + dark interior) and see how the precapture AE trigger adjusts exposure relative to preview. Compare the file size at `JPEG_QUALITY = 50` vs `95` vs `100`. Swap `chooseMaxJpegSize` for a 4K size and notice the speed difference. The best way to internalize this material is to see the real-world consequences of each parameter. Congratulations on building your first Camera2 camera — you've earned it.
+А пока — идите и сделайте несколько снимков вашим приложением! Изучите сцены со сложным освещением и посмотрите, как триггер precapture AE подстраивает экспозицию. Поздравляем с созданием вашей первой камеры на Camera2 — вы это заслужили.

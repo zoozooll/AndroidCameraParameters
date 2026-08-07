@@ -1,34 +1,34 @@
 ---
 sidebar_position: 5
-title: "Chapter 5: Creating Your First Camera2 Project"
-description: Set up a complete Android Camera2 project from scratch. Learn about camera permissions, CameraManager initialization, background threading with HandlerThread, and the project configuration needed for TextureView hardware acceleration.
-keywords: [Camera2 project setup, Android camera permissions, HandlerThread, CameraManager, TextureView hardwareAccelerated]
+title: "Глава 5: Создание вашего первого проекта на Camera2"
+description: Настройте полноценный проект Android Camera2 с нуля. Узнайте о разрешениях камеры, инициализации CameraManager, фоновой многопоточности с HandlerThread и конфигурации проекта, необходимой для аппаратного ускорения TextureView.
+keywords: [настройка проекта Camera2, разрешения камеры Android, HandlerThread, CameraManager, TextureView hardwareAccelerated]
 ---
 
-Welcome to the hands-on portion of the Camera2 tutorial series. In the previous chapters, you learned about smartphone camera hardware and the theoretical foundations of the Camera2 API. Now it's time to roll up your sleeves and write real code. By the end of this chapter, you'll have a working Android project that successfully initializes the Camera2 API and accesses the CameraManager service — the critical first step before you can enumerate cameras, open devices, or show previews.
+Добро пожаловать в практическую часть серии уроков по Camera2. В предыдущих главах вы узнали об аппаратном обеспечении камер смартфонов и теоретических основах API Camera2. Теперь пришло время засучить рукава и написать настоящий код. К концу этой главы у вас будет рабочий проект Android, который успешно инициализирует API Camera2 и обращается к сервису CameraManager — это критически важный первый шаг перед тем, как вы сможете перечислять камеры, открывать устройства или показывать предпросмотр.
 
-If you want to see a production example of everything we'll build in this series, check out the **Android Camera Parameters** app on [GitHub](https://github.com/zoozooll/AndroidCameraParameters) and [Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams). It demonstrates advanced Camera2 usage including full CameraCharacteristics enumeration, manual capture controls, and multi-camera support.
+Если вы хотите увидеть промышленный пример всего того, что мы построим в этой серии, изучите приложение **Android Camera Parameters** на [GitHub](https://github.com/zoozooll/AndroidCameraParameters) и в [Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams). Оно демонстрирует продвинутое использование Camera2, включая полное перечисление CameraCharacteristics, ручное управление захватом и поддержку нескольких камер.
 
-## Why Start with Project Setup?
+## Зачем начинать с настройки проекта?
 
-Before you can write a single line of Camera2 code, your application must be properly configured. Camera2 is a low-level, performance-sensitive API, and cutting corners on setup will lead to mysterious crashes, ANRs (Application Not Responding), or frames that never arrive. The three pillars of a correct Camera2 project setup are:
+Прежде чем вы сможете написать хоть одну строку кода Camera2, ваше приложение должно быть правильно настроено. Camera2 — это низкоуровневое, чувствительное к производительности API, и экономия на настройке приведет к таинственным вылетам, ошибкам ANR (приложение не отвечает) или кадрам, которые никогда не дойдут до адресата. Три столпа правильной настройки проекта на Camera2:
 
-1. **Permissions** — The Android framework restricts camera access at both install-time (manifest) and runtime (user consent).
-2. **Threading Architecture** — Camera2 callbacks must never block the main thread; we need a dedicated background thread.
-3. **View Configuration** — If you plan to use TextureView for preview (the recommended approach), hardware acceleration must be enabled.
+1. **Разрешения** — фреймворк Android ограничивает доступ к камере как на этапе установки (манифест), так и во время выполнения (согласие пользователя).
+2. **Архитектура потоков** — обратные вызовы Camera2 никогда не должны блокировать главный поток; нам нужен выделенный фоновый поток.
+3. **Конфигурация View** — если вы планируете использовать TextureView для предпросмотра (рекомендуемый подход), необходимо включить аппаратное ускорение.
 
-Let's tackle each one systematically.
+Давайте разберем каждый пункт систематически.
 
-## Step 1: Creating a New Android Studio Project
+## Шаг 1: Создание нового проекта в Android Studio
 
-Launch Android Studio and create a new project. For this tutorial series, we recommend:
+Запустите Android Studio и создайте новый проект. Для этой серии уроков мы рекомендуем:
 
-- **Template**: Empty Activity (the simplest starting point)
-- **Language**: Kotlin (the modern standard for Android development; all examples in this series are in Kotlin)
-- **Minimum SDK**: API 21 (Lollipop) — this is the first SDK level that supports Camera2 natively. If you need to support external USB cameras via OTG, target API 23 or higher. If you need scoped storage support for photo saving (Chapter 9), API 29+ is relevant, but we'll handle backward compatibility there.
-- **Build configuration language**: Kotlin DSL or Groovy — either works; our examples will be build-system agnostic.
+- **Шаблон (Template)**: Empty Activity (самый простой вариант для старта).
+- **Язык (Language)**: Kotlin (современный стандарт разработки под Android; все примеры в этой серии написаны на Kotlin).
+- **Минимальный SDK (Minimum SDK)**: API 21 (Lollipop) — это первый уровень SDK, нативно поддерживающий Camera2. Если вам нужна поддержка внешних USB-камер через OTG, выбирайте API 23 или выше. Если вам нужна поддержка Scoped Storage для сохранения фото (Глава 9), актуален API 29+, но мы разберем обратную совместимость позже.
+- **Язык конфигурации сборки**: Kotlin DSL или Groovy — подойдет любой; наши примеры не будут зависеть от системы сборки.
 
-Once the project is generated, open your module-level `build.gradle` (or `build.gradle.kts`) file. The default Empty Activity template includes most dependencies you need, but verify you have at minimum:
+После генерации проекта откройте файл `build.gradle` (или `build.gradle.kts`) вашего модуля. Шаблон Empty Activity по умолчанию включает большинство нужных зависимостей, но убедитесь, что у вас есть как минимум:
 
 ```kotlin
 dependencies {
@@ -36,30 +36,31 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.google.android.material:material:1.11.0")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
-    // Camera2 is part of the Android framework, so NO extra dependency is needed
-    // for the basic API. androidx.camera.camera2 is for CameraX interop only.
+    // Camera2 является частью фреймворка Android, поэтому НИКАКИХ дополнительных 
+    // зависимостей для базового API не требуется. 
+    // androidx.camera.camera2 нужна только для взаимодействия с CameraX.
 }
 ```
 
 :::tip
-You do **not** need to add any external Camera2 dependency. The entire `android.hardware.camera2` package is part of the Android framework. The Jetpack CameraX library is a separate higher-level abstraction built on top of Camera2; we are using the **native Camera2 API directly** in this tutorial.
+Вам **не нужно** добавлять внешние зависимости для Camera2. Весь пакет `android.hardware.camera2` является частью фреймворка Android. Библиотека Jetpack CameraX — это отдельная высокоуровневая абстракция над Camera2; в этом уроке мы используем **нативный API Camera2 напрямую**.
 :::
 
-## Step 2: Declaring Permissions in AndroidManifest.xml
+## Шаг 2: Объявление разрешений в AndroidManifest.xml
 
-Every camera application must declare the `CAMERA` permission in `AndroidManifest.xml`. This tells the Google Play Store that your app uses the camera hardware, and it enables the runtime permission dialog on Android 6.0 (API 23) and above.
+Каждое приложение для работы с камерой должно объявить разрешение `CAMERA` в `AndroidManifest.xml`. Это сообщает Google Play Store, что ваше приложение использует оборудование камеры, и позволяет отображать диалоговое окно запроса разрешения во время выполнения на Android 6.0 (API 23) и выше.
 
-Open `app/src/main/AndroidManifest.xml` and add the following elements **as children of the root `<manifest>` tag** (not inside `<application>`):
+Откройте `app/src/main/AndroidManifest.xml` и добавьте следующие элементы **как дочерние теги корня `<manifest>`** (не внутри `<application>`):
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- ✅ Camera permission declaration -->
+    <!-- ✅ Объявление разрешения на камеру -->
     <uses-permission android:name="android.permission.CAMERA" />
 
-    <!-- Optional feature declarations (used by Google Play filtering) -->
+    <!-- Опциональные объявления функций (используются для фильтрации в Google Play) -->
     <uses-feature
         android:name="android.hardware.camera"
         android:required="true" />
@@ -80,30 +81,30 @@ Open `app/src/main/AndroidManifest.xml` and add the following elements **as chil
 </manifest>
 ```
 
-Let's break down the important parts:
+Разберем важные части:
 
 ### `<uses-permission android:name="android.permission.CAMERA" />`
 
-This is the core permission. Without it, any call to the camera service will throw a `SecurityException`. On API 22 and below, users grant this at install time; on API 23+, you must also request it at runtime (covered next).
+Это основное разрешение. Без него любой вызов сервиса камеры выбросит `SecurityException`. На API 22 и ниже пользователи предоставляют его при установке; на API 23+ вы также должны запрашивать его во время выполнения (рассмотрим далее).
 
 ### `<uses-feature android:name="android.hardware.camera" android:required="true" />`
 
-This declaration tells Google Play to filter your app onto devices that have at least one camera. Set `android:required="false"` if your app can function without a camera (for example, a gallery app with optional capture). If you don't declare this at all, Google Play assumes camera is **not** required, which may install your app on devices without cameras.
+Это объявление сообщает Google Play о необходимости фильтрации вашего приложения для устройств, имеющих хотя бы одну камеру. Установите `android:required="false"`, если ваше приложение может работать без камеры (например, приложение-галерея с опциональной съемкой). Если вы вообще не объявите этот тег, Google Play предположит, что камера **не** обязательна, и приложение может быть установлено на устройства без камер.
 
-### `android:hardwareAccelerated="true"` on the `<activity>`
+### `android:hardwareAccelerated="true"` у `<activity>`
 
-This is **critical** for TextureView preview rendering. TextureView uses the GPU composition pipeline to display camera frames efficiently. Without hardware acceleration enabled at the Activity or Application level, TextureView will silently fail to render or display a black screen. The default in modern Android is `true` for the entire application, but it is good practice to declare it explicitly on any Activity that hosts a TextureView.
+Это **критически важно** для отрисовки предпросмотра в TextureView. TextureView использует конвейер композиции GPU для эффективного отображения кадров камеры. Без включенного аппаратного ускорения на уровне Activity или приложения TextureView не сможет отрисовать картинку (будет черный экран). В современной версии Android значение по умолчанию — `true` для всего приложения, но хорошей практикой считается явное объявление в любой Activity, содержащей TextureView.
 
-## Step 3: Runtime Permission Request
+## Шаг 3: Запрос разрешения во время выполнения
 
-On Android 6.0 (Marshmallow, API 23) and later, declaring the permission in the manifest is only half the story. You must also **explicitly ask the user for permission** at runtime, using the Activity Compat library. The standard pattern is:
+На Android 6.0 (Marshmallow, API 23) и более поздних версиях одного объявления в манифесте недостаточно. Вы должны **явно запросить разрешение у пользователя** во время работы приложения, используя библиотеку Activity Compat. Стандартный паттерн:
 
-1. Check if permission is already granted with `ContextCompat.checkSelfPermission`.
-2. If granted, proceed to camera initialization.
-3. If not granted, call `ActivityCompat.requestPermissions` to show the system dialog.
-4. Handle the result in `onRequestPermissionsResult`.
+1. Проверить, предоставлено ли уже разрешение через `ContextCompat.checkSelfPermission`.
+2. Если предоставлено — переходим к инициализации камеры.
+3. Если не предоставлено — вызываем `ActivityCompat.requestPermissions` для показа системного диалога.
+4. Обрабатываем результат в `onRequestPermissionsResult`.
 
-Here's the complete permission flow in `MainActivity.kt`:
+Вот полный цикл обработки разрешений в `MainActivity.kt`:
 
 ```kotlin
 package com.example.camera2tutorial
@@ -149,7 +150,7 @@ class MainActivity : AppCompatActivity() {
             } else {
                 Toast.makeText(
                     this,
-                    "Camera permission is required to use this app.",
+                    "Для работы приложения требуется разрешение на использование камеры.",
                     Toast.LENGTH_LONG
                 ).show()
                 finish()
@@ -158,10 +159,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initializeCamera() {
-        // TODO: We'll implement this method in the sections below.
-        // This is where CameraManager setup will happen.
-        // For now, just log success.
-        android.util.Log.d(TAG, "Permissions granted. Ready to initialize camera.")
+        // TODO: Мы реализуем этот метод в следующих разделах.
+        // Здесь будет происходить настройка CameraManager.
+        // Пока просто выведем лог.
+        android.util.Log.d(TAG, "Разрешения получены. Готовность к инициализации камеры.")
     }
 
     companion object {
@@ -172,37 +173,37 @@ class MainActivity : AppCompatActivity() {
 }
 ```
 
-### Why `allPermissionsGranted()` Uses an Array Pattern
+### Почему `allPermissionsGranted()` использует паттерн с массивом
 
-Even though we only need `CAMERA` right now, defining a `REQUIRED_PERMISSIONS` array makes it trivial to add additional permissions later (such as `WRITE_EXTERNAL_STORAGE` for legacy photo saving, or `RECORD_AUDIO` for video). The `all { ... }` function checks that **every** permission in the array is granted before proceeding.
+Даже если сейчас нам нужна только `CAMERA`, определение массива `REQUIRED_PERMISSIONS` позволяет легко добавить дополнительные разрешения позже (например, `WRITE_EXTERNAL_STORAGE` для сохранения фото на старых API или `RECORD_AUDIO` для видео). Функция `all { ... }` проверяет, что **каждое** разрешение в массиве предоставлено, прежде чем продолжить.
 
-## Step 4: The Background Thread (HandlerThread)
+## Шаг 4: Фоновый поток (HandlerThread)
 
-This is the single most commonly-missed detail in beginner Camera2 code, and it causes **random, hard-to-reproduce bugs**. Let's understand why Camera2 needs a background thread, then implement it correctly.
+Это самая часто упускаемая деталь в коде новичков на Camera2, и она вызывает **случайные, трудновоспроизводимые ошибки**. Давайте разберемся, зачем Camera2 нужен фоновый поток, и реализуем его правильно.
 
-### Why Camera2 MUST NOT Run on the Main Thread
+### Почему Camera2 НЕ ДОЛЖНА работать в главном потоке
 
-The Android main (UI) thread is responsible for:
-- Drawing the UI at 60-120 FPS
-- Handling user touch events
-- Dispatching lifecycle callbacks
-- Running all Activity/Fragment code by default
+Главный (UI) поток Android отвечает за:
+- Отрисовку интерфейса с частотой 60-120 кадров в секунду.
+- Обработку событий касания пользователя.
+- Рассылку обратных вызовов жизненного цикла.
+- Выполнение всего кода Activity/Fragment по умолчанию.
 
-The Camera2 API delivers several critical callbacks synchronously:
-- `CameraDevice.StateCallback` — when a camera opens, disconnects, or errors
-- `CameraCaptureSession.StateCallback` — when a capture session is configured
-- `CameraCaptureSession.CaptureCallback` — for every single frame (up to 60+ times per second!)
+API Camera2 доставляет несколько критически важных обратных вызовов синхронно:
+- `CameraDevice.StateCallback` — когда камера открывается, отключается или выдает ошибку.
+- `CameraCaptureSession.StateCallback` — когда сеанс захвата настроен.
+- `CameraCaptureSession.CaptureCallback` — для каждого кадра (до 60+ раз в секунду!).
 
-If these callbacks run on the main thread, two catastrophic things happen:
+Если эти обратные вызовы выполняются в главном потоке, случаются две катастрофические вещи:
 
-1. **Jank and dropped frames**: If processing a callback takes even 10ms, a 60FPS frame is skipped, and the user sees stutter.
-2. **Deadlocks and ANRs**: Some Camera2 methods (like `close()`) are synchronous and wait for callbacks. If the callback must run on the same thread that called `close()`, you get a deadlock.
+1. **Лаги и пропуски кадров**: если обработка вызова занимает хотя бы 10 мс, кадр при 60 FPS пропускается, и пользователь видит заикание картинки.
+2. **Взаимные блокировки (deadlocks) и ANR**: некоторые методы Camera2 (например, `close()`) являются синхронными и ждут обратных вызовов. Если вызов должен выполниться в том же потоке, который вызвал `close()`, вы получите вечную блокировку.
 
-The solution is a **dedicated background thread** with its own Looper, implemented via `HandlerThread`.
+Решение — **выделенный фоновый поток** со своим собственным Looper, реализованный через `HandlerThread`.
 
-### Implementing HandlerThread Correctly
+### Правильная реализация HandlerThread
 
-The lifecycle of the background thread must match the lifecycle of the camera operations. We start the thread when the Activity starts/resumes, and we quit the thread when the Activity stops/pauses.
+Жизненный цикл фонового потока должен совпадать с жизненным циклом операций камеры. Мы запускаем поток, когда Activity запускается/возобновляется, и завершаем его, когда Activity останавливается/приостанавливается.
 
 ```kotlin
 package com.example.camera2tutorial
@@ -222,7 +223,7 @@ import androidx.core.content.ContextCompat
 
 class MainActivity : AppCompatActivity() {
 
-    // --- Background threading components ---
+    // --- Компоненты фоновой многопоточности ---
     private lateinit var backgroundThread: HandlerThread
     private lateinit var backgroundHandler: Handler
 
@@ -244,9 +245,9 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         startBackgroundThread()
-        // Re-initialize if permissions were granted while app was in background
+        // Реинициализация, если разрешения были даны, пока приложение было в фоне
         if (allPermissionsGranted() && this::cameraManager.isInitialized) {
-            // (cameraManager is declared below)
+            // (cameraManager объявляется ниже)
         }
     }
 
@@ -260,39 +261,39 @@ class MainActivity : AppCompatActivity() {
             start()
         }
         backgroundHandler = Handler(backgroundThread.looper)
-        Log.d(TAG, "Background thread started: ${backgroundThread.name}")
+        Log.d(TAG, "Фоновый поток запущен: ${backgroundThread.name}")
     }
 
     private fun stopBackgroundThread() {
         backgroundThread.quitSafely()
         try {
-            backgroundThread.join(1000) // Wait up to 1 second for cleanup
-            Log.d(TAG, "Background thread stopped cleanly")
+            backgroundThread.join(1000) // Ждем завершения до 1 секунды
+            Log.d(TAG, "Фоновый поток чисто остановлен")
         } catch (e: InterruptedException) {
-            Log.e(TAG, "Interrupted while joining background thread", e)
+            Log.e(TAG, "Прерывание во время ожидания завершения фонового потока", e)
         }
     }
 
-    // --- CameraManager initialization ---
+    // --- Инициализация CameraManager ---
     private lateinit var cameraManager: CameraManager
 
     private fun initializeCamera() {
         cameraManager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
 
         val cameraIdList = cameraManager.cameraIdList
-        Log.d(TAG, "Successfully accessed CameraManager. Found ${cameraIdList.size} camera(s).")
+        Log.d(TAG, "Успешный доступ к CameraManager. Найдено камер: ${cameraIdList.size}.")
         cameraIdList.forEachIndexed { index, cameraId ->
-            Log.d(TAG, "Camera $index: ID = $cameraId")
+            Log.d(TAG, "Камера $index: ID = $cameraId")
         }
 
         Toast.makeText(
             this,
-            "CameraManager initialized! Found ${cameraIdList.size} camera(s).",
+            "CameraManager инициализирован! Найдено камер: ${cameraIdList.size}.",
             Toast.LENGTH_LONG
         ).show()
     }
 
-    // --- Permission handling (same as before) ---
+    // --- Обработка разрешений (как и раньше) ---
     private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
         ContextCompat.checkSelfPermission(baseContext, it) == PackageManager.PERMISSION_GRANTED
     }
@@ -309,7 +310,7 @@ class MainActivity : AppCompatActivity() {
             } else {
                 Toast.makeText(
                     this,
-                    "Camera permission is required to use this app.",
+                    "Для работы приложения требуется разрешение на использование камеры.",
                     Toast.LENGTH_LONG
                 ).show()
                 finish()
@@ -325,31 +326,31 @@ class MainActivity : AppCompatActivity() {
 }
 ```
 
-### Key Threading Patterns Explained
+### Пояснения к паттернам работы с потоками
 
-1. **`startBackgroundThread()` in `onResume()`**: Every time the Activity comes to the foreground, we create a fresh `HandlerThread`, start it, and create a `Handler` bound to the thread's `Looper`. This Handler will be passed to all Camera2 callback-accepting methods (`openCamera`, `createCaptureSession`, etc.).
+1. **`startBackgroundThread()` в `onResume()`**: каждый раз, когда Activity выходит на передний план, мы создаем новый `HandlerThread`, запускаем его и создаем `Handler`, привязанный к `Looper` этого потока. Этот Handler будет передаваться во все методы Camera2, принимающие обратные вызовы (`openCamera`, `createCaptureSession` и др.).
 
-2. **`stopBackgroundThread()` in `onPause()`**: Before the Activity goes to the background, we call `quitSafely()` on the thread. This tells the Looper to stop processing new messages after the current one finishes (unlike `quit()`, which discards pending messages). We then call `join(1000)` to block the main thread for at most one second while the background thread finishes its cleanup. This prevents resource leaks.
+2. **`stopBackgroundThread()` в `onPause()`**: перед тем как Activity уйдет в фоновый режим, мы вызываем `quitSafely()` у потока. Это велит Looper'у перестать принимать новые сообщения после завершения текущего (в отличие от `quit()`, который просто отбрасывает очередь). Затем мы вызываем `join(1000)`, чтобы заблокировать главный поток максимум на одну секунду, пока фоновый поток завершает работу. Это предотвращает утечки ресурсов.
 
-3. **Why `HandlerThread` instead of `CoroutineDispatcher`?** Camera2 predates Kotlin Coroutines by several years, and its callback system is fundamentally Handler/Looper-based. While you can use `Dispatchers.Default.asExecutor()` or wrap callbacks in `suspendCoroutine` for higher-level code, the underlying Camera2 API still needs a Looper thread for callbacks. Using `HandlerThread` directly is the canonical, documented approach in the official Android samples.
+3. **Почему `HandlerThread` вместо корутин (CoroutineDispatcher)?** Camera2 появилась на несколько лет раньше корутин Kotlin, и ее система обратных вызовов фундаментально основана на связке Handler/Looper. Хотя вы можете использовать `Dispatchers.Default.asExecutor()` или оборачивать вызовы в `suspendCoroutine` для кода более высокого уровня, подлежащему API Camera2 всё равно нужен поток с Looper для работы колбэков. Использование `HandlerThread` напрямую — каноничный подход, описанный в официальной документации Android.
 
-## Step 5: The Complete Initialization Flow (Combined)
+## Шаг 5: Полный цикл инициализации (в сборе)
 
-Let's now look at the full sequence of events that must happen when your application starts. The order is critical: permissions → thread → CameraManager. If you reverse any step, the code will crash or behave inconsistently.
+Теперь посмотрим на полную последовательность событий, которые должны произойти при запуске приложения. Порядок критичен: разрешения → поток → CameraManager. Если вы поменяете шаги местами, код вылетит или будет вести себя непредсказуемо.
 
 ```mermaid
 flowchart TD
-    A[Activity onCreate] --> B{Permissions Granted?}
-    B -->|Yes| C[Start Background Thread]
-    B -->|No| D[Show Runtime Permission Dialog]
-    D --> E{User Grants Permission?}
-    E -->|Yes| C
-    E -->|No| F[Show Error & Finish Activity]
+    A["Activity onCreate"] --> B{Разрешения получены?}
+    B -->|Да| C[Запуск фонового потока]
+    B -->|Нет| D[Показ диалога запроса разрешения]
+    D --> E{Пользователь согласился?}
+    E -->|Да| C
+    E -->|Нет| F[Показ ошибки и закрытие Activity]
     C --> G[getSystemService CAMERA_SERVICE]
-    G --> H[Cast to CameraManager]
-    H --> I[Call cameraIdList]
-    I --> J[Log Camera Count & IDs]
-    J --> K[Ready for Chapter 6 - Discovering Cameras]
+    G --> H[Приведение к CameraManager]
+    H --> I[Вызов cameraIdList]
+    I --> J[Логирование кол-ва и ID камер]
+    J --> K[Готовность к Главе 6 - Обнаружение камер]
     
     style A fill:#e3f2fd
     style B fill:#fff3e0
@@ -359,84 +360,84 @@ flowchart TD
     style H fill:#e8f5e9
     style I fill:#e8f5e9
     style J fill:#f3e5f5
-    style K fill:#00c853,color:#fff
+    style K Symbol,fill:#00c853,color:#fff
     style F fill:#ffcdd2
 ```
 
-The flowchart above illustrates why each step exists:
+Диаграмма выше иллюстрирует смысл каждого шага:
 
-- **Permission Gate**: The entire camera subsystem is protected; we cannot proceed until the user grants consent.
-- **Thread Before CameraManager**: While `getSystemService()` itself is thread-safe, we want the background thread already running before we perform any callback-driven Camera2 operations (which start in the next chapter).
-- **CameraManager → cameraIdList**: Calling `cameraIdList` is the cheapest way to verify that CameraManager is working. If this call succeeds without throwing, your manifest declaration, runtime permission, and service binding are all correct.
+- **Разрешения**: вся подсистема камер защищена; мы не можем продолжать, пока пользователь не даст согласие.
+- **Поток перед CameraManager**: хотя сам `getSystemService()` потокобезопасен, мы хотим, чтобы фоновый поток уже работал до начала любых операций в Camera2, управляемых обратными вызовами (которые начнутся в следующей главе).
+- **CameraManager → cameraIdList**: вызов `cameraIdList` — самый дешевый способ проверить работу CameraManager. Если он проходит без ошибок, значит объявление в манифесте, разрешения и привязка к сервису верны.
 
-## Putting It All Together: Run and Verify
+## Итог: запуск и проверка
 
-At this point, you have a complete, runnable Camera2 project that:
-1. Creates an Android project with the correct SDK targets.
-2. Declares the CAMERA permission in the manifest.
-3. Requests the permission at runtime, handling both accept and reject paths.
-4. Starts a dedicated HandlerThread in `onResume` and stops it cleanly in `onPause`.
-5. Retrieves the `CAMERA_SERVICE` system service and casts it to `CameraManager`.
-6. Calls `cameraIdList` and logs the number of cameras and their IDs.
+На данном этапе у вас есть полноценный, готовый к запуску проект на Camera2, который:
+1. Создает проект Android с правильными целями SDK.
+2. Объявляет разрешение CAMERA в манифесте.
+3. Запрашивает разрешение во время выполнения, обрабатывая согласие и отказ.
+4. Запускает выделенный HandlerThread в `onResume` и чисто останавливает его в `onPause`.
+5. Получает системный сервис `CAMERA_SERVICE` и приводит его к `CameraManager`.
+6. Вызывает `cameraIdList` и выводит количество камер и их ID в лог.
 
-### What You Should See When You Run It
+### Что вы должны увидеть при запуске
 
-1. On the first launch, Android shows the permission dialog: *"Allow Camera2Tutorial to take pictures and record video?"*
-2. Tap **Allow**.
-3. A Toast appears: *"CameraManager initialized! Found X camera(s)."*
-4. In Logcat (filter by `Camera2Tutorial`), you should see entries like:
+1. При первом запуске Android покажет диалог: *«Разрешить приложению Camera2Tutorial снимать фото и видео?»*
+2. Нажмите **Разрешить**.
+3. Появится Toast: *«CameraManager инициализирован! Найдено камер: X».*
+4. В Logcat (фильтр по `Camera2Tutorial`) вы увидите записи вида:
    ```
-   D/Camera2Tutorial: Background thread started: Camera2Background
-   D/Camera2Tutorial: Successfully accessed CameraManager. Found 4 camera(s).
-   D/Camera2Tutorial: Camera 0: ID = 0
-   D/Camera2Tutorial: Camera 1: ID = 1
-   D/Camera2Tutorial: Camera 2: ID = 2
-   D/Camera2Tutorial: Camera 3: ID = 3
+   D/Camera2Tutorial: Фоновый поток запущен: Camera2Background
+   D/Camera2Tutorial: Успешный доступ к CameraManager. Найдено камер: 4.
+   D/Camera2Tutorial: Камера 0: ID = 0
+   D/Camera2Tutorial: Камера 1: ID = 1
+   D/Camera2Tutorial: Камера 2: ID = 2
+   D/Camera2Tutorial: Камера 3: ID = 3
    ```
-5. When you press the Home button or navigate away, Logcat shows:
+5. При нажатии кнопки «Домой» или уходе из приложения в логе появится:
    ```
-   D/Camera2Tutorial: Background thread stopped cleanly
+   D/Camera2Tutorial: Фоновый поток чисто остановлен
    ```
 
-If you see these logs, **congratulations**! You have successfully set up the foundation of a Camera2 application. There is no camera preview yet — that comes in Chapter 8 — but the plumbing is correct. If you get a `SecurityException`, double-check that you accepted the permission dialog. If `cameraIdList` returns an empty array, the device may have no cameras (unlikely on a phone) or the permission was denied.
+Если вы видите эти логи, **поздравляем**! Вы успешно заложили фундамент приложения на Camera2. Предпросмотра пока нет — он появится в главе 8, — но «водопровод» настроен верно. Если вы получили `SecurityException`, проверьте еще раз, дали ли вы разрешение в диалоге. Если `cameraIdList` возвращает пустой массив, возможно, на устройстве нет камер (вряд ли для телефона) или разрешение было отклонено.
 
-## Troubleshooting Common Setup Errors
+## Решение типичных проблем настройки
 
 ### `SecurityException: Lacking privileges to access camera service`
 
-This means the runtime permission was not granted. Check that:
-- You added `<uses-permission android:name="android.permission.CAMERA" />` to the manifest.
-- You called `ActivityCompat.requestPermissions` with the correct request code.
-- The user tapped **Allow** on the dialog.
-- If you're testing on a physical device, go to Settings → Apps → Your App → Permissions and ensure Camera is enabled.
+Это означает, что разрешение во время выполнения не было предоставлено. Проверьте:
+- Добавили ли вы `<uses-permission android:name="android.permission.CAMERA" />` в манифест.
+- Вызвали ли вы `ActivityCompat.requestPermissions` с правильным кодом запроса.
+- Нажал ли пользователь «Разрешить» в диалоге.
+- Если вы тестируете на реальном устройстве, зайдите в Настройки → Приложения → Ваше приложение → Разрешения и убедитесь, что Камера включена.
 
-### `NullPointerException` on `backgroundHandler`
+### `NullPointerException` при обращении к `backgroundHandler`
 
-This happens if you try to use `backgroundHandler` before `startBackgroundThread()` runs. Make sure all Camera2 operations that accept a Handler only execute **after** `onResume` has been called and the thread is running. In our code, `initializeCamera()` is called from `onCreate`, but it only uses CameraManager synchronously; callbacks that need `backgroundHandler` will be added in later chapters and properly gated on `onResume`.
+Это случается, если вы пытаетесь использовать `backgroundHandler` до того, как сработал `startBackgroundThread()`. Убедитесь, что все операции Camera2, принимающие Handler, выполняются только **после** того, как был вызван `onResume` и поток запущен. В нашем коде `initializeCamera()` вызывается из `onCreate`, но она использует только синхронные вызовы CameraManager; колбэки, требующие `backgroundHandler`, будут добавлены в следующих главах и будут защищены проверкой `onResume`.
 
-### `TextureView` shows a black screen in later chapters
+### `TextureView` показывает черный экран в последующих главах
 
-If you skip ahead and add a TextureView now, ensure `android:hardwareAccelerated="true"` is set on your Activity in the manifest. Also make sure the TextureView is attached to the view hierarchy and visible in your layout XML.
+Если вы забежите вперед и добавите TextureView сейчас, убедитесь, что в манифесте для вашей Activity прописано `android:hardwareAccelerated="true"`. Также проверьте, что TextureView прикреплен к иерархии представлений и видим в вашем XML-макете.
 
-## Summary
+## Резюме
 
-In this chapter, you built the complete scaffolding of an Android Camera2 application. You learned:
+В этой главе вы построили каркас приложения для Android на Camera2. Вы узнали:
 
-1. **Project Structure**: How to create a new Android Studio project with Empty Activity template, targeting API 21+, using Kotlin, and verifying that no external Camera2 dependencies are needed.
-2. **Manifest Configuration**: The `CAMERA` permission declaration, `uses-feature` tags for Google Play filtering, and `hardwareAccelerated="true"` on the Activity for TextureView rendering.
-3. **Runtime Permissions**: The full check → request → result cycle using `ContextCompat.checkSelfPermission` and `ActivityCompat.requestPermissions`, with handling for both the accept and deny paths.
-4. **Background Threading**: Why Camera2 callbacks must not run on the main thread, and how to implement a properly lifecycle-managed `HandlerThread` + `Handler` pair with `startBackgroundThread()` in `onResume` and `stopBackgroundThread()` with `quitSafely()` + `join()` in `onPause`.
-5. **CameraManager Initialization**: Retrieving the `CAMERA_SERVICE` system service, casting to `CameraManager`, calling `cameraIdList` to verify the service works, and logging the discovered camera IDs.
+1. **Структура проекта**: как создать новый проект в Android Studio с шаблоном Empty Activity, нацеленный на API 21+, используя Kotlin, и убедились, что внешние зависимости для Camera2 не нужны.
+2. **Конфигурация манифеста**: объявление разрешения `CAMERA`, теги `uses-feature` для фильтрации в Google Play и `hardwareAccelerated="true"` для Activity для работы TextureView.
+3. **Разрешения во время выполнения**: полный цикл «проверка → запрос → результат» с использованием `ContextCompat.checkSelfPermission` и `ActivityCompat.requestPermissions`, с обработкой путей согласия и отказа.
+4. **Фоновая многопоточность**: почему обратные вызовы Camera2 не должны работать в главном потоке, и как реализовать пару `HandlerThread` + `Handler` с управлением жизненным циклом в `onResume` и `onPause`.
+5. **Инициализация CameraManager**: получение системного сервиса `CAMERA_SERVICE`, приведение к `CameraManager`, вызов `cameraIdList` для проверки работы сервиса и логирование обнаруженных ID камер.
 
-The code in this chapter is the bedrock for everything that follows. The Android Camera Parameters app ([GitHub](https://github.com/zoozooll/AndroidCameraParameters), [Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)) uses exactly these patterns — multiple `HandlerThread`s for different workloads, careful permission checking, and robust lifecycle management.
+Код этой главы — фундамент для всего последующего материала. Приложение Android Camera Parameters ([GitHub](https://github.com/zoozooll/AndroidCameraParameters), [Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)) использует именно эти паттерны — несколько `HandlerThread` для разных нагрузок, тщательную проверку разрешений и надежное управление жизненным циклом.
 
-## What's Next
+## Что дальше
 
-Now that `CameraManager` is successfully initialized and we have a list of camera IDs, the next step is to **query the capabilities of each camera**. In **Chapter 6: Discovering Cameras**, you will:
+Теперь, когда `CameraManager` успешно инициализирован и у нас есть список ID камер, следующим шагом будет **запрос возможностей каждой камеры**. В **Главе 6: Обнаружение камер** вы:
 
-- Learn what camera ID strings represent (and why you should never hardcode assumptions about them).
-- Distinguish front-facing, back-facing, and external (USB OTG) cameras using `LENS_FACING`.
-- Query the hardware level of each camera (`INFO_SUPPORTED_HARDWARE_LEVEL`) to determine if it's LEGACY, LIMITED, FULL, or LEVEL_3.
-- Iterate over every camera on the device and log its properties using `CameraCharacteristics`.
+- Узнаете, что представляют собой строки ID камер (и почему нельзя жестко прописывать предположения о них).
+- Научитесь различать фронтальные, основные и внешние (USB OTG) камеры с помощью `LENS_FACING`.
+- Запросите уровень аппаратной поддержки каждой камеры (`INFO_SUPPORTED_HARDWARE_LEVEL`), чтобы определить, является ли она LEGACY, LIMITED, FULL или LEVEL_3.
+- Пройдете циклом по каждой камере на устройстве и выведете ее свойства, используя `CameraCharacteristics`.
 
-By the end of Chapter 6, you'll have a working camera enumeration utility that extracts real Camera2 metadata from the device — something you can already use to compare camera hardware across phones!
+К концу главы 6 у вас будет готовая утилита для перечисления камер, которая извлекает реальные метаданные Camera2 из устройства — то, что уже можно использовать для сравнения «железа» разных телефонов!

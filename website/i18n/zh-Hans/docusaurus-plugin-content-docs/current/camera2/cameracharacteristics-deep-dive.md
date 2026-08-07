@@ -1,74 +1,74 @@
 ---
 sidebar_position: 12
-title: "Chapter 12: CameraCharacteristics Deep Dive"
-description: Master CameraCharacteristics — the immutable static metadata that describes every camera before you open it. Hardware levels (LEGACY, LIMITED, FULL, LEVEL_3, EXTERNAL), capability flags, metadata key organization, and runtime capability queries.
-keywords: [CameraCharacteristics, hardware level, INFO_SUPPORTED_HARDWARE_LEVEL, LEGACY, LIMITED, FULL, LEVEL_3, EXTERNAL, REQUEST_AVAILABLE_CAPABILITIES, MANUAL_SENSOR, RAW, metadata keys]
+title: "第 12 章：CameraCharacteristics 深度挖掘"
+description: 精通 CameraCharacteristics — 在打开相机之前描述每个相机的不可变静态元数据。硬件级别 (LEGACY, LIMITED, FULL, LEVEL_3, EXTERNAL)、功能标志、元数据键组织以及运行时功能查询。
+keywords: [CameraCharacteristics, 硬件级别, INFO_SUPPORTED_HARDWARE_LEVEL, LEGACY, LIMITED, FULL, LEVEL_3, EXTERNAL, REQUEST_AVAILABLE_CAPABILITIES, MANUAL_SENSOR, RAW, 元数据键]
 ---
 
-## 12.1 The Spec Sheet in Your Pocket
+## 12.1 你口袋里的规格表
 
-Before you can call `openCamera()`, before you can build a `CaptureRequest`, before you can configure a session — there is `CameraCharacteristics`. It is the immutable, power-on-free window into *everything* a camera can do. Think of it as the camera's spec sheet, exposed as a structured queryable object.
+在你可以调用 `openCamera()`、构建 `CaptureRequest` 或配置会话之前——首先要面对的是 `CameraCharacteristics`。它是无需通电即可了解相机*一切*能力的窗口。可以把它看作是相机的规格表，以结构化可查询对象的形式呈现。
 
-`CameraCharacteristics` is your most important tool for writing apps that work across Android's 10,000+ device models. You cannot assume manual ISO works. You cannot assume RAW is available. You cannot even assume the camera supports 1080p preview — unless you ask `CameraCharacteristics`.
+`CameraCharacteristics` 是编写能跨越 Android 10,000 多种设备型号运行的应用的最重要工具。你不能假设手动 ISO 可用。你不能假设支持 RAW。你甚至不能假设相机支持 1080p 预览——除非你询问 `CameraCharacteristics`。
 
-In [Chapter 6](discovering-cameras.md) we touched on the basics: lens facing, sensor size, focal length. In this deep dive we go much further:
-- The five **hardware levels** (LEGACY → LIMITED → FULL → LEVEL_3 → EXTERNAL) and what each guarantees
-- The ten+ **capability flags** (`MANUAL_SENSOR`, `RAW`, `DEPTH_OUTPUT`, etc.) and which hardware levels provide them
-- How metadata keys are **organized hierarchically** by subsystem (`android.sensor.*`, `android.lens.*`, `android.control.*`, ...)
-- How to write a **comprehensive runtime capability query** with graceful fallbacks
+在[第 6 章](discovering-cameras.md)中，我们涉及了基础知识：镜头朝向、传感器尺寸、焦距。在这次深度挖掘中，我们将走得更远：
+- 五个**硬件级别** (LEGACY → LIMITED → FULL → LEVEL_3 → EXTERNAL) 及其各自保证的功能
+- 十多个**功能标志** (`MANUAL_SENSOR`、`RAW`、`DEPTH_OUTPUT` 等) 以及哪些硬件级别提供它们
+- 元数据键如何按子系统（`android.sensor.*`、`android.lens.*`、`android.control.*`……）进行**分层组织**
+- 如何编写带有优雅回退的**综合运行时功能查询**
 
-The Android Camera Parameters app ([GitHub](https://github.com/zoozooll/AndroidCameraParameters), [Play Store](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)) is essentially a `CameraCharacteristics` browser on steroids. Open it to any camera and you'll see exactly the keys we discuss in this chapter, organized by category, with human-readable labels and live-value rendering.
+**Android Camera Parameters** 应用（[GitHub](https://github.com/zoozooll/AndroidCameraParameters)，[Play 商店](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)）本质上是一个加强版的 `CameraCharacteristics` 浏览器。打开它查看任何一个相机，你都能看到我们在本章中讨论的键，按类别组织，并配有易于理解的标签和实时数值渲染。
 
-## 12.2 What CameraCharacteristics Actually Is
+## 12.2 CameraCharacteristics 究竟是什么
 
-Formally, `CameraCharacteristics` is:
+正式来说，`CameraCharacteristics` 是：
 
-- **Immutable** — Once obtained from `CameraManager.getCameraCharacteristics(id)`, the object never changes (with one documented exception: foldable `SENSOR_ORIENTATION` on API 32+).
-- **Power-free** — Querying it does **not** power on the sensor or ISP. You can call it in `onCreate()` of your first Activity without battery impact.
-- **Per-camera** — Every logical camera ID has its own `CameraCharacteristics` object.
-- **Type-safe and keyed** — Data is accessed via `<Key<T>> get(Key<T> key)` where each key has a documented type (Int, Long, Float, Rect, Array, etc.).
+- **不可变的** — 一旦从 `CameraManager.getCameraCharacteristics(id)` 获取，该对象就永远不会改变（有一个记录在案的例外：API 32+ 上的可折叠设备 `SENSOR_ORIENTATION`）。
+- **零功耗** — 查询它**不会**开启传感器或 ISP。你可以在第一个 Activity 的 `onCreate()` 中调用它，而不会影响电池寿命。
+- **针对每个相机的** — 每个逻辑相机 ID 都有其自己的 `CameraCharacteristics` 对象。
+- **类型安全且基于键的** — 通过 ``<Key<T>> get(Key<T> key)`` 访问数据，其中每个键都有记录在案的类型（Int、Long、Float、Rect、数组等）。
 
-You obtain one with a single call:
+你只需一次调用即可获取它：
 
 ```kotlin
 val cameraManager = getSystemService(CAMERA_SERVICE) as CameraManager
-val cameraIdList = cameraManager.cameraIdList  // e.g. ["0", "1", "2", "3"]
+val cameraIdList = cameraManager.cameraIdList  // 例如 ["0", "1", "2", "3"]
 
 for (id in cameraIdList) {
     val characteristics: CameraCharacteristics = cameraManager.getCameraCharacteristics(id)
-    // Query away — no sensor power used!
+    // 尽管查询吧 — 不消耗传感器电量！
 }
 ```
 
-On Android 15 (API 35) you can use `CameraManager.getCameraDeviceSetup(id)` for lightweight session-configuration queries without opening the camera (see [Chapter 28](camera2-architecture.md) for `CameraDeviceSetup` details).
+在 Android 15 (API 35) 上，你可以使用 `CameraManager.getCameraDeviceSetup(id)` 进行轻量级的会话配置查询，而无需打开相机（详见[第 28 章](camera2-architecture.md)关于 `CameraDeviceSetup` 的内容）。
 
-## 12.3 Hardware Level: INFO_SUPPORTED_HARDWARE_LEVEL
+## 12.3 硬件级别：INFO_SUPPORTED_HARDWARE_LEVEL
 
-The single most important `CameraCharacteristics` key is **`INFO_SUPPORTED_HARDWARE_LEVEL`**. It defines the entire tier of the camera HAL and tells you (broadly) what features are guaranteed to work. There are five hardware levels:
+最重要的 `CameraCharacteristics` 键是 **`INFO_SUPPORTED_HARDWARE_LEVEL`**。它定义了相机 HAL 的整个层级，并告诉你（宽泛地）哪些功能可以保证正常工作。共有五个硬件级别：
 
-### The Five Hardware Levels
+### 五个硬件级别
 
-| Level | Constant | Typical Devices | What It Means In Practice |
+| 级别 | 常量 | 典型设备 | 实践中的含义 |
 |-------|----------|----------------|---------------------------|
-| **LEGACY** | `INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY` | Pre-2015 budget devices, very old chipsets | Camera2 API is a wrapper around the old `android.hardware.Camera` API. No per-frame controls, no manual settings, RAW impossible, burst unreliable. Treat these devices as "Camera1-era with Camera2 syntax." |
-| **LIMITED** | `INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED` | Budget phones (Android Go, entry-level SoCs like MediaTek Helio, Snapdragon 4xx) | Native Camera2 HAL but only subset of features. 3A (AF/AE/AWB) work. Preview + JPEG work. But **no** manual sensor control, **no** RAW, **no** guaranteed burst, **no** YUV reprocessing. This is Android's "baseline functional" camera level. |
-| **FULL** | `INFO_SUPPORTED_HARDWARE_LEVEL_FULL` | Mid-range and flagship phones (Snapdragon 6xx/7xx/8xx, Exynos mid+, Dimensity 7xxx+) | The "pro camera" tier. Guarantees MANUAL_SENSOR, MANUAL_POST_PROCESSING, BURST_CAPTURE, per-frame settings, 30fps full-res, RAW, all output formats, predictable pipeline depth. What you want for any serious camera app. |
-| **LEVEL_3** | `INFO_SUPPORTED_HARDWARE_LEVEL_3` | High-end flagships with advanced ISP (Snapdragon 8 Gen 1+, Pixel 6+, Exynos 2xxx+) | FULL + extra: YUV reprocessing (input stream support, offline reprocessing), private reprocessing, advanced statistics, hardware JPEG + RAW at max resolution simultaneously. Required for ZSL with RAW output. |
-| **EXTERNAL** | `INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL` | USB cameras, webcams connected via OTG | External camera HAL. Behaves like LIMITED or FULL depending on the USB device. Key caveat: camera can be hotplugged/disconnected at any time, so listen for `ACTION_CAMERA_DEVICE_STATE_CHANGED`. |
+| **LEGACY** | `INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY` | 2015 年前的廉价设备，非常旧的芯片组 | Camera2 API 是对旧版 `android.hardware.Camera` API 的封装。没有逐帧控制，没有手动设置，无法拍摄 RAW，连拍不可靠。将这些设备视为"具有 Camera2 语法的 Camera1 时代产物"。 |
+| **LIMITED** | `INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED` | 廉价手机（Android Go，入门级 SoC 如联发科 Helio、骁龙 4xx） | 原生 Camera2 HAL，但仅支持子集功能。3A (AF/AE/AWB) 有效。预览 + JPEG 有效。但**没有**手动传感器控制，**没有** RAW，**没有**保证的连拍，**没有** YUV 重处理。这是 Android 的"基本可用"相机级别。 |
+| **FULL** | `INFO_SUPPORTED_HARDWARE_LEVEL_FULL` | 中端及旗舰手机（骁龙 6xx/7xx/8xx，三星 Exynos 中高端，天玑 7xxx+） | "专业相机"级别。保证支持 MANUAL_SENSOR、MANUAL_POST_PROCESSING、BURST_CAPTURE、逐帧设置、30fps 全分辨率、RAW、所有输出格式、可预测的管线深度。这是任何严谨相机应用所追求的级别。 |
+| **LEVEL_3** | `INFO_SUPPORTED_HARDWARE_LEVEL_3` | 配备高级 ISP 的高端旗舰机（骁龙 8 Gen 1+，Pixel 6+，Exynos 2xxx+） | FULL 级别外加：YUV 重处理（输入流支持、离线重处理）、私有重处理、高级统计信息、同时以最大分辨率输出硬件 JPEG + RAW。支持 RAW 输出的 ZSL 所必需的。 |
+| **EXTERNAL** | `INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL` | USB 摄像头，通过 OTG 连接的网络摄像头 | 外部相机 HAL。根据 USB 设备的性能，表现类似于 LIMITED 或 FULL。关键提示：相机可能随时被热插拔/断开连接，因此要监听 `ACTION_CAMERA_DEVICE_STATE_CHANGED`。 |
 
 ```mermaid
 flowchart BT
-    LEGACY["LEGACY<br/>Camera1 wrapper, no manual controls"]
-    LIMITED["LIMITED<br/>3A works, JPEG preview only"]
-    FULL["FULL<br/>Manual sensor, RAW, burst, all formats"]
-    LEVEL3["LEVEL_3<br/>FULL + reprocessing + advanced stats"]
-    EXTERNAL["EXTERNAL<br/>USB/OTG cameras (hotpluggable)"]
+    LEGACY["LEGACY<br/>Camera1 封装器，无手动控制"]
+    LIMITED["LIMITED<br/>3A 有效，仅 JPEG 预览"]
+    FULL["FULL<br/>手动传感器、RAW、连拍、所有格式"]
+    LEVEL3["LEVEL_3<br/>FULL + 重处理 + 高级统计"]
+    EXTERNAL["EXTERNAL<br/>USB/OTG 相机 (支持热插拔)"]
 
-    LIMITED -->|"Adds manual/RAW/burst"| FULL
-    FULL -->|"Adds reprocessing"| LEVEL3
-    LEGACY -.->|Wrapped HAL| LIMITED
-    EXTERNAL -.->|Varies by device| LIMITED
-    EXTERNAL -.->|If device supports it| FULL
+    LIMITED -->|"增加手动/RAW/连拍"| FULL
+    FULL -->|"增加重处理"| LEVEL3
+    LEGACY -.->|被封装的 HAL| LIMITED
+    EXTERNAL -.->|视设备而异| LIMITED
+    EXTERNAL -.->|若设备支持| FULL
 
     classDef low fill:#ffebee,stroke:#c62828;
     classDef mid fill:#fff3e0,stroke:#e65100;
@@ -82,34 +82,34 @@ flowchart BT
 ```
 
 :::important
-Hardware level is a **guarantee**, not a best-effort flag. If a device reports FULL, Google's CTS (Compatibility Test Suite) has verified that every FULL-level feature works. If a device reports LIMITED, you cannot rely on any FULL-level feature — even if it happens to work on one specific LIMITED device, it will break on another.
+硬件级别是一项**保证**，而不仅仅是一个"尽力而为"的标志。如果一台设备报告为 FULL，则意味着 Google 的 CTS (兼容性测试套件) 已经验证了每一项 FULL 级别功能都能正常工作。如果设备报告为 LIMITED，你不能依赖任何 FULL 级别功能——即使它在某一台特定的 LIMITED 设备上恰好能用，在另一台设备上也可能会报错。
 :::
 
-### Checking Hardware Level at Runtime
+### 在运行时检查硬件级别
 
 ```kotlin
 val hardwareLevel = characteristics.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL)
 
 when (hardwareLevel) {
     CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY -> {
-        Log.w("CamCaps", "LEGACY hardware — manual/RAW disabled. Falling back to basic JPEG.")
+        Log.w("CamCaps", "LEGACY 硬件 — 已禁用手动/RAW。回退到基础 JPEG。")
         disableManualControls()
         disableRawCapture()
     }
     CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED -> {
-        Log.i("CamCaps", "LIMITED hardware — basic photo + preview only.")
+        Log.i("CamCaps", "LIMITED 硬件 — 仅支持基础照片 + 预览。")
         disableManualControls()
         disableRawCapture()
         disableBurstCapture()
     }
     CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL -> {
-        Log.i("CamCaps", "FULL hardware — enabling manual controls, RAW, and burst.")
+        Log.i("CamCaps", "FULL 硬件 — 启用手动控制、RAW 和连拍。")
         enableManualControls()
         enableRawCapture()
         enableBurstCapture()
     }
     CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_3 -> {
-        Log.i("CamCaps", "LEVEL_3 hardware — FULL + reprocessing + ZSL + advanced stats.")
+        Log.i("CamCaps", "LEVEL_3 硬件 — FULL + 重处理 + ZSL + 高级统计。")
         enableManualControls()
         enableRawCapture()
         enableBurstCapture()
@@ -117,42 +117,42 @@ when (hardwareLevel) {
         enableZeroShutterLag()
     }
     CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL -> {
-        Log.i("CamCaps", "EXTERNAL camera — may be LIMITED or FULL; registering disconnect listener.")
+        Log.i("CamCaps", "EXTERNAL 相机 — 可能是 LIMITED 或 FULL；正在注册断开连接监听器。")
         registerHotplugListener()
-        // Dynamically probe capabilities rather than assuming
+        // 动态探测功能而非直接假设
     }
     else -> {
-        Log.w("CamCaps", "Unknown hardware level $hardwareLevel — assuming LIMITED for safety.")
+        Log.w("CamCaps", "未知硬件级别 $hardwareLevel — 为了安全假设为 LIMITED。")
         safeDefaultFeatures()
     }
 }
 ```
 
-## 12.4 Capabilities: REQUEST_AVAILABLE_CAPABILITIES
+## 12.4 功能标志：REQUEST_AVAILABLE_CAPABILITIES
 
-The hardware level is a *coarse* tier. For fine-grained feature detection, Camera2 exposes `REQUEST_AVAILABLE_CAPABILITIES` — a `IntArray` of capability flags. Each flag describes one specific thing the camera can do.
+硬件级别是一个*粗略*的分类。为了进行细粒度的功能检测，Camera2 暴露了 `REQUEST_AVAILABLE_CAPABILITIES` —— 一个包含功能标志的 `IntArray`。每个标志描述了相机可以执行的一个特定操作。
 
-The formal relationship between hardware level and capabilities:
+硬件级别保证与功能标志之间的正式关系：
 
 ```mermaid
 flowchart LR
-    subgraph Level["Hardware Level Guarantee"]
+    subgraph Level["硬件级别保证"]
         LEG["LEGACY"]
         LIM["LIMITED"]
         FUL["FULL"]
         L3["LEVEL_3"]
     end
 
-    subgraph Cap["Guaranteed Capability Flags"]
-        BC["BACKWARD_COMPATIBLE ✅ All levels"]
+    subgraph Cap["保证的功能标志"]
+        BC["BACKWARD_COMPATIBLE ✅ 所有级别"]
         MS["MANUAL_SENSOR"]
         MP["MANUAL_POST_PROCESSING"]
         RAW["RAW"]
         BURST["BURST_CAPTURE"]
         YUV["YUV_REPROCESSING"]
         PRIV["PRIVATE_REPROCESSING"]
-        DEPTH["DEPTH_OUTPUT ✅ Optional on any"]
-        LMC["LOGICAL_MULTI_CAMERA ✅ Optional on any"]
+        DEPTH["DEPTH_OUTPUT ✅ 各级别均可选"]
+        LMC["LOGICAL_MULTI_CAMERA ✅ 各级别均可选"]
     end
 
     LEG --> BC
@@ -172,28 +172,28 @@ flowchart LR
     L3 --> YUV
     L3 --> PRIV
 
-    LEG -.->|"May claim but unreliable"| MS
-    LIM -.->|"Rarely, and untested"| RAW
+    LEG -.->|"可能声明但不可靠"| MS
+    LIM -.->|"极少且未经测试"| RAW
 ```
 
-### The Capability Flags, Explained
+### 功能标志详解
 
-| Flag Constant | Meaning | Hardware Level Guarantee | Practical Implication |
+| 标志常量 | 含义 | 硬件级别保证 | 实践意义 |
 |--------------|---------|--------------------------|----------------------|
-| `BACKWARD_COMPATIBLE` | Camera implements the baseline Camera2 API | **All 5 levels** (LEGACY–EXTERNAL) | If this is missing, the camera device is effectively non-functional for your app. |
-| `MANUAL_SENSOR` | App can manually control `SENSOR_EXPOSURE_TIME`, `SENSOR_SENSITIVITY`, `SENSOR_FRAME_DURATION`, `LENS_FOCUS_DISTANCE`, `LENS_APERTURE` | Guaranteed on **FULL** and **LEVEL_3** | Pro-mode and manual camera UIs require this. Without it, all manual ISO/exposure sliders must be hidden. |
-| `MANUAL_POST_PROCESSING` | App can manually control ISP stages: noise reduction, edge enhancement, tone curve, color correction gains, color correction transform | Guaranteed on **FULL** and **LEVEL_3** | Needed for custom "film look" LUTs, manual white balance via gains, sharpness/blur control. |
-| `RAW` | Sensor outputs RAW Bayer data via `ImageFormat.RAW_SENSOR`, `RAW10`, or `RAW12` | Guaranteed on **FULL** and **LEVEL_3** | DNG capture, RAW-to-JPEG editing pipeline, computational photography all start here. |
-| `PRIVATE_REPROCESSING` | Camera supports `InputSurface` + offline reprocessing of HAL-private-format images into JPEG/YUV | Guaranteed on **LEVEL_3**. Rare on FULL. | Enables Zero-Shutter-Lag (ZSL): circular-buffer past frames, reprocess a recent one into a high-quality still. |
-| `YUV_REPROCESSING` | Camera supports `InputSurface` + reprocessing of app-provided YUV_420_888 images back through the ISP | Guaranteed on **LEVEL_3** | Enables "apply cinematic LUT to recorded video" or "re-focus portrait depth in post" pipelines. |
-| `DEPTH_OUTPUT` | Camera can output depth maps (`DEPTH16` / `DEPTH_POINT_CLOUD` formats) | **Optional on ANY** level. Check the array explicitly. | Portrait mode bokeh, AR measurement, 3D scanning. Often paired with `LOGICAL_MULTI_CAMERA` (dual physical cameras for stereo depth). |
-| `LOGICAL_MULTI_CAMERA` | This logical camera is backed by 2+ physical sensors (e.g. ultra-wide + wide + telephoto) | **Optional on ANY** level. Usually only flagships. | Enables seamless optical zoom (see [Chapter 20](multi-camera.md)). You can query `LOGICAL_MULTI_CAMERA_PHYSICAL_IDS` to get the physical camera IDs. |
-| `BURST_CAPTURE` | `captureBurst()` with > 1 frame works at full resolution without frame drops | Guaranteed on **FULL** and **LEVEL_3** | Without this, burst capture may stutter, drop frames, or silently fail. Exposure / focus bracketing require this. |
-| `CONSTRAINED_HIGH_SPEED_VIDEO` | Supports `createHighSpeedRequestList()` + high-speed video (120fps, 240fps) | **Optional on FULL/LEVEL_3**. Rare on LIMITED. | Slow-motion recording (see [Chapter 19](high-speed-video.md)). |
-| `MOTION_TRACKING` | Camera can track objects / faces at high frame rate with low latency | Optional (rare). Found on Pixel and some flagships. | AR motion tracking, sports autofocus. |
-| `LOGICAL_MULTI_CAMERA_SYNC` | Multiple physical cameras in a logical device can capture synchronized frames | Optional. Required for true simultaneous multi-sensor capture. | Computational photography that uses multiple lenses at once (e.g. fusion zoom). |
+| `BACKWARD_COMPATIBLE` | 相机实现了基础 Camera2 API | **所有 5 个级别** (LEGACY–EXTERNAL) | 如果缺失此项，该相机设备对你的应用来说实际上是不可用的。 |
+| `MANUAL_SENSOR` | 应用可以手动控制 `SENSOR_EXPOSURE_TIME`、`SENSOR_SENSITIVITY`、`SENSOR_FRAME_DURATION`、`LENS_FOCUS_DISTANCE`、`LENS_APERTURE` | **FULL** 和 **LEVEL_3** 保证 | 专业模式和手动相机 UI 需要此项。没有它，所有的手动 ISO/曝光滑块必须隐藏。 |
+| `MANUAL_POST_PROCESSING` | 应用可以手动控制 ISP 阶段：降噪、边缘增强、色调曲线、色彩校正增益、色彩校正变换 | **FULL** 和 **LEVEL_3** 保证 | 自定义"电影感" LUT、通过增益实现的手动白平衡、锐度/模糊控制所需。 |
+| `RAW` | 传感器通过 `ImageFormat.RAW_SENSOR`、`RAW10` 或 `RAW12` 输出 RAW 拜耳数据 | **FULL** 和 **LEVEL_3** 保证 | DNG 拍摄、RAW 转 JPEG 编辑管线、计算摄影都从此开始。 |
+| `PRIVATE_REPROCESSING` | 相机支持 `InputSurface` + 将 HAL 私有格式图像离线重处理为 JPEG/YUV | **LEVEL_3** 保证。FULL 较罕见。 | 实现零快门延迟 (ZSL)：环形缓冲过去的帧，将近期的一帧重处理为高质量静态图。 |
+| `YUV_REPROCESSING` | 相机支持 `InputSurface` + 将应用提供的 YUV_420_888 图像重新传回 ISP 进行处理 | **LEVEL_3** 保证 | 实现"在后期为录制的视频应用电影级 LUT"或"在后期重新对焦人像深度"管线。 |
+| `DEPTH_OUTPUT` | 相机可以输出深度图 (`DEPTH16` / `DEPTH_POINT_CLOUD` 格式) | **任何**级别均可选。显式检查数组。 | 人像模式虚化、AR 测量、3D 扫描。通常与 `LOGICAL_MULTI_CAMERA` 配对（用于立体深度的双物理摄像头）。 |
+| `LOGICAL_MULTI_CAMERA` | 此逻辑相机由 2 个以上物理传感器支持（例如超广角 + 广角 + 长焦） | **任何**级别均可选。通常仅见于旗舰机。 | 实现无缝光学变焦（详见[第 20 章](multi-camera.md)）。你可以查询 `LOGICAL_MULTI_CAMERA_PHYSICAL_IDS` 来获取物理相机 ID。 |
+| `BURST_CAPTURE` | 以每秒 ≥20 帧的全分辨率运行 `captureBurst()`，且不掉帧 | **FULL** 和 **LEVEL_3** 保证 | 没有此项，连拍捕获可能会卡顿、掉帧或静默失败。曝光/对焦包围需要此项。 |
+| `CONSTRAINED_HIGH_SPEED_VIDEO` | 支持 `createHighSpeedRequestList()` + 高速视频 (120fps, 240fps) | **FULL/LEVEL_3 可选**。LIMITED 较罕见。 | 慢动作录制（详见[第 19 章](high-speed-video.md)）。 |
+| `MOTION_TRACKING` | 相机可以高帧率、低延迟地追踪物体 / 人脸 | 可选 (罕见)。见于 Pixel 和部分旗舰机。 | AR 运动追踪、运动自动对焦。 |
+| `LOGICAL_MULTI_CAMERA_SYNC` | 逻辑设备中的多个物理相机可以捕获同步帧 | 可选。真正的同步多传感器捕获所需。 | 使用多个镜头的计算摄影（例如融合变焦）。 |
 
-### Querying All Capabilities at Runtime
+### 在运行时查询所有功能
 
 ```kotlin
 val capabilities = characteristics.get(
@@ -227,9 +227,9 @@ val supportsPrivateReprocessing = hasCapability(
     CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_PRIVATE_REPROCESSING
 )
 
-// Build human-readable report
+// 构建人类可读的报告
 val capabilityReport = buildString {
-    appendLine("=== Camera Capabilities Report ===")
+    appendLine("=== 相机功能报告 ===")
     appendLine("BACKWARD_COMPATIBLE:     ${hasCapability(
         CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_BACKWARD_COMPATIBLE
     )}")
@@ -248,7 +248,7 @@ val capabilityReport = buildString {
 
 Log.i("CamCaps", capabilityReport)
 
-// Now gate your UI features
+// 现在进行 UI 功能门控
 manualIsoSlider.isEnabled = supportsManualSensor
 manualExposureSlider.isEnabled = supportsManualSensor
 rawCaptureToggle.isEnabled = supportsRaw
@@ -260,58 +260,58 @@ zslMode.isEnabled = supportsPrivateReprocessing  // LEVEL_3
 ```
 
 :::tip
-The Android Camera Parameters app renders this exact query as color-coded checkboxes in the **Capabilities** card of the camera summary view. Green = supported, gray = unsupported. You can compare multiple cameras side-by-side to see how the ultra-wide's capabilities differ from the main camera's.
+**Android Camera Parameters** 应用在相机摘要视图的 **Capabilities** 卡片中将此查询渲染为颜色编码的复选框。绿色 = 支持，灰色 = 不支持。你可以并排比较多个相机，查看超广角镜头的功能与主相机有何不同。
 :::
 
-## 12.5 Metadata Organization: The android.* Namespace
+## 12.5 元数据组织：android.* 命名空间
 
-Every key in `CameraCharacteristics`, `CaptureRequest`, and `CaptureResult` follows a hierarchical naming convention: `android.<subsystem>.<parameter>`. The dot-separated components group related settings by the hardware/software subsystem they control.
+`CameraCharacteristics`、`CaptureRequest` 和 `CaptureResult` 中的每个键都遵循分层命名约定：`android.<subsystem>.<parameter>`。由点分隔的组件按其控制的硬件/软件子系统对相关设置进行分组。
 
-### The Subsystem Classes
+### 子系统类
 
-| Subsystem Prefix | Kotlin Metadata Class | What It Covers |
+| 子系统前缀 | Kotlin 元数据类 | 涵盖内容 |
 |-----------------|----------------------|---------------|
-| `android.sensor.*` | `CameraCharacteristics.SensorInfo*`, `CaptureRequest.SENSOR_*`, `CaptureResult.SENSOR_*` | Sensor readout: exposure time, ISO sensitivity, frame duration, timestamp, pixel array, active array, rolling shutter direction, test pattern modes |
-| `android.lens.*` | `LensInfo*`, `Lens.*` | Optics: focus distance, aperture, focal length, optical stabilization (OIS), filter density (ND), focus range, available apertures |
-| `android.control.*` | `Control*` | 3A algorithms: auto-exposure (AE) modes / state / target / regions, auto-focus (AF) modes / state / trigger / regions, auto-white-balance (AWB) modes / state / regions, anti-banding, scene modes, effect modes, video stabilization (EIS) |
-| `android.scaler.*` | `Scaler.*` | Output pipeline configuration: crop region (digital zoom), rotation, stream configuration map (output formats, sizes, durations), available minimum frame durations |
-| `android.jpeg.*` | `Jpeg*` | JPEG encoding: quality, orientation, GPS coordinates, thumbnail size, thumbnail quality |
-| `android.request.*` | `Request*` | Pipeline-wide capabilities: available capabilities array, pipeline max depth, max num output raw/proc, metadata object keys, available template list |
-| `android.flash.*` | `FlashInfo*`, `Flash*` | Flash unit: availability, charge state, color temperature, max brightness, mode (off / single / torch) |
-| `android.statistics.*` | `Statistics*` | ISP statistics output: face detection, face IDs, face landmarks, face scores, histogram, sharpness map, lens shading map, hot pixel map |
-| `android.info.*` | `Info*` | Static camera info: supported hardware level, device version, supported hardware level, available face detect modes, available noise reduction modes |
-| `android.black.*` | `BlackLevel*` | Black level lock, black level pattern (fixed pattern noise correction) |
-| `android.colorCorrection.*` | `ColorCorrection*` | Color pipeline: transform matrix, color correction gains (R, G, B channels), aberration correction mode |
-| `android.tonemap.*` | `Tonemap*` | Tone mapping: tonemap curve (custom gamma), tonemap mode, contrast, saturation |
-| `android.edge.*` | `Edge*` | Edge enhancement / sharpening: mode, strength |
-| `android.noiseReduction.*` | `NoiseReduction*` | Noise reduction: mode, strength, temporal NR strength |
-| `android.shading.*` | `Shading*` | Lens shading / vignetting correction: mode, strength |
-| `android.hotPixel.*` | `HotPixel*` | Hot pixel correction: mode, hot pixel map |
-| `android.distortionCorrection.*` | `DistortionCorrection*` | Lens geometric distortion correction: mode |
-| `android.depth.*` | `Depth*` | Depth output: depth is exclusive, maximum depth samples, depth format |
-| `android.logicalMultiCamera.*` | `LogicalMultiCamera*` | Logical multi-camera: physical camera IDs, physical sensor sync |
+| `android.sensor.*` | `CameraCharacteristics.SensorInfo*`, `CaptureRequest.SENSOR_*`, `CaptureResult.SENSOR_*` | 传感器读取：曝光时间、ISO 灵敏度、帧时长、时间戳、像素阵列、活动阵列、滚动快门方向、测试图案模式 |
+| `android.lens.*` | `LensInfo*`, `Lens.*` | 光学：对焦距离、光圈、焦距、光学防抖 (OIS)、滤镜密度 (ND)、对焦范围、可用光圈 |
+| `android.control.*` | `Control*` | 3A 算法：自动曝光 (AE) 模式 / 状态 / 目标 / 区域、自动对焦 (AF) 模式 / 状态 / 触发 / 区域、自动白平衡 (AWB) 模式 / 状态 / 区域、抗条纹、场景模式、特效模式、视频防抖 (EIS) |
+| `android.scaler.*` | `Scaler.*` | 输出管线配置：裁剪区域 (数字变焦)、旋转、流配置映射 (输出格式、尺寸、时长)、可用最小帧时长 |
+| `android.jpeg.*` | `Jpeg*` | JPEG 编码：质量、朝向、GPS 坐标、缩略图尺寸、缩略图质量 |
+| `android.request.*` | `Request*` | 全局管线性能：可用功能标志数组、管线最大深度、最大输出 raw/proc 数量、元数据对象键、可用模板列表 |
+| `android.flash.*` | `FlashInfo*`, `Flash*` | 闪光灯单元：可用性、充电状态、色温、最大亮度、模式 (off / single / torch) |
+| `android.statistics.*` | `Statistics*` | ISP 统计输出：人脸检测、人脸 ID、人脸关键点、人脸评分、直方图、清晰度图、镜头遮蔽图、热像素图 |
+| `android.info.*` | `Info*` | 静态相机信息：支持的硬件级别、设备版本、可用人脸检测模式、可用降噪模式 |
+| `android.black.*` | `BlackLevel*` | 黑电平锁定、黑电平模式 (固定模式噪声校正) |
+| `android.colorCorrection.*` | `ColorCorrection*` | 色彩管线：变换矩阵、色彩校正增益 (R, G, B 通道)、色差校正模式 |
+| `android.tonemap.*` | `Tonemap*` | 色调映射：色调映射曲线 (自定义伽马)、色调映射模式、对比度、饱和度 |
+| `android.edge.*` | `Edge*` | 边缘增强 / 锐化：模式、强度 |
+| `android.noiseReduction.*` | `NoiseReduction*` | 降噪：模式、强度、时域降噪强度 |
+| `android.shading.*` | `Shading*` | 镜头遮蔽 / 暗角校正：模式、强度 |
+| `android.hotPixel.*` | `HotPixel*` | 热像素校正：模式、热像素图 |
+| `android.distortionCorrection.*` | `DistortionCorrection*` | 镜头几何畸变校正：模式 |
+| `android.depth.*` | `Depth*` | 深度输出：深度是否排他、最大深度样本、深度格式 |
+| `android.logicalMultiCamera.*` | `LogicalMultiCamera*` | 逻辑多摄像头：物理相机 ID、物理传感器同步 |
 
 ```mermaid
 mindmap
-  root((Camera Metadata))
-    Sensor
+  root((相机元数据))
+    传感器
       SENSOR_EXPOSURE_TIME
       SENSOR_SENSITIVITY
       SENSOR_FRAME_DURATION
       SENSOR_TIMESTAMP
       SENSOR_INFO_PIXEL_ARRAY_SIZE
-    Lens
+    镜头
       LENS_FOCUS_DISTANCE
       LENS_APERTURE
       LENS_FOCAL_LENGTH
       LENS_OPTICAL_STABILIZATION
-    Control
+    控制
       CONTROL_AF_MODE
       CONTROL_AE_MODE
       CONTROL_AWB_MODE
       CONTROL_AF_REGIONS
       CONTROL_AE_EXPOSURE_COMPENSATION
-    Scaler
+    缩放器
       SCALER_CROP_REGION
       SCALER_STREAM_CONFIGURATION_MAP
       SCALER_AVAILABLE_ROTATIONS
@@ -320,49 +320,49 @@ mindmap
       JPEG_ORIENTATION
       JPEG_GPS_LOCATION
       JPEG_THUMBNAIL_SIZE
-    Request
+    请求
       REQUEST_AVAILABLE_CAPABILITIES
       REQUEST_PIPELINE_MAX_DEPTH
       REQUEST_MAX_NUM_OUTPUT_RAW
-    Flash
+    闪光灯
       FLASH_INFO_AVAILABLE
       FLASH_MODE
       FLASH_STATE
-    Statistics
+    统计
       STATISTICS_FACE_DETECT_MODE
       STATISTICS_FACE_IDS
       STATISTICS_FACE_LANDMARKS
-    Info
+    信息
       INFO_SUPPORTED_HARDWARE_LEVEL
       INFO_DEVICE_VERSION
       INFO_SUPPORTED_HARDWARE_LEVEL
 ```
 
-### A Note on Key Availability
+### 关于键可用性的说明
 
-Not every key exists on every device. If you call `get(KEY)` on a key the device doesn't support, you get `null` — hence the `?: 0` or `?.let` patterns you see throughout this book.
+并非每个键都存在于每台设备上。如果你在设备不支持的键上调用 `get(KEY)`，你将得到 `null` —— 因此你在本书中随处可见 `?: 0` 或 `?.let` 模式。
 
-The safe pattern is: **check if the key exists before reading it**, or use Kotlin's null-safety to provide a default.
+安全的做法是：**在读取键之前检查其是否存在**，或者使用 Kotlin 的空安全提供默认值。
 
 ```kotlin
-// Safe access with fallback defaults
+// 使用回退默认值的安全访问
 val exposureTimeNs: Long = characteristics.get(
     CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE
-)?.upper ?: 1_000_000L  // default 1ms max if key missing
+)?.upper ?: 1_000_000L  // 如果键缺失，默认最大 1ms
 
-// Optional processing if key exists
+// 如果键存在则进行可选处理
 characteristics.get(CameraCharacteristics.LENS_INFO_AVAILABLE_APERTURES)?.let { apertures ->
-    Log.d("CamCaps", "Device supports ${apertures.size} apertures: ${apertures.contentToString()}")
+    Log.d("CamCaps", "设备支持 ${apertures.size} 种光圈: ${apertures.contentToString()}")
     buildApertureSelector(apertures)
 } ?: run {
-    Log.d("CamCaps", "No variable aperture on this device")
+    Log.d("CamCaps", "此设备无级变光圈")
     hideApertureControl()
 }
 ```
 
-## 12.6 A Complete Runtime Capability Query (Production-Grade)
+## 12.6 完整的运行时功能查询 (生产级)
 
-Putting it all together, here is a production-ready capability query that you can drop into any Camera2 app. It combines hardware level, capability flags, and individual key checks:
+综合以上内容，这里有一个可以放入任何 Camera2 应用的生产级功能查询实现。它结合了硬件级别、功能标志和单个键的检查：
 
 ```kotlin
 data class CameraCapabilityProfile(
@@ -409,7 +409,7 @@ fun buildCapabilityProfile(
     val caps = c.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES) ?: intArrayOf()
     fun has(cap: Int) = caps.contains(cap)
 
-    // Hardware level provides capability guarantees, but check flags for safety
+    // 硬件级别提供功能保证，但为了安全起见也要检查标志
     val atLeastFull = hwLevel == CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL ||
                       hwLevel == CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_3
 
@@ -420,7 +420,7 @@ fun buildCapabilityProfile(
         hardwareLevel = hwLevel,
         hardwareLevelName = hwLevelName,
 
-        // Use flag check + hardware level guarantee fallback for safety
+        // 使用标志检查 + 硬件级别保证回退以确保安全
         supportsManualSensor = has(
             CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR
         ) || atLeastFull,
@@ -460,36 +460,36 @@ fun buildCapabilityProfile(
     )
 }
 
-// Usage:
+// 用法：
 val profile = buildCapabilityProfile(cameraManager, "0")
-Log.d("CamCaps", "Camera 0 profile: ${profile.hardwareLevelName}, " +
-    "Manual=${profile.supportsManualSensor}, RAW=${profile.supportsRaw}, " +
-    "Burst=${profile.supportsBurst}, Depth=${profile.supportsDepth}, " +
-    "Zoom=${profile.maxDigitalZoom}x")
+Log.d("CamCaps", "相机 0 简况: ${profile.hardwareLevelName}, " +
+    "手动=${profile.supportsManualSensor}, RAW=${profile.supportsRaw}, " +
+    "连拍=${profile.supportsBurst}, 深度=${profile.supportsDepth}, " +
+    "变焦=${profile.maxDigitalZoom}x")
 ```
 
-## 12.7 Visualizing in the Android Camera Parameters App
+## 12.7 在 Android Camera Parameters 应用中可视化
 
-The Android Camera Parameters app ([GitHub](https://github.com/zoozooll/AndroidCameraParameters), [Play Store](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)) is the ideal companion to this chapter. It turns the raw `CameraCharacteristics` key/value pairs into a browsable UI:
+**Android Camera Parameters** 应用（[GitHub](https://github.com/zoozooll/AndroidCameraParameters)，[Play 商店](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)）是本章的理想伴侣。它将原始的 `CameraCharacteristics` 键/值对转换为可浏览的 UI：
 
-- **Summary card** — Hardware level (with color-coded badge: red=LEGACY, orange=LIMITED, green=FULL, teal=LEVEL_3, blue=EXTERNAL), lens facing, sensor resolution, focal lengths
-- **Capabilities card** — Checkmark list of every `REQUEST_AVAILABLE_CAPABILITIES` flag, green if present
-- **Category tabs** — Organized exactly by the `android.*` subsystems: Sensor, Lens, Control, Scaler, Jpeg, Flash, Statistics, Info, Request
-- **Raw JSON tab** — The complete serialized `CameraCharacteristics` object for copy/paste into bug reports
-- **Compare mode** — Swipe between cameras (0, 1, 2, 3) to see how hardware levels and capabilities differ across lenses
+- **摘要卡片** — 硬件级别（带有颜色编码徽章：红色=LEGACY, 橙色=LIMITED, 绿色=FULL, 青色=LEVEL_3, 蓝色=EXTERNAL）、镜头朝向、传感器分辨率、焦距
+- **功能卡片** — 每个 `REQUEST_AVAILABLE_CAPABILITIES` 标志的复选框列表，支持则为绿色
+- **类别选项卡** — 严格按 `android.*` 子系统组织：Sensor (传感器)、Lens (镜头)、Control (控制)、Scaler (缩放器)、Jpeg、Flash (闪光灯)、Statistics (统计)、Info (信息)、Request (请求)
+- **原生 JSON 选项卡** — 用于复制/粘贴到 bug 报告中的完整序列化 `CameraCharacteristics` 对象
+- **比较模式** — 在相机 (0, 1, 2, 3) 之间滑动，查看不同镜头的硬件级别和功能有何差异
 
-## 12.8 Summary
+## 12.8 小结
 
-| Concept | Key Takeaway |
+| 概念 | 关键要点 |
 |---------|-------------|
-| **Hardware Level** | 5 tiers: LEGACY (wrapper) → LIMITED (baseline) → FULL (pro + manual/RAW) → LEVEL_3 (FULL + reprocessing) → EXTERNAL (USB). FULL is the minimum for any serious camera work. CTS-verified guarantees. |
-| **Capability Flags** | Fine-grained feature detection via `REQUEST_AVAILABLE_CAPABILITIES`. Key flags: `MANUAL_SENSOR`, `MANUAL_POST_PROCESSING`, `RAW`, `BURST_CAPTURE`, `DEPTH_OUTPUT`, `LOGICAL_MULTI_CAMERA`, `PRIVATE_REPROCESSING`, `YUV_REPROCESSING`, `CONSTRAINED_HIGH_SPEED_VIDEO`. |
-| **Level → Capability Mapping** | FULL guarantees MANUAL_SENSOR, MANUAL_POST_PROCESSING, RAW, BURST. LEVEL_3 adds YUV/PRIVATE_REPROCESSING. DEPTH and LOGICAL_MULTI_CAMERA are optional on all levels. |
-| **Metadata Namespace** | Keys organized as `android.<subsystem>.<param>`. Main subsystems: sensor, lens, control, scaler, jpeg, request, flash, statistics, info. Each subsystem has static info (CameraCharacteristics), request inputs (CaptureRequest), and result outputs (CaptureResult). |
-| **Safe Queries** | Always provide null-safety defaults for `get()` — many keys are optional. Use hardware level as coarse gate, capability flags as fine gate, individual key presence for per-device tuning. |
+| **硬件级别** | 5 个层级：LEGACY (封装器) → LIMITED (基准) → FULL (专业 + 手动/RAW) → LEVEL_3 (FULL + 重处理) → EXTERNAL (USB)。FULL 是进行任何严肃相机工作的最低要求。通过 CTS 验证的保证。 |
+| **功能标志** | 通过 `REQUEST_AVAILABLE_CAPABILITIES` 进行细粒度功能检测。关键标志：`MANUAL_SENSOR`、`MANUAL_POST_PROCESSING`、`RAW`、`BURST_CAPTURE`、`DEPTH_OUTPUT`、`LOGICAL_MULTI_CAMERA`、`PRIVATE_REPROCESSING`、`YUV_REPROCESSING`、`CONSTRAINED_HIGH_SPEED_VIDEO`。 |
+| **级别与功能映射** | FULL 保证支持 MANUAL_SENSOR、MANUAL_POST_PROCESSING、RAW、BURST。LEVEL_3 增加了 YUV/PRIVATE_REPROCESSING。DEPTH 和 LOGICAL_MULTI_CAMERA 在所有级别上都是可选的。 |
+| **元数据命名空间** | 键组织为 `android.<子系统>.<参数>`。主要子系统：sensor、lens、control、scaler、jpeg、request、flash、statistics、info。每个子系统都有静态信息 (CameraCharacteristics)、请求输入 (CaptureRequest) 和结果输出 (CaptureResult)。 |
+| **安全查询** | 始终为 `get()` 提供空安全默认值——许多键是可选的。使用硬件级别作为粗略门控，功能标志作为细化门控，单个键的存在作为针对特定设备的调优。 |
 
-## What's Next
+## 下一章
 
-Now that you understand what a camera can do (characteristics) and how to control it (the pipeline + capture types), you have the complete foundation for Part IV.
+既然你已经了解了相机的能力（特性）以及如何控制它（管线 + 捕获类型），你就已经为第四部分打下了完整的基础。
 
-In **Chapter 13: Manual Camera ISO and Exposure**, you will learn to use the `MANUAL_SENSOR` capability to manually control `SENSOR_EXPOSURE_TIME` and `SENSOR_SENSITIVITY` — implementing a pro-mode exposure slider with live preview, exposure compensation, and the exposure triangle trade-offs.
+在**第 13 章：手动相机 ISO 与曝光**中，你将学习使用 `MANUAL_SENSOR` 功能来手动控制 `SENSOR_EXPOSURE_TIME` 和 `SENSOR_SENSITIVITY` —— 实现一个带有实时预览、曝光补偿和曝光三角权衡的专业模式曝光滑块。

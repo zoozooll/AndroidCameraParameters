@@ -1,34 +1,34 @@
-﻿---
+---
 sidebar_position: 20
-title: "Chapter 20: Multi-Camera"
-description: "Explore Android 9+ logical multi-camera devices, physical camera IDs, APPROXIMATE vs CALIBRATED sensor sync, seamless zoom switching, and simultaneous dual-physical capture via OutputConfiguration.setPhysicalCameraId() in Camera2 API"
-keywords: [Android Camera2, multi-camera, logical camera, physical camera, getPhysicalCameraIds, sensor sync, APPROXIMATE, CALIBRATED, seamless zoom, disparity, setPhysicalCameraId]
+title: "第 20 章：多相機"
+description: "探索 Android 9+ 邏輯多相機設備、物理相機 ID、APPROXIMATE 與 CALIBRATED 感光元件同步、無縫變焦切換，以及在 Camera2 API 中透過 OutputConfiguration.setPhysicalCameraId() 實現的同步雙物理拍攝"
+keywords: [Android Camera2, 多相機, 邏輯相機, 物理相機, getPhysicalCameraIds, 感光元件同步, APPROXIMATE, CALIBRATED, 無縫變焦, 視差, setPhysicalCameraId]
 ---
 
-# Chapter 20: Multi-Camera
+# 第 20 章：多相機
 
-Modern smartphones ship with 3–5 rear cameras and 2 front cameras — ultra-wide, wide, telephoto, macro, depth, and periscope lenses on 2023+ flagships. Before Android 9 (API 28), every lens appeared as an independent `CameraCharacteristics` camera ID, and apps had to manually open/close cameras at zoom boundaries to switch lenses. This caused visible black frames, lost AF state, and audio pops during video — all unacceptable UX defects. Android 9 solved this with the **logical camera** abstraction: a virtual camera ID that groups multiple same-facing physical cameras and lets the HAL transparently switch lenses at zoom thresholds, preserving session state. The research project's *Logical Multi-Camera* section specifies the exact rules for stream replacement, sensor sync semantics, and dual-physical capture that this chapter implements.
+現代智慧型手機配備了 3–5 個後置鏡頭和 2 個前置鏡頭——在 2023+ 旗艦機上包括超廣角、廣角、望遠、微距、深度和潛望式鏡頭。在 Android 9 (API 28) 之前，每個鏡頭都顯示為一個獨立的 `CameraCharacteristics` 相機 ID，應用程序必須在變焦邊界手動打開/關閉相機來切換鏡頭。這會導致可見的黑幀、丟失 AF 狀態以及影片期間的音訊爆音——這些都是不可接受的 UI 缺陷。Android 9 透過**邏輯相機 (logical camera)** 抽象解決了這個問題：一個虛擬相機 ID 將多個同朝向的物理相機分組，讓 HAL 在變焦閾值處透明地切換鏡頭，同時保留工作階段狀態。本章實現了研究專案《邏輯多相機》部分中規定的串流替換規則、感光元件同步語意和雙物理拍攝。
 
-You can browse the full logical/physical camera topology of every supported device in the [Android Camera Parameters](https://github.com/zoozooll/AndroidCameraParameters) app (also on the [Play Store](https://play.google.com/store/apps/details?id=com.zoozooll.cameraparameters)): the Multi-Camera dashboard reports the `REQUEST_AVAILABLE_CAPABILITIES_LOGICAL_MULTI_CAMERA` flag, lists `getPhysicalCameraIds()` per logical ID, and renders the calibrated vs approximate sensor sync type for every rear-facing combo. These reports are directly pulled from the HAL via the Camera2 API with no vendor-specific filtering, so they match exactly what your app will see at runtime.
+你可以在 **Android Camera Parameters** 應用（也可在 [Google Play 商店](https://play.google.com/store/apps/details?id=com.zoozooll.cameraparameters) 下載）中瀏覽任何受支援設備的完整邏輯/物理相機拓撲：其「多相機」儀表板會報告 `REQUEST_AVAILABLE_CAPABILITIES_LOGICAL_MULTI_CAMERA` 標記，列出每個邏輯 ID 的 `getPhysicalCameraIds()`，並渲染每個後置組合的已校準 (calibrated) 與近似 (approximate) 感光元件同步類型。這些報告直接從 HAL 透過 Camera2 API 獲取，沒有經過供應商特定的過濾，因此它們與你的應用在執行時看到的情況完全一致。
 
-## Logical vs Physical Camera Topology
+## 邏輯對比物理相機拓撲
 
-A logical camera is a virtual HAL device backed by N ≥ 2 physical cameras that share the same facing direction (`LENS_FACING_FRONT` or `LENS_FACING_BACK`). When you open a logical ID, the HAL internally manages power rails, ISP pipelines, and lens switching for all underlying physical cameras. The topology looks like this:
+邏輯相機是一個由 N ≥ 2 個同朝向（`LENS_FACING_FRONT` 或 `LENS_FACING_BACK`）物理相機支持的虛擬 HAL 設備。當你打開一個邏輯 ID 時，HAL 會在內部為所有底層物理相機管理電源軌、ISP 管線和鏡頭切換。拓撲結構如下：
 
 ```mermaid
 flowchart TB
-    subgraph UserSpace["App (Userspace)"]
-        APP[CameraManager.openCamera\ncameraId = \"0\" (Logical ID)]
+    subgraph UserSpace["應用 (用戶空間)"]
+        APP["CameraManager.openCamera<br/>cameraId = \"0\" (邏輯 ID)"]
     end
 
-    subgraph HAL["Camera HAL (Kernel / Vendor Partition)"]
-        LOG[Logical Camera Device 0\nVirtual Node]
+    subgraph HAL["相機 HAL (內核 / 供應商分區)"]
+        LOG["邏輯相機設備 0<br/>虛擬節點"]
 
-        subgraph PhysicalCams["Physical Cameras (Same-Facing Group)"]
-            UW["Physical ID \"8\"\nUltra-Wide 0.5×\n12MP, 13mm eq."]
-            W["Physical ID \"0\"\nWide 1.0×\n50MP, 24mm eq."]
-            T["Physical ID \"5\"\nTelephoto 3.0×\n10MP, 72mm eq."]
-            P["Physical ID \"7\"\nPeriscope 10×\n8MP, 240mm eq."]
+        subgraph PhysicalCams["物理相機 (同朝向組)"]
+            UW["物理 ID \"8\"<br/>超廣角 0.5×<br/>12MP, 13mm 等效"]
+            W["物理 ID \"0\"<br/>廣角 1.0×<br/>50MP, 24mm 等效"]
+            T["物理 ID \"5\"<br/>望遠 3.0×<br/>10MP, 72mm 等效"]
+            P["物理 ID \"7\"<br/>潛望鏡 10×<br/>8MP, 240mm 等效"]
         end
 
         LOG <--> UW
@@ -37,76 +37,76 @@ flowchart TB
         LOG <--> P
     end
 
-    subgraph ZoomScale["Zoom Ratios → HAL Lens Switch Points"]
-        Z1["0.5× – 0.9× → ULTRA-WIDE (ID 8)"]
-        Z2["1.0× – 2.9× → WIDE (ID 0)"]
-        Z3["3.0× – 9.9× → TELEPHOTO (ID 5)"]
-        Z4["10.0×+ → PERISCOPE (ID 7)"]
+    subgraph ZoomScale["變焦倍率 → HAL 鏡頭切換點"]
+        Z1["0.5× – 0.9× → 超廣角 (ID 8)"]
+        Z2["1.0× – 2.9× → 廣角 (ID 0)"]
+        Z3["3.0× – 9.9× → 望遠 (ID 5)"]
+        Z4["10.0×+ → 潛望鏡 (ID 7)"]
     end
 
     APP --> LOG
     LOG -.-> ZoomScale
 ```
 
-The zoom switch points (Z1–Z4) are completely HAL-controlled and opaque to your app — when you set `CaptureRequest.CONTROL_ZOOM_RATIO = 3.2f` on a 4-lens logical device, the HAL instantly routes capture traffic to the 3× telephoto (ID 5) and digitally crops back to the correct framing without your app ever knowing a lens change happened. This is the "seamless zoom" behavior that flagship camera apps use.
+變焦切換點 (Z1–Z4) 完全由 HAL 控制且對應用透明——當你針對一個 4 鏡頭邏輯設備設定 `CaptureRequest.CONTROL_ZOOM_RATIO = 3.2f` 時，HAL 會立即將擷取流量路由到 3 倍望遠 (ID 5)，並以數位方式裁剪回正確的取景，而你的應用甚至不知道發生了鏡頭更換。這就是旗艦相機應用使用的「無縫變焦」行為。
 
-The critical properties are:
-- **`getPhysicalCameraIds()`** (called on the `CameraCharacteristics` of the logical ID) returns a `Set&lt;String&gt;` of the underlying physical ID strings, e.g. `{"0", "5", "7", "8"}` for the example above.
-- **`LENS_INFO_MINIMUM_FOCUS_DISTANCE`** and **`LENS_INFO_AVAILABLE_FOCAL_LENGTHS`** on the logical ID represent the currently-active physical lens. Query the *physical* characteristics if you need per-lens focal length data.
-- **`SCALER_AVAILABLE_MAX_DIGITAL_ZOOM`** on the logical ID gives the zoom ceiling (e.g., 100×) which is a combination of per-lens optical zoom + digital crop across all physical lenses.
+關鍵屬性包括：
+- **`getPhysicalCameraIds()`**（在邏輯 ID 的 `CameraCharacteristics` 上呼叫）返回底層物理 ID 字串的 `Set<String>`，例如上述範例中的 `{"0", "5", "7", "8"}`。
+- 邏輯 ID 上的 **`LENS_INFO_MINIMUM_FOCUS_DISTANCE`** 和 **`LENS_INFO_AVAILABLE_FOCAL_LENGTHS`** 代表目前活動的物理鏡頭。如果你需要每鏡頭的焦距數據，請查詢*物理*特性。
+- 邏輯 ID 上的 **`SCALER_AVAILABLE_MAX_DIGITAL_ZOOM`** 給出了變焦上限（例如 100×），它是所有物理鏡頭上的每鏡頭光學變焦 + 數位裁剪的組合。
 
-## Sensor Synchronization: APPROXIMATE vs CALIBRATED
+## 感光元件同步：APPROXIMATE 對比 CALIBRATED
 
-When you capture from two physical cameras simultaneously (e.g., wide + tele for depth/disparity matching, or wide + ultra-wide for multi-frame fusion), the pixel data is only computationally useful if the two sensor exposures start within a known time delta. Android defines two sync levels in the key **`CameraCharacteristics.LOGICAL_MULTI_CAMERA_SENSOR_SYNC_TYPE`**:
+當你同時從兩個物理相機擷取影像時（例如，廣角 + 望遠用於深度/視差比對，或廣角 + 超廣角用於多幀融合），只有在兩個感光元件的曝光開始時間差已知的情況下，像素數據才具有計算意義。Android 在鍵 **`CameraCharacteristics.LOGICAL_MULTI_CAMERA_SENSOR_SYNC_TYPE`** 中定義了兩個同步層級：
 
-| Sync Level | Numeric Value | Meaning | Typical Use Case |
+| 同步層級 | 數值 | 含義 | 典型用例 |
 |------------|---------------|---------|------------------|
-| **APPROXIMATE** | 0 | Sensor start-of-exposure timestamps match within ±1 frame interval (±33 ms at 30 fps). AF/AE are synchronized, but not pixel-level exposure start. | Portrait mode with a depth sensor, casual bokeh. |
-| **CALIBRATED** | 1 | Sensor start-of-exposure timestamps match within ±1 ms. Hardware-level sync is enforced via the SoC CSI-2 receiver. Pixel-level temporal alignment is guaranteed. | Stereo depth estimation for AR, photogrammetry, simultaneous dual-focal-length fusion, super-resolution. |
+| **APPROXIMATE** (近似) | 0 | 感光元件曝光開始時間戳在 ±1 個幀間隔（30 fps 下為 ±33 ms）內比對。AF/AE 是同步的，但像素級的曝光開始不同步。 | 帶深度感測器的人像模式，正規虛化。 |
+| **CALIBRATED** (已校準) | 1 | 感光元件曝光開始時間戳在 ±1 ms 內比對。透過 SoC CSI-2 接收器強制執行硬體級同步。保證像素級的時間對齊。 | 用於 AR 的立體深度估計、攝影測量、同步的雙焦距融合、超解析度。 |
 
-The research doc's *Logical Multi-Camera* section found that only **Snapdragon 8 Gen 1+ and Exynos 2200+ flagships report CALIBRATED sync**. All mid-range (Snapdragon 7-series, Dimensity 8000-series) and budget devices report APPROXIMATE. If you attempt pixel-level disparity matching on an APPROXIMATE-sync device, you will get ±1-frame parallax drift that breaks depth maps. Always gate disparity features behind the CALIBRATED check.
+研究文件《邏輯多相機》部分發現，**只有驍龍 8 Gen 1+ 和 Exynos 2200+ 旗艦機報告 CALIBRATED 同步**。所有中階機（驍龍 7 系列、天璣 8000 系列）和入門級設備都報告為 APPROXIMATE。如果你嘗試在 APPROXIMATE 同步設備上進行像素級視差比對，你會得到 ±1 幀的視差漂移，從而破壞深度圖。務必將視差功能置於 CALIBRATED 檢查之後。
 
 ```mermaid
 flowchart LR
-    subgraph APPROX["APPROXIMATE Sync (±33 ms)"]
-        A1[Wide Sensor Exposure Start\nt=0.000 ms] --> A2[ISP Merge\nDepth OK, Motion NOT OK]
-        A3[Tele Sensor Exposure Start\nt=+27 ms] --> A2
+    subgraph APPROX["APPROXIMATE 同步 (±33 ms)"]
+        A1[廣角感光元件曝光開始<br/>t=0.000 ms] --> A2[ISP 融合<br/>深度 OK, 動態物體 NOT OK]
+        A3[望遠感光元件曝光開始<br/>t=+27 ms] --> A2
     end
-    subgraph CALIB["CALIBRATED Sync (±1 ms)"]
-        C1[Wide Sensor Exposure Start\nt=0.000 ms] --> C2[ISP / GPU Fusion\nDepth + Motion + AR OK]
-        C3[Tele Sensor Exposure Start\nt=+0.4 ms] --> C2
+    subgraph CALIB["CALIBRATED 同步 (±1 ms)"]
+        C1[廣角感光元件曝光開始<br/>t=0.000 ms] --> C2[ISP / GPU 融合<br/>深度 + 動態 + AR 均 OK]
+        C3[望遠感光元件曝光開始<br/>t=+0.4 ms] --> C2
     end
 
     style APPROX fill:#ffe9e9,stroke:#b91c1c
     style CALIB fill:#e6ffef,stroke:#15803d
 ```
 
-The time-delta difference is not subtle: 27 ms of misalignment means a moving subject (e.g., a runner at 5 m/s) has moved 13.5 cm between the two exposures — a parallax error large enough to completely destroy any depth-from-disparity algorithm.
+時間差的差異並不細微：27 ms 的錯位意味著一個移動的物體（例如以 5 m/s 奔跑的人）在兩次曝光之間移動了 13.5 cm——這個視差誤差大到足以完全摧毀任何基於視差的深度演算法。
 
-## Stream Replacement Rule (From Research Doc)
+## 串流替換規則 (來自研究文件)
 
-The single most important constraint the HAL enforces on physical-camera targeting is the **Stream Replacement Rule**, verbatim from the *Logical Multi-Camera* specification in the research doc:
+HAL 對物理相機定向強制執行的最重要約束是**串流替換規則**，該規則原樣引用自研究文件中的《邏輯多相機》規範：
 
-> **Rule MR-1:** If a logical camera has N physical children, then for every 1 logical-format stream (YUV or RAW) of size S that you attach to the logical session, you may replace it with up to **2 identical-format streams of the SAME size S**, each targeted at a DIFFERENT physical camera via `OutputConfiguration.setPhysicalCameraId()`.
+> **規則 MR-1:** 如果一個邏輯相機有 N 個物理子相機，那麼對於你附加到邏輯工作階段的每一個尺寸為 S 的邏輯格式串流（YUV 或 RAW），你最多可以將其替換為 **2 個尺寸相同為 S 的相同格式串流**，其中每個串流都透過 `OutputConfiguration.setPhysicalCameraId()` 指向不同的物理相機。
 
-Consequences of violating MR-1:
-- 3 or more physical streams → session `onConfigureFailed()`.
-- Different sizes for the two physical streams → session `onConfigureFailed()`.
-- Mixing RAW and YUV in the same replacement pair → session `onConfigureFailed()`.
-- Adding 2 physical streams without removing the parent logical stream → HAL allocates 3× the required bandwidth and silently drops frames.
+違反 MR-1 的後果：
+- 3 個或更多物理串流 → 工作階段 `onConfigureFailed()`。
+- 同一對物理串流使用不同尺寸 → 工作階段 `onConfigureFailed()`。
+- 在同一對替換串流中混合 RAW 和 YUV → 工作階段 `onConfigureFailed()`。
+- 添加 2 個物理串流但不移除父邏輯串流 → HAL 分配 3 倍所需頻寬並靜默掉幀。
 
-Correct examples (4 physical children → 2 allowed replacements):
-| Logical Stream | Replacement (Valid per MR-1) |
+正確範例（4 個物理子相機 → 允許 2 個替換）：
+| 邏輯串流 | 替換 (根據 MR-1 有效) |
 |----------------|-------------------------------|
-| 1× Logical YUV 1920×1080 | → 2× Physical YUV 1920×1080 (Wide + Tele) |
-| 1× Logical RAW 4000×3000 | → 2× Physical RAW 4000×3000 (UltraWide + Wide) |
-| 2× Logical YUV (preview + video) | → 2× (Logical YUV preview) + 2× (Physical YUV Wide+Tele encode) — 2 replacements total |
+| 1× 邏輯 YUV 1920×1080 | → 2× 物理 YUV 1920×1080 (廣角 + 望遠) |
+| 1× 邏輯 RAW 4000×3000 | → 2× 物理 RAW 4000×3000 (超廣角 + 廣角) |
+| 2× 邏輯 YUV (預覽 + 影片) | → 2× (邏輯 YUV 預覽) + 2× (物理 YUV 廣角+望遠編碼) — 總計 2 個替換 |
 
-## Implementation: Step-by-Step Dual-Physical Capture
+## 實現：分步執行雙物理拍攝
 
-The workflow below captures simultaneous frames from the wide (1×) and telephoto (3×) physical sensors, using the Stream Replacement Rule.
+以下工作流程使用了串流替換規則，同時從廣角 (1×) 和望遠 (3×) 物理感光元件擷取幀。
 
-### Step 1: Query Logical Capability and Physical Camera IDs
+### 第 1 步：查詢邏輯性能和物理相機 ID
 
 ```kotlin
 import android.hardware.camera2.CameraCharacteristics
@@ -145,7 +145,7 @@ fun enumerateLogicalMultiCams(
             CameraCharacteristics.LOGICAL_MULTI_CAMERA_SENSOR_SYNC_TYPE
         ) ?: 0
 
-        // Identify roles by focal length
+        // 透過焦距識別角色
         var ultraWideId: String? = null
         var wideId: String? = null
         var teleId: String? = null
@@ -184,11 +184,11 @@ fun enumerateLogicalMultiCams(
 }
 ```
 
-Role identification by focal length (shortest = ultra-wide, longest = tele, remainder = wide) is reliable across all OEMs because the HAL reports LENS_INFO_AVAILABLE_FOCAL_LENGTHS as 35mm-equivalent or actual-mm values consistent with marketing specs. The Android Camera Parameters app uses this exact algorithm for its Multi-Camera dashboard.
+透過焦距（最短 = 超廣角，最長 = 望遠，其餘 = 廣角）識別角色在所有 OEM 中都是可靠的，因為 HAL 報告的 LENS_INFO_AVAILABLE_FOCAL_LENGTHS 作為 35mm 等效值或實際公釐值與行銷規格一致。**Android Camera Parameters** 應用的「多相機」儀表板正是使用了這種演算法。
 
-### Step 2: Create OutputConfigurations with setPhysicalCameraId()
+### 第 2 步：透過 setPhysicalCameraId() 建立 OutputConfigurations
 
-The replacement pair (wide YUV + tele YUV) requires `OutputConfiguration` objects with `setPhysicalCameraId()` invoked **before** the session is created. Once the session is configured, changing the physical ID via `setPhysicalCameraId()` is not allowed on existing surfaces (requires session re-creation).
+必須在建立工作階段**之前**對 `OutputConfiguration` 對象呼叫 `setPhysicalCameraId()` 以配置替換對（廣角 YUV + 望遠 YUV）。一旦工作階段配置完成，就不允許在現有 Surface 上透過 `setPhysicalCameraId()` 更改物理 ID（需要重新建立工作階段）。
 
 ```kotlin
 import android.hardware.camera2.params.OutputConfiguration
@@ -203,7 +203,7 @@ var teleImageReader: ImageReader? = null
 fun createPhysicalOutputConfigs(
     wideId: String,
     teleId: String,
-    sharedSize: Size // Must be SAME size for both per Rule MR-1!
+    sharedSize: Size // 根據規則 MR-1，兩者必須尺寸相同！
 ): Pair<OutputConfiguration, OutputConfiguration> {
     wideImageReader = ImageReader.newInstance(
         sharedSize.width, sharedSize.height,
@@ -226,11 +226,11 @@ fun createPhysicalOutputConfigs(
 }
 ```
 
-Rule MR-1 is enforced in the code above: both `ImageReader` instances use `sharedSize` (identical dimensions) and `YUV_420_888` (identical format). Using different sizes guarantees `onConfigureFailed` — the HAL has no mechanism to run two physical sensors at different resolutions in the same sync group.
+上述程式碼強制執行了規則 MR-1：兩個 `ImageReader` 實例都使用 `sharedSize`（相同維度）和 `YUV_420_888`（相同格式）。使用不同的尺寸保證會導致 `onConfigureFailed` —— HAL 没有任何機制能在同一個同步組中以不同解析度執行兩個物理感光元件。
 
-### Step 3: Create CaptureSession and Submit Dual-Physical Capture
+### 第 3 步：建立 CaptureSession 並提交雙物理拍攝
 
-The session uses the 2 physical OutputConfigurations plus 1 logical preview Surface (total 3 outputs). 3 outputs total is within the bandwidth budget of flagships (the research doc measured 68% ISP utilization on Snapdragon 8 Gen 2 for 3-output simultaneous wide+tele+preview at 1080p30).
+工作階段使用 2 個物理 OutputConfiguration 加上 1 個邏輯預覽 Surface（總計 3 個輸出）。總計 3 個輸出處於旗艦機的頻寬預算內（研究文件測得在驍龍 8 Gen 2 上，以 1080p30 同時進行廣角+望遠+預覽的 3 輸出拍攝，ISP 利用率為 68%）。
 
 ```kotlin
 import android.hardware.camera2.CameraDevice
@@ -238,7 +238,7 @@ import android.hardware.camera2.CameraCaptureSession
 import android.hardware.camera2.CaptureRequest
 import android.os.Handler
 
-lateinit var cameraDevice: CameraDevice // Already-opened logical ID
+lateinit var cameraDevice: CameraDevice // 已打開的邏輯 ID
 
 fun createDualPhysicalSession(
     previewSurface: Surface,
@@ -247,9 +247,9 @@ fun createDualPhysicalSession(
     backgroundHandler: Handler
 ) {
     val outputs = listOf(
-        OutputConfiguration(previewSurface), // Logical preview (any size)
-        widePhysConfig,                      // Physical wide YUV (sharedSize)
-        telePhysConfig                       // Physical tele YUV (sharedSize)
+        OutputConfiguration(previewSurface), // 邏輯預覽 (任意尺寸)
+        widePhysConfig,                      // 物理廣角 YUV (sharedSize)
+        telePhysConfig                       // 物理望遠 YUV (sharedSize)
     )
 
     val sessionConfig = android.hardware.camera2.params.SessionConfiguration(
@@ -272,8 +272,8 @@ fun createDualPhysicalSession(
                     set(CaptureRequest.CONTROL_AF_MODE,
                         CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
 
-                    // Optional: Lock AE across both physical lenses so fusion
-                    // does not produce mismatched exposure halves
+                    // 可選：跨兩個物理鏡頭鎖定 AE，以便融合
+                    // 不會產生曝光不匹配的左右半部分
                     set(CaptureRequest.CONTROL_AE_LOCK, true)
                 }
 
@@ -284,7 +284,7 @@ fun createDualPhysicalSession(
                 )
             }
             override fun onConfigureFailed(s: CameraCaptureSession) =
-                Log.e(TAG, "Dual-physical session FAILED — check Rule MR-1")
+                Log.e(TAG, "雙物理工作階段失敗 — 請檢查規則 MR-1")
         }
     )
 
@@ -292,41 +292,41 @@ fun createDualPhysicalSession(
 }
 ```
 
-Once `setRepeatingRequest()` is running, every frame interval the HAL: (a) triggers both physical sensors' start-of-exposure at the calibrated time delta, (b) routes each sensor's output to its targeted ImageReader surface via the CSI-2 virtual channel demux, (c) combines both with the logical preview output into a single CaptureResult with one timestamp.
+一旦 `setRepeatingRequest()` 執行起來，HAL 每個幀間隔都會：(a) 以已校準的時間差觸發兩個物理感光元件的曝光開始，(b) 透過 CSI-2 虛擬通道解復用將每個感光元件的輸出路由到其目標 ImageReader Surface，(c) 將兩者與邏輯預覽輸出合併到一個帶有單一時間戳的 CaptureResult 中。
 
-The two `Image` objects will have **identical `image.timestamp` values** when `LOGICAL_MULTI_CAMERA_SENSOR_SYNC_TYPE == CALIBRATED`, and timestamps within ±1 frame interval when APPROXIMATE.
+當 `LOGICAL_MULTI_CAMERA_SENSOR_SYNC_TYPE == CALIBRATED` 時，兩個 `Image` 對象將具有**完全相同的时间戳 (`image.timestamp`)**，而當為 APPROXIMATE 時，時間戳在 ±1 幀間隔內。
 
-## Logical → Physical Topology Diagram (Mermaid ER-style)
+## 邏輯 → 物理拓撲圖 (Mermaid ER 風格)
 
 ```mermaid
 graph TD
-    subgraph BackLogical["Logical Rear Camera ID \"0\""]
+    subgraph BackLogical["後置邏輯相機 ID \"0\""]
         direction TB
-        CAPFLAG["CAPABILITIES:\nLOGICAL_MULTI_CAMERA = true\nSENSOR_SYNC_TYPE = CALIBRATED\nMAX_DIGITAL_ZOOM = 100×"]
+        CAPFLAG["性能標誌:<br/>LOGICAL_MULTI_CAMERA = true<br/>SENSOR_SYNC_TYPE = CALIBRATED<br/>MAX_DIGITAL_ZOOM = 100×"]
     end
 
-    subgraph PhysChildren["Physical Children (getPhysicalCameraIds)"]
-        UWPHYS["ID \"8\" → Ultra-Wide\nFocal=1.7mm\nf/1.8\nFOV=120°"]
-        WPHYS["ID \"0\" → Wide\nFocal=5.5mm\nf/1.6\nFOV=84°"]
-        TPHYS["ID \"5\" → Telephoto 3×\nFocal=16.5mm\nf/2.0\nFOV=28°"]
-        PPHYS["ID \"7\" → Periscope 10×\nFocal=55mm\nf/3.4\nFOV=8.5°"]
+    subgraph PhysChildren["物理子相機 (getPhysicalCameraIds)"]
+        UWPHYS["ID \"8\" → 超廣角<br/>焦距=1.7mm<br/>f/1.8<br/>FOV=120°"]
+        WPHYS["ID \"0\" → 廣角<br/>焦距=5.5mm<br/>f/1.6<br/>FOV=84°"]
+        TPHYS["ID \"5\" → 望遠 3×<br/>焦距=16.5mm<br/>f/2.0<br/>FOV=28°"]
+        PPHYS["ID \"7\" → 潛望鏡 10×<br/>焦距=55mm<br/>f/3.4<br/>FOV=8.5°"]
     end
 
-    subgraph ReplaceRule["Session Outputs (Rule MR-1 Applied)"]
+    subgraph ReplaceRule["工作階段輸出 (應用規則 MR-1)"]
         direction TB
-        PREV["1x Logical Preview\nSurfaceView 1080p\n(No physical ID set)"]
-        PHYS1["1x Physical YUV 12MP\n→ OutputConfiguration\n.setPhysicalCameraId(ID \"0\")\n← Targets WIDE lens"]
-        PHYS2["1x Physical YUV 12MP\n→ OutputConfiguration\n.setPhysicalCameraId(ID \"5\")\n← Targets TELE lens"]
-        NOTE["✓ VALID per MR-1:\nFormat YUV × Size Match × 2 Replacements"]
+        PREV["1x 邏輯預覽<br/>SurfaceView 1080p<br/>(未設定物理 ID)"]
+        PHYS1["1x 物理 YUV 12MP<br/>→ OutputConfiguration<br/>.setPhysicalCameraId(ID \"0\")<br/>← 指向廣角鏡頭"]
+        PHYS2["1x 物理 YUV 12MP<br/>→ OutputConfiguration<br/>.setPhysicalCameraId(ID \"5\")<br/>← 指向望遠鏡頭"]
+        NOTE["✓ 根據 MR-1 有效:<br/>YUV 格式 × 尺寸匹配 × 2 個替換"]
     end
 
     BackLogical --> PhysChildren
-    PhysChildren -.->|"HAL selects by zoom ratio"| ReplaceRule
+    PhysChildren -.->|"HAL 根據變焦倍率選擇"| ReplaceRule
 ```
 
-## Seamless Zoom Implementation
+## 無縫變焦實現
 
-The HAL's automatic lens switching at zoom boundaries is what makes "seamless zoom" seamless. You do **not** need to manually swap physical IDs when zoom crosses a threshold — just set `CONTROL_ZOOM_RATIO` on the repeating request and let the HAL do the work:
+HAL 在變焦邊界的自動鏡頭切換是讓「無縫變焦」得以無縫銜接的原因。你**不需要**在變焦越過閾值時手動更換物理 ID——只需在重複請求上設定 `CONTROL_ZOOM_RATIO`，然後讓 HAL 去完成工作：
 
 ```kotlin
 fun updateZoom(session: CameraCaptureSession,
@@ -337,40 +337,40 @@ fun updateZoom(session: CameraCaptureSession,
 }
 ```
 
-When `zoomRatio` crosses from `2.9× → 3.0×` on a typical 4-lens device, the HAL internally:
-1. Starts the 3× telephoto sensor from standby (takes ~2 frames, 66 ms)
-2. Synchronizes exposure/white balance between the wide and tele
-3. Fades digitally-cropped wide output into native tele output over ~10 frames (333 ms)
-4. Powers down the wide sensor if not used elsewhere
+在典型的 4 鏡頭設備上，當 `zoomRatio` 從 `2.9× → 3.0×` 跨越時，HAL 會在內部：
+1. 從待機狀態啟動 3 倍望遠感光元件（耗時約 2 幀，66 ms）
+2. 在廣角和望遠之間同步曝光/白平衡
+3. 在約 10 幀（333 ms）內將數位裁剪的廣角輸出淡入到原生長度的望遠輸出
+4. 如果其他地方未用到，則關閉廣角感光元件
 
-All four steps happen transparently — your CaptureCallback never sees a session-teardown event, `CaptureResult.SENSOR_TIMESTAMP` stays monotonically increasing, and AF/AE state is preserved across the boundary. The only way to detect a lens change is to compare `CaptureResult.LENS_FOCAL_LENGTH` between consecutive frames (which jumps from 5.5mm → 16.5mm when switching to tele on the example above).
+所有四個步驟都是透明發生的——你的 CaptureCallback 永遠不會看到工作階段拆除事件，`CaptureResult.SENSOR_TIMESTAMP` 保持單調遞增，且 AF/AE 狀態跨越邊界得以保留。偵測鏡頭更換的唯一方法是對比連續幀之間的 `CaptureResult.LENS_FOCAL_LENGTH`（在上述範例中，切換到望遠時該值會從 5.5mm 跳到 16.5mm）。
 
-## Performance and Limitations
+## 性能與限制
 
-The *Logical Multi-Camera* section of the research doc contains the following measured limits on a 2023 flagship (Snapdragon 8 Gen 2, 4 rear cameras):
+研究文件《邏輯多相機》部分包含了在 2023 旗艦機（驍龍 8 Gen 2, 4 個後置鏡頭）上的實測限制：
 
-| Configuration | Sustained Frame Rate | ISP Bandwidth Utilized |
+| 配置 | 持續幀率 | ISP 頻寬利用率 |
 |---------------|---------------------|-------------------------|
-| Logical preview + 2 physical YUV (12 MP each) | 22 fps | 89% |
-| Logical preview + 2 physical YUV (4 MP each) | 30 fps (locked) | 62% |
-| Logical preview + 2 physical RAW (12 MP each) | 10 fps | 94% — triggers thermal ~60 s |
-| Logical preview + 2 physical YUV + 1 physical RAW | **Not allowed** (HAL bandwidth check fails) | — |
+| 邏輯預覽 + 2 個物理 YUV (每個 12 MP) | 22 fps | 89% |
+| 邏輯預覽 + 2 個物理 YUV (每個 4 MP) | 30 fps (鎖定) | 62% |
+| 邏輯預覽 + 2 個物理 RAW (每個 12 MP) | 10 fps | 94% — 約 60s 觸發過熱保護 |
+| 邏輯預覽 + 2 個物理 YUV + 1 個物理 RAW | **不被允許** (HAL 頻寬檢查失敗) | — |
 
-The 2-physical-stream cap is enforced both by Rule MR-1 and by raw ISP throughput. Attempting to attach 3 physical streams (e.g., ultra-wide + wide + tele simultaneous) will result in `onConfigureFailed` even if you try to trick Rule MR-1 with two separate replacement pairs — the HAL's CAMERA_ISP_BANDWIDTH check rejects it at configuration time.
+2 個物理串流的上限不僅受到規則 MR-1 的約束，也受到原始 ISP 吞吐量的限制。嘗試附加 3 個物理串流（例如超廣角 + 廣角 + 望遠同時）將導致 `onConfigureFailed`，即使你嘗試透過兩個獨立的替換對來欺騙規則 MR-1 —— HAL 的 CAMERA_ISP_BANDWIDTH 檢查也會在配置時拒絕它。
 
-## Summary
+## 小結
 
-This chapter covered Android 9+ logical multi-camera support in full detail:
+本章詳細介紹了 Android 9+ 的邏輯多相機支援：
 
-- **Logical cameras** are virtual HAL nodes grouping same-facing physical cameras. Query via `REQUEST_AVAILABLE_CAPABILITIES_LOGICAL_MULTI_CAMERA`; get children via `getPhysicalCameraIds()`.
-- **Sensor sync** comes in two levels: APPROXIMATE (±33 ms, for portrait bokeh) and CALIBRATED (±1 ms, for AR/disparity fusion). Always gate computational photography features behind CALIBRATED.
-- **Seamless zoom** is HAL-controlled via `CONTROL_ZOOM_RATIO` — set the ratio and the HAL switches lenses at internal thresholds with no session tear-down.
-- **Stream Replacement Rule MR-1** (from the research doc) allows exactly 2 same-size, same-format physical streams per 1 logical stream. 3+ streams or mismatched sizes cause `onConfigureFailed`.
-- **`OutputConfiguration.setPhysicalCameraId()`** must be called before session creation to target individual physical lenses for simultaneous capture.
-- The two Mermaid diagrams (topology + ER-style rule mapping) visualize how the logical/physical hierarchy maps to session outputs.
+- **邏輯相機**是分組了同朝向物理相機的虛擬 HAL 節點。透過 `REQUEST_AVAILABLE_CAPABILITIES_LOGICAL_MULTI_CAMERA` 查詢性能；透過 `getPhysicalCameraIds()` 獲取子相機。
+- **感光元件同步**有兩個層級：APPROXIMATE（±33 ms，用於人像虛化）和 CALIBRATED（±1 ms，用於 AR/視差融合）。計算攝影功能務必建立在 CALIBRATED 檢查之上。
+- **無縫變焦**由 HAL 透過 `CONTROL_ZOOM_RATIO` 控制——設定倍率，HAL 會在內部閾值處切換鏡頭，無需拆除工作階段。
+- 來自研究文件的**串流替換規則 MR-1** 允許每 1 個邏輯串流對應正好 2 個同尺寸、同格式的物理串流。3 個及以上串流或尺寸不匹配會導致 `onConfigureFailed`。
+- 必須在建立工作階段之前呼叫 **`OutputConfiguration.setPhysicalCameraId()`** 以指向單個物理鏡頭進行同步拍攝。
+- 兩張 Mermaid 圖（拓撲圖 + ER 風格規則映射）直觀地展示了邏輯/物理層級如何映射到工作階段輸出。
 
-## What's Next
+## 下一章
 
-In **Chapter 21: HDR & Ultra HDR**, we move beyond 8-bit Standard Dynamic Range (SDR, sRGB, 100 nits) into the world of High Dynamic Range video and stills. You will learn about `DynamicRangeProfiles` for HDR10 (10-bit ST.2084 PQ, Rec.2020, static metadata) and HLG (Hybrid Log-Gamma, broadcast SDR-compatible), and the brand-new Android 14 (API 34) **JPEG_R (Ultra HDR)** format — ISO 21496-1, which embeds a "gain map" inside a standard JPEG so legacy readers see SDR while HDR displays boost highlights by up to 8 stops locally.
+在**第 21 章：HDR 與 Ultra HDR** 中，我們將跨越 8 位元標準動態範圍 (SDR, sRGB, 100 nits) 的邊界，進入高動態範圍影片和靜態照片的世界。你將學習有關 HDR10（10 位元 ST.2084 PQ, Rec.2020, 靜態元數據）和 HLG（混合對數伽馬, 廣播 SDR 相容）的 `DynamicRangeProfiles`，以及全新的 Android 14 (API 34) **JPEG_R (Ultra HDR)** 格式 —— ISO 21496-1，它在標準 JPEG 中嵌入了「增益圖 (gain map)」，以便舊版讀取器看到 SDR 效果，而 HDR 顯示器則在局部提升高達 8 檔的高光。
 
-Check which `DynamicRangeProfiles` your device supports per camera ID (HDR10, HDR10+, HLG, JPEG_R) and verify CDD Performance Class 15 compliance for Ultra HDR using the [Android Camera Parameters app](https://play.google.com/store/apps/details?id=com.zoozooll.cameraparameters). New device reports uploaded to the open-source [GitHub project](https://github.com/zoozooll/AndroidCameraParameters) help build a public database of HDR-capable phones.
+請使用 **Android Camera Parameters** 應用檢查你的設備按相機 ID 支援哪些 `DynamicRangeProfiles` (HDR10, HDR10+, HLG, JPEG_R)，並驗證 CDD 性能等級 15 對 Ultra HDR 的合規性。上傳到開源 [GitHub 專案](https://github.com/zoozooll/AndroidCameraParameters) 的新設備報告有助於建立一个支援 HDR 的手機公共資料庫。

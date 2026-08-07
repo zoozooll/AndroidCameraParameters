@@ -1,46 +1,46 @@
 ---
 sidebar_position: 14
-title: "Chapter 14: Manual Exposure in Camera2"
-description: Take full creative control of exposure with the Android Camera2 API. Learn to disable auto-exposure, set manual ISO via SENSOR_SENSITIVITY, control shutter speed in nanoseconds with SENSOR_EXPOSURE_TIME, and build working Kotlin examples for timelapses, long exposures, and bracketing.
-keywords: [android camera2 manual exposure, SENSOR_SENSITIVITY, SENSOR_EXPOSURE_TIME, CONTROL_MODE_OFF, CONTROL_AE_MODE_OFF, exposure bracketing, long exposure camera2, timelapse camera2]
+title: "第 14 章：Camera2 中的手动曝光"
+description: 利用 Android Camera2 API 完全掌控曝光。学习禁用自动曝光、通过 SENSOR_SENSITIVITY 设置手动 ISO、以纳秒为单位使用 SENSOR_EXPOSURE_TIME 控制快门速度，并构建用于延时摄影、长曝光和包围曝光的 Kotlin 示例。
+keywords: [android camera2 手动曝光, SENSOR_SENSITIVITY, SENSOR_EXPOSURE_TIME, CONTROL_MODE_OFF, CONTROL_AE_MODE_OFF, 曝光包围, 长曝光, 延时摄影]
 ---
 
-# Chapter 14: Manual Exposure in Camera2
+# 第 14 章：Camera2 中的手动曝光
 
-With the photographic theory of Chapter 13 under your belt, it's time to translate concepts into code. In this chapter, you'll learn how to **completely take over** the camera's auto-exposure (AE) system and set the ISO and shutter speed manually with the Camera2 API.
+掌握了第 13 章的摄影理论后，现在是将概念转化为代码的时候了。在本章中，你将学习如何**完全接管**相机的自动曝光 (AE) 系统，并使用 Camera2 API 手动设置 ISO 和快门速度。
 
-The [Android Camera Parameters app](https://github.com/zoozooll/AndroidCameraParameters) demonstrates every technique in this chapter — you can follow along live by switching to Manual mode in the app and adjusting the ISO and Shutter sliders to see real-time results.
+**Android Camera Parameters** 应用演示了本章中的所有技术——你可以切换到应用中的 Manual (手动) 模式，并调整 ISO 和 Shutter (快门) 滑块以实时查看结果。
 
 ---
 
-## The Big Switch: From AUTO → MANUAL
+## 大开关：从 AUTO 到 MANUAL
 
-By default, every `CaptureRequest` you submit runs under the camera's built-in 3A auto-pipeline (Auto Exposure, Auto Focus, Auto White Balance). To go manual, you must **explicitly disable** the pipeline.
+默认情况下，你提交的每一个 `CaptureRequest` 都在相机内置的 3A 自动管线（自动曝光、自动对焦、自动白平衡）下运行。要进入手动模式，你必须**显式禁用**该管线。
 
-There are two levels of override:
+有两个级别的覆盖：
 
-| Level | Setting | What Happens |
+| 级别 | 设置 | 发生什么 |
 |-------|---------|-------------|
-| 1. Disable AE only | `CONTROL_AE_MODE = OFF` | ISO + shutter become manual; AF and AWB still auto-run |
-| 2. Disable entire 3A | `CONTROL_MODE = OFF` | **All** 3A algorithms halt; every 3A parameter must be set manually |
+| 1. 仅禁用 AE | `CONTROL_AE_MODE = OFF` | ISO + 快门变为手动；AF 和 AWB 仍自动运行 |
+| 2. 禁用整个 3A | `CONTROL_MODE = OFF` | **所有** 3A 算法停止；每个 3A 参数必须手动设置 |
 
-For reliable manual exposure, set **both**. Disabling only `CONTROL_AE_MODE` on some devices still leaves OEM post-processing "helping" behind the scenes. Setting `CONTROL_MODE = OFF` is the cleanest, most predictable path.
+为了获得可靠的手动曝光，请**两者**都设置。在某些设备上，仅禁用 `CONTROL_AE_MODE` 仍会留下 OEM 后处理在幕后进行"辅助"。将 `CONTROL_MODE = OFF` 是最干净、最可预测的路径。
 
 ```mermaid
 stateDiagram-v2
-    [*] --> AUTO_MODE: Default Preview Starts
-    AUTO_MODE --> MANUAL_PREP: User toggles Manual Exposure
-    MANUAL_PREP --> VALIDATE_RANGES: Query SENSOR_INFO_EXPOSURE_TIME_RANGE
-    VALIDATE_RANGES --> BUILD_REQUEST: Clamp ISO &amp; Shutter to valid range
+    [*] --> AUTO_MODE: 默认预览启动
+    AUTO_MODE --> MANUAL_PREP: 用户切换到手动曝光
+    MANUAL_PREP --> VALIDATE_RANGES: 查询 SENSOR_INFO_EXPOSURE_TIME_RANGE
+    VALIDATE_RANGES --> BUILD_REQUEST: 将 ISO 和快门限制在有效范围内
     BUILD_REQUEST --> SUBMIT_REQUEST: set(CONTROL_MODE, OFF)
     SUBMIT_REQUEST --> APPLY_FRAME_1: CaptureSession.capture()
-    APPLY_FRAME_1 --> APPLY_FRAME_N: New values settle (~3–5 frames)
-    APPLY_FRAME_N --> LOCKED_EXPOSURE: Preview now runs at fixed values
-    LOCKED_EXPOSURE --> AUTO_MODE: User re-enables Auto
+    APPLY_FRAME_1 --> APPLY_FRAME_N: 新值趋于平稳 (约 3–5 帧)
+    APPLY_FRAME_N --> LOCKED_EXPOSURE: 预览现在以固定值运行
+    LOCKED_EXPOSURE --> AUTO_MODE: 用户重新启用自动模式
     note right of VALIDATE_RANGES
-        Always query hardware caps!
-        Shutter: 1/8000s to 10s typical
-        ISO: 100 to 6400 typical
+        务必查询硬件能力！
+        快门: 典型 1/8000s 到 10s
+        ISO: 典型 100 到 6400
     end note
     note right of SUBMIT_REQUEST
         CONTROL_AE_MODE = OFF
@@ -49,24 +49,24 @@ stateDiagram-v2
     end note
 ```
 
-**Transition latency:** When you submit a manual capture request, the new ISO/shutter values do not appear on the *next* frame. CMOS sensors have pipeline latency — the *current* frame is already being exposed with the old settings. Expect **3–5 frames of transition** before values settle. The [Android Camera Parameters app](https://play.google.com/store/apps/details?id=com.minininja.cameraparams) explicitly waits for `CaptureResult` to confirm the requested values match the applied values before reporting "locked."
+**转换延迟：** 当你提交一个手动捕获请求时，新的 ISO/快门值不会出现在*下一帧*。CMOS 传感器存在管线延迟——*当前*帧已经在使用旧设置进行曝光。预计会有 **3-5 帧的转换期**，然后数值才会趋于平稳。**Android Camera Parameters** 应用在报告"已锁定"之前，会显式等待 `CaptureResult` 以确认请求值与应用值匹配。
 
 ---
 
-## Manual Controls in Camera2 API
+## Camera2 API 中的手动控制
 
 ### SENSOR_SENSITIVITY (ISO)
 
-Camera2 expresses ISO as `CaptureRequest.SENSOR_SENSITIVITY` — an integer that directly maps to the ISO arithmetic scale. On most devices, this is a 1:1 mapping:
+Camera2 将 ISO 表示为 `CaptureRequest.SENSOR_SENSITIVITY` —— 一个直接映射到 ISO 算术刻度的整数。在大多数设备上，这是一个 1:1 的映射：
 
-| Photographer's ISO | SENSOR_SENSITIVITY value |
+| 摄影师的 ISO | SENSOR_SENSITIVITY 值 |
 |-------------------|--------------------------|
 | 100 | 100 |
 | 400 | 400 |
 | 3200 | 3200 |
 | 6400 | 6400 |
 
-**Always query the valid range.** Do not hardcode values:
+**务必查询有效范围。** 不要硬编码数值：
 
 ```kotlin
 val sensorSensitivityRange = characteristics.get(
@@ -76,22 +76,22 @@ val minIso = sensorSensitivityRange?.lower ?: 100
 val maxIso = sensorSensitivityRange?.upper ?: 6400
 ```
 
-Some ultra-premium phones report a range like 50–12800, while budget devices may lock you to 100–3200. Values outside the range are clamped by the HAL — which defeats your manual-control purpose.
+一些超高端手机报告的范围如 50–12800，而廉价设备可能将你限制在 100–3200。超出范围的值会被 HAL 夹断 —— 这违背了你手动控制的目的。
 
-### SENSOR_EXPOSURE_TIME (Shutter in Nanoseconds)
+### SENSOR_EXPOSURE_TIME (以纳秒为单位的快门速度)
 
-Here's the first "gotcha" that trips every new Camera2 developer: **shutter speed is stored as nanoseconds (ns), not seconds.** Humans think in 1/60s; the HAL thinks in 16666666 ns.
+这是困扰每一个 Camera2 新开发者的第一个"坑"：**快门速度以纳秒 (ns) 存储，而不是秒。** 人类考虑的是 1/60s；而 HAL 考虑的是 16666666 ns。
 
-Converting between them is straightforward arithmetic:
+两者之间的转换是简单的算术：
 
 ```kotlin
-// Seconds → Nanoseconds (multiply by 1,000,000,000)
+// 秒 → 纳秒 (乘以 1,000,000,000)
 fun secondsToNs(seconds: Double): Long = (seconds * 1_000_000_000.0).toLong()
 
-// Nanoseconds → Seconds for user display
+// 纳秒 → 秒 (用于用户显示)
 fun nsToSeconds(ns: Long): Double = ns.toDouble() / 1_000_000_000.0
 
-// Human-friendly string formatter (e.g., "1/60s" or "2.5s")
+// 用户友好的字符串格式化程序 (例如 "1/60s" 或 "2.5s")
 fun formatShutter(ns: Long): String {
     val seconds = nsToSeconds(ns)
     return when {
@@ -104,14 +104,14 @@ fun formatShutter(ns: Long): String {
 }
 ```
 
-**Common conversions for reference:**
+**供参考的常见转换：**
 
-| Human Shutter | Nanoseconds (ns) |
+| 人类习惯的快门速度 | 纳秒 (ns) |
 |--------------|-------------------|
 | 1/8000s | 125,000 |
 | 1/1000s | 1,000,000 |
 | 1/500s | 2,000,000 |
-| 1/120s (24fps 180° rule) | 8,333,333 |
+| 1/120s (24fps 180° 法则) | 8,333,333 |
 | 1/60s | 16,666,666 |
 | 1/30s | 33,333,333 |
 | 1/15s | 66,666,666 |
@@ -120,53 +120,53 @@ fun formatShutter(ns: Long): String {
 | 10s | 10,000,000,000 |
 | 30s | 30,000,000,000 |
 
-**Again, query the hardware range:**
+**同样，查询硬件范围：**
 
 ```kotlin
 val exposureTimeRange = characteristics.get(
     CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE
 )
-val minShutterNs = exposureTimeRange?.lower ?: 1_000_000L   // 1/1000s floor
-val maxShutterNs = exposureTimeRange?.upper ?: 10_000_000_000L  // 10s ceiling
+val minShutterNs = exposureTimeRange?.lower ?: 1_000_000L   // 1/1000s 下限
+val maxShutterNs = exposureTimeRange?.upper ?: 10_000_000_000L  // 10s 上限
 ```
 
-On devices supporting ultra-long exposure (e.g., some Sony Xperia and Google Pixel models), `SENSOR_INFO_EXPOSURE_TIME_RANGE.upper` can exceed 30,000,000,000 ns (30s). Respect this limit — requests beyond the maximum are silently clamped.
+在支持超长曝光的设备上（例如，某些索尼 Xperia 和 Google Pixel 机型），`SENSOR_INFO_EXPOSURE_TIME_RANGE.upper` 可以超过 30,000,000,000 ns (30s)。请遵守此限制 —— 超出最大值的请求会被静默夹断。
 
 ---
 
-## ⚠️ Critical: Manual Mode Quality Degradation
+## ⚠️ 至关重要：手动模式下的画质下降
 
-**This is the most important warning in the chapter.** Do not skip it.
+**这是本章最重要的警告。** 请不要跳过。
 
-When you set `CONTROL_MODE = OFF` (full manual override), you are not just disabling the AE/AF/AWB *algorithms* — on nearly all Android devices, you are also **disabling the OEM's proprietary computational post-processing** that normally runs inside the 3A pipeline.
+当你设置 `CONTROL_MODE = OFF`（完全手动覆盖）时，你不只是禁用了 AE/AF/AWB *算法* —— 在几乎所有的 Android 设备上，你也**禁用了通常在 3A 管线内运行的 OEM 专有计算后处理**。
 
-Specifically, research and HAL3 analysis reveals that disabling 3A typically turns off:
+具体而言，根据 HAL3 的研究分析显示，禁用 3A 通常会关闭：
 
-| Processing Step | AUTO Mode | MANUAL Mode (CONTROL_MODE = OFF) |
+| 处理步骤 | AUTO (自动) 模式 | MANUAL (手动) 模式 (CONTROL_MODE = OFF) |
 |-----------------|-----------|-----------------------------------|
-| Multi-frame noise reduction | ✓ Active — noise-reduced output | ✗ OFF — visible raw sensor noise |
-| Adaptive tone-mapping / HDR merge | ✓ Active — highlights + shadows recovered | ✗ OFF — single-frame curve only |
-| Local contrast enhancement (MiraVision, etc.) | ✓ Varies by scene | ✗ Flat generic curve |
-| Face metering / scene detection | ✓ Weights exposure to faces | ✗ Ignored |
-| Lens shading / vignetting correction | ✓ Calibrated per-lens | ✗ Often reduced or off |
+| 多帧降噪 | ✓ 激活 — 降噪后的输出 | ✗ 关闭 — 可见原始传感器噪声 |
+| 自适应色调映射 / HDR 合成 | ✓ 激活 — 恢复高光 + 阴影 | ✗ 关闭 — 仅单帧曲线 |
+| 局部对比度增强 (MiraVision 等) | ✓ 视场景而异 | ✗ 平坦的通用曲线 |
+| 人脸测光 / 场景检测 | ✓ 根据人脸权重进行曝光 | ✗ 被忽略 |
+| 镜头遮蔽 / 暗角校正 | ✓ 每镜头校准 | ✗ 通常减少或关闭 |
 
-**Result:** A manual-mode photo at ISO 3200 and 1/15s will look *visibly worse* (noisier, flatter contrast) than the same scene captured in AUTO mode with the *identical* ISO and shutter the HAL chose.
+**结果：** 在手动模式下以 ISO 3200 和 1/15s 拍摄的照片，看起来会比在 AUTO 模式下以 HAL 选择的*完全相同*的 ISO 和快门拍摄的照片*明显更差*（噪声更多，对比度更平淡）。
 
-**What can you do?** Two realistic options:
+**你能做些什么？** 两个现实的选择：
 
-1. **Post-process yourself.** Since you've disabled OEM processing, you can apply your own denoising (e.g., OpenCV bilateral filter, MediaPipe denoiser, or custom-trained CNN) in your processing pipeline. RAW capture (see later chapters) + custom RAW development gives maximum artistic control.
+1. **自己进行后处理。** 既然你禁用了 OEM 处理，你可以在自己的处理管线中应用你自己的去噪（例如，OpenCV 双边滤波、MediaPipe 降噪器或自定义训练的 CNN）。RAW 拍摄（见后续章节）+ 自定义 RAW 显影可以提供最大的艺术控制。
 
-2. **Use manual AE overrides instead of CONTROL_MODE = OFF.** If you only need to *lock* specific values while keeping OEM processing enabled, try setting `CONTROL_AE_MODE = ON` but pin `SENSOR_SENSITIVITY` and `SENSOR_EXPOSURE_TIME` on a request-by-request basis. Support for this mixed-mode is device-dependent — test thoroughly.
+2. **使用手动 AE 覆盖而非 CONTROL_MODE = OFF。** 如果你只需要*锁定*特定值，同时保持 OEM 处理开启，请尝试将 `CONTROL_AE_MODE = ON` 但在逐请求的基础上固定 `SENSOR_SENSITIVITY` 和 `SENSOR_EXPOSURE_TIME`。对此混合模式的支持视设备而定 —— 请彻底测试。
 
-The [Android Camera Parameters app](https://github.com/zoozooll/AndroidCameraParameters) has a toggle in the Manual panel that switches between both approaches and lets you visually compare the quality difference.
+**Android Camera Parameters** 应用在 Manual 面板中有一个切换开关，可以在这两种方法之间切换，并让你直观地比较画质差异。
 
 ---
 
-## Complete Example 1: Locked Exposure for Timelapse
+## 完整示例 1：延时摄影的锁定曝光
 
-A classic use case for manual exposure is **timelapse photography**. In AUTO mode, the camera subtly adjusts exposure from frame to frame as clouds move or light changes. The resulting video flickers horribly. Locking ISO + shutter eliminates this.
+手动曝光的一个经典用例是**延时摄影 (timelapse photography)**。在 AUTO 模式下，相机会随着云层移动或光线变化，在帧与帧之间进行微妙的曝光调整。生成的视频闪烁严重。锁定 ISO + 快门可以消除这种情况。
 
-**Goal:** ISO 100, 1/60s (16,666,666 ns) — locked for every frame.
+**目标：** ISO 100，1/60s (16,666,666 ns) — 每一帧都锁定。
 
 ```kotlin
 class TimelapseManualExposure(
@@ -182,7 +182,7 @@ class TimelapseManualExposure(
 
     fun captureTimelapseFrame(frameCallback: ImageReader.OnImageAvailableListener) {
         try {
-            // ---- STEP 1: Validate requested values are in hardware range ----
+            // ---- 第 1 步：验证请求的值是否在硬件范围内 ----
             val isoRange = characteristics.get(
                 CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE
             )
@@ -198,27 +198,27 @@ class TimelapseManualExposure(
                 TARGET_SHUTTER_NS.coerceIn(it.lower, it.upper)
             } ?: TARGET_SHUTTER_NS
 
-            // ---- STEP 2: Build CaptureRequest with manual exposure ----
+            // ---- 第 2 步：构建手动曝光的 CaptureRequest ----
             val requestBuilder = captureSession.device.createCaptureRequest(
                 CameraDevice.TEMPLATE_STILL_CAPTURE
             ).apply {
                 addTarget(previewSurface)
                 addTarget(imageReaderSurface)
 
-                // --- THE KEY LINES: Disable 3A and pin values ---
+                // --- 关键行：禁用 3A 并固定数值 ---
                 set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_OFF)
                 set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_OFF)
                 set(CaptureRequest.SENSOR_SENSITIVITY, clampedIso)
                 set(CaptureRequest.SENSOR_EXPOSURE_TIME, clampedShutter)
 
-                // Optional: Pin AWB to Daylight for consistent color too
+                // 可选：将 AWB 固定在 Daylight 模式，以获得一致的色彩
                 set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_DAYLIGHT)
 
-                // Still-capture JPEG quality
-                set(CaptureRequest.JPEG_QUALITY, 95)
+                // 静态拍摄 JPEG 质量
+                set(CaptureRequest.JPEG_QUALITY, 95.toByte())
             }
 
-            // ---- STEP 3: Submit the still capture ----
+            // ---- 第 3 步：提交静态捕获 ----
             captureSession.capture(
                 requestBuilder.build(),
                 object : CameraCaptureSession.CaptureCallback() {
@@ -227,35 +227,35 @@ class TimelapseManualExposure(
                         request: CaptureRequest,
                         result: TotalCaptureResult
                     ) {
-                        // Verify the HAL actually applied our values (it may clamp!)
+                        // 验证 HAL 实际上应用了我们的值（它可能会夹断！）
                         val appliedIso = result.get(CaptureResult.SENSOR_SENSITIVITY)
                         val appliedShutter = result.get(CaptureResult.SENSOR_EXPOSURE_TIME)
-                        Log.d("Timelapse", "Applied: ISO=$appliedIso, Shutter=${formatShutter(appliedShutter!!)}")
+                        Log.d("Timelapse", "应用值: ISO=$appliedIso, 快门=${formatShutter(appliedShutter!!)}")
                     }
                 },
-                null // Run on current thread's Handler
+                null // 在当前线程的 Handler 上运行
             )
 
         } catch (e: CameraAccessException) {
-            Log.e("Timelapse", "Manual capture failed", e)
+            Log.e("Timelapse", "手动捕获失败", e)
         }
     }
 }
 ```
 
-**Key points:**
+**关键点：**
 
-- Always use `coerceIn()` against the hardware ranges. If a budget phone min ISO is 120, your request for 100 silently becomes 120. `onCaptureCompleted()` confirms what was *actually* applied.
-- For a timelapse, submit this request every N seconds (e.g., every 5s for a 300× speedup at 30fps output).
-- Pinning `CONTROL_AWB_MODE_DAYLIGHT` is optional but recommended for timelapses — otherwise AWB may still subtly drift white balance between frames even when exposure is locked.
+- 始终针对硬件范围使用 `coerceIn()`。如果一台廉价手机的最小 ISO 是 120，你对 100 的请求就会静默变成 120。`onCaptureCompleted()` 会确认*实际*应用了什么值。
+- 对于延时摄影，每隔 N 秒提交一次此请求（例如，每 5 秒拍摄一次，以在 30fps 输出下获得 300 倍的加速）。
+- 固定 `CONTROL_AWB_MODE_DAYLIGHT` 是可选的，但在延时摄影中强烈推荐 —— 否则即使曝光被锁定，AWB 在帧与帧之间仍可能微妙地漂移白平衡。
 
 ---
 
-## Complete Example 2: Long Exposure for Night Photography
+## 完整示例 2：夜景摄影的长曝光
 
-**Goal:** ISO 3200, 2 seconds (2,000,000,000 ns) — smooth water trails, bright night sky.
+**目标：** ISO 3200，2 秒 (2,000,000,000 ns) — 丝滑的水面，明亮的星空。
 
-**Critical hardware requirement:** The device must support `SENSOR_INFO_EXPOSURE_TIME_RANGE.upper >= 2,000,000,000 ns`. Many mid-range phones max out at ~1/8s to 1s.
+**关键硬件要求：** 设备必须支持 `SENSOR_INFO_EXPOSURE_TIME_RANGE.upper >= 2,000,000,000 ns`。许多中端手机上限约为 1/8s 到 1s。
 
 ```kotlin
 class NightLongExposure(
@@ -263,20 +263,20 @@ class NightLongExposure(
     private val captureSession: CameraCaptureSession,
     private val previewSurface: Surface,
     private val jpegReaderSurface: Surface,
-    private val rawReaderSurface: Surface? // Optional RAW capture
+    private val rawReaderSurface: Surface? // 可选 RAW 捕获
 ) {
     fun shootLongExposure(onPhotoSaved: (path: String) -> Unit) {
-        val shutterNs = 2_000_000_000L  // 2 seconds
+        val shutterNs = 2_000_000_000L  // 2 秒
         val targetIso = 3200
 
-        // --- Validate the hardware can even do this ---
+        // --- 验证硬件是否具备此能力 ---
         val shutterRange = characteristics.get(
             CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE
         )
         if (shutterRange == null || shutterRange.upper < shutterNs) {
             throw UnsupportedOperationException(
-                "Device does not support 2s exposure. Max = " +
-                "${shutterRange?.upper?.let { nsToSeconds(it) } ?: "unknown"}s"
+                "设备不支持 2s 曝光。最大支持 = " +
+                "${shutterRange?.upper?.let { nsToSeconds(it) } ?: "未知"}s"
             )
         }
 
@@ -285,20 +285,20 @@ class NightLongExposure(
         ).apply {
             addTarget(previewSurface)
             addTarget(jpegReaderSurface)
-            // If you configured a RAW-capable OutputConfiguration earlier:
+            // 如果你之前配置了支持 RAW 的 OutputConfiguration：
             rawReaderSurface?.let { addTarget(it) }
 
-            // Manual exposure override
+            // 手动曝光覆盖
             set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_OFF)
             set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_OFF)
             set(CaptureRequest.SENSOR_SENSITIVITY, targetIso)
             set(CaptureRequest.SENSOR_EXPOSURE_TIME, shutterNs)
 
-            // --- Critical for long exposures ---
-            // Disable optical/digital video stabilization (they conflict >1s)
+            // --- 长曝光的关键点 ---
+            // 禁用光学/数字视频防抖（长于 1s 时会发生冲突）
             set(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE,
                 CameraMetadata.LENS_OPTICAL_STABILIZATION_MODE_OFF)
-            // No flash for long exposure shots
+            // 长曝光拍摄不开启闪光灯
             set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_OFF)
         }
 
@@ -308,11 +308,12 @@ class NightLongExposure(
                 override fun onCaptureStarted(
                     session: CameraCaptureSession,
                     request: CaptureRequest,
-                    timestamp: Long
+                    timestamp: Long,
+                    frameNumber: Long
                 ) {
-                    super.onCaptureStarted(session, request, timestamp)
-                    // Notify UI: "Exposure started — hold very still for 2 seconds"
-                    Log.d("LongExposure", "Exposure started @ $timestamp")
+                    super.onCaptureStarted(session, request, timestamp, frameNumber)
+                    // 通知 UI: "曝光开始 — 保持 2 秒钟不动"
+                    Log.d("LongExposure", "曝光开始于时间戳 $timestamp")
                 }
 
                 override fun onCaptureCompleted(
@@ -320,8 +321,8 @@ class NightLongExposure(
                     request: CaptureRequest,
                     result: TotalCaptureResult
                 ) {
-                    // ImageReader.OnImageAvailableListener fires separately to save the JPEG
-                    Log.d("LongExposure", "Long exposure capture complete")
+                    // ImageReader.OnImageAvailableListener 会单独触发以保存 JPEG
+                    Log.d("LongExposure", "长曝光捕获完成")
                 }
             },
             null
@@ -330,21 +331,21 @@ class NightLongExposure(
 }
 ```
 
-**Long exposure tips:**
+**长曝光技巧：**
 
-1. **Turn off OIS.** Optical image stabilization in most lenses tries to compensate for camera shake *during* the exposure. For exposures >0.5s, the OIS actuators can saturate and cause visible drift. Disable it and use a tripod.
+1. **关闭 OIS。** 多数镜头的全光学防抖会尝试在曝光*期间*补偿手抖。对于 >0.5s 的曝光，OIS 执行器会饱和并导致可见的漂移。请关闭它并使用三脚架。
 
-2. **Expect a freeze.** The camera will not output preview frames while a 2-second exposure is running. Your UI should show an explicit "EXPOSING…" indicator.
+2. **做好冻结准备。** 在运行 2 秒曝光时，相机不会输出预览帧。你的 UI 应当显示一个明确的"正在曝光..."指示器。
 
-3. **RAW is better.** High ISO (3200) + long exposure produces thermal noise (the sensor warms up). Save a RAW frame and use a desktop RAW developer with frame averaging — or implement your own multi-frame long exposure by averaging 8 × 0.25s frames instead of 1 × 2s frame (reduces thermal noise dramatically).
+3. **RAW 效果更好。** 高 ISO (3200) + 长曝光会产生热噪声（传感器发热）。保存一张 RAW 帧，并使用桌面端 RAW 显影工具进行帧平均 —— 或者通过平均 8 张 0.25s 的帧而非单张 2s 的帧来实现你自己的多帧长曝光（这样可以大幅减少热噪声）。
 
 ---
 
-## Complete Example 3: 3-Shot Exposure Bracketing
+## 完整示例 3：3 帧曝光包围
 
-**Goal:** Same ISO, 3 different exposures at −1 EV, 0 EV, +1 EV. The user later merges them into an HDR photo.
+**目标：** 相同的 ISO，3 种不同的曝光：−1 EV、0 EV、+1 EV。用户稍后将其合并为 HDR 照片。
 
-From Chapter 13, we know each EV step doubles/halves light. At a fixed ISO, each EV step = multiply/divide shutter speed by 2.
+从第 13 章我们知道，每一个 EV 步长都会使光量翻倍/减半。在 ISO 固定的情况下，每一个 EV 步长 = 将快门速度乘以/除以 2。
 
 ```kotlin
 class ExposureBracketing(
@@ -368,7 +369,7 @@ class ExposureBracketing(
             CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE
         )
 
-        // Build bracket plan: multiply shutter by 2^(evStep)
+        // 构建包围计划：将快门乘以 2^(evStep)
         val frames = listOf(-1.0, 0.0, +1.0).map { ev ->
             val multiplier = Math.pow(2.0, ev)
             val rawShutter = (baseShutterNs.toDouble() * multiplier).toLong()
@@ -381,9 +382,9 @@ class ExposureBracketing(
             BracketFrame("EV${if (ev > 0) "+" else ""}${ev.toInt()}", ev, clampedShutter, clampedIso)
         }
 
-        Log.d("Bracket", "Plan: ${frames.map { "${it.label} ISO${it.iso} ${formatShutter(it.shutterNs)}" }}")
+        Log.d("Bracket", "计划: ${frames.map { "${it.label} ISO${it.iso} ${formatShutter(it.shutterNs)}" }}")
 
-        // Submit each frame as a burst using captureBurst() for atomicity
+        // 使用 captureBurst() 将每一帧作为一个连拍提交，以确保原子性
         val requestList = frames.map { frame ->
             captureSession.device.createCaptureRequest(
                 CameraDevice.TEMPLATE_STILL_CAPTURE
@@ -396,7 +397,7 @@ class ExposureBracketing(
                 set(CaptureRequest.SENSOR_SENSITIVITY, frame.iso)
                 set(CaptureRequest.SENSOR_EXPOSURE_TIME, frame.shutterNs)
 
-                // Tag each request so we can sort frames in the callback
+                // 为每个请求贴上标签，以便我们在回调中区分各个帧
                 setTag(frame.label)
             }.build()
         }
@@ -410,7 +411,7 @@ class ExposureBracketing(
                     result: TotalCaptureResult
                 ) {
                     val tag = request.tag as? String ?: "?"
-                    Log.d("Bracket", "$tag complete — ready for HDR merge")
+                    Log.d("Bracket", "$tag 已完成 — 准备进行 HDR 合并")
                 }
             },
             null
@@ -419,48 +420,48 @@ class ExposureBracketing(
 }
 ```
 
-**Why `captureBurst()` instead of three separate `capture()` calls?** `captureBurst()` submits the entire list atomically. The HAL guarantees no other preview frames get interleaved, and focus/white-balance state won't drift between frames.
+**为什么使用 `captureBurst()` 而非三个独立的 `capture()` 调用？** `captureBurst()` 原子地提交整个列表。HAL 保证中间不会插入其他预览帧，对焦/白平衡状态也不会在帧与帧之间发生漂移。
 
-**Want 5 or 7 brackets?** Just change `listOf(-2.0, -1.0, 0.0, +1.0, +2.0)` — the math scales. Many professional HDR apps shoot 9 brackets for extreme dynamic range scenes.
+**想要 5 帧或 7 帧包围？** 只需修改 `listOf(-2.0, -1.0, 0.0, +1.0, +2.0)` —— 数学计算会随之缩放。许多专业的 HDR 应用拍摄 9 帧包围，用于极端动态范围场景。
 
-**Merge step:** Once you have the three JPEG (or RAW) frames, you can merge them using:
-- Android's built-in HDR pipeline via `CameraExtensionSession` (see HDR chapter)
-- A 3rd-party library like OpenCV's `createMergeDebevec()` / `createMergeRobertson()` for true exposure fusion
-- Google's Photo Sphere HDR library
+**合并步骤：** 一旦获得三个 JPEG（或 RAW）帧，你可以使用以下方式合并它们：
+- Android 通过 `CameraExtensionSession` 内置的 HDR 管线（见 HDR 章节）
+- 第三方库如 OpenCV 的 `createMergeDebevec()` / `createMergeRobertson()`，用于真正的曝光融合
+- Google 的 Photo Sphere HDR 库
 
 ---
 
-## Troubleshooting Common Failures
+## 常见失败排查
 
-| Problem | Likely Cause | Fix |
+| 问题 | 可能原因 | 解决办法 |
 |---------|-------------|-----|
-| Manual values seem ignored, still looks auto | `CONTROL_MODE` not set to OFF, or values clamped | Set both CONTROL_MODE and CONTROL_AE_MODE to OFF; verify applied values in `onCaptureCompleted()` |
-| 2s long exposure request errors immediately | Device can't do 2s exposure | Check `SENSOR_INFO_EXPOSURE_TIME_RANGE.upper`; reduce exposure time or use ISO bump instead |
-| Preview stutters or lags when switching manual | Too many `setRepeatingRequest()` calls | Use throttled slider listener (every 30–50 ms); only update repeating request, not still captures |
-| Long exposure photo is all black at ISO 100 2s | Scene actually needs more light at ISO 100 | Increase ISO or extend shutter; 2s ISO 100 = EV 0 baseline, not "night bright" |
-| Manual shots noisier than Auto at same ISO | OEM NR disabled by CONTROL_MODE = OFF | Expected behavior! See "Manual Mode Quality Degradation" section. Post-process, or use partial manual via AE_LOCK |
+| 手动数值似乎被忽略，看起来仍是自动模式 | `CONTROL_MODE` 未设置为 OFF，或者数值被夹断 | 将 CONTROL_MODE 和 CONTROL_AE_MODE 均设置为 OFF；在 `onCaptureCompleted()` 中验证实际应用的值 |
+| 2s 长曝光请求立即报错 | 设备不支持 2s 曝光 | 检查 `SENSOR_INFO_EXPOSURE_TIME_RANGE.upper`；减少曝光时间或改用提升 ISO 代替 |
+| 切换手动模式时预览卡顿或延迟 | 调用了太多次 `setRepeatingRequest()` | 使用经过节流的滑块监听器（每 30–50 ms）；仅更新重复请求，而非静态捕获 |
+| 在 ISO 100 2s 拍摄的长曝光照片全黑 | 场景实际需要比 ISO 100 下更多的光线 | 提高 ISO 或延长快门；2s ISO 100 是 EV 0 基准，并非真正的"夜间亮度" |
+| 相同 ISO 下的手动拍摄比自动拍摄噪点更多 | CONTROL_MODE = OFF 禁用了 OEM 降噪 | 预期行为！见"手动模式下的画质下降"一节。进行后处理，或通过 AE_LOCK 使用部分手动模式 |
 
 ---
 
-## Summary
+## 小结
 
-You now have the tools to wrest full control of exposure from the Camera2 HAL:
+你现在已经掌握了从 Camera2 HAL 手中夺取曝光控制权的工具：
 
-- **Disable 3A pipeline** with `CONTROL_MODE = OFF` + `CONTROL_AE_MODE = OFF` for fully manual control
-- **Map ISO → `SENSOR_SENSITIVITY`** (1:1 mapping on most hardware; always query the range)
-- **Map seconds ↔ nanoseconds** for `SENSOR_EXPOSURE_TIME` with simple 10⁹ conversion
-- **Timelapse lock:** Fixed ISO 100 + 1/60s repeated for every frame = zero flicker
-- **Night long exposure:** ISO 3200 + 2s with OIS disabled = bright smooth night scene (on supported hardware)
-- **Exposure bracketing:** Same ISO, shutter ×0.5 / ×1 / ×2 via `captureBurst()` = ready-to-merge HDR input
-- **⚠️ Manual quality tradeoff:** Disabling 3A disables OEM noise reduction and tone-mapping — manual photos often look *worse* at identical ISO than Auto. Plan for post-processing.
+- 使用 `CONTROL_MODE = OFF` + `CONTROL_AE_MODE = OFF` **禁用 3A 管线**以进行全手动控制
+- **将 ISO 映射到 `SENSOR_SENSITIVITY`** (多数硬件上为 1:1 映射；务必查询范围)
+- **将秒 ↔ 纳秒映射**到 `SENSOR_EXPOSURE_TIME`，使用简单的 10⁹ 转换
+- **延时锁定：** 每一帧重复固定的 ISO 100 + 1/60s = 零闪烁
+- **夜间长曝光：** 禁用 OIS 的情况下使用 ISO 3200 + 2s = 明亮平滑的夜景（在支持的硬件上）
+- **曝光包围：** 通过 `captureBurst()` 拍摄 ISO 相同、快门 ×0.5 / ×1 / ×2 的序列 = 准备好合并的 HDR 输入
+- **⚠️ 手动画质权衡：** 禁用 3A 会关闭 OEM 降噪和色调映射 —— 在相同 ISO 下，手动照片往往看起来比自动照片*更差*。请做好后处理计划。
 
-## What's Next
+## 下一章
 
-Exposure controls *brightness*. **Focus controls sharpness.** In **Chapter 15: Focus**, we cover:
+曝光控制*亮度*。**对焦控制锐度。** 在**第 15 章：对焦**中，我们将介绍：
 
-- Auto Focus (AF) states and modes — how passive scan works, the difference between continuous picture vs. video
-- Manual focus with `LENS_FOCUS_DISTANCE` in diopters (0.0 = infinity, 10D = 0.1m)
-- Kotlin code for a one-shot AF trigger-and-capture sequence, and a manual-focus SeekBar slider
-- The AF state machine — when `CONTROL_AF_STATE_FOCUSED_LOCKED` actually fires, and how to wait for it
+- 自动对焦 (AF) 状态和模式 —— 被动扫描的工作原理，连续图片 vs 视频的区别
+- 使用屈光度单位的 `LENS_FOCUS_DISTANCE` 进行手动对焦 (0.0 = 无穷远, 10D = 0.1m)
+- 用于单次 AF 触发并捕获序列的 Kotlin 代码，以及手动对焦 SeekBar 滑块
+- AF 状态机 —— `CONTROL_AF_STATE_FOCUSED_LOCKED` 究竟何时触发，以及如何等待它
 
-The blur stops here. (Pun very much intended.)
+模糊到此为止。（双关语，很冷，但我很认真。）

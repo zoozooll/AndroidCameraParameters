@@ -1,376 +1,110 @@
 ---
 sidebar_position: 25
-title: "Chapter 25: Native Camera Development"
-description: "Go native with the Android NDK camera stack. Use ACameraManager to open cameras from C++, bind AHardwareBuffer memory directly as Vulkan textures for zero-copy AR, and understand OpenGL/Vulkan interop for 60fps pipelines. Includes automotive EVS migration context."
-keywords: [ndk camera, acamera, acameramanager, ahardwarebuffer, native camera, vulkan, opengl, zero copy, evs, automotive camera, jni camera]
+title: "제25장: 네이티브 카메라 개발 (NDK)"
+description: "고성능 실시간 처리를 위해 안드로이드 NDK의 ACamera API를 활용하세요. C++에서 카메라를 열고, 네이티브 하드웨어 버퍼를 사용하여 제로 복사(Zero-copy) 파이프라인을 구축하며, Vulkan 및 OpenGL ES와의 고속 연동 방법을 배웁니다."
+keywords: [안드로이드 NDK 카메라, ACamera API, libcamera2ndk, 네이티브 카메라, 제로 복사 카메라, C++ 카메라 개발, Vulkan 카메라 연동, 고성능 안드로이드 카메라]
 ---
 
-# Chapter 25: Native Camera Development
+# 제25장: 네이티브 카메라 개발 (NDK)
 
-## Summary
+## 요약
 
-Chapters 1–24 operated in managed code: Kotlin or Java running on ART, crossing a Binder IPC boundary for every `CaptureRequest`, and either allocating `ByteBuffer` copies of frames or accepting the overhead of `SurfaceTexture`-mediated texture streaming. For social camera apps, this is plenty. For AR engines, real-time computer vision pipelines, in-car rear-view cameras, or 3D engines with a 16ms per-frame budget — this is not.
+카메라 미리보기에 복잡한 실시간 쉐이더를 적용하거나, 증강 현실(AR) 엔진을 구축하거나, 매 프레임마다 고성능 컴퓨터 비전 알고리즘을 실행해야 한다면, Java/Kotlin의 가비지 컬렉션(GC) 지연과 JNI 오버헤드가 걸림돌이 될 수 있습니다. 1,200만 화소의 프레임 데이터를 Java와 네이티브 레이어 사이로 복사하는 것은 성능상 매우 비효율적입니다.
 
-Native camera development moves the entire camera open/configure/capture loop into C/C++ using the NDK's `<camera/NdkCameraManager.h>` and `<android/hardware_buffer.h>` headers. The immediate payoff is zero JNI overhead on the hot path and, critically, the ability to wrap gralloc-allocated `AHardwareBuffer` objects directly as Vulkan `VkImage` or OpenGL `EGLImage` targets without a single byte of memory copy between sensor output and GPU texture sampling.
+안드로이드 NDK는 안드로이드 7.0 (API 24)부터 **네이티브 카메라 API(ACamera)**를 제공합니다. 이 API를 사용하면 C++ 코드에서 직접 카메라 장치를 열고, 요청을 보내고, 프레임을 받을 수 있습니다. 가장 큰 장점은 **"제로 복사(Zero-copy)"** 파이프라인입니다. 카메라 하드웨어가 생성한 `AHardwareBuffer`를 Java 레이어를 거치지 않고 직접 Vulkan 텍스처나 OpenGL 테스처로 바인딩하여 GPU에서 즉시 처리할 수 있습니다. 이 장에서는 NDK 카메라의 아키텍처를 배우고, C++에서 세션을 구성하는 법을 익히며, 최신 안드로이드 게임 엔진이나 미디어 프레임워크가 카메라를 다루는 로우 레벨 방식을 이해하게 됩니다.
 
-**Android Camera Parameters** helps you validate that your target devices expose the `INFO_SUPPORTED_HARDWARE_LEVEL_FULL` or `LEVEL_3` guarantees required for predictable low-level native operation. Install it from [Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams) or check the source at [github.com/zoozooll/AndroidCameraParameters](https://github.com/zoozooll/AndroidCameraParameters).
-
----
-
-## Why Go Native?
-
-Before diving into C++, let us be precise about what native buys you and when it justifies the complexity.
-
-### The Case for Native
-
-1. **Zero JNI overhead on the critical path.** A 60fps pipeline has 16.67ms per frame. A single JNI `CallVoidMethod` crossing the ART/C boundary is ~0.5–2µs microbenchmarked, but the real cost is the call *per frame*, the thread handoff, the JNI local reference bookkeeping, and GC pressure from managed `Image` proxies. Multiply by four cameras feeding an AR session simultaneously and you are burning a millisecond of budget just crossing language boundaries. Native eliminates this.
-
-2. **Direct memory ownership with `AHardwareBuffer`.** In managed code, `Image.getPlanes()[0].getBuffer()` returns a `ByteBuffer` that is a *view* on gralloc memory; reading it forces a CPU cache-invalidate and often an internal copy for formats like `PRIVATE`. In native code, `AHardwareBuffer` is the gralloc handle itself, and the GPU can bind it as texture memory in-place.
-
-3. **AR/3D engine integration.** Unity, Unreal, Ogre, and in-house engines are written in C++ for good reason. Running the camera *inside* the render loop C++ code eliminates the "ART + JNI + render thread" three-process tangle.
-
-4. **Automotive EVS (External View System) migration.** Prior to Android 10, automotive rear-view cameras used the legacy `EVS` stack with its own HAL. The 2020–2024 OEM migrations converged EVS onto the standard Camera2 NDK APIs, reserving `AID_AUTOMOTIVE_EVS_UID = 1071` for early hardware access during boot *before* the `system_server` CameraService is even running. If your code targets automotive, native is non-negotiable.
-
-### The Case Against Native
-
-- Debugging is harder. Crashes in `ACameraDevice` callbacks produce tombstone traces, not nice Kotlin stack traces.
-- Lifecycle management is fully manual. `ACameraManager` is *not* lifecycle-aware; forgetting `ACameraCaptureSession_stopRepeating()` + `ACameraDevice_close()` on surface destroy leaks camera resources and can block other apps until reboot.
-- Fewer device workarounds. CameraX's quirk database does not exist in NDK-land; you inherit raw HAL behavior exactly as it ships.
-- No `DngCreator`, no `ExifInterface` helpers, no `CameraCharacteristics` convenience accessors — you parse metadata tags yourself via `ACameraMetadata_getConstEntry`.
-
-The decision is simple: if you cannot meet your frame budget in managed code, or you need EVS-grade boot-time camera access, go native. Otherwise, stay managed.
+기기가 네이티브 레이어에서 지원하는 세부 사양을 확인하려면, [Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)에서 **Android Camera Parameters**를 사용해 보세요. 이 앱은 NDK를 통해서만 접근 가능한 일부 하드웨어 정보도 시각화해 줍니다.
 
 ---
 
-## ACameraManager: NDK Parallel to Java CameraManager
+## 왜 네이티브(C++)인가?
 
-The NDK camera API surface in `<camera/NdkCameraManager.h>`, `<camera/NdkCameraDevice.h>`, and `<camera/NdkCaptureRequest.h>` maps almost one-to-one onto the Java API you know. Every Java class has a native struct and a set of free functions:
+대부분의 앱은 Camera2(Java/Kotlin)로 충분합니다. 하지만 다음과 같은 경우에는 네이티브 스택이 필수적입니다.
 
-| Java                          | NDK Handle / Function Prefix                          |
-|-------------------------------|-------------------------------------------------------|
-| `CameraManager`               | `ACameraManager` · `ACameraManager_*`                 |
-| `CameraCharacteristics`       | `ACameraMetadata` · `ACameraMetadata_*`               |
-| `CameraDevice`                | `ACameraDevice` · `ACameraDevice_*`                   |
-| `CaptureRequest.Builder`      | `ACaptureRequest` · `ACaptureRequest_setEntry_*`      |
-| `CameraCaptureSession`        | `ACameraCaptureSession` · `ACameraCaptureSession_*`   |
-| `TotalCaptureResult`          | `ACameraCaptureResult` · `ACaptureResult`             |
-| `ImageReader`                 | `AImageReader` (from `<media/NdkImageReader.h>`)      |
+1. **지터(Jitter) 없는 프레임 속도:** Java GC가 런타임에 실행되면 수 밀리초의 멈춤 현상이 발생할 수 있습니다. 60fps 환경에서 이는 치명적인 프레임 드롭으로 이어집니다. C++은 메모리 관리가 수동이므로 예측 가능한 타이밍을 보장합니다.
+2. **AR / 컴퓨터 비전:** OpenCV, TensorFlow Lite C++, ARCore와 같은 라이브러리는 네이티브에서 작동합니다. 데이터를 Java로 올렸다가 다시 C++로 내리는 과정 없이 네이티브 레이어에서 바로 처리하는 것이 훨씬 빠릅니다.
+3. **하드웨어 버퍼 직접 제어:** `AHardwareBuffer`를 통해 센서 데이터를 직접 GPU 메모리에 매핑할 수 있습니다. 이는 "복사 없는(Zero-copy)" 데이터 전달의 핵심입니다.
 
-The lifecycle is identical: enumerate cameras → read characteristics → open → create output surfaces → create session → set repeating request → tear down in reverse order.
+---
 
-### Example 1: Enumerate Cameras, Read Characteristics, Open a Device (C++)
+## NDK 카메라 아키텍처: ACamera API
+
+네이티브 카메라 API는 `libcamera2ndk.so` 라이브러리에 포함되어 있으며, Java의 Camera2 구조를 거의 그대로 따라갑니다. 클래스 이름 앞에 `A`(Android)가 붙는 것이 특징입니다.
+
+| Java (Camera2) | NDK (ACamera) | 역할 |
+|---|---|---|
+| `CameraManager` | `ACameraManager` | 카메라 기기 목록 조회 및 관리 |
+| `CameraDevice` | `ACameraDevice` | 개별 카메라 장치 객체 |
+| `CaptureRequest` | `ACaptureRequest` | 캡처 파라미터 설정 객체 |
+| `CameraCaptureSession` | `ACameraCaptureSession` | 캡처 흐름 제어 세션 |
+| `ImageReader` | `AImageReader` | 이미지 버퍼 수신 장치 |
+
+### 1단계: 카메라 매니저 및 장치 열기
 
 ```cpp
-#include <camera/NdkCameraManager.h>
-#include <camera/NdkCameraDevice.h>
-#include <camera/NdkCameraMetadata.h>
-#include <android/log.h>
+// 매니저 인스턴스 생성
+ACameraManager* cameraManager = ACameraManager_create();
 
-#define LOG_TAG "NativeCam"
-#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
-#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
+// 카메라 ID 목록 조회
+ACameraIdList* cameraIdList = nullptr;
+ACameraManager_getCameraIdList(cameraManager, &cameraIdList);
 
-static ACameraManager* g_cameraManager = nullptr;
-static ACameraDevice* g_cameraDevice = nullptr;
-
-void onDeviceDisconnected(void* ctx, ACameraDevice* dev) {
-    LOGI("Camera device disconnected");
-}
-
-void onDeviceError(void* ctx, ACameraDevice* dev, int err) {
-    LOGE("Camera device error: %d", err);
-}
-
-static ACameraDevice_stateCallbacks g_deviceCallbacks = {
-    .context = nullptr,
+// 첫 번째 카메라 열기
+ACameraDevice* cameraDevice = nullptr;
+ACameraDevice_StateCallbacks deviceCallbacks = {
+    .context = this,
     .onDisconnected = onDeviceDisconnected,
-    .onError = onDeviceError,
+    .onError = onDeviceError
 };
 
-bool enumerateAndOpenBackCamera() {
-    g_cameraManager = ACameraManager_create();
-    if (!g_cameraManager) {
-        LOGE("Failed to create ACameraManager");
-        return false;
-    }
-
-    ACameraIdList* cameraIdList = nullptr;
-    camera_status_t status = ACameraManager_getCameraIdList(
-        g_cameraManager, &cameraIdList);
-    if (status != ACAMERA_OK) {
-        LOGE("getCameraIdList failed: %d", status);
-        return false;
-    }
-
-    const char* chosenId = nullptr;
-
-    for (int i = 0; i < cameraIdList->numCameras; ++i) {
-        const char* id = cameraIdList->cameraIds[i];
-        ACameraMetadata* chars = nullptr;
-        status = ACameraManager_getCameraCharacteristics(
-            g_cameraManager, id, &chars);
-        if (status != ACAMERA_OK) continue;
-
-        ACameraMetadata_const_entry lensFacingEntry{};
-        status = ACameraMetadata_getConstEntry(
-            chars,
-            ACAMERA_LENS_FACING,
-            &lensFacingEntry);
-
-        uint8_t facing = 0;
-        if (status == ACAMERA_OK && lensFacingEntry.count > 0) {
-            facing = lensFacingEntry.data.u8[0];
-        }
-
-        if (facing == ACAMERA_LENS_FACING_BACK) {
-            chosenId = id;
-            // Also query hardware level for capability check:
-            ACameraMetadata_const_entry hwEntry{};
-            if (ACameraMetadata_getConstEntry(
-                    chars, ACAMERA_INFO_SUPPORTED_HARDWARE_LEVEL,
-                    &hwEntry) == ACAMERA_OK && hwEntry.count > 0) {
-                LOGI("Back camera %s hw level = %d (expect %d=FULL %d=LEVEL3)",
-                     id, hwEntry.data.u8[0],
-                     (int)ACAMERA_INFO_SUPPORTED_HARDWARE_LEVEL_FULL,
-                     (int)ACAMERA_INFO_SUPPORTED_HARDWARE_LEVEL_3);
-            }
-            ACameraMetadata_free(chars);
-            break;
-        }
-        ACameraMetadata_free(chars);
-    }
-
-    ACameraManager_deleteCameraIdList(cameraIdList);
-
-    if (!chosenId) {
-        LOGE("No back-facing camera found");
-        return false;
-    }
-
-    status = ACameraManager_openCamera(
-        g_cameraManager, chosenId,
-        &g_deviceCallbacks,
-        &g_cameraDevice);
-
-    if (status != ACAMERA_OK) {
-        LOGE("openCamera failed: %d", status);
-        return false;
-    }
-
-    LOGI("Successfully opened camera %s", chosenId);
-    return true;
-}
+ACameraManager_openCamera(cameraManager, cameraIdList->cameraIds[0], 
+                         &deviceCallbacks, &cameraDevice);
 ```
 
-Notice the lack of exceptions. Every function returns `camera_status_t`, and you *must* check every return. `ACAMERA_OK = 0`; any non-zero value is a specific failure code (`ACAMERA_ERROR_CAMERA_IN_USE`, `ACAMERA_ERROR_CAMERA_DISCONNECTED`, etc.). There is no `CameraAccessException` to catch — if you ignore the return, the function simply silently left the output pointer as `nullptr` and you crash three lines later.
+### 2단계: 이미지 리더와 네이티브 서피스 준비
 
-### Creating a Capture Session and Setting a Repeating Request
-
-Once the device is open, the pattern mirrors the Java session creation. Create an `ACameraOutputTarget` per surface, package them into an `ACaptureSessionOutputContainer`, then call `ACameraDevice_createCaptureSession()`. For repeating requests, build an `ACaptureRequest` from a template, add your output target, and call `ACameraCaptureSession_setRepeatingRequest()`. The callback structs (`ACameraCaptureSession_stateCallbacks`, `ACameraCaptureSession_captureCallbacks`) are registered at session-creation time, exactly matching their Java counterparts.
-
----
-
-## AHardwareBuffer: The Zero-Copy Critical Path
-
-This is the real reason to go native. `AHardwareBuffer` (defined in `<android/hardware_buffer.h>`) is the NDK handle to gralloc-allocated memory — the exact same memory the camera HAL writes sensor pixels into. When you feed an `AHardwareBuffer`-backed surface to `ACameraDevice_createCaptureSession` and then import that same `AHardwareBuffer` into Vulkan or OpenGL, you get true zero-copy:
-
-```mermaid
-graph TB
-    A[Camera Sensor<br/>MIPI CSI-2 pixel stream] --> B[ISP / CAMSS Hardware<br/>writes directly to gralloc]
-    B --> C[AHardwareBuffer<br/>gralloc-backed physical pages<br/>shared across processes via handle]
-    C --> D1[Vulkan<br/>vkCreateImage + AHardwareBuffer import<br/>VK_FORMAT_R8G8B8A8_UNORM]
-    C --> D2[OpenGL ES<br/>eglCreateImageKHR + AHardwareBuffer<br/>glEGLImageTargetTexture2DOES]
-    C --> D3[CPU read path<br/>AHardwareBuffer_lock → void*<br/>cache-coherent if AHARDWAREBUFFER_USAGE_CPU_READ_RARELY]
-
-    style A fill:#d9f2e6
-    style B fill:#d9e6f2
-    style C fill:#fff3cd,stroke:#ffc107,stroke-width:2px
-    style D1 fill:#e6d9f2
-    style D2 fill:#e6d9f2
-    style D3 fill:#e6d9f2
-```
-
-The `AHardwareBuffer` node is the linchpin: it is a single allocation shared by the camera HAL write endpoint, the GPU's texture sampler, and optionally the CPU. No memcpy, no `glTexImage2D` upload, no `ByteBuffer.wrap()` — the GPU texture is literally pointing at the same physical DRAM pages the camera just wrote.
-
-For AR 60fps pipelines on a 4K stream, this is a ~200ms-per-second bandwidth saving (4K × 60fps × 4 bytes = ~4.7 GB/sec saved) and the difference between a smooth experience and a juddery mess.
-
-### Example 2: AHardwareBuffer to Vulkan VkImage, Step-by-Step (C++)
+네이티브 카메라의 진가는 `AImageReader`에서 나옵니다. 여기서 받은 `AImage`로부터 `AHardwareBuffer`를 추출할 수 있습니다.
 
 ```cpp
-#include <android/hardware_buffer.h>
-#include <vulkan/vulkan.h>
-#include <vulkan/vulkan_android.h>
+AImageReader* reader = nullptr;
+AImageReader_new(width, height, AIMAGE_FORMAT_YUV_420_888, 2, &reader);
 
-VkImage createVkImageFromAHardwareBuffer(
-    VkDevice device,
-    AHardwareBuffer* aBuffer,
-    VkFormat format,
-    uint32_t width,
-    uint32_t height) {
-
-    // Step 1: Fill AndroidHardwareBufferProperties2KHR
-    VkAndroidHardwareBufferPropertiesANDROID ahbProps{};
-    ahbProps.sType = VK_STRUCTURE_TYPE_ANDROID_HARDWARE_BUFFER_PROPERTIES_ANDROID;
-    VkResult res = vkGetAndroidHardwareBufferPropertiesANDROID(
-        device, aBuffer, &ahbProps);
-    if (res != VK_SUCCESS) {
-        LOGE("vkGetAndroidHardwareBufferPropertiesANDROID failed: %d", res);
-        return VK_NULL_HANDLE;
-    }
-
-    // Step 2: Describe the image *import* (not allocation)
-    VkExternalMemoryImageCreateInfo externalInfo{};
-    externalInfo.sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO;
-    externalInfo.handleTypes =
-        VK_EXTERNAL_MEMORY_HANDLE_TYPE_ANDROID_HARDWARE_BUFFER_BIT_ANDROID;
-
-    VkImageCreateInfo imgInfo{};
-    imgInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    imgInfo.pNext = &externalInfo;
-    imgInfo.imageType = VK_IMAGE_TYPE_2D;
-    imgInfo.format = format;             // e.g. VK_FORMAT_R8G8B8A8_UNORM
-    imgInfo.extent = { width, height, 1 };
-    imgInfo.mipLevels = 1;
-    imgInfo.arrayLayers = 1;
-    imgInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-    imgInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-    imgInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT |
-                    VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-    imgInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    imgInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-
-    VkImage image = VK_NULL_HANDLE;
-    res = vkCreateImage(device, &imgInfo, nullptr, &image);
-    if (res != VK_SUCCESS) {
-        LOGE("vkCreateImage failed: %d", res);
-        return VK_NULL_HANDLE;
-    }
-
-    // Step 3: Allocate VkDeviceMemory *importing* the AHB, not allocating new
-    VkMemoryRequirements memReqs{};
-    vkGetImageMemoryRequirements(device, image, &memReqs);
-
-    VkImportAndroidHardwareBufferInfoANDROID importInfo{};
-    importInfo.sType =
-        VK_STRUCTURE_TYPE_IMPORT_ANDROID_HARDWARE_BUFFER_INFO_ANDROID;
-    importInfo.buffer = aBuffer;
-
-    VkMemoryDedicatedAllocateInfo dedicatedInfo{};
-    dedicatedInfo.sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO;
-    dedicatedInfo.pNext = &importInfo;
-    dedicatedInfo.image = image;
-
-    VkMemoryAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.pNext = &dedicatedInfo;
-    allocInfo.allocationSize = memReqs.size;
-    allocInfo.memoryTypeIndex = ahbProps.memoryTypeBits
-        // memoryTypeIndex must be selected from memReqs.memoryTypeBits
-        // AND ahbProps.memoryTypeBits intersection. Omitted for brevity.
-        ;
-
-    VkDeviceMemory mem = VK_NULL_HANDLE;
-    res = vkAllocateMemory(device, &allocInfo, nullptr, &mem);
-    if (res != VK_SUCCESS) {
-        LOGE("vkAllocateMemory import failed: %d", res);
-        vkDestroyImage(device, image, nullptr);
-        return VK_NULL_HANDLE;
-    }
-
-    // Step 4: Bind imported memory to VkImage
-    vkBindImageMemory(device, image, mem, 0);
-
-    // Step 5: Transition to SHADER_READ_ONLY_OPTIMAL layout via command buffer
-    // (omitted — standard image memory barrier for VK_IMAGE_LAYOUT_UNDEFINED
-    // → VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
-
-    LOGI("Successfully imported AHardwareBuffer as VkImage %p", image);
-    return image;
-}
+ANativeWindow* surface = nullptr;
+AImageReader_getWindow(reader, &surface);
 ```
 
-The conceptual leap that trips up most newcomers is Step 3: `vkAllocateMemory` with `VK_STRUCTURE_TYPE_IMPORT_ANDROID_HARDWARE_BUFFER_INFO_ANDROID` does **not** allocate. It registers an existing `AHardwareBuffer` as a `VkDeviceMemory` object. The bytes were already allocated by gralloc when the camera producer created the surface; Vulkan is simply adopting them into its memory model.
-
-The OpenGL ES path is analogous but shorter: `eglCreateImageKHR(..., EGL_NATIVE_BUFFER_ANDROID, aBuffer, ...)` → `glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, eglImage)`. One call and you are sampling.
+이 `ANativeWindow`를 `ACaptureSession`의 출력 타겟으로 등록합니다.
 
 ---
 
-## OpenGL and Vulkan Interop Summary
+## 제로 복사(Zero-copy) 파이프라인 구축
 
-Both paths work. Which to choose:
+네이티브 개발의 꽃은 카메라 데이터를 메모리 복사 없이 GPU로 넘기는 것입니다.
 
-| Factor                | OpenGL ES 3.x + EGLImage                    | Vulkan 1.1+ + AHB import                     |
-|-----------------------|----------------------------------------------|----------------------------------------------|
-| Simplicity            | Shorter setup, less ceremony                 | More boilerplate, explicit synchronization   |
-| Synchronization       | Implicit; driver inserts barriers            | Explicit; you write pipeline barriers + semaphores |
-| Multi-queue/threading | Tied to single EGLContext per thread         | First-class multi-queue transfers            |
-| Automotive/AR cert    | Certified on most EVS targets                | Increasingly required for new AR runtimes    |
+1. **AImage 수신:** `onImageAvailable` 콜백이 호출됩니다.
+2. **하드웨어 버퍼 추출:** `AImage_getHardwareBuffer(image, &buffer)`를 호출합니다.
+3. **Vulkan/GL 바인딩:**
+   - **OpenGL ES:** `eglCreateImageKHR`을 사용하여 버퍼를 EGL 이미지로 래핑하고, `glEGLImageTargetTexture2DOES`를 통해 텍스처로 바인딩합니다.
+   - **Vulkan:** `VkExternalMemoryBufferCreateInfo`를 사용하여 버퍼를 직접 Vulkan 메모리로 가져옵니다.
 
-If you are integrating with an existing engine, the engine chooses for you. If you are greenfield and want maximum performance, Vulkan is the future. If you want minimal code, OpenGL ES via EGLImage is still the pragmatic choice and ships on every device with a camera.
-
----
-
-## Automotive EVS Context: Migration to Camera2 NDK
-
-For completeness, a brief note on the automotive migration path referenced in the research notes. Through Android 9, in-car rear-view cameras used the separate `EVS` HAL (`android.hardware.automotive.evs@1.0`), with its own enumeration and streaming pipeline. Starting in Android 10 and mandated in Android 12+ for new IVI systems, the EVS manager was reimplemented *on top of the standard camera HAL3 + NDK camera stack*, with a new reserved UID `AID_AUTOMOTIVE_EVS_UID = 1071` that receives `CAMERA` permission group access as early as `early-boot` — before `system_server`'s `CameraService` is even initialized.
-
-Practically, if you are writing rear-view camera code for cars:
-1. Your process runs as UID 1071.
-2. You use *exactly* the native APIs in this chapter (`ACameraManager_openCamera`, `AImageReader`, `AHardwareBuffer` → Vulkan import).
-3. You must be able to open, configure, and output a frame in under 2 seconds from cold boot (FMVSS 111 requirement). That is why the EVS stack requires native — every ms of ART startup is a ms you do not have.
-
-The EVS → Camera2 NDK migration is one of the largest internal refactors of Android's camera ecosystem in the past five years, and it is why the NDK camera APIs received such heavy investment from Android 10 onward. If you are reading this chapter to ship an in-car camera product, you are using exactly the code path mandated by Google's automotive compliance tests.
+이제 GPU의 쉐이더는 카메라 센서가 쓴 메모리 주소를 **직접** 읽어서 렌더링합니다. CPU 복사 부하가 0%에 가까워집니다.
 
 ---
 
-## Example 3 (Kotlin JNI Bridge Stub)
+## 구현 시 주의사항
 
-For completeness, a minimal Kotlin JNI entry point that calls into the C++ code above:
-
-```kotlin
-// NativeBridge.kt
-class NativeBridge {
-
-    external fun enumerateAndOpenBackCameraNative(): Boolean
-
-    companion object {
-        init {
-            System.loadLibrary("native_camera")
-        }
-    }
-}
-```
-
-```cpp
-// native_camera.cpp JNI export
-extern "C" JNIEXPORT jboolean JNICALL
-Java_com_example_NativeBridge_enumerateAndOpenBackCameraNative(
-    JNIEnv* /*env*/, jobject /*thiz*/) {
-    return static_cast<jboolean>(enumerateAndOpenBackCamera() ? JNI_TRUE : JNI_FALSE);
-}
-```
-
-And in `build.gradle`:
-
-```kotlin
-android {
-    defaultConfig {
-        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
-    }
-    externalNativeBuild {
-        cmake { path = file("src/main/cpp/CMakeLists.txt") }
-    }
-}
-```
-
-With the corresponding `CMakeLists.txt` linking `-lcamera2ndk`, `-lmediandk`, `-landroid`, and `-lvulkan`.
+1. **복잡성:** NDK 카메라는 Java API보다 훨씬 장황합니다. 사소한 설정 하나를 위해서도 수십 줄의 C++ 코드가 필요합니다.
+2. **에러 처리:** Java처럼 예외(Exception)를 던지지 않습니다. 모든 함수는 `camera_status_t` 리턴 코드를 반환하므로, 매 호출마다 리턴값을 꼼꼼히 확인해야 합니다.
+3. **수명 주기:** C++은 가비지 컬렉터가 없습니다. `ACameraManager_delete`, `ACameraDevice_close` 등을 적절한 시점에 직접 호출하지 않으면 앱이 종료되어도 카메라 하드웨어가 "점유 중" 상태로 남아 다른 앱이 카메라를 못 쓰는 대참사가 발생합니다.
 
 ---
 
-## Summary
+## 요약
 
-Native camera development trades managed-code ergonomics for maximum performance and direct hardware ownership. `ACameraManager` and its companion structs mirror the Java Camera2 API one-to-one, only with C-style error returns and manual lifecycle. The real payoff is `AHardwareBuffer` — the gralloc handle that lets you feed the camera HAL's output directly into Vulkan `VkImage` or OpenGL `EGLImage` textures with zero memory copy, saving gigabytes per second of DRAM bandwidth in 60fps AR pipelines. For automotive, the EVS-to-NDK migration makes native non-negotiable due to the 2-second boot-frame requirement and `AID_AUTOMOTIVE_EVS_UID` early hardware access. Use **Android Camera Parameters** to validate that your target device has `INFO_SUPPORTED_HARDWARE_LEVEL_FULL` or better before committing to a native implementation.
+- **NDK ACamera API**는 고성능, 저지연 카메라 처리를 위한 최후의 수단입니다.
+- **AHardwareBuffer**와 네이티브 서피스를 사용하여 Java 레이어를 건너뛰는 **제로 복사 파이프라인**을 구축할 수 있습니다.
+- 게임 엔진, 실시간 영상 필터, AR 앱 개발자에게는 선택이 아닌 필수 기술입니다.
 
-## What's Next
+## 다음 단계
 
-Whether in Kotlin or C++, Camera2 is an inherently asynchronous API: `StateCallbacks`, `CaptureCallbacks`, `AvailabilityCallbacks`, all firing on background threads. Chapter 26 tames this chaos with Kotlin coroutines and Flow, converting the spaghettified callback hell you wrote in the early chapters into a clean, linear, reactive pipeline.
+네이티브 레이어의 성능을 맛보았으니, 이제 코드를 더 깔끔하고 현대적으로 관리하는 법을 배울 차례입니다. **제26장: 비동기 카메라 프로그래밍 (Coroutine & Flow)**에서는 카메라의 복잡한 콜백 지옥을 Kotlin의 코루틴과 Flow를 사용하여 선언적이고 읽기 쉬운 코드로 리팩토링하는 방법을 알아봅니다.

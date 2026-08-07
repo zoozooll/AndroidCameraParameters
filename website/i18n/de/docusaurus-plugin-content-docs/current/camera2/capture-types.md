@@ -1,30 +1,30 @@
-﻿---
+---
 sidebar_position: 11
-title: "Chapter 11: Capture Types"
-description: Learn the three Camera2 capture types — one-shot (capture), burst (captureBurst), and repeating (setRepeatingRequest) — plus built-in templates (TEMPLATE_PREVIEW, TEMPLATE_STILL_CAPTURE, TEMPLATE_RECORD, and more).
-keywords: [Camera2 capture types, one-shot capture, burst capture, repeating request, captureBurst, setRepeatingRequest, TEMPLATE_PREVIEW, TEMPLATE_STILL_CAPTURE, camera templates]
+title: "Kapitel 11: Aufnahme-Typen"
+description: Lernen Sie die drei Camera2-Aufnahme-Typen kennen – One-Shot (capture), Burst (captureBurst) und Repeating (setRepeatingRequest) – sowie die integrierten Vorlagen (TEMPLATE_PREVIEW, TEMPLATE_STILL_CAPTURE, TEMPLATE_RECORD und weitere).
+keywords: [Camera2 Aufnahme-Typen, One-Shot Capture, Burst-Aufnahme, Repeating Request, captureBurst, setRepeatingRequest, TEMPLATE_PREVIEW, TEMPLATE_STILL_CAPTURE, Kamera-Vorlagen]
 ---
 
-## 11.1 Three Ways to Feed the Pipeline
+## 11.1 Drei Möglichkeiten, die Pipeline zu füttern
 
-In [Chapter 10](the-camera2-pipeline.md) you saw how requests travel through the Camera2 pipeline: from the Pending Queue to the In-Flight Queue to the HAL to your callback and output surfaces. But *how you submit* those requests matters enormously. Camera2 gives you three submission mechanisms, each with fundamentally different behavior:
+In [Kapitel 10](the-camera2-pipeline.md) haben Sie gesehen, wie Anforderungen die Camera2-Pipeline durchlaufen: von der Pending-Warteschlange zur In-Flight-Warteschlange zum HAL und schließlich zu Ihren Callbacks und Ausgabe-Surfaces. Aber *wie Sie diese Anforderungen übermitteln*, spielt eine enorme Rolle. Camera2 bietet Ihnen drei Übermittlungsmechanismen, jeder mit einem grundlegend unterschiedlichen Verhalten:
 
-1. **One-shot** (`capture()`) — execute a single request once
-2. **Burst** (`captureBurst()`) — execute a list of requests contiguously, back-to-back
-3. **Repeating** (`setRepeatingRequest()`) — execute the same request continuously forever (or until interrupted)
+1. **One-Shot** (`capture()`) – führt eine einzelne Anforderung genau einmal aus.
+2. **Burst** (`captureBurst()`) – führt eine Liste von Anforderungen zusammenhängend und nacheinander aus.
+3. **Repeating** (`setRepeatingRequest()`) – führt dieselbe Anforderung kontinuierlich für immer aus (oder bis sie unterbrochen wird).
 
-On top of those three submission modes, the framework provides six **capture templates** that pre-populate a `CaptureRequest.Builder` with sensible defaults for common use cases (preview, still capture, video recording, zero-shutter-lag, manual control, etc.).
+Zusätzlich zu diesen drei Übermittlungsmodi bietet das Framework sechs **Aufnahme-Vorlagen (Capture Templates)**, die einen `CaptureRequest.Builder` mit sinnvollen Standardwerten für gängige Anwendungsfälle (Vorschau, Standbildaufnahme, Videoaufzeichnung, Zero-Shutter-Lag, manuelle Steuerung usw.) vorbelegen.
 
-By the end of this chapter you will know exactly when to use each capture type and template — including why preview always uses repeating requests, why burst is the only way to do exposure bracketing, and why still photos use one-shot even when a preview is running.
+Am Ende dieses Kapitels werden Sie genau wissen, wann Sie welchen Aufnahme-Typ und welche Vorlage verwenden sollten – einschließlich der Gründe, warum die Vorschau immer wiederholte Anforderungen verwendet, warum Burst die einzige Möglichkeit für Belichtungsreihen ist und warum Standbilder One-Shot verwenden, selbst wenn eine Vorschau läuft.
 
-The Android Camera Parameters app ([GitHub](https://github.com/zoozooll/AndroidCameraParameters), [Play Store](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)) demonstrates all three capture types in its **Capture Demo** tab. Flip between "Preview (Repeating)," "Single Photo (One-Shot)," and "Burst (3 Frames)" modes to see the callback behavior and timing differences live on your device.
+Die App Android Camera Parameters ([GitHub](https://github.com/zoozooll/AndroidCameraParameters), [Play Store](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)) demonstriert alle drei Aufnahme-Typen in ihrer Registerkarte **Capture Demo**. Wechseln Sie zwischen den Modi "Vorschau (Repeating)", "Einzelbild (One-Shot)" und "Burst (3 Frames)", um das Callback-Verhalten und die Zeitunterschiede live auf Ihrem Gerät zu sehen.
 
 ## 11.2 One-Shot: capture()
 
-The simplest submission mode is **one-shot capture** via `CameraCaptureSession.capture()`. It does exactly what it says on the tin: submits a single `CaptureRequest` to the pipeline, executes it exactly once, and is done.
+Der einfachste Übermittlungsmodus ist die **One-Shot-Aufnahme** über `CameraCaptureSession.capture()`. Er tut genau das, was der Name sagt: Er übermittelt einen einzelnen `CaptureRequest` an die Pipeline, führt ihn exakt einmal aus und ist dann fertig.
 
 ```kotlin
-// One-shot: capture a single still frame to JPEG ImageReader
+// One-Shot: Ein einzelnes Standbild an den JPEG-ImageReader erfassen
 fun captureStillPhoto() {
     val builder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
     builder.addTarget(jpegReader.surface)
@@ -41,92 +41,92 @@ fun captureStillPhoto() {
             result: TotalCaptureResult
         ) {
             super.onCaptureCompleted(session, request, result)
-            Log.d("Capture", "One-shot photo done. Frame #${result.frameNumber}")
+            Log.d("Capture", "One-Shot-Foto fertig. Frame #${result.frameNumber}")
         }
     }, backgroundHandler)
 }
 ```
 
-### When to Use One-Shot
+### Wann man One-Shot verwendet
 
-| Use Case | Why One-Shot? |
+| Anwendungsfall | Warum One-Shot? |
 |----------|--------------|
-| Single still photograph | Execute exactly once per shutter click |
-| Single AF/AE trigger | Fire `CONTROL_AF_TRIGGER_START` for one tap-to-focus event |
-| Snapshot during video | Grab one high-res frame while a repeating video request is active |
-| Capture a single RAW frame | RAW + JPEG dual capture for one photo |
+| Einzelne Standbildaufnahme | Wird genau einmal pro Drücken des Auslösers ausgeführt |
+| Einmaliger AF/AE-Trigger | Löst `CONTROL_AF_TRIGGER_START` für ein einzelnes Tap-to-Focus-Ereignis aus |
+| Schnappschuss während eines Videos | Erfasst einen hochauflösenden Frame, während eine wiederholte Videoanforderung aktiv ist |
+| Erfassung eines einzelnen RAW-Frames | Gleichzeitige Aufnahme von RAW + JPEG für ein einzelnes Foto |
 
-### How One-Shot Interacts with the Repeating Preview
+### Wie One-Shot mit der wiederholten Vorschau interagiert
 
-A critical design pattern in Camera2 is: **preview runs as a repeating request, and still photos are injected as one-shot requests**. The one-shot jumps ahead of the repeating request in the Pending Queue (as we discussed in Chapter 10's queue model), so it executes immediately. After the one-shot completes, the framework automatically resumes the repeating preview request — you don't need to resubmit it.
+Ein entscheidendes Designmuster in Camera2 ist: **Die Vorschau läuft als wiederholte Anforderung, und Standbilder werden als One-Shot-Anforderungen eingeschleust.** Die One-Shot-Anforderung rückt in der Pending-Warteschlange vor die wiederholte Anforderung (wie wir im Warteschlangenmodell von Kapitel 10 besprochen haben), sodass sie sofort ausgeführt wird. Nach Abschluss der One-Shot-Anforderung nimmt das Framework automatisch die wiederholte Vorschauanforderung wieder auf – Sie müssen sie nicht erneut senden.
 
 ```mermaid
 sequenceDiagram
     participant App
-    participant Queue as Pending Queue
+    participant Queue as Pending-Warteschlange
     participant HAL
-    participant Prev as Preview Callback
-    participant Photo as Photo Callback
+    participant Prev as Vorschau-Callback
+    participant Photo as Foto-Callback
 
     App->>Queue: setRepeatingRequest(PREVIEW_REQ)
-    loop Continuous preview
+    loop Kontinuierliche Vorschau
         Queue->>HAL: PREVIEW
-        HAL-->>Prev: onCaptureCompleted(preview result)
+        HAL-->>Prev: onCaptureCompleted(Vorschauergebnis)
         Note right of Prev: Frame 100, 101, 102...
     end
 
-    Note over App: User taps shutter button
+    Note over App: Benutzer tippt auf Auslöser
     App->>Queue: capture(STILL_PHOTO_REQ)
-    Note over Queue: STILL_PHOTO jumps to HEAD of queue<br/>Repeating PREVIEW resumes after
+    Note over Queue: STILL_PHOTO rückt an die SPITZE der Warteschlange<br/>Danach wird PREVIEW fortgesetzt
 
-    Queue->>HAL: STILL_PHOTO (one-shot)
-    HAL-->>Photo: onCaptureCompleted(photo result)
-    Note right of Photo: Frame 103 — JPEG written
+    Queue->>HAL: STILL_PHOTO (One-Shot)
+    HAL-->>Photo: onCaptureCompleted(Fotoergebnis)
+    Note right of Photo: Frame 103 — JPEG geschrieben
 
-    loop Preview auto-resumes (no app code needed)
+    loop Vorschau wird automatisch fortgesetzt (kein App-Code nötig)
         Queue->>HAL: PREVIEW
-        HAL-->>Prev: onCaptureCompleted(preview result)
+        HAL-->>Prev: onCaptureCompleted(Vorschauergebnis)
         Note right of Prev: Frame 104, 105...
     end
 ```
 
 :::tip
-This auto-resume behavior is baked into the Camera2 framework. You never need to manually "restart preview" after a one-shot capture — the framework re-enqueues the repeating request for you.
+Dieses automatische Fortsetzungsverhalten ist fest in das Camera2-Framework eingebaut. Sie müssen die Vorschau nach einer One-Shot-Aufnahme niemals manuell "neu starten" – das Framework stellt die wiederholte Anforderung für Sie wieder in die Warteschlange.
 :::
 
-### One-Shot Execution Flow
+### Ablauf einer One-Shot-Ausführung
 
 ```mermaid
 flowchart LR
-    A["App calls session.capture(req)"] --> B["Request enqueued at HEAD of Pending Queue"]
-    B --> C["Bypasses repeating requests (highest priority)"]
-    C --> D["HAL processes single frame"]
-    D --> E["Image buffers delivered to target Surfaces"]
-    E --> F["onCaptureCompleted fires ONCE"]
-    F --> G["Framework auto-resumes repeating request (if set)"]
+    A["App ruft session.capture(req) auf"] --> B["Request wird an SPITZE der Pending-Warteschlange gestellt"]
+    B --> C["Umgeht wiederholte Anforderungen (höchste Priorität)"]
+    C --> D["HAL verarbeitet einen einzelnen Frame"]
+    D --> E["Bildpuffer werden an Ziel-Surfaces geliefert"]
+    E --> F["onCaptureCompleted wird EINMAL ausgelöst"]
+    F --> G["Framework setzt wiederholte Anforderung fort (falls gesetzt)"]
 ```
 
 ## 11.3 Burst: captureBurst()
 
-Where `capture()` submits one request, `captureBurst()` submits a **`List&lt;CaptureRequest&gt;`** and guarantees that all N frames in the list execute **contiguously and in order, with no interleaving frames from other sources (including the repeating request)**.
+Während `capture()` eine einzelne Anforderung sendet, übermittelt `captureBurst()` eine **`List<CaptureRequest>`** und garantiert, dass alle N Frames in der Liste **zusammenhängend und nacheinander ausgeführt werden, ohne dass Frames von anderen Quellen (einschließlich der wiederholten Anforderung) dazwischengeschoben werden**.
 
-This atomic, gap-free guarantee is what makes burst capture essential for:
+Diese atomare, lückenlose Garantie macht Burst-Aufnahmen unverzichtbar für:
 
-- **Exposure bracketing** — Capture 3-5 frames at ±1EV, ±2EV, then merge them into HDR
-- **Focus bracketing** — Sweep through focus distances, then stack for depth-of-field effects
-- **Action / motion capture** — Shoot 10-30 frames of a fast-moving subject, then pick the sharpest
-- **Slow-motion video (high-speed)** — `createHighSpeedRequestList()` + constrained high-speed burst
-- **3A convergence sampling** — Fire AF/AE trigger, then burst until converged
+- **Belichtungsreihen (Exposure Bracketing)** – Erfassen von 3-5 Frames mit ±1 EV, ±2 EV, um sie anschließend zu einem HDR-Bild zu verschmelzen.
+- **Fokus-Reihen (Focus Bracketing)** – Durchlaufen von Fokusdistanzen, um sie für Schärfentiefe-Effekte zu stapeln (Focus Stacking).
+- **Action- / Bewegungsaufnahmen** – Aufnahme von 10-30 Frames eines sich schnell bewegenden Motivs, um dann das schärfste auszuwählen.
+- **Zeitlupenvideos (High-Speed)** – `createHighSpeedRequestList()` + Burst mit eingeschränkter Hochgeschwindigkeitsaufnahme.
+- **Abtastung der 3A-Konvergenz** – Auslösen des AF/AE-Triggers und anschließender Burst, bis die Konvergenz erreicht ist.
 
 ```kotlin
-// Burst: 3-frame exposure bracketing (-2EV, 0EV, +2EV)
+// Burst: Belichtungsreihe mit 3 Bildern (-2 EV, 0 EV, +2 EV)
 fun captureExposureBracket() {
     val baseIso = 100
-    val baseExposure = 10_000_000L  // 10ms = "0EV" baseline
+    val baseExposure = 10_000_000L  // 10 ms = "0 EV" Basislinie
 
     val burstList: MutableList<CaptureRequest> = mutableListOf()
 
-    // Frame 0: -2EV (4x shorter exposure = darker)
+    // Frame 0: -2 EV (4x kürzere Belichtung = dunkler)
     burstList += cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE).apply {
         addTarget(jpegReader.surface)
         set(CaptureRequest.SENSOR_SENSITIVITY, baseIso)
@@ -134,7 +134,7 @@ fun captureExposureBracket() {
         set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
     }.build()
 
-    // Frame 1: 0EV (correct exposure)
+    // Frame 1: 0 EV (korrekte Belichtung)
     burstList += cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE).apply {
         addTarget(jpegReader.surface)
         set(CaptureRequest.SENSOR_SENSITIVITY, baseIso)
@@ -142,7 +142,7 @@ fun captureExposureBracket() {
         set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
     }.build()
 
-    // Frame 2: +2EV (4x longer exposure = brighter)
+    // Frame 2: +2 EV (4x längere Belichtung = heller)
     burstList += cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE).apply {
         addTarget(jpegReader.surface)
         set(CaptureRequest.SENSOR_SENSITIVITY, baseIso)
@@ -160,57 +160,57 @@ fun captureExposureBracket() {
         ) {
             super.onCaptureCompleted(session, request, result)
             completedCount++
-            Log.d("Burst", "Burst frame $completedCount/${burstList.size} done. Frame #${result.frameNumber}")
+            Log.d("Burst", "Burst-Frame $completedCount/${burstList.size} fertig. Frame #${result.frameNumber}")
 
             if (completedCount == burstList.size) {
-                Log.d("Burst", "All $burstList.size bracketed frames captured!")
-                // TODO: Merge HDR, focus stack, or let user pick the best frame
+                Log.d("Burst", "Alle ${burstList.size} Bilder der Belichtungsreihe aufgenommen!")
+                // TODO: HDR verschmelzen, Fokus-Stack erstellen oder Benutzer das beste Bild wählen lassen
             }
         }
     }, backgroundHandler)
 }
 ```
 
-### The Contiguous Guarantee in Action
+### Die zusammenhängende Garantie in Aktion
 
-The key property of burst is that **the entire list is enqueued atomically** — even if a `setRepeatingRequest()` is active, the N burst frames will all run back-to-back before the repeating request resumes. The repeating request is not interleaved between burst frames.
+Die wichtigste Eigenschaft von Burst ist, dass **die gesamte Liste atomar in die Warteschlange gestellt wird**. Selbst wenn ein `setRepeatingRequest()` aktiv ist, werden alle N Burst-Frames nacheinander ausgeführt, bevor die wiederholte Anforderung fortgesetzt wird. Die wiederholte Anforderung wird nicht zwischen den Burst-Frames eingeschoben.
 
 ```mermaid
 flowchart TB
-    subgraph QueueBefore ["Before Burst Submit"]
+    subgraph QueueBefore ["Vor dem Senden des Bursts"]
         direction LR
-        R1["PREVIEW (repeating)"] --> R2["PREVIEW (repeating)"] --> R3["PREVIEW (repeating)"]
+        R1["PREVIEW (Repeating)"] --> R2["PREVIEW (Repeating)"] --> R3["PREVIEW (Repeating)"]
     end
 
-    subgraph Arrow ["app calls captureBurst([B1,B2,B3])"]
+    subgraph Arrow ["App ruft captureBurst([B1,B2,B3]) auf"]
         style Arrow fill:#fff3e0
     end
 
-    subgraph QueueAfter ["After Burst Submit (atomic enqueue)"]
+    subgraph QueueAfter ["Nach dem Senden des Bursts (atomares Enqueue)"]
         direction LR
-        B1["BURST FRAME 1"] --> B2["BURST FRAME 2"] --> B3["BURST FRAME 3"] --> R4["PREVIEW (repeating) resumes"] --> R5["PREVIEW"]
+        B1["BURST FRAME 1"] --> B2["BURST FRAME 2"] --> B3["BURST FRAME 3"] --> R4["PREVIEW (Repeating) wird fortgesetzt"] --> R5["PREVIEW"]
     end
 
     QueueBefore --> Arrow --> QueueAfter
 
-    Note over B1,B3: No preview frames sneak in between!
+    Note over B1,B3: Keine Vorschau-Frames schleichen sich dazwischen!
 ```
 
-### Burst Size Limits
+### Grenzen der Burst-Größe
 
-The maximum burst size you can submit in a single `captureBurst()` call is determined by:
-- `CameraCharacteristics.REQUEST_MAX_NUM_OUTPUT_RAW` — for RAW outputs
-- `CameraCharacteristics.REQUEST_MAX_NUM_OUTPUT_PROC` — for processed (YUV/JPEG) outputs
-- Practical hardware bandwidth (4K bursts will be shorter than 1080p bursts)
+Die maximale Burst-Größe, die Sie in einem einzigen `captureBurst()`-Aufruf übermitteln können, wird bestimmt durch:
+- `CameraCharacteristics.REQUEST_MAX_NUM_OUTPUT_RAW` – für RAW-Ausgaben.
+- `CameraCharacteristics.REQUEST_MAX_NUM_OUTPUT_PROC` – für verarbeitete Ausgaben (YUV/JPEG).
+- Die tatsächliche Hardware-Bandbreite (4K-Bursts sind kürzer als 1080p-Bursts).
 
-For typical FULL devices, processed JPEG bursts of 10-50 frames are fine. RAW bursts may be limited to 5-10 frames depending on sensor and memory.
+Für typische FULL-Geräte sind verarbeitete JPEG-Bursts von 10-50 Frames in Ordnung. RAW-Bursts können je nach Sensor und Speicher auf 5-10 Frames begrenzt sein.
 
-### High-Speed Burst for Slow-Motion
+### High-Speed-Burst für Zeitlupe
 
-For slow-motion video, Camera2 provides `CameraDevice.createHighSpeedRequestList()` which converts a normal `CaptureRequest` into a list of burst requests suitable for high-speed, constrained-capture video (e.g., 120fps or 240fps). This is paired with `CameraCaptureSession.captureBurst()` and requires the `CONSTRAINED_HIGH_SPEED_VIDEO` capability:
+Für Zeitlupenvideos bietet Camera2 `CameraDevice.createHighSpeedRequestList()`, welches einen normalen `CaptureRequest` in eine Liste von Burst-Anforderungen umwandelt, die für Videoaufnahmen mit eingeschränkter Hochgeschwindigkeit (z. B. 120 fps oder 240 fps) geeignet sind. Dies wird mit `CameraCaptureSession.captureBurst()` kombiniert und erfordert die Fähigkeit `CONSTRAINED_HIGH_SPEED_VIDEO`:
 
 ```kotlin
-// Burst: High-speed slow-motion (120fps)
+// Burst: High-Speed-Zeitlupe (120 fps)
 fun captureHighSpeedSlowMo() {
     val capabilities = characteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
     val supportsHighSpeed = capabilities?.contains(
@@ -218,29 +218,29 @@ fun captureHighSpeedSlowMo() {
     ) ?: false
 
     if (!supportsHighSpeed) {
-        Log.w("HighSpeed", "Device does not support constrained high-speed video")
+        Log.w("HighSpeed", "Gerät unterstützt keine eingeschränkte Hochgeschwindigkeits-Videoaufnahme")
         return
     }
 
-    // Build a single base request (targeting the MediaRecorder Surface)
+    // Eine einzelne Basis-Anforderung erstellen (die auf die MediaRecorder-Surface abzielt)
     val baseBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD)
     baseBuilder.addTarget(mediaRecorderSurface)
     val baseRequest = baseBuilder.build()
 
-    // Expand into high-speed burst list — framework optimizes for 120fps
+    // In eine High-Speed-Burst-Liste umwandeln — das Framework optimiert für 120 fps
     val highSpeedBurst = cameraDevice.createHighSpeedRequestList(listOf(baseRequest))
 
-    // Submit the optimized burst list via captureBurst
+    // Die optimierte Burst-Liste über captureBurst übermitteln
     captureSession.captureBurst(highSpeedBurst, highSpeedCallback, backgroundHandler)
 }
 ```
 
 ## 11.4 Repeating: setRepeatingRequest()
 
-The workhorse of Camera2 is the **repeating request**, submitted via `CameraCaptureSession.setRepeatingRequest()`. Instead of executing once, the framework re-enqueues *the same request* after every frame, forever — producing a continuous stream of frames at the hardware's native frame rate.
+Das Arbeitspferd von Camera2 ist die **wiederholte Anforderung (Repeating Request)**, die über `CameraCaptureSession.setRepeatingRequest()` übermittelt wird. Anstatt sie nur einmal auszuführen, stellt das Framework *dieselbe Anforderung* nach jedem Frame für immer wieder in die Warteschlange – und erzeugt so einen kontinuierlichen Stream von Frames mit der nativen Bildrate der Hardware.
 
 ```kotlin
-// Repeating: Start camera preview (30fps continuous stream)
+// Repeating: Kameravorschau starten (kontinuierlicher Stream mit 30 fps)
 fun startPreview() {
     val builder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
     builder.addTarget(previewSurface)
@@ -265,7 +265,7 @@ fun startPreview() {
                 frameCount++
                 val now = System.currentTimeMillis()
                 if (now - lastFpsLogMs > 1000) {
-                    Log.d("Preview", "Preview FPS: $frameCount")
+                    Log.d("Preview", "Vorschau-FPS: $frameCount")
                     frameCount = 0
                     lastFpsLogMs = now
                 }
@@ -276,55 +276,55 @@ fun startPreview() {
 }
 ```
 
-### Why Preview *Must* Use Repeating Requests
+### Warum die Vorschau wiederholte Anforderungen verwenden *muss*
 
-If you tried to implement a 30fps preview using `capture()` called 30 times per second from a timer, you would:
-1. Waste CPU re-submitting identical requests every 33ms
-2. Accumulate drift if your timer is late
-3. Get frame gaps if one-shot callbacks block
-4. Fight with the framework's queue management
+Wenn Sie versuchen würden, eine Vorschau mit 30 fps zu implementieren, indem Sie `capture()` 30-mal pro Sekunde über einen Timer aufrufen, würden Sie:
+1. CPU-Leistung verschwenden, indem Sie alle 33 ms identische Anforderungen erneut senden.
+2. Zeitliche Abweichungen (Drift) ansammeln, wenn Ihr Timer zu spät kommt.
+3. Frame-Lücken erhalten, wenn One-Shot-Callbacks blockieren.
+4. Gegen die Warteschlangenverwaltung des Frameworks ankämpfen.
 
-The repeating request is handled entirely inside the framework/HAL. After each frame completes, the HAL automatically schedules the next exposure — no app-thread involvement. This produces smooth, gap-free preview with zero app CPU overhead.
+Die wiederholte Anforderung wird vollständig innerhalb des Frameworks/HAL gehandhabt. Nachdem jeder Frame abgeschlossen ist, plant der HAL automatisch die nächste Belichtung – ohne Beteiligung des App-Threads. Dies erzeugt eine flüssige, lückenlose Vorschau ohne CPU-Overhead in der App.
 
 ```mermaid
 flowchart LR
-    subgraph RepeatingLoop ["Repeating Request Cycle (Framework-managed)"]
+    subgraph RepeatingLoop ["Zyklus der wiederholten Anforderungen (vom Framework verwaltet)"]
         direction TB
-        S1["HAL finishes frame N"] --> S2["Framework auto-re-enqueues SAME request"]
-        S2 --> S3["HAL dequeues and exposes frame N+1"]
-        S3 --> S4["Repeat forever or until stopRepeating()"]
+        S1["HAL beendet Frame N"] --> S2["Framework stellt DIESELBE Anforderung automatisch wieder in Warteschlange"]
+        S2 --> S3["HAL nimmt Anforderung aus Warteschlange und belichtet Frame N+1"]
+        S3 --> S4["Wird für immer wiederholt oder bis stopRepeating()"]
     end
 
     RepeatingLoop
 ```
 
-### Stopping Repeating Requests
+### Stoppen wiederholter Anforderungen
 
-To stop the repeating stream, call `stopRepeating()`. This removes the repeating request from the queue but does not flush already-in-flight frames. Call `abortCaptures()` to forcibly flush everything (and trigger `onCaptureFailed` with `REASON_FLUSHED` for in-flight frames).
+Um den wiederholten Stream zu stoppen, rufen Sie `stopRepeating()` auf. Dies entfernt die wiederholte Anforderung aus der Warteschlange, leert jedoch nicht die bereits in Bearbeitung befindlichen Frames. Rufen Sie `abortCaptures()` auf, um alles gewaltsam zu leeren (und `onCaptureFailed` mit `REASON_FLUSHED` für Frames in Bearbeitung auszulösen).
 
 ```kotlin
-// Temporarily pause preview
+// Vorschau vorübergehend pausieren
 fun pausePreview() {
     captureSession.stopRepeating()
-    Log.d("Preview", "Repeating stopped. In-flight frames will still complete.")
+    Log.d("Preview", "Repeating gestoppt. Frames in Bearbeitung werden noch beendet.")
 }
 
-// Emergency stop — drop everything right now
+// Notstopp — alles sofort abbrechen
 fun emergencyStopAllCaptures() {
     captureSession.stopRepeating()
     captureSession.abortCaptures()
-    // All in-flight frames will fail with REASON_FLUSHED
+    // Alle Frames in Bearbeitung schlagen mit REASON_FLUSHED fehl
 }
 ```
 
-### Repeating Requests Are Also for Video Recording
+### Wiederholte Anforderungen werden auch für Videoaufzeichnungen verwendet
 
-In addition to preview, repeating requests are used for **video recording** (targeting a `MediaRecorder` or `MediaCodec` `Surface`) and **continuous image analysis** (targeting a low-res YUV `ImageReader` for face detection, ML inference, etc.).
+Zusätzlich zur Vorschau werden wiederholte Anforderungen für die **Videoaufzeichnung** (die auf eine `MediaRecorder`- oder `MediaCodec`-`Surface` abzielen) und die **kontinuierliche Bildanalyse** (die auf einen niedrig auflösenden YUV-`ImageReader` für Gesichtserkennung, ML-Inferenz usw. abzielen) verwendet.
 
-The pattern is always the same: set it once, let it stream, update the request parameters when you want to change settings (e.g., change digital zoom mid-stream by updating the crop region in a new repeating request).
+Das Muster ist immer das gleiche: Einmal einstellen, streamen lassen und die Anforderungsparameter aktualisieren, wenn Sie Einstellungen ändern möchten (z. B. den digitalen Zoom während des Streams ändern, indem Sie den Crop-Bereich in einer neuen wiederholten Anforderung aktualisieren).
 
 ```kotlin
-// Repeating: Update zoom level live during preview/video
+// Repeating: Digitalen Zoom live während der Vorschau/Videoaufzeichnung aktualisieren
 fun updateDigitalZoom(cropRegion: Rect) {
     val builder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
     builder.addTarget(previewSurface)
@@ -332,25 +332,25 @@ fun updateDigitalZoom(cropRegion: Rect) {
     builder.set(CaptureRequest.SCALER_CROP_REGION, cropRegion)
     builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
 
-    // Replace the old repeating request with a new one (same targets, new crop)
+    // Die alte wiederholte Anforderung durch eine neue ersetzen (gleiche Ziele, neuer Ausschnitt)
     captureSession.setRepeatingRequest(builder.build(), currentCallback, backgroundHandler)
-    Log.d("Zoom", "Repeating request updated with crop ${cropRegion.width()}x${cropRegion.height()}")
+    Log.d("Zoom", "Wiederholte Anforderung mit Crop ${cropRegion.width()}x${cropRegion.height()} aktualisiert")
 }
 ```
 
-## 11.5 Capture Templates
+## 11.5 Aufnahme-Vorlagen (Capture Templates)
 
-Every `CaptureRequest.Builder` starts from a **template**: you call `cameraDevice.createCaptureRequest(TEMPLATE_XXX)` and the framework populates the builder with hardware-optimized defaults for that use case. You then override only the specific settings you need.
+Jeder `CaptureRequest.Builder` beginnt mit einer **Vorlage**: Sie rufen `cameraDevice.createCaptureRequest(TEMPLATE_XXX)` auf, und das Framework befüllt den Builder mit hardwareoptimierten Standardwerten für diesen Anwendungsfall. Sie überschreiben dann nur noch die spezifischen Einstellungen, die Sie benötigen.
 
-Templates exist because a phone's camera pipeline has dozens of knobs (noise reduction strength, edge enhancement, tone curve, anti-banding mode, frame rate range, ...). Templates set sensible baselines so you don't have to configure every single one from scratch.
+Vorlagen existieren, weil die Kamera-Pipeline eines Telefons dutzende Regler hat (Stärke der Rauschunterdrückung, Kantenanhebung, Tonwertkurve, Anti-Banding-Modus, Bildratenbereich, ...). Vorlagen setzen sinnvolle Baselines, sodass Sie nicht jedes einzelne Detail von Grund auf konfigurieren müssen.
 
 ```mermaid
 graph TD
-    TD["TEMPLATE_XXX Enum"] -->|"createCaptureRequest(TD)"| B["CaptureRequest.Builder (pre-populated with defaults)"]
-    B -->|"builder.set(X, Y) — override specific fields"| B2["Builder with your overrides"]
-    B2 -->|"builder.build()"| R["CaptureRequest (immutable)"]
+    TD["TEMPLATE_XXX Enum"] -->|"createCaptureRequest(TD)"| B["CaptureRequest.Builder (mit Standardwerten vorbelegt)"]
+    B -->|"builder.set(X, Y) — spezifische Felder überschreiben"| B2["Builder mit Ihren Overrides"]
+    B2 -->|"builder.build()"| R["CaptureRequest (unveränderlich)"]
 
-    subgraph TemplateDefinitions ["Six Templates"]
+    subgraph VorlagenDefinitionen ["Sechs Vorlagen"]
         T1["TEMPLATE_PREVIEW"]
         T2["TEMPLATE_STILL_CAPTURE"]
         T3["TEMPLATE_RECORD"]
@@ -359,97 +359,97 @@ graph TD
         T6["TEMPLATE_MANUAL"]
     end
 
-    TemplateDefinitions --> TD
+    VorlagenDefinitionen --> TD
 ```
 
-### The Six Templates, What They Preconfigure, and When to Use Them
+### Die sechs Vorlagen, was sie vorkonfigurieren und wann man sie verwendet
 
-| Template | Use Case | Key Preconfigured Settings |
+| Vorlage | Anwendungsfall | Wichtige vorkonfigurierte Einstellungen |
 |----------|----------|---------------------------|
-| `TEMPLATE_PREVIEW` | Live viewfinder / preview | Low-latency priority, 3A (AF/AE/AWB) in continuous auto, modest NR/sharpen, high frame rate (30fps). Trades minor quality for smoothness. |
-| `TEMPLATE_STILL_CAPTURE` | Single-shot photo | Max quality priority, AF in picture mode, full NR/sharpen, high-quality JPEG encoding, may lower frame rate to improve quality for that one frame. |
-| `TEMPLATE_RECORD` | Video recording | Stable frame rate (matches MediaRecorder output), continuous AF, audio-video sync timestamps, anti-banding enabled, medium NR — tuned for motion + compression. |
-| `TEMPLATE_VIDEO_SNAPSHOT` | High-res still *during* video recording | Like STILL_CAPTURE but preserves video frame settings — grabs a high-res photo without stopping the video recording stream. |
-| `TEMPLATE_ZERO_SHUTTER_LAG` | ZSL still capture (Chapter 14) | Builds a circular buffer of recent frames. When shutter is pressed, a *past* frame is returned for zero blackout. Requires burst capability and private reprocessing. |
-| `TEMPLATE_MANUAL` | Manual / pro controls | All 3A modes set to OFF by default so you can manually set sensor exposure, ISO, lens focus, and color correction gains without interference. Baseline for a pro-camera UI. |
+| `TEMPLATE_PREVIEW` | Live-Sucher / Vorschau | Fokus auf niedrige Latenz, 3A (AF/AE/AWB) im kontinuierlichen Automatikmodus, moderate Rauschunterdrückung/Schärfung, hohe Bildrate (30 fps). Tauscht geringfügige Qualität gegen Flüssigkeit ein. |
+| `TEMPLATE_STILL_CAPTURE` | Einzelbildfoto | Fokus auf maximale Qualität, AF im Fotomodus, volle Rauschunterdrückung/Schärfung, hochwertige JPEG-Kodierung, kann die Bildrate senken, um die Qualität für diesen einen Frame zu verbessern. |
+| `TEMPLATE_RECORD` | Videoaufzeichnung | Stabile Bildrate (passend zur MediaRecorder-Ausgabe), kontinuierlicher AF, Zeitstempel für Audio-Video-Synchronisation, Anti-Banding aktiviert, mittlere Rauschunterdrückung – optimiert für Bewegung + Kompression. |
+| `TEMPLATE_VIDEO_SNAPSHOT` | Hochauflösendes Standbild *während* einer Videoaufzeichnung | Ähnlich wie STILL_CAPTURE, behält aber die Einstellungen für Video-Frames bei – macht ein hochauflösendes Foto, ohne den Video-Stream zu stoppen. |
+| `TEMPLATE_ZERO_SHUTTER_LAG` | ZSL-Standbildaufnahme (Kapitel 14) | Erstellt einen Ringpuffer der letzten Frames. Wenn der Auslöser gedrückt wird, wird ein Frame aus der *Vergangenheit* zurückgegeben, um einen Blackout zu vermeiden. Erfordert Burst-Fähigkeit und Private Reprocessing. |
+| `TEMPLATE_MANUAL` | Manuelle / Pro-Steuerungen | Alle 3A-Modi standardmäßig auf OFF gesetzt, damit Sie Belichtungszeit, ISO, Fokus und Farbkorrekturverstärkung ohne Störungen manuell einstellen können. Basis für eine Pro-Kamera-Benutzeroberfläche. |
 
 ```kotlin
-// Template examples — see what happens when you start with each one
+// Vorlagenbeispiele — sehen Sie, was passiert, wenn Sie mit jeder Vorlage beginnen
 
-// TEMPLATE_PREVIEW — smooth, low-latency
+// TEMPLATE_PREVIEW — flüssig, niedrige Latenz
 val previewBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
 val previewRequest = previewBuilder.build()
 Log.d("Template", "PREVIEW AF_MODE = ${previewRequest.get(CaptureRequest.CONTROL_AF_MODE)}")
-// ^ Typically CONTROL_AF_MODE_CONTINUOUS_PICTURE (always re-focusing)
+// ^ Typischerweise CONTROL_AF_MODE_CONTINUOUS_PICTURE (fokussiert ständig neu)
 
-// TEMPLATE_STILL_CAPTURE — highest quality per frame
+// TEMPLATE_STILL_CAPTURE — höchste Qualität pro Frame
 val stillBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
 val stillRequest = stillBuilder.build()
 Log.d("Template", "STILL_CAPTURE JPEG_QUALITY = ${stillRequest.get(CaptureRequest.JPEG_QUALITY)}")
-// ^ Typically 100 (max quality encoding)
+// ^ Typischerweise 100 (Kodierung mit maximaler Qualität)
 
-// TEMPLATE_MANUAL — all automatic controls disabled
+// TEMPLATE_MANUAL — alle automatischen Steuerungen deaktiviert
 val manualBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
 val manualRequest = manualBuilder.build()
 Log.d("Template", "MANUAL AE_MODE = ${manualRequest.get(CaptureRequest.CONTROL_AE_MODE)}")
 Log.d("Template", "MANUAL AF_MODE = ${manualRequest.get(CaptureRequest.CONTROL_AF_MODE)}")
 Log.d("Template", "MANUAL AWB_MODE = ${manualRequest.get(CaptureRequest.CONTROL_AWB_MODE)}")
-// ^ Typically AE_MODE_OFF, AF_MODE_OFF, AWB_MODE_OFF — manual from the start
+// ^ Typischerweise AE_MODE_OFF, AF_MODE_OFF, AWB_MODE_OFF — von Beginn an manuell
 ```
 
 :::tip
-Always start with a template and override specific fields. Starting from `TEMPLATE_PREVIEW` and then overriding 2-3 settings (e.g., crop region for zoom, AE target bias for exposure compensation) is massively less error-prone than creating a request from an empty template (which isn't even possible — every `createCaptureRequest` requires a template).
+Beginnen Sie immer mit einer Vorlage und überschreiben Sie spezifische Felder. Mit `TEMPLATE_PREVIEW` zu beginnen und dann 2-3 Einstellungen zu überschreiben (z. B. den Crop-Bereich für den Zoom oder den AE-Ziel-Bias für die Belichtungskorrektur), ist massiv weniger fehleranfällig als das Erstellen einer Anforderung aus einer leeren Vorlage (was ohnehin nicht möglich ist – jedes `createCaptureRequest` erfordert eine Vorlage).
 :::
 
-## 11.6 Comparing the Three Capture Types
+## 11.6 Vergleich der drei Aufnahme-Typen
 
 | Dimension | One-Shot `capture()` | Burst `captureBurst()` | Repeating `setRepeatingRequest()` |
 |-----------|---------------------|----------------------|---------------------------------|
-| **Execution** | Single request runs once | List of N requests runs contiguously | Same request runs every frame (auto re-enqueued) |
-| **Priority** | Highest — jumps to HEAD of Pending Queue | High — all N frames inserted atomically at HEAD | Lowest — one-shot/burst cut in front and repeating resumes after |
-| **Interruption** | Interrupts repeating; repeating resumes after | Interrupts repeating; entire burst completes before repeating resumes | Interrupted by any one-shot or burst; resumes automatically after |
-| **Queue Behavior** | Single request enqueued | N requests enqueued contiguously (no gaps) | One conceptual request re-enqueued each cycle |
-| **Typical Uses** | Single photo, single AF trigger, flash photo | Exposure bracketing, focus stacking, action burst, slow-motion, HDR | Preview, video recording, continuous ML analysis, live face detection |
-| **Result Callback** | `onCaptureCompleted` fires exactly once | `onCaptureCompleted` fires N times (once per burst frame) | `onCaptureCompleted` fires continuously for every frame (30-60x/sec) |
+| **Ausführung** | Einzelne Anforderung läuft einmal | Liste von N Anforderungen läuft zusammenhängend | Dieselbe Anforderung läuft in jedem Frame (automatisch neu eingereiht) |
+| **Priorität** | Höchste — rückt an die SPITZE der Pending-Warteschlange | Hoch — alle N Frames werden atomar an der SPITZE eingefügt | Niedrigste — One-Shot/Burst rücken vor und Repeating wird danach fortgesetzt |
+| **Unterbrechung** | Unterbricht Repeating; Repeating wird danach fortgesetzt | Unterbricht Repeating; der gesamte Burst wird abgeschlossen, bevor Repeating fortgesetzt wird | Wird durch jede One-Shot- oder Burst-Anforderung unterbrochen; wird danach automatisch fortgesetzt |
+| **Warteschlangen-Verhalten** | Einzelne Anforderung eingereiht | N Anforderungen zusammenhängend eingereiht (keine Lücken) | Eine konzeptionelle Anforderung wird in jedem Zyklus neu eingereiht |
+| **Typische Verwendungen** | Einzelnes Foto, einzelner AF-Trigger, Blitzfoto | Belichtungsreihen, Fokus-Reihen, Action-Serien, Zeitlupe, HDR | Vorschau, Videoaufzeichnung, kontinuierliche ML-Analyse, Live-Gesichtserkennung |
+| **Ergebnis-Callback** | `onCaptureCompleted` wird genau einmal ausgelöst | `onCaptureCompleted` wird N-mal ausgelöst (einmal pro Burst-Frame) | `onCaptureCompleted` wird kontinuierlich für jeden Frame ausgelöst (30-60 Mal/Sek.) |
 
 ```mermaid
 quadrantChart
-    title Capture Type Usage Patterns
-    x-axis ["Low Frame Count", "High Frame Count"]
-    y-axis ["Single Configuration", "Varying Per-Frame Config"]
-    quadrant-1 ["Burst: Exposure / Focus Bracketing"]
-    quadrant-2 ["Burst: High-Speed Slow-Mo"]
-    quadrant-3 ["One-Shot: Still Photo"]
-    quadrant-4 ["Repeating: Preview + Video"]
-    "Single JPEG capture": [0.15, 0.2]
-    "Tap-to-focus trigger": [0.1, 0.15]
-    "3-frame HDR bracket": [0.4, 0.75]
-    "7-frame focus stack": [0.45, 0.8]
-    "120fps slow-mo 2sec": [0.85, 0.25]
-    "CameraFinder preview 30fps": [0.9, 0.1]
-    "4K video recording": [0.88, 0.18]
+    title Nutzungsbilder der Aufnahme-Typen
+    x-axis ["Niedrige Frame-Anzahl", "Hohe Frame-Anzahl"]
+    y-axis ["Einzelne Konfiguration", "Variable Konfiguration pro Frame"]
+    quadrant-1 ["Burst: Belichtungs- / Fokus-Reihen"]
+    quadrant-2 ["Burst: High-Speed-Zeitlupe"]
+    quadrant-3 ["One-Shot: Standbildaufnahme"]
+    quadrant-4 ["Repeating: Vorschau + Video"]
+    "Einzelne JPEG-Aufnahme": [0.15, 0.2]
+    "Tap-to-Focus Trigger": [0.1, 0.15]
+    "HDR-Reihe mit 3 Bildern": [0.4, 0.75]
+    "Fokus-Stack mit 7 Bildern": [0.45, 0.8]
+    "120 fps Zeitlupe 2 Sek.": [0.85, 0.25]
+    "CameraFinder Vorschau 30 fps": [0.9, 0.1]
+    "4K-Videoaufzeichnung": [0.88, 0.18]
 ```
 
-## 11.7 Seeing Capture Types in the Android Camera Parameters App
+## 11.7 Aufnahme-Typen in der App Android Camera Parameters sehen
 
-Open the Android Camera Parameters app ([GitHub](https://github.com/zoozooll/AndroidCameraParameters), [Play Store](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)) and navigate to the **Capture Demo** tab. The app exposes all three capture types side-by-side:
+Öffnen Sie die App Android Camera Parameters ([GitHub](https://github.com/zoozooll/AndroidCameraParameters), [Play Store](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)) und navigieren Sie zur Registerkarte **Capture Demo**. Die App stellt alle drei Aufnahme-Typen nebeneinander dar:
 
-- Tap **Start Preview** to call `setRepeatingRequest(TEMPLATE_PREVIEW)` and see a live `CaptureCallback` log (frames 1, 2, 3, ... scrolling every ~33ms)
-- Tap **Take Photo** to inject a `capture(TEMPLATE_STILL_CAPTURE)` one-shot while preview is running. You'll see the callback count pause briefly for the high-quality frame, then resume seamlessly as repeating auto-resumes.
-- Tap **Burst 5 Frames** to call `captureBurst(List<CaptureRequest(5)>)`. Observe that exactly 5 frames complete back-to-back before the preview scroll continues — proving the contiguous guarantee.
+- Tippen Sie auf **Start Preview**, um `setRepeatingRequest(TEMPLATE_PREVIEW)` aufzurufen und ein Live-Log des `CaptureCallback` zu sehen (Frames 1, 2, 3, ... scrollen etwa alle 33 ms).
+- Tippen Sie auf **Take Photo**, um ein `capture(TEMPLATE_STILL_CAPTURE)` One-Shot einzuschleusen, während die Vorschau läuft. Sie werden sehen, wie der Callback-Zähler kurz für den qualitativ hochwertigen Frame pausiert und dann nahtlos fortgesetzt wird, wenn die wiederholte Anforderung automatisch fortgesetzt wird.
+- Tippen Sie auf **Burst 5 Frames**, um `captureBurst(List<CaptureRequest(5)>)` aufzurufen. Beobachten Sie, dass genau 5 Frames direkt hintereinander abgeschlossen werden, bevor das Scrollen der Vorschau fortgesetzt wird – dies beweist die zusammenhängende Garantie.
 
-You can also inspect `REQUEST_MAX_NUM_OUTPUT_RAW` and `REQUEST_MAX_NUM_OUTPUT_PROC` in the **Raw JSON** tab to see your device's burst size limits.
+Sie können auch `REQUEST_MAX_NUM_OUTPUT_RAW` und `REQUEST_MAX_NUM_OUTPUT_PROC` in der Registerkarte **Raw JSON** inspizieren, um die Grenzen der Burst-Größe Ihres Geräts zu sehen.
 
-## 11.8 Summary
+## 11.8 Zusammenfassung
 
-| Concept | Key Takeaway |
+| Konzept | Kernaussage |
 |---------|-------------|
-| **One-shot `capture()`** | Single request, runs once, highest priority. For still photos, AF triggers. Auto-resumes repeating after. |
-| **Burst `captureBurst()`** | List&lt;CaptureRequest&gt; runs contiguously, no interleaving. For bracketing, motion, slow-mo. Whole list jumps queue atomically. |
-| **Repeating `setRepeatingRequest()`** | One request streams continuously. Framework auto-re-enqueues. For preview, video, analysis. Lowest priority. |
-| **Templates** | Six baselines populate Builder with defaults. Start with TEMPLATE_PREVIEW/STILL_CAPTURE/RECORD/ZSL/MANUAL and override only what you need. |
-| **Interruption rules** | One-shot and burst *always* preempt repeating. Repeating auto-resumes after. Burst frames are never split apart. |
+| **One-Shot `capture()`** | Einzelne Anforderung, läuft einmal, höchste Priorität. Für Standbilder, AF-Trigger. Setzt Repeating danach automatisch fort. |
+| **Burst `captureBurst()`** | Eine Liste von Anforderungen läuft zusammenhängend, keine Unterbrechung. Für Belichtungsreihen, Action, Zeitlupe. Die gesamte Liste springt atomar in die Warteschlange. |
+| **Repeating `setRepeatingRequest()`** | Eine Anforderung wird kontinuierlich gestreamt. Das Framework stellt sie automatisch wieder in die Warteschlange. Für Vorschau, Video, Analyse. Niedrigste Priorität. |
+| **Vorlagen** | Sechs Basislinien befüllen den Builder mit Standardwerten. Beginnen Sie mit TEMPLATE_PREVIEW/STILL_CAPTURE/RECORD/ZSL/MANUAL und überschreiben Sie nur das Nötigste. |
+| **Unterbrechungsregeln** | One-Shot und Burst haben *immer* Vorrang vor Repeating. Repeating wird danach automatisch fortgesetzt. Burst-Frames werden niemals auseinandergerissen. |
 
-## What's Next
+## Wie geht es weiter?
 
-In [Chapter 12: CameraCharacteristics Deep Dive](cameracharacteristics-deep-dive.md), we'll dig into the static metadata object that describes *what your camera can even do* before you open it. We'll break down hardware levels (LEGACY → LIMITED → FULL → LEVEL_3 → EXTERNAL), the capability flag system (MANUAL_SENSOR, RAW, DEPTH_OUTPUT, etc.), and how to query all of it at runtime to write apps that work across 10,000+ Android device models.
+In [Kapitel 12: Tiefer Einblick in die CameraCharacteristics](cameracharacteristics-deep-dive.md) werden wir uns mit dem statischen Metadaten-Objekt befassen, das beschreibt, *was Ihre Kamera überhaupt leisten kann*, bevor Sie sie öffnen. Wir werden die Hardware-Level (LEGACY → LIMITED → FULL → LEVEL_3 → EXTERNAL), das System der Capability-Flags (MANUAL_SENSOR, RAW, DEPTH_OUTPUT usw.) aufschlüsseln und lernen, wie man all dies zur Laufzeit abfragt, um Apps zu schreiben, die auf über 10.000 verschiedenen Android-Gerätemodellen funktionieren.

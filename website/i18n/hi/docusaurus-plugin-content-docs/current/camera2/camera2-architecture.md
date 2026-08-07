@@ -1,25 +1,25 @@
 ---
 sidebar_position: 28
-title: "Chapter 28: Camera2 Architecture"
-description: "The grand architecture finale of Camera2. Travel the full stack from your Kotlin app down through Binder IPC, the Framework, CameraService in native, Camera3Device, HAL3 with camera3_device_t, the V4L2 kernel driver, and finally the physical sensor, ISP, VCM lens and flash hardware. Includes the Treble HAL requirement, the LEGACY HAL1 wrapper, and Android 15's CameraDeviceSetup. Complete reader's journey map to layers."
-keywords: [camera2 architecture, hal3, camera3_device_t, cameraservice, binder ipc, v4l2 driver, mipi csi-2, camera devicesetup, android treble hal, legacy hal1 wrapper, kernel camera driver, camera isp, vcm voice coil]
+title: "अध्याय 28: Camera2 आर्किटेक्चर"
+description: "Camera2 का भव्य आर्किटेक्चर समापन। अपने Kotlin ऐप से बिंडर IPC, फ्रेमवर्क, नेटिव में CameraService, Camera3Device, camera3_device_t के साथ HAL3, V4L2 कर्नेल ड्राइवर और अंत में भौतिक सेंसर, ISP, VCM लेंस और फ्लैश हार्डवेयर के माध्यम से पूरे स्टैक की यात्रा करें।"
+keywords: [camera2 architecture, hal3, camera3_device_t, cameraservice, binder ipc, v4l2 driver, mipi csi-2, camera devicesetup, android treble hal, legacy hal1 wrapper, kernel camera driver, camera isp, vcm voice coil, हिंदी]
 ---
 
-# Chapter 28: Camera2 Architecture
+# अध्याय 28: Camera2 आर्किटेक्चर (Camera2 Architecture)
 
-## Summary
+## सारांश (Summary)
 
-This is the chapter you have earned. In Chapters 1–27 you used `CameraManager`, `CameraCharacteristics`, `CaptureRequest`, `CaptureResult`, `CameraCaptureSession`, `ImageReader`, CameraX, the NDK native stack, coroutine wrappers, and test mocks. You know every public API surface. Now we peel back every abstraction in sequence, from the Kotlin line of code you write all the way to the individual electrons crossing the MIPI CSI-2 bus between sensor and SoC, the voice-coil motor nudging the lens group by 10 micrometers, and the flash LED controller pulsing a xenon or LED strobe in microsecond lock-step with the sensor's rolling shutter.
+यह वह अध्याय है जिसे आपने कमाया है। अध्याय 1-27 में आपने `CameraManager`, `CameraCharacteristics`, `CaptureRequest`, `CaptureResult`, `CameraCaptureSession`, `ImageReader`, CameraX, NDK नेटिव स्टैक, कोरूटीन रैपर्स और टेस्ट मॉक्स का उपयोग किया। आप हर सार्वजनिक API सरफेस को जानते हैं। अब हम क्रम में हर एब्स्ट्रैक्शन को हटाते हैं, आपके द्वारा लिखे गए Kotlin कोड की लाइन से लेकर सेंसर और SoC के बीच MIPI CSI-2 बस को पार करने वाले व्यक्तिगत इलेक्ट्रॉनों तक, लेंस समूह को 10 माइक्रोमीटर तक खिसकाने वाले वॉयस-कॉइल मोटर (VCM), और सेंसर के रोलिंग शटर के साथ माइक्रोसेकंड लॉक-स्टेप में जेनन या LED स्ट्रोब को पल्स करने वाले फ्लैश LED कंट्रोलर तक।
 
-By the end of this chapter you will be able to look at any `CaptureRequest` and map, layer by layer, where each part of it goes, who translates it, who validates it, and who finally executes it on silicon. You will also understand the Android 15 (API 35) `CameraDeviceSetup` abstraction as an example of a decade-long architectural trend: progressively decoupling *capability queries* from *hardware power states* so apps can probe a camera without burning the ~300mW needed to power up the sensor and ISP.
+इस अध्याय के अंत तक आप किसी भी `CaptureRequest` को देख पाएंगे और लेयर दर लेयर मैप कर पाएंगे कि इसका प्रत्येक भाग कहाँ जाता है, कौन इसका अनुवाद करता है, कौन इसे वैलिडेट करता है, और अंत में सिलिकॉन पर इसे कौन निष्पादित करता है। आप Android 15 (API 35) `CameraDeviceSetup` एब्स्ट्रैक्शन को एक दशक लंबे आर्किटेक्चरल ट्रेंड के उदाहरण के रूप में भी समझेंगे: *क्षमता प्रश्नों (capability queries)* को *हार्डवेयर पावर स्टेट्स* से उत्तरोत्तर अलग करना ताकि ऐप्स सेंसर और ISP को चालू करने के लिए आवश्यक ~300mW जलाए बिना कैमरे की जांच कर सकें।
 
-To inspect the exact capabilities of any real device and cross-reference them against the architecture layers described here, install **Android Camera Parameters** ([Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams), [GitHub](https://github.com/zoozooll/AndroidCameraParameters)). It reads every `CameraCharacteristics` key that the layers below expose to the public API.
+किसी भी वास्तविक डिवाइस की सटीक क्षमताओं का निरीक्षण करने और इस अध्याय में वर्णित आर्किटेक्चर परतों के साथ उन्हें क्रॉस-रेफरेंस करने के लिए, **Android Camera Parameters** इंस्टॉल करें ([Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams), [GitHub](https://github.com/zoozooll/AndroidCameraParameters))। यह हर `CameraCharacteristics` कुंजी को पढ़ता है जो नीचे की परतें सार्वजनिक API के लिए उजागर करती हैं।
 
 ---
 
-## The Full Stack Layer Diagram
+## पूर्ण स्टैक लेयर आरेख (The Full Stack Layer Diagram)
 
-This is the single most important diagram in the entire book. Every layer from here down is real code with a real path in the Android Open Source Project (AOSP), a real owner, and a real Binder or function-call boundary. We will walk each layer from top to bottom, then show the evolution of the stack over the past decade, then map your learning journey across the layers.
+यह पूरी पुस्तक का सबसे महत्वपूर्ण आरेख है। यहाँ से नीचे की हर परत Android Open Source Project (AOSP) में एक वास्तविक पथ, एक वास्तविक मालिक और एक वास्तविक बिंडर या फंक्शन-कॉल सीमा वाला वास्तविक कोड है। हम प्रत्येक परत को ऊपर से नीचे तक देखेंगे, फिर पिछले दशक में स्टैक के विकास को दिखाएंगे, फिर परतों में आपकी सीखने की यात्रा को मैप करेंगे।
 
 ```mermaid
 graph TB
@@ -81,84 +81,84 @@ graph TB
     style HW fill:#f2e6d9,stroke:#d4a373,stroke-width:2px
 ```
 
-Now go top to bottom.
+अब ऊपर से नीचे चलते हैं।
 
 ---
 
-## Layer 1 — App Layer (Your Code)
+## लेयर 1 — ऐप लेयर (App Layer - Your Code)
 
-This is the code you wrote. `cameraManager.openCamera(id, stateCallback, cameraHandler)`. You know this layer by heart. Two facts you may not have internalized:
-- Every single `CaptureRequest.Builder.set(key, value)` call you make appends a *tagged metadata entry* to a parcelable structure that exactly mirrors the `camera_metadata_t` C struct in `system/media/camera/include/system/camera_metadata.h`. There is no magic translation between your Kotlin `CaptureRequest` and the HAL's request — they are the same binary metadata format, just wrapped with different language bindings.
-- Every `CaptureResult.get(key)` call you make reads the exact bytes the HAL wrote into the response buffer. If a HAL mis-reports exposure time on a specific OTA build, your app reads exactly that wrong value. There is no framework-level validation layer above the HAL correcting vendor errors. That is why Chapter 27's real-hardware sanity test exists.
-
----
-
-## Layer 2 — Java/Kotlin Framework Layer (`android.hardware.camera2.*`)
-
-The Framework layer (AOSP `frameworks/base/core/java/android/hardware/camera2/`) does two things only:
-1. Exposes the public API surface (`CameraManager`, `CameraDevice`, etc.) you call.
-2. Translates between `CaptureRequest` / `CaptureResult` Java objects and their Binder-parcelable on-the-wire representations.
-
-It does no policy enforcement above the HAL. It does no metadata rewriting. It does not "fix" requests. It is a thin translation layer plus a cache for the immutable `CameraCharacteristics` blob fetched once per camera ID at device boot.
-
-The Binder boundary is in `CameraManager` → `ICameraService` AIDL, which is the next layer.
+यह वह कोड है जो आपने लिखा है। `cameraManager.openCamera(id, stateCallback, cameraHandler)`। आप इस परत को दिल से जानते हैं। दो तथ्य जिन्हें आपने शायद आत्मसात नहीं किया होगा:
+- आपके द्वारा किया गया हर एक `CaptureRequest.Builder.set(key, value)` कॉल एक *टैग्ड मेटाडेटा प्रविष्टि (tagged metadata entry)* को एक पार्सलेबल संरचना में जोड़ता है जो `system/media/camera/include/system/camera_metadata.h` में `camera_metadata_t` C स्ट्रक्चर को बिल्कुल मिरर करती है। आपके Kotlin `CaptureRequest` और HAL के रिक्वेस्ट के बीच कोई जादुई अनुवाद नहीं है - वे एक ही बाइनरी मेटाडेटा प्रारूप हैं, बस अलग-अलग भाषा बाइंडिंग के साथ लिपटे हुए हैं।
+- आपके द्वारा किया गया हर `CaptureResult.get(key)` कॉल उन सटीक बाइट्स को पढ़ता है जो HAL ने रिस्पॉन्स बफर में लिखे थे। यदि कोई HAL किसी विशिष्ट OTA बिल्ड पर एक्सपोज़र समय को गलत रिपोर्ट करता है, तो आपका ऐप बिल्कुल वही गलत मान पढ़ता है। HAL के ऊपर कोई फ्रेमवर्क-स्तरीय सत्यापन परत नहीं है जो वेंडर की गलतियों को सुधारती हो। यही कारण है कि अध्याय 27 का रियल-हार्डवेयर सैनिटी टेस्ट मौजूद है।
 
 ---
 
-## Layer 3 — IPC Layer: Binder / HwBinder (Treble)
+## लेयर 2 — Java/Kotlin फ्रेमवर्क लेयर (`android.hardware.camera2.*`)
 
-This is the critical architectural contract that Project Treble (Android 8.0, 2017) locked down. Two Binder domains are involved:
+फ्रेमवर्क लेयर (AOSP `frameworks/base/core/java/android/hardware/camera2/`) केवल दो काम करती है:
+1. सार्वजनिक API सरफेस (`CameraManager`, `CameraDevice`, आदि) को उजागर करती है जिसे आप कॉल करते हैं।
+2. `CaptureRequest` / `CaptureResult` Java ऑब्जेक्ट्स और उनके बिंडर-पार्सलेबल ऑन-द-वायर अभ्यावेदन के बीच अनुवाद करती है।
 
-| Binder Domain     | Connects                                              | Protocol        | Who Enforces ABI Stability      |
-|-------------------|-------------------------------------------------------|-----------------|---------------------------------|
-| `/dev/binder`     | Framework ↔ cameraserver (system_server side)         | AIDL            | Platform (same partition build) |
-| `/dev/hwbinder`   | cameraserver ↔ vendor camera HAL                      | HIDL / AIDL HAL | Treble (stable vendor interface)|
+यह HAL के ऊपर कोई नीति प्रवर्तन (policy enforcement) नहीं करती है। यह कोई मेटाडेटा रीराइटिंग नहीं करती है। यह फिक्स नहीं करती है। यह एक पतली अनुवाद परत है और डिवाइस बूट के समय प्रति कैमरा आईडी एक बार प्राप्त `CameraCharacteristics` ब्लॉब के लिए एक कैश है।
 
-Before Treble, the HAL was a `.so` dlopen'd directly into `cameraserver`'s process. Every OTA from the OEM had to rebuild camera *and* framework together. Treble's HwBinder split means the vendor HAL is its own process, its own partition, its own 3-year security update timeline, and the contract between it and `cameraserver` is versioned and frozen for the device's lifetime. For you as an app developer, this is the single biggest reason Camera2 API behavior is predictable across OTAs: the HAL interface literally cannot change without breaking the Treble compliance test.
-
-The LEGACY HAL1 wrapper lives below this boundary, inside the vendor HAL process, so it is invisible to you at the app layer except via `INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY`.
+बिंडर सीमा `CameraManager` → `ICameraService` AIDL में है, जो अगली परत है।
 
 ---
 
-## Layer 4 — Native Mediaserver Layer: `CameraService` / `Camera3Device`
+## लेयर 3 — IPC लेयर: बिंडर / HwBinder (Treble)
 
-`/system/bin/cameraserver` is a native daemon started at boot by `init.rc`. It runs always, owns every open camera on the device, and is the single arbiter of which app gets camera access (the top-foreground app wins; everything else is disconnected).
+यह महत्वपूर्ण आर्किटेक्चरल अनुबंध है जिसे प्रोजेक्ट ट्रेबल (Project Treble - Android 8.0, 2017) ने लॉक कर दिया था। इसमें दो बिंडर डोमेन शामिल हैं:
 
-Its two most important classes:
+| बिंडर डोमेन | किसे जोड़ता है | प्रोटोकॉल | ABI स्थिरता कौन लागू करता है |
+|:---|:---|:---|:---|
+| `/dev/binder` | Framework ↔ cameraserver (system_server side) | AIDL | प्लेटफ़ॉर्म (समान पार्टीशन बिल्ड) |
+| `/dev/hwbinder` | cameraserver ↔ vendor camera HAL | HIDL / AIDL HAL | Treble (स्थिर वेंडर इंटरफेस) |
+
+ट्रेबल से पहले, HAL एक `.so` फाइल थी जिसे सीधे `cameraserver` की प्रक्रिया में लोड किया जाता था। OEM के हर OTA को कैमरा *और* फ्रेमवर्क को एक साथ फिर से बनाना पड़ता था। ट्रेबल के HwBinder विभाजन का मतलब है कि वेंडर HAL अपनी खुद की प्रक्रिया, अपना खुद का पार्टीशन, अपनी खुद की 3-वर्षीय सुरक्षा अपडेट टाइमलाइन है, और इसके और `cameraserver` के बीच अनुबंध वर्शन और डिवाइस के जीवनकाल के लिए फ्रीज है। एक ऐप डेवलपर के रूप में आपके लिए, यही एकमात्र सबसे बड़ा कारण है कि Camera2 API व्यवहार OTA में अनुमानित है: वेंडर HAL इंटरफेस ट्रेबल अनुपालन परीक्षण को तोड़े बिना शाब्दिक रूप से बदल नहीं सकता है।
+
+लीगेसी HAL1 रैपर इस सीमा के नीचे, वेंडर HAL प्रक्रिया के अंदर रहता है, इसलिए यह ऐप लेयर पर आपके लिए अदृश्य है सिवाय `INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY` के माध्यम से।
+
+---
+
+## लेयर 4 — नेटिव मीडियासर्वर लेयर: `CameraService` / `Camera3Device`
+
+`/system/bin/cameraserver` एक नेटिव डेमन (daemon) है जो बूट के समय `init.rc` द्वारा शुरू किया जाता है। यह हमेशा चलता रहता है, डिवाइस पर हर खुले कैमरे का मालिक होता है, और यह एकमात्र निर्णायक है कि किस ऐप को कैमरा एक्सेस मिलता है (शीर्ष-फोरग्राउंड ऐप जीतता है; बाकी सब डिस्कनेक्ट हो जाते हैं)।
+
+इसके दो सबसे महत्वपूर्ण क्लासेज़:
 
 1. **`CameraService`** (`frameworks/av/services/camera/libcameraservice/CameraService.cpp`):
-   - Exposes `ICameraService` AIDL to the framework.
-   - Enforces `android.permission.CAMERA` permission checks for every binder call (a non-CAMERA-permissioned app's call is rejected *in cameraserver* before ever reaching the HAL).
-   - Handles concurrent open arbitration (two apps request same camera → top activity gets it; background app gets `onDisconnected`).
-   - Manages `CameraProviderManager` for enumerating vendor HAL modules.
+   - फ्रेमवर्क में `ICameraService` AIDL को उजागर करता है।
+   - हर बिंडर कॉल के लिए `android.permission.CAMERA` अनुमति जांच लागू करता है (बिना CAMERA अनुमति वाले ऐप की कॉल को HAL तक पहुँचने से पहले ही `cameraserver` में खारिज कर दिया जाता है)।
+   - समवर्ती ओपन आर्बिट्रेशन (दो ऐप एक ही कैमरे का अनुरोध करते हैं → टॉप एक्टिविटी को मिलता है; बैकग्राउंड ऐप को `onDisconnected` मिलता है) को हैंडल करता है।
+   - वेंडर HAL मॉड्यूल को एन्युमरेट करने के लिए `CameraProviderManager` का प्रबंधन करता है।
 
 2. **`Camera3Device`** (`frameworks/av/services/camera/libcameraservice/device3/Camera3Device.cpp`):
-   - The heart of the pipeline.
-   - Validates that every output surface in a capture request is actually part of the session's configured output set. (This is where the framework throws `IllegalArgumentException: Surface not in configured outputs`.)
-   - Packages your parceled `CaptureRequest` into a HAL3 `camera3_capture_request_t` struct.
-   - Streams requests one-by-one into the HAL via `process_capture_request(request)`.
-   - Receives `camera3_capture_result_t` back from the HAL, parcels metadata + fences, and forwards them *back* up the Binder chain to your `CaptureCallback.onCaptureCompleted`.
-   - Handles `flush()` for you, the error paths, the `notify()` shutter and error callbacks, and output buffer release fences for EGL/Vulkan interop.
+   - पाइपलाइन का दिल।
+   - वैलिडेट करता है कि कैप्चर रिक्वेस्ट में हर आउटपुट सरफेस वास्तव में सेशन के कॉन्फ़िगर किए गए आउटपुट सेट का हिस्सा है। (यहीं फ्रेमवर्क `IllegalArgumentException: Surface not in configured outputs` थ्रो करता है।)
+   - आपके पार्सल किए गए `CaptureRequest` को HAL3 `camera3_capture_request_t` स्ट्रक्चर में पैकेज करता है।
+   - `process_capture_request(request)` के माध्यम से एक-एक करके HAL में रिक्वेस्ट स्ट्रीम करता है।
+   - HAL से वापस `camera3_capture_result_t` प्राप्त करता है, मेटाडेटा + फेंस को पार्सल करता है, और उन्हें आपके `CaptureCallback.onCaptureCompleted` के बिंडर चैन के माध्यम से वापस भेजता है।
+   - आपके लिए `flush()`, एरर पाथ, `notify()` शटर और एरर कॉलबैक और EGL/Vulkan इंटरऑपरेबिलिटी के लिए आउटपुट बफर रिलीज फेंस को हैंडल करता है।
 
-`Camera3Device` is ~15,000 lines of C++ and is the most heavily-tested piece of the whole stack (Chapter 27's CTS tests target `Camera3Device` behavior directly from the framework side). If you ever read a bug report saying "this request key works on Camera2 NDK but not on Java Camera2," the discrepancy is almost always a missing validation or conversion path inside `Camera3Device`.
+`Camera3Device` C++ की ~15,000 लाइनें है और पूरे स्टैक का सबसे भारी परीक्षण किया गया हिस्सा है। यदि आप कभी कोई बग रिपोर्ट पढ़ते हैं जिसमें कहा गया है कि "यह रिक्वेस्ट की Camera2 NDK पर काम करती है लेकिन Java Camera2 पर नहीं," तो विसंगति लगभग हमेशा `Camera3Device` के अंदर गायब वैलिडेशन या कन्वर्शन पाथ होती है।
 
 ---
 
-## Layer 5 — Vendor HAL Layer: HAL3 (`camera3_device_t`)
+## लेयर 5 — वेंडर HAL लेयर: HAL3 (`camera3_device_t`)
 
-This is where OEM differentiation actually lives. Every SoC vendor ships their own HAL3 implementation:
+यहीं पर OEM भेदभाव (differentiation) वास्तव में रहता है। हर SoC वेंडर अपना खुद का HAL3 कार्यान्वयन भेजता है:
 
-| Vendor       | HAL Codename                              | AOSP Interface                              |
-|--------------|-------------------------------------------|----------------------------------------------|
-| Qualcomm     | QCamera2 / QCamera3 (mm-camera codebase)  | `camera3_device_t` + `vendor.qti.hardware.camera*` extensions |
-| MediaTek     | CamHAL (mtkcam)                           | Same `camera3_device_t` + MediaTek extensions |
-| Samsung      | Exynos Camera HAL                         | Same `camera3_device_t` + Samsung extensions |
-| Google Tensor| Google Camera HAL (Pixels)                | Same `camera3_device_t` + Google custom logic for Night Sight / Computational Raw |
+| वेंडर | HAL कोडनाम | AOSP इंटरफेस |
+|:---|:---|:---|
+| Qualcomm | QCamera2 / QCamera3 (mm-camera codebase) | `camera3_device_t` + `vendor.qti.hardware.camera*` एक्सटेंशन |
+| MediaTek | CamHAL (mtkcam) | वही `camera3_device_t` + MediaTek एक्सटेंशन |
+| Samsung | Exynos Camera HAL | वही `camera3_device_t` + Samsung एक्सटेंशन |
+| Google Tensor | Google Camera HAL (Pixels) | वही `camera3_device_t` + नाइट साइट / कंप्यूटेशनल रॉ के लिए Google कस्टम लॉजिक |
 
-The HAL3 contract (defined in `hardware/libhardware/include/hardware/camera3.h`) is exactly four core operations on an open device:
+HAL3 अनुबंध (contract) खुले डिवाइस पर बिल्कुल चार मुख्य ऑपरेशन हैं:
 
 ```cpp
-// HAL3 simplified contract — this is the entire interface
+// HAL3 सरलीकृत अनुबंध — यह पूरा इंटरफेस है
 typedef struct camera3_device {
     hw_device_t common;
 
@@ -180,134 +180,83 @@ typedef struct camera3_device {
 } camera3_device_t;
 ```
 
-The HAL receives requests, produces results and output buffers. That's it. The request/response model is HAL3's signature — HAL1 was a single `CameraParameters` string blob (`"preview-size=1920x1080;picture-size=..."`) that the entire industry hated for its lack of per-frame control. HAL3's request/response model is what *enables* every advanced feature you have used in this book: per-frame manual exposure, RAW capture, multi-camera physical streams, reprocessing, ZSL input surfaces. All impossible under HAL1.
+HAL रिक्वेस्ट प्राप्त करता है, परिणाम और आउटपुट बफर तैयार करता है। बस इतना ही। रिक्वेस्ट/रिस्पॉन्स मॉडल HAL3 के हस्ताक्षर (signature) है - HAL1 एक सिंगल `CameraParameters` स्ट्रिंग ब्लॉब (`"preview-size=1920x1080;picture-size=..."`) था जिसे पूरा उद्योग प्रति-फ्रेम नियंत्रण की कमी के कारण नापसंद करता था। HAL3 का रिक्वेस्ट/रिस्पॉन्स मॉडल वह है जो उन सभी उन्नत सुविधाओं को *सक्षम* बनाता है जिनका आपने इस पुस्तक में उपयोग किया है: प्रति-फ्रेम मैनुअल एक्सपोज़र, RAW कैप्चर, मल्टी-कैमरा फिजिकल स्ट्रीम, रीप्रोसेसिंग, ZSL इनपुट सरफेस। HAL1 के तहत यह सब असंभव था।
 
-### The LEGACY HAL1 Wrapper
+### लीगेसी HAL1 रैपर (The LEGACY HAL1 Wrapper)
 
-`INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY` means the vendor *still* only shipped a HAL1 `.so` and the device uses AOSP's `camera2compat::Camera2Compat` shim to translate HAL3 request/response calls back into the old `CameraParameters` blob + `startPreview()`/`takePicture()` HAL1 entry points. This translation layer is why Chapter 24 warned you that `CONTROL_MODE_OFF` silently does nothing on `LEGACY` devices — HAL1 has no per-frame `CONTROL_MODE` concept to translate *to*. The shim drops that metadata entry on the floor.
-
----
-
-## Layer 6 — Kernel Layer: V4L2 + MIPI CSI-2 + Sensor Drivers
-
-The HAL3 process calls down into the Linux kernel exclusively via `ioctl()` syscalls on device nodes. Four categories of kernel driver interact to process a single frame:
-
-1. **MIPI CSI-2 Receiver Driver** (`/dev/v4l-subdevX`): Configures the PHY lane count and data rate, handles Low-Power to High-Speed transitions on the differential pairs, validates packet ECC/CRC, and DMA's received pixel lines into the ISP's input ring buffer. You never touch this driver from user space. A bad CSI-2 CRC manifests to you as a corrupted output buffer with a matching `camera3_stream_buffer_t.status == BUFFER_ERROR`.
-
-2. **Sensor Subdev Driver** (`/dev/v4l-subdevY`, I2C-controlled):
-   - Writes sensor registers over I2C (a slow, ~100KHz side-band bus, which is why exposure changes and mode switches have ~2-3 frame latency even for `HARDWARE_LEVEL_3` devices).
-   - Sets exposure time (per-frame rolling shutter start/stop), analog gain, digital gain, resolution, binning mode.
-   - Controls VCM focus via an I2C DAC that sources current into the voice coil (see HW layer).
-   - Controls flash strobe synchronization via a sensor-side EXRST output pin that the flash controller listens to.
-
-3. **V4L2 Video Capture Node** (`/dev/video0` etc.): The HAL calls `VIDIOC_REQBUFS` to allocate gralloc-backed buffers (the exact same `AHardwareBuffer` handles you imported into Vulkan in Chapter 25), then `VIDIOC_QBUF` (enqueue a buffer) in a loop. As frames arrive from the CSI-2 receiver + ISP, the HAL calls `VIDIOC_DQBUF` (dequeue a buffer) and ships it up to `Camera3Device` as a `camera3_stream_buffer_t`.
-
-4. **ISP Memory-to-Memory Driver** (`/dev/videoN m2m` node): Separately from the capture path, the HAL queues reprocessing input buffers (for ZSL, Chapter 23) into the ISP m2m queue to run demosaic, denoise, HDR merge, or face detection on previously-captured RAW frames. The result emerges as a processed JPEG/YUV/PRIVATE output buffer.
+`INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY` का मतलब है कि वेंडर ने *अभी भी* केवल एक HAL1 `.so` भेजा है और डिवाइस पुराने `CameraParameters` ब्लॉब + `startPreview()`/`takePicture()` HAL1 प्रविष्टि बिंदुओं में वापस HAL3 रिक्वेस्ट/रिस्पॉन्स कॉल का अनुवाद करने के लिए AOSP के `camera2compat::Camera2Compat` शिम (shim) का उपयोग करता है। यह अनुवाद परत ही कारण है कि अध्याय 24 ने आपको चेतावनी दी थी कि `CONTROL_MODE_OFF` चुपचाप `LEGACY` डिवाइस पर कुछ नहीं करता है - HAL1 में अनुवाद करने के लिए कोई प्रति-फ्रेम `CONTROL_MODE` अवधारणा नहीं है। शिम उस मेटाडेटा प्रविष्टि को छोड़ देता है।
 
 ---
 
-## Layer 7 — Physical Hardware Layer
+## लेयर 6 — कर्नेल लेयर: V4L2 + MIPI CSI-2 + सेंसर ड्राइवर
 
-Finally, electrons. Every layer above is code executing on the SoC. The hardware layer is where photons are converted to electrons and processed:
+HAL3 प्रक्रिया डिवाइस नोड्स पर विशेष रूप से `ioctl()` सिस्टम कॉल के माध्यम से Linux कर्नेल को कॉल करती है। एक सिंगल फ्रेम को प्रोसेस करने के लिए कर्नेल ड्राइवर की चार श्रेणियां इंटरैक्ट करती हैं:
+
+1. **MIPI CSI-2 रिसीवर ड्राइवर** (`/dev/v4l-subdevX`): PHY लेन काउंट और डेटा रेट कॉन्फ़िगर करता है, डिफरेंशियल पेयर पर लो-पावर से हाई-स्पीड ट्रांज़िशन को हैंडल करता है, पैकेट ECC/CRC को वैलिडेट करता है, और प्राप्त पिक्सेल लाइनों को ISP के इनपुट रिंग बफर में DMA करता है। आप यूजर स्पेस से इस ड्राइवर को कभी नहीं छूते हैं। एक खराब CSI-2 CRC आपके लिए `camera3_stream_buffer_t.status == BUFFER_ERROR` के साथ एक दूषित (corrupted) आउटपुट बफर के रूप में प्रकट होता है।
+
+2. **सेंजर सबदेव ड्राइवर** (`/dev/v4l-subdevY`, I2C-नियंत्रित):
+   - I2C (एक धीमी, ~100KHz साइड-बैंड बस) पर सेंसर रजिस्टर लिखता है, यही कारण है कि `HARDWARE_LEVEL_3` डिवाइस के लिए भी एक्सपोज़र परिवर्तन और मोड स्विच में ~2-3 फ्रेम की विलंबता होती है।
+   - एक्सपोज़र टाइम (प्रति-फ्रेम रोलिंग शटर स्टार्ट/स्टॉप), एनालॉग गेन, डिजिटल गेन, रेज़ोल्यूशन, बिनिंग मोड सेट करता है।
+   - वॉयस कॉइल में करंट भेजने वाले I2C DAC के माध्यम से VCM फोकस को नियंत्रित करता है (HW लेयर देखें)।
+   - सेंसर-साइड EXRST आउटपुट पिन के माध्यम से फ्लैश स्ट्रोब सिंक्रोनाइज़ेशन को नियंत्रित करता है जिसे फ्लैश कंट्रोलर सुनता है।
+
+3. **V4L2 वीडियो कैप्चर नोड** (`/dev/video0` आदि): HAL gralloc-backed बफर (बिल्कुल वही `AHardwareBuffer` हैंडल जिन्हें आपने अध्याय 25 में Vulkan में इम्पोर्ट किया था) आवंटित करने के लिए `VIDIOC_REQBUFS` कॉल करता है, फिर एक लूप में `VIDIOC_QBUF` (बफर को एनक्यू करना) कॉल करता है। जैसे ही CSI-2 रिसीवर + ISP से फ्रेम आते हैं, HAL `VIDIOC_DQBUF` (बफर को डीक्यू करना) कॉल करता है और इसे `Camera3Device` को `camera3_stream_buffer_t` के रूप में भेजता है।
+
+4. **ISP मेमोरी-टू-मेमोरी ड्राइवर** (`/dev/videoN m2m` नोड): कैप्चर पाथ से अलग, HAL पहले से कैप्चर किए गए RAW फ्रेम पर डेमोसैक, डेनोइज़, HDR मर्ज या फेस डिटेक्शन चलाने के लिए ISP m2m क्यू में रीप्रोसेसिंग इनपुट बफर (ZSL के लिए, अध्याय 23) डालता है। परिणाम एक प्रोसेस्ड JPEG/YUV/PRIVATE आउटपुट बफर के रूप में उभरता है।
+
+---
+
+## लेयर 7 — भौतिक हार्डवेयर लेयर (Physical Hardware Layer)
+
+अंत में, इलेक्ट्रॉन। ऊपर की हर परत SoC पर निष्पादित होने वाला कोड है। हार्डवेयर लेयर वह जगह है जहाँ फोटोन को इलेक्ट्रॉनों में परिवर्तित और संसाधित किया जाता है:
 
 ```mermaid
 graph LR
-    LENS[Lens Group<br/>Glass elements<br/>~10–20mm focal length] --> VCM[VCM Voice Coil Motor<br/>I2C DAC → coil current →<br/>lens displacement ±50 µm<br/>Focus + OIS stabilization]
+    LENS["Lens Group<br/>Glass elements<br/>~10–20mm focal length"] --> VCM["VCM Voice Coil Motor<br/>I2C DAC → coil current →<br/>lens displacement ±50 µm<br/>Focus + OIS stabilization"]
     VCM --> SENSOR[CMOS Sensor Pixel Array<br/>Sony IMX / Samsung ISOCELL<br/>~12MP – 200MP<br/>rolling shutter: readout line-by-line<br/>Global shutter (rare) on industrial sensors]
     SENSOR -->|A/D converted 10/12/14-bit Bayer| CSI[MIPI CSI-2 PHY<br/>2/4/8 pairs<br/>up to 20 Gbps aggregate]
     CSI -->|SoC-internal interconnect| ISP[ISP — on SoC die<br/>Demosaic · CCM · NR · 3A stats · HDR merge<br/>often 1 TOPS+ of DNN for face/segmentation]
     ISP -->|Gralloc buffers → DRAM| CPU[CPU / GPU<br/>Your app's process reads them]
-    FLASH[Flash LED / Xenon<br/>I2C flash controller<br/>Strobe synced to sensor EXRST] --> SENSOR
+    FLASH["Flash LED / Xenon<br/>I2C flash controller<br/>Strobe synced to sensor EXRST"] --> SENSOR
 ```
 
-Each physical sub-system:
-- **Lens & VCM**: A 10µm movement of the lens is one step of AF. OIS (Optical Image Stabilization) adds closed-loop gyro feedback to the VCM, nudging the lens 500–5000 times per second to cancel hand shake. The kernel driver writes I²C DAC values; your app controls it via `LENS_FOCUS_DISTANCE` and `LENS_OPTICAL_STABILIZATION_MODE` metadata keys.
-- **Sensor pixel array**: Photodiodes accumulate charge proportional to incident photon count. Readout is rolling-shutter (line by line top to bottom), which is why your AE slider in Chapter 14 had a 2–3 frame latency — exposure for frame N is programmed during frame N-1's readout.
-- **MIPI CSI-2 bus**: Differential pairs at up to 2.5Gbps/lane × 8 lanes = 20Gbps raw. More than enough for 60fps 4K 12-bit Bayer. Packet errors trigger CRC retransmission in hardware but a corrupted frame reaches you as `BUFFER_ERROR`.
-- **ISP**: The underrated hero. Its demosaic + noise reduction + sharpening hardware runs at 1+ Gigapixel/sec and saves your CPU from doing it. On modern Tensor / Snapdragon SoCs it also runs DNN accelerators for scene segmentation, face detection, and HDR merge in-sensor before the CPU even sees the frame.
-- **Flash controller**: The flash pulse must fire *exactly during* the rolling-shutter exposure window of the frame it is supposed to illuminate. The `FLASH_STATE_FIRED` bit in `CaptureResult` confirms alignment; misalignment yields partially-exposed frames.
+प्रत्येक भौतिक उप-प्रणाली:
+- **Lens & VCM**: लेंस का 10µm मूवमेंट AF का एक चरण है। OIS (Optical Image Stabilization) VCM में क्लोज्ड-लूप जाइरो फीडबैक जोड़ता है, हाथ के कंपन को रद्द करने के लिए लेंस को प्रति सेकंड 500-5000 बार थोड़ा सा खिसकाता है। कर्नेल ड्राइवर I²C DAC मान लिखता है; आपका ऐप `LENS_FOCUS_DISTANCE` और `LENS_OPTICAL_STABILIZATION_MODE` मेटाडेटा कुंजियों के माध्यम से इसे नियंत्रित करता।
+- **सेंसर पिक्सेल एरे**: फोटोडायोड आपतित फोटोन काउंट के समानुपाती चार्ज जमा करते हैं। रीडआउट रोलिंग-शटर (ऊपर से नीचे लाइन दर लाइन) है, यही कारण है कि अध्याय 14 में आपके AE स्लाइडर में 2-3 फ्रेम की विलंबता थी - फ्रेम N के लिए एक्सपोज़र फ्रेम N-1 के रीडआउट के दौरान प्रोग्राम किया जाता है।
+- **MIPI CSI-2 बस**: 2.5Gbps/लेन × 8 लेन = 20Gbps रॉ तक डिफरेंशियल पेयर। 60fps 4K 12-bit बायर के लिए पर्याप्त से अधिक। पैकेट एरर हार्डवेयर में CRC पुर्नप्रसार (retransmission) को ट्रिगर करते हैं लेकिन एक दूषित फ्रेम आप तक `BUFFER_ERROR` के रूप में पहुँचता है।
+- **ISP**: कम आंका गया नायक। इसका डेमोसैक + शोर कम करना + शार्पनिंग हार्डवेयर 1+ गीगापिक्सेल/सेकंड पर चलता है और आपके CPU को इसे करने से बचाता है। आधुनिक Tensor / Snapdragon SoC पर यह CPU द्वारा फ्रेम देखने से पहले ही सीन सेगमेंटेशन, फेस डिटेक्शन और इन-सेंसर HDR मर्ज के लिए DNN एक्सेलरेटर भी चलाता है।
+- **फ्लैश कंट्रोलर**: फ्लैश पल्स उस फ्रेम की रोलिंग-शटर एक्सपोज़र विंडो के दौरान *बिल्कुल* फायर होनी चाहिए जिसे उसे रोशन करना है। `CaptureResult` में `FLASH_STATE_FIRED` बिट संरेखण की पुष्टि करता है; गलत संरेखण के परिणामस्वरूप आंशिक रूप से उजागर (exposed) फ्रेम मिलते हैं।
 
 ---
 
-## Architectural Evolution: Camera2 through the Android Versions
+## आर्किटेक्चरल विकास: Android वर्शन्स के माध्यम से Camera2
 
-Camera2 was not built in a day. Every 2–3 Android versions added a new architectural primitive that unlocked real features for developers:
+Camera2 एक दिन में नहीं बना था। हर 2-3 Android वर्शन्स ने एक नया आर्किटेक्चरल प्रिमिटिव जोड़ा जिसने डेवलपर्स के लिए वास्तविक सुविधाओं को अनलॉक किया:
 
 ```mermaid
 timeline
     title Camera2 Architectural Evolution
-    2014 · Android 5.0 Lollipop : Camera2 public API launch (HAL3). Per-frame CaptureRequest / CaptureResult model replaces HAL1 CameraParameters blob.
-    2017 · Android 8.0 Oreo    : Project Treble. HwBinder split. HAL3 interface frozen as stable AIDL/HIDL vendor contract. LEGACY HAL1 wrapper standardized.
-    2018 · Android 9.0 Pie      : Logical Multi-Camera. REQUEST_AVAILABLE_CAPABILITIES_LOGICAL_MULTI_CAMERA; one logical camera → multiple physical sensors + zoom switching.
-    2021 · Android 12           : Camera Extensions API (Chapter 22). OEMs plug Night / HDR / Bokeh into framework via standardized extension interface, not CameraX-only hacks.
-    2023 · Android 14           : JPEG_R Ultra HDR format (Chapter 21). 10-bit + gain map in standard container. Hal3 gains STREAM_USE_FLAG_*_ULTRA_HDR.
-    2024 · Android 15 (API 35)  : CameraDeviceSetup. Lightweight capability query object. Can query per-mode capabilities WITHOUT powering the sensor/ISP. Eliminates ~300mW wake-up for capability-only use cases.
+    2014 · Android 5.0 Lollipop : Camera2 सार्वजनिक API लॉन्च (HAL3)। प्रति-फ्रेम CaptureRequest / CaptureResult मॉडल ने HAL1 CameraParameters ब्लॉब की जगह ली।
+    2017 · Android 8.0 Oreo    : Project Treble। HwBinder स्प्लिट। HAL3 इंटरफेस स्थिर AIDL/HIDL वेंडर अनुबंध के रूप में लॉक। LEGACY HAL1 रैपर मानकीकृत।
+    2018 · Android 9.0 Pie      : लॉजिकल मल्टी-कैमरा। REQUEST_AVAILABLE_CAPABILITIES_LOGICAL_MULTI_CAMERA; एक लॉजिकल कैमरा → कई फिजिकल सेंसर + ज़ूम स्विचिंग।
+    2021 · Android 12           : कैमरा एक्सटेंशन API (अध्याय 22)। OEM मानकीकृत एक्सटेंशन इंटरफेस के माध्यम से फ्रेमवर्क में नाइट / HDR / बोकेह प्लग करते हैं, न कि केवल CameraX-आधारित हैक।
+    2023 · Android 14           : JPEG_R Ultra HDR प्रारूप (अध्याय 21)। मानक कंटेनर में 10-बिट + गेन मैप। Hal3 में STREAM_USE_FLAG_*_ULTRA_HDR जुड़ा।
+    2024 · Android 15 (API 35)  : CameraDeviceSetup। हल्का क्षमता क्वेरी ऑब्जेक्ट। सेंसर/ISP को चालू किए बिना प्रति-मोड क्षमताओं की जांच कर सकते हैं। केवल-क्षमता उपयोग मामलों के लिए ~300mW वेक-अप को समाप्त करता है।
 ```
 
-The trend in every release is clear: **decoupling**.
-- Android 8 decoupled HAL from framework (Treble).
-- Android 9 decoupled logical camera ID from physical sensors.
-- Android 12 decoupled OEM extensions from app code.
-- Android 14 decoupled HDR encoding from RAW pipeline.
-- **Android 15's `CameraDeviceSetup` decouples capability queries from hardware power.**
-
-### Spotlight: Android 15 `CameraDeviceSetup` — Architectural Decoupling in Action
-
-`CameraDeviceSetup` (Android 15, API 35) is the purest example of this trend. Before API 35, if an app wanted to know "does this 4K@60 stream combo with YUV_420_888 analysis at the same time?", the only way to call `isSessionConfigurationSupported` was through a `CameraCharacteristics` instance fetched via `CameraManager.getCameraCharacteristics(id)`. Internally, this forced the HAL to power the sensor (≈250–350mW) and ISP for several milliseconds just to read a capability table that is effectively static for the device's lifetime. On a battery-constrained app this was a non-starter for any "pre-flight feature check" UX.
-
-`CameraDeviceSetup` fixes this by providing a lightweight, non-power-grabbing representation:
-
-```kotlin
-// Requires API 35+
-val setup: CameraDeviceSetup = cameraManager.getCameraDeviceSetup(cameraId)
-val supported: Boolean = setup.isSessionConfigurationSupported(sessionConfig)
-// getCameraDeviceSetup() does NOT power sensor or ISP
-// Result can be cached for the device's entire uptime
-```
-
-Architecturally, the capability table now lives in a pre-fetched, signed, partition-independent blob in the vendor partition, and `getCameraDeviceSetup` reads it via a separate HwBinder call that skips `Camera3Device`'s power-on sequence entirely. This is the next decade's direction: *every* API that can be answered statically will eventually have a no-power lightweight counterpart. Expect `getCameraDeviceSetup` to gain more and more capability queries in Android 16+.
+हर रिलीज़ में रुझान स्पष्ट है: **डिकपलिंग (Decoupling)**।
+- Android 8 ने HAL को फ्रेमवर्क से अलग किया (Treble)।
+- Android 9 ने लॉजिकल कैमरा आईडी को फिजिकल सेंसर से अलग किया।
+- Android 12 ने OEM एक्सटेंशन को ऐप कोड से अलग किया।
+- Android 14 ने HDR एन्कोडिंग को RAW पाइपलाइन से अलग किया।
+- **Android 15 का `CameraDeviceSetup` क्षमता प्रश्नों को हार्डवेयर पावर स्टेट्स से अलग करता है।**
 
 ---
 
-## The Reader's Journey Mapped to Architecture Layers
+## सारांश (Summary)
 
-Finally, map your own journey across this book onto the layers. Every chapter corresponds to a specific layer or interface boundary:
+Camera2 एक सात-परत वाला स्टैक है: App → Framework (Java/Kotlin `android.hardware.camera2.*`) → Binder/HwBinder IPC → Native `CameraService` + `Camera3Device` → Vendor HAL3 (`camera3_device_t`, एक LEGACY HAL1 रैपर के साथ) → V4L2 Kernel drivers (MIPI CSI-2, सेंसर, कैप्चर, ISP m2m) → भौतिक हार्डवेयर (lens/VCM, सेंसर, MIPI बस, ISP, फ्लैश कंट्रोलर)। प्रोजेक्ट ट्रेबल ने HwBinder के माध्यम से HAL अनुबंध को लॉक कर दिया, जिससे दीर्घकालिक स्थिरता सुनिश्चित हुई। दशक भर पुराना आर्किटेक्चरल रुझान प्रगतिशील डिकपलिंग है, जो Android 15 के `CameraDeviceSetup` में समाप्त होता है, जो सेंसर को पावर दिए बिना क्षमताओं की जांच कर सकता है। आपने अब हर फीचर को मैप कर लिया है - अध्याय 14 में मैन्युअल ISO से लेकर अध्याय 23 में ZSL तक और अध्याय 25 में नेटिव Vulkan ज़ीरो-कॉपी तक - उस सटीक परत तक जो इसे निष्पादित करती है।
 
-```mermaid
-flowchart TB
-    subgraph Journey["Your Journey Across This Book (Chapters → Layers)"]
-        direction LR
-        C1["Ch. 1–4<br/>Foundations<br/>Hardware layer concepts"] ~~~ H_L1["↔ HW Layer"]
-        C2["Ch. 5–9<br/>First Camera2 app<br/>CameraManager · Session · ImageReader"] ~~~ H_L2["↔ App + Framework"]
-        C3["Ch. 10–12<br/>Pipeline · Capture Types<br/>Characteristics Deep Dive"] ~~~ H_L3["↔ Parcel metadata + HAL3 contract"]
-        C4["Ch. 13–17<br/>Manual 3A · Exposure · Focus · WB"] ~~~ H_L4["↔ Metadata keys → HAL3 → I²C sensor driver"]
-        C5["Ch. 18–23<br/>RAW · HDR · Multi-Cam · ZSL · Extensions"] ~~~ H_L5["↔ HAL3 request model · ISP m2m reprocessing"]
-        C6["Ch. 24 CameraX<br/>UseCase facade + Interop"] ~~~ H_L6["↔ App-side abstraction over Framework"]
-        C7["Ch. 25 Native NDK<br/>ACamera + AHB → Vulkan"] ~~~ H_L7["↔ NDK shim directly above Camera3Device"]
-        C8["Ch. 26 Coroutines/Flow<br/>Async wrapping of callbacks"] ~~~ H_L8["↔ App-layer async around Binder boundaries"]
-        C9["Ch. 27 Testing ITS/CTS<br/>Mock vs Real hardware"] ~~~ H_L9["↔ Validate every layer via test harness"]
-        C10["Ch. 28 THIS CHAPTER<br/>Full stack architecture"] ~~~ H_L10["↔ ALL layers, end-to-end"]
-    end
-    H_L1 --> HW
-    H_L2 --> FRAME
-    H_L3 --> HAL
-    H_L4 --> K
-    H_L5 --> HAL
-    H_L6 --> APP
-    H_L7 --> NS
-    H_L8 --> APP
-    H_L9 --> BIND
-    H_L10 --> HW
-```
+## आगे क्या है: भाग VII — कैमरा मेटाडेटा इनसाइक्लोपीडिया
 
-By reading this chapter last, you have matched the architecture with the practice. You did not learn HAL3 abstractly at day one and struggle to map it to real code. You learned by *doing*: open → configure → capture → result, for 27 chapters, then pulled back the curtain to see who was really responding to every one of those calls.
-
----
-
-## Summary
-
-Camera2 is a seven-layer stack: App → Framework (Java/Kotlin `android.hardware.camera2.*`) → Binder/HwBinder IPC → Native `CameraService` + `Camera3Device` → Vendor HAL3 (`camera3_device_t`, with a LEGACY HAL1 wrapper) → V4L2 Kernel drivers (MIPI CSI-2, sensor, capture, ISP m2m) → Physical hardware (lens/VCM, sensor, MIPI bus, ISP, flash controller). Project Treble locked the HAL contract via HwBinder, ensuring long-term stability. The decade-long architectural trend is progressive decoupling, culminating in Android 15's `CameraDeviceSetup`, which can query capabilities without powering the sensor. You have now mapped every feature — from manual ISO in Chapter 14 to ZSL in Chapter 23 to native Vulkan zero-copy in Chapter 25 — to the exact layer that executes it.
-
-## What's Next: Part VII — Camera Metadata Encyclopedia
-
-This closes Part VI: Modern Android Camera Development. The remaining frontier is a detailed, encyclopedic reference for every `CameraCharacteristics`, `CaptureRequest`, and `CaptureResult` metadata key you have been using across all 28 chapters. Part VII is the Metadata Encyclopedia: SENSOR, LENS, CONTROL, SCALER, REQUEST — every tag defined, explained, queried, cross-checked against real devices, and validated through the Android Camera Parameters app. Open it when you need to know exactly what `SCALER_CROPPING_TYPE` means, which devices support `REQUEST_AVAILABLE_CAPABILITIES_OFFLINE_PROCESSING`, or how a specific key actually behaves on a real `LEGACY` HAL.
+यह भाग VI को समाप्त करता है: आधुनिक Android कैमरा विकास। शेष सीमा सभी 28 अध्यायों में आपके द्वारा उपयोग की जा रही हर `CameraCharacteristics`, `CaptureRequest`, और `CaptureResult` मेटाडेटा कुंजी के लिए एक विस्तृत, विश्वकोश संदर्भ (encyclopedic reference) है। भाग VII मेटाडेटा इनसाइक्लोपीडिया है: SENSOR, LENS, CONTROL, SCALER, REQUEST — हर टैग को परिभाषित किया गया है, समझाया गया है, वास्तविक उपकरणों के साथ क्रॉस-चेक किया गया है, और Android Camera Parameters ऐप के माध्यम से वैलिडेट किया गया है। इसे तब खोलें जब आपको यह जानने की आवश्यकता हो कि `SCALER_CROPPING_TYPE` का वास्तव में क्या अर्थ है, कौन से डिवाइस `REQUEST_AVAILABLE_CAPABILITIES_OFFLINE_PROCESSING` को सपोर्ट करते हैं, या कोई विशिष्ट कुंजी वास्तव में एक वास्तविक `LEGACY` HAL पर कैसा व्यवहार करती है।

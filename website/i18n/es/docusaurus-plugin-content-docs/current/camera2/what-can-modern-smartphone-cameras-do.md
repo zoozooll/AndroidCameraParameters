@@ -1,230 +1,230 @@
 ---
 sidebar_position: 3
-title: "Chapter 3: Modern Smartphone Photography"
-description: "A tour of the computational and optical features on modern phones: HDR, portrait bokeh, night mode, slow-motion, ultra-wide, telephoto, macro, and how computational photography fuses hardware and software."
-keywords: [HDR photography, portrait mode, night mode, slow motion video, ultra wide camera, telephoto, computational photography]
+title: "Capítulo 3: Fotografía moderna con smartphones"
+description: "Un recorrido por las funciones computacionales y ópticas de los teléfonos modernos: HDR, bokeh de retrato, modo nocturno, cámara lenta, ultra gran angular, teleobjetivo, macro y cómo la fotografía computacional fusiona hardware y software."
+keywords: [fotografía HDR, modo retrato, modo nocturno, video en cámara lenta, cámara ultra gran angular, teleobjetivo, fotografía computacional]
 ---
 
-# Chapter 3: Modern Smartphone Photography
+# Capítulo 3: Fotografía moderna con smartphones
 
-Chapter 2 gave you the hardware foundations: lenses, sensors, ISP pipelines, and multi-camera modules. This chapter answers the natural follow-up question: **How do modern camera apps actually use that hardware to produce the photos I see on Instagram?**
+El Capítulo 2 le proporcionó los fundamentos del hardware: lentes, sensores, tuberías de ISP y módulos de cámara múltiple. Este capítulo responde a la pregunta lógica que surge a continuación: **¿Cómo usan realmente las aplicaciones de cámara modernas ese hardware para producir las fotos que veo en Instagram?**
 
-A 2010 smartphone took a single exposure, ran it through a basic ISP, and wrote a JPEG. A 2026 smartphone routinely captures 5 to 15 separate frames for a single still photo, aligns them to sub-pixel precision using gyroscope data, fuses them using multi-frame signal processing, runs the result through a neural network for semantic segmentation or depth estimation, and finally tone-maps it into a single shareable image — all within the span of a single shutter button press.
+Un smartphone de 2010 tomaba una única exposición, la pasaba por un ISP básico y escribía un JPEG. Un smartphone de 2026 captura rutinariamente de 5 a 15 fotogramas por separado para una única foto fija, los alinea con precisión subpíxel usando datos del giroscopio, los fusiona usando el procesamiento de señal multifotograma, pasa el resultado por una red neuronal para la segmentación semántica o la estimación de profundidad y, finalmente, le aplica el mapa de tonos en una única imagen compartible, todo en el lapso de una única pulsación del botón disparador.
 
-This chapter is a feature-by-feature tour of modern smartphone photography. We will explain how each feature works at the hardware + software level, without any Camera2 API code. The goal is to build a vocabulary of what modern camera systems can do, so that when you later write code to control these features, you know what is happening under the hood.
+Este capítulo es un recorrido función por función de la fotografía moderna con smartphones. Explicaremos cómo funciona cada función a nivel de hardware + software, sin ningún código de la API Camera2. El objetivo es construir un vocabulario de lo que los sistemas de cámara modernos pueden hacer, de modo que cuando más tarde escriba código para controlar estas funciones, sepa qué está sucediendo bajo el capó.
 
-## HDR: High Dynamic Range Multi-Frame Fusion
+## HDR: Fusión multifotograma de alto rango dinámico
 
-**Dynamic range** is the ratio between the brightest and darkest parts of a scene that the imaging system can record simultaneously without clipping. The human eye can perceive roughly 20 stops of dynamic range (a 1,000,000:1 contrast ratio) in a single glance, thanks to saccadic adaptation. A single smartphone sensor exposure can capture roughly 10 to 12 stops at base ISO. The gap between those two numbers is the reason HDR exists.
+El **rango dinámico** es la relación entre las partes más brillantes y más oscuras de una escena que el sistema de imagen puede registrar simultáneamente sin recortes. El ojo humano puede percibir aproximadamente 20 pasos de rango dinámico (una relación de contraste de 1.000.000:1) en una sola mirada, gracias a la adaptación sacádica. La exposición de un único sensor de smartphone puede capturar aproximadamente de 10 a 12 pasos con el ISO base. La brecha entre esos dos números es la razón por la que existe el HDR.
 
-Imagine you are taking a photo indoors with a bright window behind your subject. If you expose for the person's face (let's say 1/30s, ISO 400), the window blows out to pure clipped white — no sky, no clouds, no detail. If you expose for the window (1/2000s, ISO 50), the person's face becomes a silhouetted black blob. Neither single exposure works.
+Imagine que está tomando una foto en el interior con una ventana brillante detrás del sujeto. Si expone para el rostro de la persona (digamos 1/30 s, ISO 400), la ventana se quema hasta el blanco puro: sin cielo, sin nubes, sin detalles. Si expone para la ventana (1/2000 s, ISO 50), el rostro de la persona se convierte en una mancha negra silueteada. Ninguna de las dos exposiciones individuales funciona.
 
-### How Smartphone HDR Works
+### Cómo funciona el HDR en los smartphones
 
-Every HDR system on modern phones uses **multi-frame bracketing** followed by computational fusion. The algorithm works like this:
+Todos los sistemas HDR de los teléfonos modernos utilizan el **bracketing multifotograma** seguido de la fusión computacional. El algoritmo funciona así:
 
-1. **Bracketed capture**: The camera captures a rapid burst of 3 to 10 consecutive frames at different exposure values (EV). A typical set might be frames at -3 EV (very short, preserves highlights), -1 EV, +1 EV, and +3 EV (very long, captures shadows). The sensor and VCM are held perfectly still during the burst; only the electronic shutter timing changes.
-2. **Reference frame selection**: The algorithm picks the sharpest mid-exposure frame as the geometric reference.
-3. **Image registration / alignment**: Each non-reference frame is computationally aligned to the reference. The algorithm finds distinctive keypoint features (corners, edges) using algorithms like FAST or SIFT, computes an affine or homography transform that maps each frame's features onto the reference frame, and warps the pixels accordingly. Any frames that are too blurred (from micro-shake during the burst) are discarded entirely.
-4. **Fusion**: For each pixel location in the final image, the algorithm combines information from the aligned frames. Underexposed pixels contribute their clean, unclipped highlight data. Overexposed pixels contribute their low-noise shadow data. Mid-tone pixels are averaged across all frames to reduce shot noise.
-5. **Tone mapping**: The fused linear image — which may now contain 14 to 18 stops of usable dynamic range — is compressed through a sophisticated local tone mapping operator into an 8-bit or 10-bit output image that looks good on a standard sRGB display.
+1. **Captura en bracketing**: la cámara captura una ráfaga rápida de 3 a 10 fotogramas consecutivos con diferentes valores de exposición (EV). Un conjunto típico podría ser fotogramas a -3 EV (muy corto, preserva las luces), -1 EV, +1 EV y +3 EV (muy largo, captura las sombras). El sensor y el VCM se mantienen perfectamente quietos durante la ráfaga; solo cambia la temporización del obturador electrónico.
+2. **Selección del fotograma de referencia**: el algoritmo elige el fotograma de exposición media más nítido como referencia geométrica.
+3. **Registro / Alineación de imágenes**: cada fotograma que no es de referencia se alinea computacionalmente con la referencia. El algoritmo busca características de puntos clave distintivos (esquinas, bordes) utilizando algoritmos como FAST o SIFT, calcula una transformación afín o de homografía que mapea las características de cada fotograma sobre el fotograma de referencia y deforma los píxeles en consecuencia. Cualquier fotograma que esté demasiado borroso (debido al microtemblor durante la ráfaga) se descarta por completo.
+4. **Fusión**: para cada ubicación de píxel en la imagen final, el algoritmo combina la información de los fotogramas alineados. Los píxeles subexpuestos aportan sus datos de luces limpios y sin recortes. Los píxeles sobreexpuestos aportan sus datos de sombras con poco ruido. Los píxeles de tonos medios se promedian entre todos los fotogramas para reducir el ruido de disparo.
+5. **Mapeo de tonos (Tone mapping)**: la imagen lineal fusionada —que ahora puede contener de 14 a 18 pasos de rango dinámico utilizable— se comprime mediante un sofisticado operador de mapeo de tonos local en una imagen de salida de 8 o 10 bits que se ve bien en una pantalla sRGB estándar.
 
 ```mermaid
 flowchart LR
-    A[Scene: Bright Window + Dark Room] --> B[Burst Capture]
-    B --> C1[-3 EV Frame\nDark, Preserves Highlights]
-    B --> C2[0 EV Frame\nMid-Exposure Reference]
-    B --> C3[+3 EV Frame\nBright, Preserves Shadows]
-    C1 --> D[Registration / Alignment\nFeature Matching + Warp]
+    A["Escena: Ventana brillante + Habitación oscura"] --> B["Captura en ráfaga"]
+    B --> C1["Fotograma -3 EV<br/>Oscuro, preserva luces"]
+    B --> C2["Fotograma 0 EV<br/>Referencia de exposición media"]
+    B --> C3["Fotograma +3 EV<br/>Brillante, preserva sombras"]
+    C1 --> D["Registro / Alineación<br/>Coincidencia de rasgos + Deformación"]
     C2 --> D
     C3 --> D
-    D --> E[Merge / Fuse\nPer-Pixel Exposure Blend]
-    E --> F[Local Tone Mapping\n16 Stops → 8-Bit Displayable]
-    F --> G[Final HDR Output\nFace Visible + Sky Detailed]
+    D --> E["Mezcla / Fusión<br/>Mezcla de exposición por píxel"]
+    E --> F["Mapeo de tonos local<br/>De 16 pasos a 8 bits visualizables"]
+    F --> G["Salida HDR final<br/>Rostro visible + Cielo detallado"]
 ```
 
-Real-world example: a Galaxy S26 Ultra in the default "Scene Optimizer HDR" mode internally fires 7 bracketed frames totaling approximately 0.2 seconds of capture time. The built-in hand-motion detection discards 2 blurred frames. The remaining 5 frames are aligned, fused, and tone-mapped. The output is written as a **JPEG_R Ultra HDR file** on Android 14+ devices: a standard JPEG primary image (8-bit SDR) with an embedded gain map that HDR-capable viewers (Android 14 Gallery, Chrome 120+, Adobe Lightroom) can use to reconstruct the full 10-bit HDR luminance range on an HDR10 or Dolby Vision display.
+Ejemplo real: un Galaxy S26 Ultra en el modo predeterminado "Optimizador de escenas HDR" dispara internamente 7 fotogramas en bracketing que suman aproximadamente 0,2 segundos de tiempo de captura. La detección de movimiento de la mano integrada descarta 2 fotogramas borrosos. Los 5 fotogramas restantes se alinean, se fusionan y se les aplica el mapeo de tonos. La salida se escribe como un **archivo JPEG_R Ultra HDR** en los dispositivos con Android 14+: una imagen JPEG primaria estándar (SDR de 8 bits) con un mapa de ganancia incrustado que los visores compatibles con HDR (Galería de Android 14, Chrome 120+, Adobe Lightroom) pueden usar para reconstruir el rango de luminancia HDR completo de 10 bits en una pantalla HDR10 o Dolby Vision.
 
-### When HDR Works and When It Doesn't
+### Cuándo funciona el HDR y cuándo no
 
-HDR excels at static scenes with both bright highlights and deep shadows: landscapes, backlit portraits, rooms with windows, sunsets over water. It actively fails — producing ghosting artifacts — when objects in the scene move during the bracketed burst: a flying bird, a waving flag, a person blinking, a child running. Modern AI-powered HDR algorithms detect and segment moving objects, blending only the reference frame for those pixels to avoid the classic HDR "ghost."
+El HDR destaca en escenas estáticas con luces brillantes y sombras profundas: paisajes, retratos a contraluz, habitaciones con ventanas, atardeceres sobre el agua. Falla activamente —produciendo artefactos de "fantasmas"— cuando los objetos de la escena se mueven durante la ráfaga de bracketing: un pájaro volando, una bandera ondeando, una persona parpadeando, un niño corriendo. Los modernos algoritmos de HDR basados en IA detectan y segmentan los objetos en movimiento, mezclando solo el fotograma de referencia para esos píxeles para evitar el clásico "fantasma" del HDR.
 
-## Portrait Mode: Bokeh via Depth Estimation
+## Modo Retrato: Bokeh mediante estimación de profundidad
 
-Portrait mode produces the aesthetic where the subject's face is perfectly sharp and the background dissolves into a creamy, out-of-focus blur called **bokeh**. Traditional cameras achieve this optically with large sensors, wide apertures, and long focal lengths. Smartphones achieve it computationally, because a 1/1.3-inch sensor at f/1.6 does not naturally produce enough shallow depth of field for the effect.
+El modo retrato produce la estética en la que el rostro del sujeto está perfectamente nítido y el fondo se disuelve en un desenfoque cremoso llamado **bokeh**. Las cámaras tradicionales logran esto ópticamente con sensores grandes, aperturas amplias y distancias focales largas. Los smartphones lo logran computacionalmente, porque un sensor de 1/1,3 pulgadas a f/1,6 no produce de forma natural suficiente profundidad de campo reducida para el efecto.
 
-### Three Methods of Smartphone Depth Estimation
+### Tres métodos de estimación de profundidad en smartphones
 
-There are three independent techniques used by modern portrait systems; many phones use a combination of all three.
+Existen tres técnicas independientes utilizadas por los sistemas de retrato modernos; muchos teléfonos utilizan una combinación de las tres.
 
-**Method 1: Stereo Disparity from Dual Cameras.** This is the oldest and most geometrically sound method. The phone fires both the wide camera and the telephoto camera simultaneously at the same subject. Because the two cameras are physically separated by 10 to 15 millimeters (the "baseline"), they see the subject from slightly different horizontal positions. A foreground object's position shifts more between the two viewpoints than a distant background object's position does. This shift is called **disparity**. The algorithm runs a block-matching or semi-global matching (SGM) algorithm over the two rectified images to compute a disparity value for every pixel. Disparity is inversely proportional to depth, so the disparity map is converted directly into a per-pixel depth map.
+**Método 1: Disparidad estéreo de cámaras duales.** Este es el método más antiguo y geométricamente sólido. El teléfono dispara simultáneamente la cámara gran angular y la cámara teleobjetivo al mismo sujeto. Como las dos cámaras están separadas físicamente por 10 a 15 milímetros (la "línea base"), ven al sujeto desde posiciones horizontales ligeramente diferentes. La posición de un objeto en primer plano se desplaza más entre los dos puntos de vista que la posición de un objeto en el fondo distante. Este desplazamiento se denomina **disparidad**. El algoritmo ejecuta un algoritmo de coincidencia de bloques o de coincidencia semiglobal (SGM) sobre las dos imágenes rectificadas para calcular un valor de disparidad para cada píxel. La disparidad es inversamente proporcional a la profundidad, por lo que el mapa de disparidad se convierte directamente en un mapa de profundidad por píxel.
 
-**Method 2: ToF / LiDAR Active Depth Sensing.** A ToF (Time-of-Flight) or LiDAR depth sensor projects a structured pattern of 30,000+ near-infrared laser dots onto the scene, then measures the round-trip time (for direct ToF) or phase shift (for indirect ToF) of the reflected light to compute a true metric depth in meters for each pixel. ToF produces accurate, dense depth maps even in complete darkness and on textureless surfaces (plain walls, sky) where stereo matching fails. Modern portrait systems typically use ToF as the ground-truth depth cue and stereo disparity as a refinement signal.
+**Método 2: Detección de profundidad activa ToF / LiDAR.** Un sensor de profundidad ToF (Time-of-Flight) o LiDAR proyecta un patrón estructurado de más de 30.000 puntos láser de infrarrojo cercano sobre la escena, y luego mide el tiempo de ida y vuelta (para ToF directo) o el desfase (para ToF indirecto) de la luz reflejada para calcular una profundidad métrica real en metros para cada píxel. El ToF produce mapas de profundidad densos y precisos incluso en completa oscuridad y sobre superficies sin textura (paredes lisas, cielo) donde el emparejamiento estéreo falla. Los sistemas de retrato modernos suelen usar el ToF como señal de profundidad base y la disparidad estéreo como señal de refinamiento.
 
-**Method 3: Monocular ML Depth Estimation.** For single-camera phones (or for the front-facing selfie camera, which has no stereo partner), a neural network estimates depth from a single RGB image. The model, trained on millions of images with ground-truth depth labels, learns the statistical cues humans use to judge depth: relative size, occlusion, linear perspective, texture gradient, defocus blur, and atmospheric perspective. Google's PortraitNet and Meta's DeepLabV3+ are representative architectures. Monocular depth is less metrically accurate than stereo or ToF, but it is sufficient for plausible-looking portrait bokeh.
+**Método 3: Estimación de profundidad ML monocular.** Para los teléfonos de una sola cámara (o para la cámara frontal para selfies, que no tiene pareja estéreo), una red neuronal estima la profundidad a partir de una única imagen RGB. El modelo, entrenado en millones de imágenes con etiquetas de profundidad reales, aprende las pistas estadísticas que los humanos usamos para juzgar la profundidad: tamaño relativo, oclusión, perspectiva lineal, gradiente de textura, desenfoque y perspectiva atmosférica. PortraitNet de Google y DeepLabV3+ de Meta son arquitecturas representativas. La profundidad monocular es menos precisa métricamente que la estéreo o la ToF, pero es suficiente para obtener un bokeh de retrato plausible.
 
-### The Portrait Rendering Pipeline
+### La tubería de renderizado de retratos
 
-Once a depth map is obtained, the remaining steps are the same regardless of which depth estimation method was used:
+Una vez obtenido el mapa de profundidad, los pasos restantes son los mismos independientemente del método de estimación de profundidad utilizado:
 
-1. **Subject Segmentation**: A separate semantic segmentation neural network (usually a U-Net variant) runs on the main RGB camera image and produces a soft alpha mask identifying which pixels belong to "person" vs "background." The mask is feathered at the edges — especially around hair, glasses, and fine foreground detail — to avoid the cutout "paper doll" look of early 2010s portrait mode.
-2. **Depth Refinement**: The raw depth map from Method 1/2/3 is multiplied with the segmentation mask. Background pixels keep their depth value; subject pixels are clamped to a single focus plane depth.
-3. **Per-Pixel Variable Blur**: Each background pixel is blurred by a Gaussian (or, for premium "optical simulation" modes, a physically rendered lens-kernel convolution) whose radius scales linearly with the pixel's distance from the focus plane. A background object at 5 meters gets a heavy blur; a background object at 1.5 meters gets a mild blur. The subject pixels are copied untouched.
-4. **Faux Optical Glare**: A premium touch: bright specular highlights in the blurred background (streetlights, reflections, the sun) are rendered as characteristic lens-shaped bokeh hexagons or circles rather than simple Gaussian blobs. This sells the illusion that the blur came from a real lens diaphragm.
+1. **Segmentación del sujeto**: una red neuronal de segmentación semántica independiente (normalmente una variante de U-Net) se ejecuta sobre la imagen de la cámara RGB principal y produce una máscara alfa suave que identifica qué píxeles pertenecen a la "persona" frente al "fondo". La máscara se suaviza en los bordes —especialmente alrededor del pelo, las gafas y los detalles finos del primer plano— para evitar el aspecto de "muñeca de papel" recortada del modo retrato de principios de la década de 2010.
+2. **Refinamiento de la profundidad**: el mapa de profundidad bruto del Método 1/2/3 se multiplica por la máscara de segmentación. Los píxeles del fondo mantienen su valor de profundidad; los píxeles del sujeto se fijan a la profundidad de un único plano de enfoque.
+3. **Desenfoque variable por píxel**: cada píxel del fondo se desenfoca mediante una gaussiana (o, para los modos de "simulación óptica" premium, una convolución de núcleo de lente renderizada físicamente) cuyo radio escala linealmente con la distancia del píxel al plano de enfoque. Un objeto del fondo a 5 metros recibe un desenfoque fuerte; un objeto del fondo a 1,5 metros recibe un desenfoque leve. Los píxeles del sujeto se copian sin tocar.
+4. **Resplandor óptico falso**: un toque premium: los reflejos especulares brillantes en el fondo desenfocado (farolas, reflejos, el sol) se renderizan como hexágonos o círculos de bokeh característicos de la lente en lugar de simples manchas gaussianas. Esto vende la ilusión de que el desenfoque procede de un diafragma de lente real.
 
 ```mermaid
 flowchart TD
-    A[Wide Camera Frame + Tele Camera Frame / ToF Data] --> B[Depth Estimation\nStereo / ToF / Mono ML]
-    B --> C[Depth Map\n0.5m → Infinity]
-    A --> D[Subject Segmentation\nU-Net Neural Network]
-    D --> E[Person Alpha Mask\nSoft-Edged Feathering]
-    C --> F[Per-Pixel Blur Radius\nScales with Depth]
+    A["Fotograma de cámara angular + Tele / Datos ToF"] --> B["Estimación de profundidad<br/>Estéreo / ToF / Mono ML"]
+    B --> C["Mapa de profundidad<br/>0.5 m a infinito"]
+    A --> D["Segmentación del sujeto<br/>Red neuronal U-Net"]
+    D --> E["Máscara alfa de persona<br/>Suavizado de bordes"]
+    C --> F["Radio de desenfoque por píxel<br/>Escala con la profundidad"]
     E --> F
-    F --> G[Apply Variable Blur\nSubject = Sharp, Background = Bokeh]
-    G --> H[Add Bokeh Speculars\nHexagonal / Circular Highlights]
-    H --> I[Final Portrait Photo\nCreamy Background Blur]
+    F --> G["Aplicar desenfoque variable<br/>Sujeto = nítido, Fondo = bokeh"]
+    G --> H["Añadir especulares de bokeh<br/>Reflejos hexagonales / circulares"]
+    H --> I["Foto de retrato final<br/>Desenfoque de fondo cremoso"]
 ```
 
-## Night Mode: Multi-Frame Temporal Merging
+## Modo Nocturno: Mezcla temporal multifotograma
 
-Before 2018, low-light smartphone photography was essentially unusable without flash. A dimly lit bar or a city street at night produced a noisy, grainy, blurry mess. Then Google released **Night Sight** on the Pixel 3, and everything changed. The core insight was counterintuitive: instead of taking one long 1-second exposure (which would be hopelessly blurred from hand shake), take 15 very short 1/15-second exposures (each individually sharp because OIS is active), then algorithmically align and average them. The total integrated exposure time is still 1 second, but the per-frame exposure is short enough that handshake blur never accumulates.
+Antes de 2018, la fotografía con smartphones con poca luz era esencialmente inutilizable sin flash. Un bar tenuemente iluminado o una calle de la ciudad por la noche producían un desastre ruidoso, granulado y borroso. Entonces Google lanzó **Night Sight** en el Pixel 3 y todo cambió. La idea central era contraintuitiva: en lugar de hacer una única exposición larga de 1 segundo (que quedaría irremediablemente borrosa por el temblor de la mano), haz 15 exposiciones muy cortas de 1/15 de segundo (cada una nítida individualmente porque el OIS está activo) y luego alinéalas y promédialas algorítmicamente. El tiempo de exposición total integrado sigue siendo de 1 segundo, pero la exposición por fotograma es lo suficientemente corta como para que el desenfoque por el temblor de la mano nunca se acumule.
 
-### The Night Mode Algorithm Step-by-Step
+### El algoritmo del modo nocturno paso a paso
 
-1. **Burst Capture**: The camera captures 8 to 15 raw frames. Each frame uses a moderate exposure time (1/15s to 1/8s is typical) and moderate ISO (800 to 3200). Individual frames are noisy but not blurred. The burst totals 0.5 to 2 seconds of wall-clock time.
-2. **Gyro-Aided EIS Alignment**: The phone's main IMU gyroscope records angular velocity at 8,000 Hz throughout the burst. For each frame, the cumulative rotation and translation from the reference frame is computed. Each raw frame is then digitally shifted, rotated, and slightly scaled (Electronic Image Stabilization, EIS) on the NPU to sub-pixel precision, perfectly registering it to the reference frame even if the user's hands moved by several full pixels of blur during the burst.
-3. **Temporal Pixel Merging**: For each pixel location across the 12 aligned frames, the algorithm gathers 12 candidate pixel values. It then performs robust statistical merging rather than a simple average: outlier values (caused by hot pixels, cosmic ray hits, or a car's headlights transiting that spot) are identified and discarded. The remaining consistent values are averaged, reducing Gaussian shot noise by a factor equal to the square root of the number of frames kept. A 12-frame merge reduces noise by 3.5×.
-4. **Spatial Denoising**: A CNN-based denoiser (trained specifically on raw night imagery) removes any remaining high-frequency noise while preserving real edges and texture.
-5. **Local Tone Mapping**: The merged raw image has very high dynamic range. A spatially-varying tone mapping operator (based on bilateral filtering or a learned CNN tone map) lifts shadows without blowing out city lights, boosts color saturation in dark regions (which would otherwise look desaturated), and produces a final 8-bit image that feels bright and clean rather than dim and murky.
+1. **Captura en ráfaga**: la cámara captura de 8 a 15 fotogramas crudos. Cada fotograma utiliza un tiempo de exposición moderado (lo típico es de 1/15 s a 1/8 s) e ISO moderado (800 a 3200). Los fotogramas individuales son ruidosos pero no borrosos. La ráfaga suma de 0,5 a 2 segundos de tiempo real.
+2. **Alineación EIS asistida por giro**: el giroscopio de la IMU principal del teléfono registra la velocidad angular a 8.000 Hz durante toda la ráfaga. Para cada fotograma, se calcula la rotación y traslación acumuladas desde el fotograma de referencia. A continuación, cada fotograma crudo se desplaza, rota y escala ligeramente de forma digital (estabilización electrónica de imagen, EIS) en la NPU con precisión subpíxel, registrándolo perfectamente con el fotograma de referencia incluso si las manos del usuario se movieron varios píxeles de desenfoque durante la ráfaga.
+3. **Mezcla temporal de píxeles**: para cada ubicación de píxel en los 12 fotogramas alineados, el algoritmo reúne 12 valores de píxel candidatos. A continuación, realiza una mezcla estadística robusta en lugar de un simple promedio: se identifican y descartan los valores atípicos (causados por píxeles calientes, impactos de rayos cósmicos o los faros de un coche que transita por ese punto). Se promedian los valores consistentes restantes, reduciendo el ruido de disparo gaussiano en un factor igual a la raíz cuadrada del número de fotogramas mantenidos. Una mezcla de 12 fotogramas reduce el ruido en 3,5 veces.
+4. **Reducción de ruido espacial**: un reductor de ruido basado en CNN (entrenado específicamente con imágenes nocturnas crudas) elimina cualquier ruido de alta frecuencia restante conservando los bordes y la textura reales.
+5. **Mapeo de tonos local**: la imagen cruda mezclada tiene un rango dinámico muy alto. Un operador de mapeo de tonos que varía espacialmente (basado en el filtrado bilateral o en un mapa de tonos de CNN aprendido) levanta las sombras sin quemar las luces de la ciudad, aumenta la saturación del color en las regiones oscuras (que de otro modo se verían desaturadas) y produce una imagen final de 8 bits que se siente brillante y limpia en lugar de tenue y turbia.
 
 ```mermaid
 flowchart LR
-    A[Dark Scene: City Street at Night] --> B[Capture 12 RAW Frames\n1/15s each = 0.66s total]
-    B --> C[Gyro EIS Alignment\nSub-Pixel Shift + Rotate]
-    C --> D[Temporal Merge\nRobust Mean / Outlier Reject\nNoise −3.5×]
-    D --> E[CNN Spatial Denoiser\nPreserve Edges / Texture]
-    E --> F[Local Tone Mapping\nBoost Shadows / Preserve Lights]
-    F --> G[Bright Clear Night Photo\nLow Noise, No Blur]
+    A["Escena oscura: Calle de ciudad de noche"] --> B["Captura de 12 fotogramas RAW<br/>1/15 s cada uno = 0,66 s total"]
+    B --> C["Alineación EIS por giro<br/>Desplazamiento subpíxel + Rotación"]
+    C --> D["Mezcla temporal<br/>Media robusta / rechazo de atípicos<br/>Ruido -3,5x"]
+    D --> E["Reductor de ruido espacial CNN<br/>Preserva bordes / textura"]
+    E --> F["Mapeo de tonos local<br/>Sube sombras / preserva luces"]
+    F --> G["Foto nocturna clara y brillante<br/>Poco ruido, sin desenfoque"]
 ```
 
-Samsung's "Nightography," Apple's "Night Mode," Xiaomi's "Night Mode 2.0," and OPPO's "Ultra Dark Mode" all use substantially the same algorithm architecture. Variations exist in the exact number of frames, the choice of robust merging statistic, the denoiser architecture, and the tone map look, but the core gyro-aligned multi-frame temporal averaging is universal across the industry.
+"Nightography" de Samsung, "Modo Noche" de Apple, "Night Mode 2.0" de Xiaomi y "Ultra Dark Mode" de OPPO utilizan sustancialmente la misma arquitectura de algoritmo. Existen variaciones en el número exacto de fotogramas, la elección de la estadística de mezcla robusta, la arquitectura del reductor de ruido y el aspecto del mapa de tonos, pero el promediado temporal multifotograma alineado por giroscopio es universal en toda la industria.
 
-## Slow Motion: High-Frame-Rate Cropped Capture
+## Cámara lenta: Captura recortada a alta velocidad de fotogramas
 
-Slow-motion video stretches time by capturing video frames faster than the standard 30 fps playback rate, then playing them back at the normal 30 fps speed. The common multipliers:
+El video en cámara lenta estira el tiempo capturando los fotogramas de video más rápido que la velocidad de reproducción estándar de 30 fps y reproduciéndolos después a la velocidad normal de 30 fps. Los multiplicadores comunes:
 
-- **120 fps capture → 30 fps playback = 4× slow motion.** A 1-second real-world event becomes 4 seconds of video.
-- **240 fps → 30 fps = 8× slow motion.**
-- **960 fps → 30 fps = 32× ultra-slow motion.** A water drop splash, a balloon pop, or a hummingbird wingbeat becomes visible.
+- **Captura a 120 fps → reproducción a 30 fps = cámara lenta de 4 aumentos.** Un evento del mundo real de 1 segundo se convierte en 4 segundos de video.
+- **240 fps → 30 fps = cámara lenta de 8 aumentos.**
+- **960 fps → 30 fps = cámara ultra lenta de 32 aumentos.** El salpicado de una gota de agua, el estallido de un globo o el aleteo de un colibrí se vuelven visibles.
 
-### Why 960 fps Requires a Sensor Crop
+### Por qué los 960 fps requieren un recorte del sensor
 
-The bottleneck for high-frame-rate capture is **sensor readout bandwidth**. The image sensor has a finite number of MIPI CSI-2 lanes running at a fixed maximum data rate (typically 2.5 Gbps per lane, 4 lanes = 10 Gbps total). The sensor can only output so many pixels per second.
+El cuello de botella para la captura a alta velocidad de fotogramas es el **ancho de banda de lectura del sensor**. El sensor de imagen tiene un número finito de carriles MIPI CSI-2 que funcionan a una velocidad de datos máxima fija (normalmente 2,5 Gbps por carril, 4 carriles = 10 Gbps en total). El sensor solo puede emitir un número determinado de píxeles por segundo.
 
-- A full 48MP (8000×6000) frame readout at 960 fps would require 48,000,000 × 960 = 46.08 billion pixels per second. That is 30× the actual readout bandwidth of any 2026 smartphone sensor.
-- Therefore, to hit 960 fps the sensor must read out only a small central crop of its pixel array. A 960 fps mode is typically a 1280×720 (720p HD) or sometimes a 1920×1080 (1080p FHD) crop. The total pixel bandwidth becomes manageable: 1280×720×960 fps = 884 megapixels per second, which fits comfortably in 10 Gbps even with 10-bit per pixel encoding.
+- La lectura de un fotograma completo de 48 MP (8000×6000) a 960 fps requeriría 48.000.000 × 960 = 46.080 millones de píxeles por segundo. Eso es 30 veces el ancho de banda de lectura real de cualquier sensor de smartphone de 2026.
+- Por tanto, para alcanzar los 960 fps el sensor debe leer solo un pequeño recorte central de su matriz de píxeles. Un modo de 960 fps suele ser un recorte de 1280×720 (720p HD) o, a veces, de 1920×1080 (1080p FHD). El ancho de banda total de píxeles se vuelve manejable: 1280×720×960 fps = 884 megapíxeles por segundo, lo que cabe cómodamente en 10 Gbps incluso con una codificación de 10 bits por píxel.
 
-The numbers in practice: 960 fps capture × 0.3 seconds of real time = 288 individual frames. Played back at 30 fps = 9.6 seconds of buttery slow-motion video. Some Sony Xperia and Samsung Galaxy flagship phones support a brief burst of 960 fps at 1080p resolution by reading the sensor through a limited analog-to-digital converter (ADC) bank only in the central crop region.
+Los números en la práctica: captura a 960 fps × 0,3 segundos de tiempo real = 288 fotogramas individuales. Reproducidos a 30 fps = 9,6 segundos de video en cámara lenta fluido. Algunos teléfonos insignia Sony Xperia y Samsung Galaxy admiten una breve ráfaga de 960 fps a una resolución de 1080p leyendo el sensor a través de un banco de convertidores analógico-digitales (ADC) limitado solo en la región del recorte central.
 
 ```mermaid
 flowchart TD
-    subgraph "Bandwidth Bottleneck: Sensor Readout"
+    subgraph "Cuello de botella: Lectura del sensor"
         direction TB
-        A[Full Sensor Mode:\n48MP (8000×6000) @ 30fps\n= 1.44 GPix/s\n→ Photo / Standard Video]
-        B[Slow-Motion Crop Mode:\n1280×720 @ 960fps\n= 0.88 GPix/s\n→ 32× Ultra Slow-Mo]
+        A["Modo sensor completo<br/>48 MP (8000x6000) @ 30 fps<br/>= 1,44 Gpix/s<br/>Foto / Video estándar"]
+        B["Modo recorte cámara lenta<br/>1280x720 @ 960 fps<br/>= 0,88 Gpix/s<br/>Cámara ultra lenta 32x"]
     end
-    A --> C{MIPI CSI-2 Bus\n4 Lanes × 2.5 Gbps\n= 10 Gbps Total}
+    A --> C{"Bus MIPI CSI-2<br/>4 carriles x 2,5 Gbps<br/>= 10 Gbps total"}
     B --> C
-    C --> D[ISP Video Pipeline\nScales to Output Resolution]
-    D --> E[HEVC / AV1 Encoder\nWrites Slow-Motion MP4]
+    C --> D["Tubería de video ISP<br/>Escala a resolución de salida"]
+    D --> E["Codificador HEVC / AV1<br/>Escribe MP4 en cámara lenta"]
 ```
 
-Slow-motion modes also often use a staggered HDR technique where alternate rows of the sensor are exposed for different durations to maintain high dynamic range even at 240 fps or 960 fps.
+Los modos de cámara lenta también suelen utilizar una técnica de HDR escalonado en la que las filas alternas del sensor se exponen durante diferentes duraciones para mantener un alto rango dinámico incluso a 240 fps o 960 fps.
 
-## Ultra-Wide: Distortion Correction and Edge Quality
+## Ultra gran angular: Corrección de distorsión y calidad en los bordes
 
-The ultra-wide camera on a modern flagship offers a 10–18mm full-frame equivalent focal length and a 100° to 130° diagonal field of view. It opens up compositional possibilities that the standard wide camera cannot: sweeping landscapes, towering architecture shots where the entire building fits without stepping into traffic, group selfies that actually include everyone, and a playful "close-up proximity distortion" effect where objects held near the lens appear massively oversized relative to the background.
+La cámara ultra gran angular de un insignia moderno ofrece una distancia focal equivalente a fotograma completo de 10–18 mm y un campo de visión diagonal de 100° a 130°. Abre posibilidades compositivas que la cámara gran angular estándar no puede: paisajes inmensos, tomas de arquitectura imponentes donde todo el edificio cabe sin tener que meterse en el tráfico, selfies de grupo en los que realmente cabe todo el mundo y un divertido efecto de "distorsión por proximidad en primer plano" donde los objetos situados cerca de la lente aparecen masivamente sobredimensionados con respecto al fondo.
 
-However, the ultra-wide focal length comes with three characteristic optical flaws that the ISP must correct before the photo is usable:
+Sin embargo, la distancia focal del ultra gran angular conlleva tres fallos ópticos característicos que el ISP debe corregir antes de que la foto sea utilizable:
 
-1. **Geometric (Barrel) Distortion**: Straight lines bow outward like the edges of a fisheye lens. A photo of a rectangular door frame will look pincushioned or barreled. The ISP's Geometric Distortion Correction stage (see Chapter 2) applies a per-pixel coordinate remap using a 4th-order or 6th-order polynomial lens model calibrated for that specific module. The correction necessarily crops the outer 5–10% of the sensor array because the remapping pushes those outer pixels off-canvas.
-2. **Lateral Chromatic Aberration (LCA)**: The lens bends different wavelengths of light by slightly different amounts, so red, green, and blue images of the same off-axis point land at slightly different pixel coordinates. The result is visible color fringing (purple/green edges) on high-contrast objects near the corners. The ISP corrects LCA by applying a slightly different magnification factor to the red and blue color planes relative to green.
-3. **Vignetting / Corner Softness**: Corner pixels receive significantly less light than center pixels (due to the lens's cos⁴θ natural falloff plus mechanical vignetting from the lens barrel), and the lens's optical MTF (Modulation Transfer Function) is lower at extreme angles so corners look soft. The Lens Shading Correction stage applies a radially symmetric gain boost to flatten the illumination, and an edge-aware sharpening filter is applied more aggressively at the corners than in the center.
+1. **Distorsión geométrica (de barril)**: las líneas rectas se curvan hacia fuera como los bordes de una lente de ojo de pez. Una foto de un marco de puerta rectangular se verá abombada o en barril. La etapa de Corrección de Distorsión Geométrica del ISP (véase el Capítulo 2) aplica una reasignación de coordenadas por píxel utilizando un modelo de lente polinómico de 4º o 6º orden calibrado para ese módulo específico. La corrección recorta necesariamente entre el 5 y el 10% del anillo exterior de píxeles porque la reasignación empuja esos píxeles exteriores fuera del lienzo.
+2. **Aberración cromática lateral (LCA)**: la lente curva las diferentes longitudes de onda de la luz en cantidades ligeramente distintas, por lo que las imágenes roja, verde y azul del mismo punto fuera del eje aterrizan en coordenadas de píxel ligeramente diferentes. El resultado es un halo de color visible (bordes púrpuras/verdes) en los objetos de alto contraste cerca de las esquinas. El ISP corrige la LCA aplicando un factor de magnificación ligeramente distinto a los planos de color rojo y azul con respecto al verde.
+3. **Viñeteado / Suavidad en las esquinas**: los píxeles de las esquinas reciben significativamente menos luz que los del centro (debido a la caída natural cos⁴θ de la lente más el viñeteado mecánico del barril de la lente), y la MTF (función de transferencia de modulación) óptica de la lente es menor en los ángulos extremos, por lo que las esquinas se ven suaves. La etapa de Corrección del Sombreado de la Lente aplica un aumento de ganancia radialmente simétrico para aplanar la iluminación, y se aplica un filtro de nitidez sensible a los bordes de forma más agresiva en las esquinas que en el centro.
 
 ```mermaid
 flowchart LR
-    A[Raw Ultra-Wide Capture\n120° Fisheye\nBarrel Distorted] --> B[ISP Geometric Correction\n6th-Order Polynomial Remap]
-    B --> C[Cropped Rectilinear Output\nStraight Lines Actually Straight]
-    C --> D[Lateral CA Correction\nRed/Blue Plane Rescaling]
-    D --> E[Lens Shading + Corner Sharpening]
-    E --> F[Final Corrected Ultra-Wide Photo]
+    A["Captura ultra angular bruta<br/>Ojo de pez 120 grados<br/>Distorsión de barril"] --> B["Corrección geométrica ISP<br/>Remapeo polinómico de 6º orden"]
+    B --> C["Salida rectilínea recortada<br/>Líneas rectas realmente rectas"]
+    C --> D["Corrección de aberración lateral<br/>Reescalado de planos rojo/azul"]
+    D --> E["Sombreado lente + Nitidez esquinas"]
+    E --> F["Foto ultra angular corregida final"]
 ```
 
-## Telephoto: Standard vs Periscope
+## Teleobjetivo: Estándar frente a periscópico
 
-The telephoto camera captures distant subjects that the wide camera cannot resolve. Modern phones ship two distinct telephoto designs.
+La cámara teleobjetivo captura sujetos lejanos que la cámara gran angular no puede resolver. Los teléfonos modernos incorporan dos diseños de teleobjetivo distintos.
 
-**Standard Telephoto (2× to 3× optical):** This is a conventional camera module: the lens barrel sits perpendicular to the phone's back cover, directly above the image sensor, exactly like the wide camera but with a longer focal length lens. A 3× telephoto has an ~72mm full-frame equivalent focal length. The physical stack-up is limited by the phone's thickness (7–9mm), so the lens cannot be longer than that. Hence the 3× practical ceiling for conventional telephoto modules.
+**Teleobjetivo estándar (zoom óptico de 2x a 3x):** se trata de un módulo de cámara convencional: el barril de la lente se sitúa perpendicular a la cubierta trasera del teléfono, directamente sobre el sensor de imagen, exactamente igual que la cámara gran angular pero con una lente de mayor distancia focal. Un teleobjetivo de 3 aumentos tiene una distancia focal equivalente a fotograma completo de ~72 mm. El apilamiento físico está limitado por el grosor del teléfono (7–9 mm), por lo que la lente no puede ser más larga que eso. De ahí el techo práctico de 3 aumentos para los módulos de teleobjetivo convencionales.
 
-**Periscope Telephoto (5× to 10× optical):** To get longer focal lengths without making the phone thicker, engineers folded the optical path 90° using a prism. Light enters through a window in the phone's edge or rear glass, hits a 45° right-angle prism, bounces 90° sideways, and then travels horizontally through a multi-element lens barrel 10–14mm long that runs parallel to the phone's mainboard, finally landing on an image sensor mounted sideways on the PCB. The prism itself is mounted on a 2-axis OIS gimbal, and the sensor is sometimes mounted on a separate sensor-shift OIS, giving 4-axis or 5-axis total stabilization — enough to get sharp handheld 10× photos of text on a distant building sign.
+**Teleobjetivo periscópico (zoom óptico de 5x a 10x):** para obtener distancias focales más largas sin aumentar el grosor del teléfono, los ingenieros doblaron la trayectoria óptica 90° usando un prisma. La luz entra a través de una ventana en el borde del teléfono o en el cristal trasero, choca con un prisma de ángulo recto de 45°, rebota 90° hacia un lado y luego viaja horizontalmente a través de un barril de lente de varios elementos de 10 a 14 mm de largo que corre paralelo a la placa base del teléfono, aterrizando finalmente en un sensor de imagen montado de lado en la PCB. El propio prisma está montado en un cardán (gimbal) OIS de 2 ejes, y el sensor a veces está montado en un OIS de desplazamiento de sensor independiente, lo que proporciona una estabilización total de 4 o 5 ejes, suficiente para obtener fotos nítidas a mano de 10 aumentos de un texto en el cartel de un edificio lejano.
 
 ```mermaid
 graph LR
-    subgraph "Periscope Telephoto (Side View Inside Phone)"
+    subgraph "Teleobjetivo periscópico (vista lateral dentro del teléfono)"
         direction LR
-        A[Light In\nRear Glass Window] --> B[45° Prism\n90° Reflection]
-        B --> C[Lens Element 1]
-        C --> D[Lens Element 2]
-        D --> E[Lens Element 3]
-        E --> F[Lens Element 4]
-        F --> G[Lens Element 5]
-        G --> H[IR Cut Filter]
-        H --> I[Image Sensor\nMounted Horizontally]
+        A["Entrada de luz<br/>Ventana de cristal trasera"] --> B["Prisma de 45 grados<br/>Reflexión de 90 grados"]
+        B --> C["Elemento lente 1"]
+        C --> D["Elemento lente 2"]
+        D --> E["Elemento lente 3"]
+        E --> F["Elemento lente 4"]
+        F --> G["Elemento lente 5"]
+        G --> H["Filtro de corte IR"]
+        H --> I["Sensor de imagen<br/>Montado horizontalmente"]
     end
-    J[Phone Thickness: 8.5mm Total] --> B
+    J["Grosor del teléfono: 8,5 mm total"] --> B
 ```
 
-At zoom boundaries between physical cameras (for example, 2.9× still digitally cropped from the wide camera vs 3.1× using the 3× periscope telephoto), the HAL performs a multi-camera fusion trick: for roughly ±0.2× around the switchover point, it captures both cameras simultaneously and performs a cross-fade weighted by zoom ratio, so the user never sees a visible "jump" when the active physical camera changes.
+En los límites del zoom entre cámaras físicas (por ejemplo, 2,9x todavía recortados digitalmente de la cámara gran angular frente a 3,1x usando el teleobjetivo periscópico de 3 aumentos), la HAL realiza un truco de fusión multicámara: durante aproximadamente ±0,2x alrededor del punto de cambio, captura ambas cámaras simultáneamente y realiza un fundido cruzado ponderado por la relación de zoom, de modo que el usuario nunca ve un "salto" visible cuando cambia la cámara física activa.
 
-## Macro: Extreme Close-Up Photography
+## Macro: Fotografía de primer plano extremo
 
-Macro photography captures extreme close-ups of small subjects: the texture of flower petals, the compound eyes of insects, the fibers of a piece of fabric, the individual sugar crystals on a cookie.
+La fotografía macro captura primeros planos extremos de sujetos pequeños: la textura de los pétalos de las flores, los ojos compuestos de los insectos, las fibras de un trozo de tela, los cristales de azúcar individuales de una galleta.
 
-Two macro strategies exist in modern phones:
+En los teléfonos modernos existen dos estrategias macro:
 
-**Dedicated Macro Camera:** Budget and mid-range phones often ship a small, low-resolution (2MP to 5MP) dedicated macro module with a fixed-focus short-focal-length lens. The module is tuned for a specific minimum focus distance (typically 2–4 cm) and produces surprisingly sharp macro images despite its low resolution. The main drawback is that the sensor is tiny, so image quality degrades sharply in anything less than bright daylight.
+**Cámara macro dedicada:** los teléfonos económicos y de gama media suelen incorporar un pequeño módulo macro dedicado de baja resolución (de 2 MP a 5 MP) con una lente de distancia focal corta y enfoque fijo. El módulo está ajustado para una distancia de enfoque mínima específica (normalmente de 2 a 4 cm) y produce imágenes macro sorprendentemente nítidas a pesar de su baja resolución. El principal inconveniente es que el sensor es diminuto, por lo que la calidad de la imagen se degrada bruscamente en cualquier condición que no sea luz de día brillante.
 
-**Ultra-Wide Re-purposed as Macro:** Flagship phones (Google Pixel, Samsung S-series Ultra, iPhone Pro) do not ship a dedicated macro camera. Instead, they re-task the ultra-wide camera. The ultra-wide's short focal length (13mm eq) gives it a very short minimum focus distance — often 1 to 2 centimeters from the subject. When the user taps "Macro" mode or the camera app detects a close subject via the ToF sensor or phase-detect AF rangefinder, the app switches to the ultra-wide, drives its VCM to the minimum-focus position, applies extra geometric distortion correction (because the subject is now at a field-curvature extreme where the polynomial remap differs significantly from the infinity calibration), and crops the center of the ultra-wide sensor to produce the final macro frame. The large 12MP–50MP ultra-wide sensor gives dramatically better macro image quality than a 5MP dedicated module.
+**Ultra gran angular reutilizado como macro:** los teléfonos insignia (Google Pixel, serie S Ultra de Samsung, iPhone Pro) no incorporan una cámara macro dedicada. En su lugar, reutilizan la cámara ultra gran angular. La corta distancia focal del ultra gran angular (13 mm eq) le proporciona una distancia mínima de enfoque muy reducida, a menudo de 1 a 2 centímetros del sujeto. Cuando el usuario toca el modo "Macro" o la aplicación de la cámara detecta un sujeto cercano a través del sensor ToF o del telémetro AF de detección de fase, la aplicación cambia al ultra gran angular, lleva su VCM a la posición de enfoque mínimo, aplica una corrección de distorsión geométrica adicional (porque el sujeto está ahora en un extremo de la curvatura de campo donde el remapeo polinómico difiere significativamente de la calibración al infinito) y recorta el centro del sensor ultra gran angular para producir el fotograma macro final. El gran sensor ultra gran angular de 12 MP–50 MP ofrece una calidad de imagen macro drásticamente mejor que la de un módulo dedicado de 5 MP.
 
-## Computational Photography: The Unifying Philosophy
+## Fotografía computacional: La filosofía unificadora
 
-The features above — HDR, Portrait, Night Mode, Slow Motion, Ultra-Wide correction, Periscope zoom fusion, Macro — share a single unifying idea. **Computational photography** is the philosophy that the camera sensor, the ISP, the gyroscope/IMU, the NPU (Neural Processing Unit), and multi-frame signal processing algorithms can work together to produce imagery that no single lens/sensor combination, no matter how expensive the glass, could ever produce on its own.
+Las funciones anteriores —HDR, Retrato, Modo Nocturno, Cámara Lenta, corrección de Ultra Angular, fusión de zoom Periscópico, Macro— comparten una única idea unificadora. La **fotografía computacional** es la filosofía de que el sensor de la cámara, el ISP, el giroscopio/IMU, la NPU (unidad de procesamiento neuronal) y los algoritmos de procesamiento de señal multifotograma pueden trabajar juntos para producir imágenes que ninguna combinación de lente/sensor, por muy caro que sea el cristal, podría producir jamás por sí sola.
 
-The classic DSLR model is: light → lens → sensor → storage. The smartphone model is: light → multiple lenses → multiple sensors → gyro/IMU → multi-frame burst capture → NPU neural inference → per-pixel decision fusion → sophisticated tone mapping → storage. Both start and end at the same place, but the smartphone inserts dozens of additional computational steps in the middle, each of which improves the final result in ways optics alone cannot.
+El modelo clásico de las DSLR es: luz → lente → sensor → almacenamiento. El modelo de los smartphones es: luz → múltiples lentes → múltiples sensores → giroscopio/IMU → captura de ráfaga multifotograma → inferencia neuronal en la NPU → fusión de decisiones por píxel → mapeo de tonos sofisticado → almacenamiento. Ambos empiezan y terminan en el mismo lugar, pero el smartphone inserta docenas de pasos computacionales adicionales en medio, cada uno de los cuales mejora el resultado final de formas que la óptica por sí sola no puede.
 
-Zooming seamlessly across 0.5× to 10× on a Galaxy S26 Ultra is computational: the HAL blends three different cameras with three different focal lengths across five zoom switch points. Rescuing a backlit portrait where the window behind the subject no longer blows out is computational: 7-frame HDR fusion. A handheld night photo of the Milky Way that would require a tripod and a 30-second exposure on a DSLR is computational: 12-frame gyro-aligned temporal merge. Every feature described in this chapter is computational photography.
+Hacer zoom de forma fluida desde 0,5x hasta 10x en un Galaxy S26 Ultra es computacional: la HAL mezcla tres cámaras diferentes con tres distancias focales distintas a través de cinco puntos de cambio de zoom. Rescatar un retrato a contraluz donde la ventana detrás del sujeto ya no se quema es computacional: fusión HDR de 7 fotogramas. Una foto nocturna a pulso de la Vía Láctea que requeriría un trípode y una exposición de 30 segundos en una DSLR es computacional: mezcla temporal de 12 fotogramas alineada por giroscopio. Cada función descrita en este capítulo es fotografía computacional.
 
 ```mermaid
 graph TD
-    subgraph "Computational Photography Venn Diagram"
-        A[Optics\nLenses, Aperture, OIS]
-        B[Sensors\nCMOS, Bayer, Rolling Shutter]
-        C[Machine Learning\nSegmentation, Denoise, Depth]
-        D[Multi-Frame Signal Processing\nHDR Merge, Night Merge, EIS]
+    subgraph "Diagrama de Venn de la fotografía computacional"
+        A["Óptica<br/>Lentes, Apertura, OIS"]
+        B["Sensores<br/>CMOS, Bayer, Obturador electrónico"]
+        C["Aprendizaje automático<br/>Segmentación, Reducción de ruido, Profundidad"]
+        D["Procesamiento de señal multifotograma<br/>Fusión HDR, Fusión nocturna, EIS"]
     end
-    A -- Overlap --> E[Portrait Bokeh]
-    B -- Overlap --> F[HDR Bracketed Capture]
-    C -- Overlap --> G[ML Portrait Segmentation]
-    D -- Overlap --> H[Night Sight Temporal Merge]
-    A & B & C & D --> I[Seamless Multi-Camera Zoom]
+    A -- Solapamiento --> E["Bokeh de retrato"]
+    B -- Solapamiento --> F["Captura en bracketing HDR"]
+    C -- Solapamiento --> G["Segmentación de retrato ML"]
+    D -- Solapamiento --> H["Mezcla temporal Night Sight"]
+    A & B & C & D --> I["Zoom multicámara fluido"]
 ```
 
-This is the most important idea to carry into the Camera2 API chapters that follow. The Camera2 API is not just a tool to "take a picture." It is a low-level control interface that lets your app fire precise multi-frame bursts, read gyro metadata per frame, select which physical camera fires at which zoom ratio, and stream frames through on-device neural networks — the building blocks for implementing your own computational photography features.
+Esta es la idea más importante que hay que trasladar a los capítulos de la API Camera2 que siguen. La API Camera2 no es solo una herramienta para "tomar una foto". Es una interfaz de control de bajo nivel que permite a su aplicación disparar ráfagas multifotograma precisas, leer metadatos de giro por fotograma, seleccionar qué cámara física se dispara en cada relación de zoom y transmitir fotogramas a través de redes neuronales en el dispositivo: los bloques de construcción para implementar sus propias funciones de fotografía computacional.
 
-## Summary
+## Resumen
 
-In this chapter you learned the real-world algorithms behind modern smartphone photography features. HDR uses 3–10 frame exposure bracketing, per-frame feature-based alignment, and tone mapping to capture dynamic range the sensor cannot see in a single exposure. Portrait mode computes a per-pixel depth map via stereo camera disparity, ToF laser ranging, or monocular ML depth estimation, then runs a U-Net subject segmentation and applies a variable per-pixel Gaussian blur scaled by depth. Night mode captures 8–15 short exposures, aligns them using gyro-aided EIS, applies robust temporal pixel merging to reduce noise by 3.5×, and locally tone-maps the result. Slow-motion video at 960 fps must crop the sensor because the MIPI readout bandwidth is the hard bottleneck. Ultra-wide photos undergo geometric distortion correction, chromatic aberration correction, and corner shading correction in the ISP before they become viewable. Periscope telephoto cameras use a 45° prism to fold the light path 90° and fit a 10× optical lens inside an 8.5mm-thick phone. You learned the definition of computational photography: the fusion of Optics, Sensors, Machine Learning, and Multi-Frame Signal Processing to create images beyond the reach of any single lens/sensor system.
+En este capítulo ha aprendido los algoritmos del mundo real que sustentan las funciones de fotografía de los smartphones modernos. El HDR utiliza el bracketing de exposición de 3 a 10 fotogramas, la alineación basada en rasgos por fotograma y el mapeo de tonos para capturar un rango dinámico que el sensor no puede ver en una sola exposición. El modo retrato calcula un mapa de profundidad por píxel mediante la disparidad de la cámara estéreo, la telemetría láser ToF o la estimación de profundidad ML monocular, y luego ejecuta una segmentación del sujeto U-Net y aplica un desenfoque gaussiano variable por píxel escalado por la profundidad. El modo noche captura de 8 a 15 exposiciones cortas, las alinea usando EIS asistida por giroscopio, aplica una mezcla de píxeles temporal robusta para reducir el ruido en 3,5 veces y aplica un mapa de tonos local al resultado. El video en cámara lenta a 960 fps debe recortar el sensor porque el ancho de banda de lectura MIPI es el cuello de botella. Las fotos ultra gran angular se someten a una corrección de distorsión geométrica, corrección de aberración cromática y corrección de sombreado de esquinas en el ISP antes de ser visualizables. Las cámaras teleobjetivo periscópicas utilizan un prisma de 45° para doblar la trayectoria de la luz 90° y meter una lente óptica de 10 aumentos dentro de un teléfono de 8,5 mm de grosor. Ha aprendido la definición de fotografía computacional: la fusión de Óptica, Sensores, Aprendizaje Automático y Procesamiento de Señal Multifotograma para crear imágenes más allá del alcance de cualquier sistema de lente/sensor único.
 
-## What's Next
+## ¿Qué sigue?
 
-Chapter 4 is the hands-on practical chapter. You will install the **Android Camera Parameters** companion app from source or Google Play, launch it on your own phone, and inspect exactly what your own hardware is capable of. You will learn to read Camera IDs and facing directions, check the Hardware Level of each camera (LEGACY / LIMITED / FULL / LEVEL_3), enumerate supported output formats (JPEG, YUV_420_888, PRIVATE, RAW_SENSOR, JPEG_R Ultra HDR), find maximum slow-motion FPS ranges, explore zoom ratios and switch points between your phone's physical cameras, and check whether your primary sensor supports RAW capture — writing down the answers for your specific device, because those answers determine what is and is not possible for your own Camera2 API app to do on that phone.
+El Capítulo 4 es el capítulo práctico. Instalará la aplicación complementaria **Android Camera Parameters** desde el código fuente o desde Google Play, la lanzará en su propio teléfono e inspeccionará exactamente de qué es capaz su propio hardware. Aprenderá a leer los ID de cámara y las orientaciones, a comprobar el nivel de hardware de cada cámara (LEGACY / LIMITED / FULL / LEVEL_3), a enumerar los formatos de salida admitidos (JPEG, YUV_420_888, PRIVATE, RAW_SENSOR, JPEG_R Ultra HDR), a buscar los rangos máximos de FPS en cámara lenta, a explorar las relaciones de zoom y los puntos de cambio entre las cámaras físicas de su teléfono, y a comprobar si su sensor principal admite la captura RAW, anotando las respuestas para su dispositivo específico, ya que esas respuestas determinan qué es y qué no es posible que su propia aplicación de la API Camera2 haga en ese teléfono.

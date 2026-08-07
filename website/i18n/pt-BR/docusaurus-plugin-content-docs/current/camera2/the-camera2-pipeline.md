@@ -1,89 +1,89 @@
 ---
 sidebar_position: 10
-title: "Chapter 10: The Camera2 Pipeline"
-description: Deep dive into the Camera2 pipeline architecture — CaptureRequest, CaptureResult, request queues, result callbacks, and the end-to-end flow from request submission to HAL processing and results.
-keywords: [Camera2 pipeline, CaptureRequest, CaptureResult, HAL3, request queue, CaptureCallback, in-flight queue, stateless pipeline]
+title: "Capítulo 10: O Pipeline do Camera2"
+description: Mergulho profundo na arquitetura do pipeline do Camera2 — CaptureRequest, CaptureResult, filas de solicitação, callbacks de resultado e o fluxo de ponta a ponta desde o envio da solicitação até o processamento no HAL e resultados.
+keywords: [pipeline do Camera2, CaptureRequest, CaptureResult, HAL3, fila de solicitação, CaptureCallback, fila em voo, pipeline sem estado]
 ---
 
-## 10.1 From Usage to Understanding
+## 10.1 Do Uso ao Entendimento
 
-In the previous chapters of this series, you *used* Camera2: you showed previews, captured photos, and worked with RAW files. Now it's time to flip the lens and look inward — **how does Camera2 actually deliver those frames?**
+Nos capítulos anteriores desta série, você *usou* o Camera2: mostrou pré-visualizações, capturou fotos e trabalhou com arquivos RAW. Agora é hora de inverter a lente e olhar para dentro — **como o Camera2 realmente entrega esses quadros?**
 
-Understanding the pipeline is not just academic. When you know how requests flow through the system, you can:
-- Diagnose frame drops in high-speed capture
-- Explain why changing settings takes 1-2 frames to appear
-- Optimize burst capture for zero blackout
-- Build correct mental models for callback timing
+Entender o pipeline não é apenas acadêmico. Quando você sabe como as solicitações fluem pelo sistema, você pode:
+- Diagnosticar quedas de quadros na captura de alta velocidade.
+- Explicar por que as mudanças nas configurações levam de 1 a 2 quadros para aparecer.
+- Otimizar a captura sequencial (burst) para zero blackout.
+- Construir modelos mentais corretos para o tempo dos callbacks.
 
-The Android Camera Parameters app ([GitHub](https://github.com/zoozooll/AndroidCameraParameters), [Play Store](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)) visualizes pipeline behavior in real time — look at the **Frame Timing** and **Raw JSON** tabs to see the concepts from this chapter live on your device.
+O aplicativo Android Camera Parameters ([GitHub](https://github.com/zoozooll/AndroidCameraParameters), [Play Store](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)) visualiza o comportamento do pipeline em tempo real — veja as abas **Frame Timing** e **Raw JSON** para ver os conceitos deste capítulo ao vivo no seu dispositivo.
 
-## 10.2 The Core Data Structures
+## 10.2 As Estruturas de Dados Principais
 
-Before looking at the pipeline itself, let's deeply examine the two objects that travel through it: `CaptureRequest` (what goes in) and `CaptureResult` (what comes out).
+Antes de olharmos para o próprio pipeline, vamos examinar profundamente os dois objetos que viajam por ele: `CaptureRequest` (o que entra) e `CaptureResult` (o que sai).
 
-### CaptureRequest: The Immutable Frame Blueprint
+### CaptureRequest: O Projeto Imutável do Quadro
 
-A `CaptureRequest` is a **complete, immutable configuration for a single frame**. It describes *everything* the sensor, lens, and ISP should do for one exposure: sensor exposure time, ISO, lens focus distance, 3A modes, output targets, JPEG quality, crop region, and more.
+Uma `CaptureRequest` é uma **configuração completa e imutável para um único quadro**. Ela descreve *tudo* o que o sensor, a lente e o ISP devem fazer para uma exposição: tempo de exposição do sensor, ISO, distância de foco da lente, modos 3A, alvos de saída, qualidade JPEG, região de corte e muito mais.
 
-The key properties of `CaptureRequest`:
+As principais propriedades da `CaptureRequest`:
 
-- **Immutable after build()** — Once you call `.build()`, the request is frozen. To change settings, you must create a new Builder.
-- **Builder pattern** — Constructed via `CaptureRequest.Builder`, obtained from `CameraDevice.createCaptureRequest(template)`.
-- **Per-frame** — Every individual frame gets its own request object. Even repeating captures create (implicitly) a new request per frame.
-- **Targeted to surfaces** — Each request explicitly lists which output surfaces receive the processed image buffers.
+- **Imutável após build()** — Uma vez que você chama `.build()`, a solicitação está congelada. Para alterar as configurações, você deve criar um novo Builder.
+- **Padrão Builder** — Construída via `CaptureRequest.Builder`, obtida a partir de `CameraDevice.createCaptureRequest(template)`.
+- **Por quadro** — Cada quadro individual recebe seu próprio objeto de solicitação. Mesmo capturas repetidas criam (implicitamente) uma nova solicitação por quadro.
+- **Direcionada a superfícies** — Cada solicitação lista explicitamente quais superfícies de saída recebem os buffers de imagem processados.
 
 ```kotlin
-// Build a CaptureRequest using the Builder pattern
+// Construir uma CaptureRequest usando o padrão Builder
 val builder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
 
-// Sensor-level parameters
+// Parâmetros de nível de sensor
 builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, 10_000_000L)   // 10ms
 builder.set(CaptureRequest.SENSOR_SENSITIVITY, 400)             // ISO 400
-builder.set(CaptureRequest.SENSOR_FRAME_DURATION, 33_333_333L)  // ~30fps max
+builder.set(CaptureRequest.SENSOR_FRAME_DURATION, 33_333_333L)  // ~30fps máx
 
-// Lens parameters
-builder.set(CaptureRequest.LENS_FOCUS_DISTANCE, 0.1f)           // 10cm focus
+// Parâmetros de lente
+builder.set(CaptureRequest.LENS_FOCUS_DISTANCE, 0.1f)           // Foco a 10cm
 builder.set(CaptureRequest.LENS_APERTURE, 1.8f)                 // f/1.8
 
-// 3A control modes
+// Modos de controle 3A
 builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
 builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
 builder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF)
 
-// Output targets
+// Alvos de saída
 builder.addTarget(previewSurface)
 builder.addTarget(jpegReader.surface)
 
-// Build — now immutable!
+// Build — agora imutável!
 val request: CaptureRequest = builder.build()
 
-// request.set(...) would fail — no set() on the built object!
+// request.set(...) falharia — não existe set() no objeto construído!
 ```
 
 :::note
-The immutability is critical to pipeline correctness. Because the HAL reads the request asynchronously, if you could modify it after submission, you'd create race conditions between the app thread and the hardware processing thread.
+A imutabilidade é crítica para a correção do pipeline. Como o HAL lê a solicitação de forma assíncrona, se você pudesse modificá-la após o envio, criaria condições de corrida entre a thread do aplicativo e a thread de processamento do hardware.
 :::
 
-### CaptureResult: The Metadata Report (Not the Image!)
+### CaptureResult: O Relatório de Metadados (Não a Imagem!)
 
-A `CaptureResult` is the **metadata output** for a processed frame. Crucially: **CaptureResult does NOT contain image pixel data**. The pixels go to the `Surface` targets you added to the request; the `CaptureResult` goes to your `CaptureCallback` carrying the *story* of what happened during capture.
+Uma `CaptureResult` é a **saída de metadados** para um quadro processado. Crucialmente: **CaptureResult NÃO contém dados de pixels de imagem**. Os pixels vão para os alvos `Surface` que você adicionou à solicitação; a `CaptureResult` vai para o seu `CaptureCallback` carregando a *história* do que aconteceu durante a captura.
 
-Here are the most important fields in a `CaptureResult`:
+Aqui estão os campos mais importantes em uma `CaptureResult`:
 
-| Result Key | Type | Description |
+| Chave de Resultado | Tipo | Descrição |
 |-----------|------|-------------|
-| `SENSOR_EXPOSURE_TIME` | `Long` | Actual exposure time used in nanoseconds (may differ from request) |
-| `SENSOR_SENSITIVITY` | `Int` | Actual ISO gain applied |
-| `SENSOR_TIMESTAMP` | `Long` | Nanosecond timestamp at start of exposure (from `SystemClock.elapsedRealtimeNanos()`) |
-| `CONTROL_AE_STATE` | `Int` | Auto-exposure state: INACTIVE, SEARCHING, CONVERGED, LOCKED, FLASH_REQUIRED |
-| `CONTROL_AF_STATE` | `Int` | Autofocus state: INACTIVE, PASSIVE_SCAN, ACTIVE_SCAN, FOCUSED_LOCKED, NOT_FOCUSED_LOCKED |
-| `CONTROL_AWB_STATE` | `Int` | Auto-white balance state |
-| `LENS_FOCUS_DISTANCE` | `Float` | Actual focus distance set by lens |
-| `SCALER_CROP_REGION` | `Rect` | Actual crop region used for digital zoom |
-| `JPEG_GPS_LOCATION` | `Location` | GPS tag written to JPEG (if requested) |
-| `STATISTICS_FACE_DETECT_MODE` | `Int` | Face detection mode actually used |
+| `SENSOR_EXPOSURE_TIME` | `Long` | Tempo de exposição real usado em nanossegundos (pode diferir da solicitação) |
+| `SENSOR_SENSITIVITY` | `Int` | Ganho ISO real aplicado |
+| `SENSOR_TIMESTAMP` | `Long` | Timestamp em nanossegundos no início da exposição (de `SystemClock.elapsedRealtimeNanos()`) |
+| `CONTROL_AE_STATE` | `Int` | Estado da exposição automática: INACTIVE, SEARCHING, CONVERGED, LOCKED, FLASH_REQUIRED |
+| `CONTROL_AF_STATE` | `Int` | Estado do foco automático: INACTIVE, PASSIVE_SCAN, ACTIVE_SCAN, FOCUSED_LOCKED, NOT_FOCUSED_LOCKED |
+| `CONTROL_AWB_STATE` | `Int` | Estado do balanço de branco automático |
+| `LENS_FOCUS_DISTANCE` | `Float` | Distância de foco real definida pela lente |
+| `SCALER_CROP_REGION` | `Rect` | Região de corte real usada para o zoom digital |
+| `JPEG_GPS_LOCATION` | `Location` | Tag GPS gravada no JPEG (se solicitada) |
+| `STATISTICS_FACE_DETECT_MODE` | `Int` | Modo de detecção facial realmente utilizado |
 
-The result fields are your **ground truth**. The `CaptureRequest` is what you *asked* for; the `CaptureResult` is what the hardware *actually did*. On LEGACY or LIMITED devices, the HAL may silently clamp, round, or override your requested values — the result lets you detect that.
+Os campos de resultado são a sua **verdade absoluta**. A `CaptureRequest` é o que você *pediu*; a `CaptureResult` é o que o hardware *realmente fez*. Em dispositivos LEGACY ou LIMITED, o HAL pode silenciosamente limitar, arredondar ou substituir seus valores solicitados — o resultado permite detectar isso.
 
 ```kotlin
 val captureCallback = object : CameraCaptureSession.CaptureCallback() {
@@ -119,74 +119,74 @@ val captureCallback = object : CameraCaptureSession.CaptureCallback() {
         }
 
         Log.d("Pipeline", buildString {
-            append("Frame @${timestampNs?.let { it / 1_000_000 } ?: "?"}ms | ")
-            append("Exposure: ${exposureNs?.let { "%.2fms".format(it / 1_000_000.0) } ?: "?"} | ")
+            append("Quadro @${timestampNs?.let { it / 1_000_000 } ?: "?"}ms | ")
+            append("Exposição: ${exposureNs?.let { "%.2fms".format(it / 1_000_000.0) } ?: "?"} | ")
             append("ISO: $iso | ")
-            append("Focus: ${focusDistance?.let { "%.3f".format(it) } ?: "?"} diopters | ")
+            append("Foco: ${focusDistance?.let { "%.3f".format(it) } ?: "?"} dioptrias | ")
             append("AE: $aeStateStr | ")
             append("AF: $afStateStr | ")
-            append("Crop: ${cropRegion?.width()}x${cropRegion?.height()}")
+            append("Corte: ${cropRegion?.width()}x${cropRegion?.height()}")
         })
     }
 }
 ```
 
 :::tip
-In the Android Camera Parameters app, enable **Live Result Logging** in settings and watch this exact stream of metadata flow in real time. You'll see AE_SEARCHING transition to AE_CONVERGED as exposure settles, and AF_SCAN transition to FOCUSED_LOCKED when you tap to focus.
+No aplicativo Android Camera Parameters, habilite **Live Result Logging** nas configurações e assista a esse fluxo exato de metadados em tempo real. Você verá a transição de AE_SEARCHING para AE_CONVERGED conforme a exposição se estabiliza, e a transição de AF_SCAN para FOCUSED_LOCKED ao tocar para focar.
 :::
 
-## 10.3 The Request Queues
+## 10.3 As Filas de Solicitação
 
-Camera2 uses a **two-queue pipeline model** at the framework level. Understanding these queues explains almost every timing behavior you observe.
+O Camera2 usa um **modelo de pipeline de duas filas** no nível do framework. Entender essas filas explica quase todos os comportamentos de tempo que você observa.
 
-### Pending Request Queue (FIFO)
+### Fila de Solicitação Pendente (FIFO)
 
-When you call `session.capture()`, `session.captureBurst()`, or `session.setRepeatingRequest()`, the request does not go to the HAL immediately. Instead, it lands in the **Pending Request Queue** — a FIFO (First-In, First-Out) queue managed by the Camera2 framework.
+Quando você chama `session.capture()`, `session.captureBurst()` ou `session.setRepeatingRequest()`, a solicitação não vai para o HAL imediatamente. Em vez disso, ela aterrissa na **Fila de Solicitação Pendente** — uma fila FIFO (First-In, First-Out) gerenciada pelo framework Camera2.
 
-Think of this as the "waiting room." Requests sit here until the HAL has capacity to accept a new request for processing.
+Pense nisso como a "sala de espera". As solicitações ficam aqui até que o HAL tenha capacidade para aceitar uma nova solicitação para processamento.
 
-Key properties:
-- **FIFO ordering** — Requests are processed in the exact order submitted.
-- **Burst atomicity** — All frames in a `captureBurst()` are enqueued contiguously and processed without interleaving repeating requests.
-- **Priority override** — One-shot/burst requests jump *ahead* of the repeating request in the queue (the repeating request is re-enqueued automatically after the one-shot completes).
-- **Bounded** — The queue has a finite depth (typically 4-8 requests); overflow triggers errors.
+Propriedades principais:
+- **Ordenação FIFO** — As solicitações são processadas na ordem exata em que foram enviadas.
+- **Atomicidade do burst** — Todos os quadros em um `captureBurst()` são enfileirados de forma contígua e processados sem intercalação com solicitações repetidas.
+- **Sobreposição de prioridade** — Solicitações de disparo único/sequencial (burst) saltam para a **frente** da solicitação repetida na fila (a solicitação repetida é enfileirada novamente de forma automática após a conclusão do disparo único).
+- **Limitada** — A fila tem uma profundidade finita (tipicamente de 4 a 8 solicitações); o estouro dispara erros.
 
-### In-Flight Queue
+### Fila Em Voo (In-Flight)
 
-When the HAL dequeues a request from the Pending Queue and begins sensor readout / ISP processing, the request moves to the **In-Flight Queue**. This queue contains all requests currently being processed by the hardware.
+Quando o HAL retira uma solicitação da Fila Pendente e inicia a leitura do sensor / processamento do ISP, a solicitação move-se para a **Fila Em Voo**. Esta fila contém todas as solicitações que estão sendo processadas pelo hardware no momento.
 
-The depth of the In-Flight Queue (`CameraCharacteristics.REQUEST_PIPELINE_MAX_DEPTH`) tells you how many frames the hardware works on simultaneously. On typical FULL devices, this is 3–4 frames deep, meaning: while frame N is being exposed, frame N-1 is being processed by the ISP, frame N-2 is being written to memory, and frame N-3 is being returned to the app. This is how Camera2 achieves 30+ fps despite each frame taking ~100ms end-to-end.
+A profundidade da Fila Em Voo (`CameraCharacteristics.REQUEST_PIPELINE_MAX_DEPTH`) informa quantos quadros o hardware trabalha simultaneamente. Em dispositivos FULL típicos, isso tem uma profundidade de 3 a 4 quadros, o que significa: enquanto o quadro N está sendo exposto, o quadro N-1 está sendo processado pelo ISP, o quadro N-2 está sendo gravado na memória e o quadro N-3 está sendo retornado para o aplicativo. É assim que o Camera2 alcança 30+ fps, apesar de cada quadro levar ~100ms de ponta a ponta.
 
 ```mermaid
 flowchart TB
-    subgraph APP ["Application Layer"]
+    subgraph APP ["Camada da Aplicação"]
         direction LR
         A1["session.capture(request)"]
         A2["session.setRepeatingRequest(request)"]
         A3["session.captureBurst([r1,r2,r3])"]
     end
 
-    subgraph FW ["Camera2 Framework Queues"]
+    subgraph FW ["Filas do Framework Camera2"]
         direction TB
-        PQ["📦 Pending Request Queue<br/>(FIFO, waiting for HAL)"]:::queue
-        IFQ["🔄 In-Flight Queue<br/>(N frames being processed)"]:::queue
-        PQ -->|HAL ready| IFQ
+        PQ["📦 Fila de Solicitação Pendente<br/>(FIFO, aguardando pelo HAL)"]:::queue
+        IFQ["🔄 Fila Em Voo<br/>(N quadros sendo processados)"]:::queue
+        PQ -->|HAL pronto| IFQ
     end
 
-    subgraph HAL ["HAL3 Hardware Layer"]
+    subgraph HAL ["Camada de Hardware HAL3"]
         direction LR
-        S["📷 Sensor<br/>Exposure & Readout"]
-        I["⚙️ ISP Pipeline<br/>Demosaic, NR, Sharpen, Color"]
-        O["💾 Output<br/>To Surfaces"]
+        S["📷 Sensor<br/>Exposição e Leitura"]
+        I["⚙️ Pipeline ISP<br/>Demosaic, NR, Nitidez, Cor"]
+        O["💾 Saída<br/>Para Surfaces"]
         S --> I --> O
     end
 
-    subgraph OUTPUTS ["Outputs"]
+    subgraph OUTPUTS ["Saídas"]
         direction LR
-        PREV["🖼️ Preview Surface"]
-        JPEG["🖼️ JPEG ImageReader"]
-        RAW["🖼️ RAW ImageReader"]
-        RES["📋 CaptureResult<br/>(to CaptureCallback)"]
+        PREV["🖼️ Superfície de Pré-visualização"]
+        JPEG["🖼️ ImageReader JPEG"]
+        RAW["🖼️ ImageReader RAW"]
+        RES["📋 CaptureResult<br/>(para CaptureCallback)"]
     end
 
     A1 --> PQ
@@ -203,52 +203,52 @@ flowchart TB
     classDef hal fill:#e8f5e9,stroke:#2e7d32;
 ```
 
-## 10.4 Result Callbacks: The CaptureCallback Lifecycle
+## 10.4 Callbacks de Resultado: O Ciclo de Vida do CaptureCallback
 
-Results come back through `CameraCaptureSession.CaptureCallback`. The HAL can return results in multiple stages, giving you early access to partial metadata before the full frame is ready.
+Os resultados retornam através do `CameraCaptureSession.CaptureCallback`. O HAL pode retornar resultados em múltiplos estágios, oferecendo acesso antecipado a metadados parciais antes que o quadro completo esteja pronto.
 
-### The Four Callback Methods
+### Os Quatro Métodos de Callback
 
-| Method | When Called | Contains | Use Case |
+| Método | Quando é Chamado | Contém | Caso de Uso |
 |--------|------------|----------|----------|
-| `onCaptureStarted` | Sensor *begins* exposure for this frame | Minimal info: frame number, timestamp | Exact timing synchronization |
-| `onCaptureProgressed` | ISP partially processed the frame | PartialCaptureResult — some metadata fields ready | Early AE/AF state updates |
-| `onCaptureCompleted` | Full frame done, all buffers delivered | TotalCaptureResult — all fields | Final metadata logging |
-| `onCaptureFailed` | Frame was dropped / error occurred | CaptureFailure — error code, reason | Error recovery |
+| `onCaptureStarted` | O sensor *inicia* a exposição para este quadro | Info mínima: número do quadro, timestamp | Sincronização exata de tempo |
+| `onCaptureProgressed` | O ISP processou parcialmente o quadro | PartialCaptureResult — alguns campos de metadados prontos | Atualizações antecipadas de estado AE/AF |
+| `onCaptureCompleted` | Quadro completo concluído, todos os buffers entregues | TotalCaptureResult — todos os campos | Log de metadados final |
+| `onCaptureFailed` | O quadro foi descartado / ocorreu um erro | CaptureFailure — código de erro, razão | Recuperação de erros |
 
-### Partial vs. Total Results
+### Resultados Parciais vs. Totais
 
-A `PartialCaptureResult` is returned when the ISP has computed *some* metadata fields but hasn't finished the full pipeline. A `TotalCaptureResult` is returned when everything is done.
+Um `PartialCaptureResult` é retornado quando o ISP computou *alguns* campos de metadados, mas ainda não terminou o pipeline completo. Uma `TotalCaptureResult` é retornada quando tudo está concluído.
 
 ```mermaid
 sequenceDiagram
-    participant App as Application
+    participant App as Aplicação
     participant FR as Framework
-    participant HAL as HAL3 Hardware
+    participant HAL as Hardware HAL3
 
     App->>FR: session.capture(request, callback, handler)
-    FR->>HAL: Submit to HAL
-    HAL->>HAL: Sensor start exposure
+    FR->>HAL: Enviar para o HAL
+    HAL->>HAL: Sensor inicia exposição
     
     HAL-->>FR: CaptureStarted (timestamp)
     FR-->>App: onCaptureStarted(session, request, timestamp, frameNumber)
-    Note over App: Sensor now exposing frame N
+    Note over App: Sensor agora expondo quadro N
 
-    HAL->>HAL: Readout + partial ISP processing
-    HAL-->>FR: PartialResult (early AE/AF)
+    HAL->>HAL: Leitura + processamento parcial do ISP
+    HAL-->>FR: PartialResult (AE/AF antecipados)
     FR-->>App: onCaptureProgressed(session, request, partialResult)
-    Note over App: Early metadata available!<br/>Can update UI now
+    Note over App: Metadados iniciais disponíveis!<br/>Pode atualizar a UI agora
 
-    HAL->>HAL: Final ISP processing + buffer output
-    HAL-->>FR: Buffers written to Surfaces
+    HAL->>HAL: Processamento final do ISP + saída do buffer
+    HAL-->>FR: Buffers gravados nas Surfaces
     HAL-->>FR: TotalCaptureResult
     FR-->>App: onCaptureCompleted(session, request, totalResult)
-    Note over App: Full metadata + image ready
+    Note over App: Metadados completos + imagem pronta
 
-    alt Hardware error or buffer dropped
+    alt Erro de hardware ou buffer descartado
         HAL-->>FR: CaptureFailure
         FR-->>App: onCaptureFailed(session, request, failure)
-        Note over App: Handle dropped frame
+        Note over App: Tratar quadro descartado
     end
 ```
 
@@ -261,7 +261,7 @@ val fullPipelineCallback = object : CameraCaptureSession.CaptureCallback() {
         frameNumber: Long
     ) {
         super.onCaptureStarted(session, request, timestamp, frameNumber)
-        Log.d("Pipeline", "Frame #$frameNumber started exposure @ ${timestamp / 1_000_000}ms")
+        Log.d("Pipeline", "Quadro #$frameNumber iniciou exposição @ ${timestamp / 1_000_000}ms")
     }
 
     override fun onCaptureProgressed(
@@ -272,7 +272,7 @@ val fullPipelineCallback = object : CameraCaptureSession.CaptureCallback() {
         super.onCaptureProgressed(session, request, partialResult)
         val aeState = partialResult.get(CaptureResult.CONTROL_AE_STATE)
         val afState = partialResult.get(CaptureResult.CONTROL_AF_STATE)
-        Log.v("Pipeline", "Partial: AE=$aeState AF=$afState")
+        Log.v("Pipeline", "Parcial: AE=$aeState AF=$afState")
     }
 
     override fun onCaptureCompleted(
@@ -282,7 +282,7 @@ val fullPipelineCallback = object : CameraCaptureSession.CaptureCallback() {
     ) {
         super.onCaptureCompleted(session, request, result)
         val totalFrames = result.frameNumber
-        Log.d("Pipeline", "Frame #$totalFrames completed fully")
+        Log.d("Pipeline", "Quadro #$totalFrames concluído totalmente")
     }
 
     override fun onCaptureFailed(
@@ -292,39 +292,39 @@ val fullPipelineCallback = object : CameraCaptureSession.CaptureCallback() {
     ) {
         super.onCaptureFailed(session, request, failure)
         val reason = when (failure.reason) {
-            CaptureFailure.REASON_ERROR -> "Internal error"
-            CaptureFailure.REASON_FLUSHED -> "Flushed by abortCaptures()"
-            else -> "Unknown (${failure.reason})"
+            CaptureFailure.REASON_ERROR -> "Erro interno"
+            CaptureFailure.REASON_FLUSHED -> "Descartado por abortCaptures()"
+            else -> "Desconhecido (${failure.reason})"
         }
-        Log.e("Pipeline", "Frame #${failure.frameNumber} FAILED: $reason. Dropped: ${failure.wasImageCaptured()}")
+        Log.e("Pipeline", "Quadro #${failure.frameNumber} FALHOU: $reason. Descartado: ${failure.wasImageCaptured()}")
     }
 }
 ```
 
-## 10.5 Pipeline Internals: Stateless, Sequential, Async, Multi-Output
+## 10.5 Internos do Pipeline: Sem Estado, Sequencial, Assíncrono, Multi-Saída
 
-The HAL3 pipeline model that Camera2 exposes has four defining properties. Internalize these and most "weird" Camera2 behavior will suddenly make sense.
+O modelo de pipeline HAL3 que o Camera2 expõe possui quatro propriedades definidoras. Internalize-as e a maior parte do comportamento "estranho" do Camera2 fará sentido subitamente.
 
-### 1. Statelessness
+### 1. Ausência de Estado (Statelessness)
 
-The hardware has **no memory between requests**. Every `CaptureRequest` must be self-contained — it includes *every setting*, not just the ones you changed from the previous frame.
+O hardware **não tem memória entre as solicitações**. Cada `CaptureRequest` deve ser autocontida — ela inclui *cada configuração*, não apenas as que você alterou em relação ao quadro anterior.
 
-This means:
-- If you set `SENSOR_EXPOSURE_TIME` on frame N but *omit* it on frame N+1, it reverts to the template default.
-- The repeating request is not a "set of overrides" — it is regenerated and re-submitted in full every frame by the framework.
-- There is no "set and forget" at the HAL level.
+Isso significa que:
+- Se você definir `SENSOR_EXPOSURE_TIME` no quadro N mas *omitir* no quadro N+1, ele voltará para o padrão do modelo (template).
+- A solicitação repetida não é um "conjunto de substituições" — ela é regenerada e reenviada na íntegra a cada quadro pelo framework.
+- Não existe um "definir e esquecer" no nível do HAL.
 
 ```kotlin
-// 🔴 WRONG: Expecting settings to persist
-session.setRepeatingRequest(requestWithExposure10ms, callback, handler)
-// Later: only change AF trigger, forget to re-set exposure
+// 🔴 ERRADO: Esperando que as configurações persistam
+session.setRepeatingRequest(requestComExposicao10ms, callback, handler)
+// Mais tarde: apenas alterar o gatilho AF, esquecer de redefinir a exposição
 val triggerBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
 triggerBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START)
 triggerBuilder.addTarget(previewSurface)
 session.capture(triggerBuilder.build(), callback, handler)
-// 🐛 Exposure reverts to TEMPLATE_PREVIEW default for this one-shot frame!
+// 🐛 A exposição volta para o padrão do TEMPLATE_PREVIEW para este quadro de disparo único!
 
-// ✅ CORRECT: Every request is self-contained
+// ✅ CORRETO: Cada solicitação é autocontida
 val triggerBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
 triggerBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, 10_000_000L)
 triggerBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START)
@@ -332,38 +332,38 @@ triggerBuilder.addTarget(previewSurface)
 session.capture(triggerBuilder.build(), callback, handler)
 ```
 
-### 2. Sequential Processing
+### 2. Processamento Sequencial
 
-Within a single logical camera stream, requests are processed **one at a time in FIFO order**. There is no reordering, no parallel request evaluation. If frame 50 is behind frame 49 in the queue, frame 50 waits for frame 49 to finish exposure even if frame 50 would be "faster" to process.
+Dentro de um único fluxo de câmera lógica, as solicitações são processadas **uma por uma na ordem FIFO**. Não há reordenação, nem avaliação paralela de solicitações. Se o quadro 50 estiver atrás do quadro 49 na fila, o quadro 50 espera o quadro 49 terminar a exposição, mesmo que o quadro 50 fosse "mais rápido" para processar.
 
-This is why burst capture produces contiguous, gap-free frames: the burst's N requests are guaranteed to execute back-to-back.
+É por isso que a captura sequencial produz quadros contíguos e sem lacunas: as N solicitações do burst têm a execução garantida em sequência.
 
-### 3. Asynchronous Results
+### 3. Resultados Assíncronos
 
-The thread that submits a request is **never** the thread that receives the result. Results are delivered on the `Handler` thread you provided (or on a binder thread if you passed `null`).
+A thread que envia uma solicitação **nunca** é a thread que recebe o resultado. Os resultados são entregues na thread do `Handler` que você forneceu (ou em uma thread de binder se você passou `null`).
 
-Practical consequence: **never access shared mutable state from the callback without synchronization**. A common bug is reading/writing `latestExposure` from both the capture button click and the callback.
+Consequência prática: **nunca acesse estado mutável compartilhado a partir do callback sem sincronização**. Um bug comum é ler/escrever `latestExposure` tanto no clique do botão de captura quanto no callback.
 
-### 4. Multiple Outputs Per Request
+### 4. Múltiplas Saídas por Solicitação
 
-One request → many outputs. A single `CaptureRequest` can target 2, 3, or even 4+ `Surface` targets simultaneously:
+Uma solicitação → muitas saídas. Uma única `CaptureRequest` pode mirar 2, 3 ou até 4+ alvos `Surface` simultaneamente:
 
-- **Preview SurfaceTexture** (for display)
-- **JPEG ImageReader** (for still capture)
-- **RAW ImageReader** (for DNG)
-- **MediaRecorder Surface** (for video encoding)
-- **Allocation Surface** (for RenderScript/ML processing)
+- **SurfaceTexture de Pré-visualização** (para exibição)
+- **ImageReader JPEG** (para captura estática)
+- **ImageReader RAW** (para DNG)
+- **Surface do MediaRecorder** (para codificação de vídeo)
+- **Surface de Alocação** (para processamento RenderScript/ML)
 
-The HAL is responsible for routing the single sensor readout through multiple ISP branches to produce each output format. You don't duplicate the capture; you declare targets and the hardware fans out.
+O HAL é responsável por rotear a leitura de sensor única através de múltiplos ramos do ISP para produzir cada formato de saída. Você não duplica a captura; você declara alvos e o hardware distribui.
 
 ```mermaid
 flowchart LR
-    R["Single CaptureRequest<br/>(1 frame config)"]
-    HAL["HAL3 ISP Processing (1 pass)"]
-    S1["Preview 1080p<br/>→ TextureView"]
+    R["Única CaptureRequest<br/>(config de 1 quadro)"]
+    HAL["Processamento ISP HAL3 (1 passagem)"]
+    S1["Pré-visualização 1080p<br/>→ TextureView"]
     S2["JPEG 12MP<br/>→ ImageReader"]
     S3["RAW 12MP<br/>→ ImageReader"]
-    S4["Video 4K<br/>→ MediaRecorder"]
+    S4["Vídeo 4K<br/>→ MediaRecorder"]
     RESULT["CaptureResult<br/>→ CaptureCallback"]
 
     R --> HAL
@@ -374,70 +374,70 @@ flowchart LR
     HAL --> RESULT
 ```
 
-## 10.6 End-to-End: Tracing One Frame
+## 10.6 Ponta a Ponta: Rastreando um Quadro
 
-Let's trace a single JPEG capture request through the entire pipeline to tie everything together:
+Vamos rastrear uma única solicitação de captura JPEG por todo o pipeline para amarrar tudo:
 
 ```mermaid
 sequenceDiagram
-    participant User as User Thread
-    participant Cam as Camera2 Framework
-    participant Pend as Pending Queue
-    participant Inflight as In-Flight Queue
-    participant Sensor as Sensor HW
-    participant ISP as ISP Pipeline
-    participant Buffers as Buffer Allocator
-    participant CB as CaptureCallback Thread
+    participant User as Thread do Usuário
+    participant Cam as Framework Camera2
+    participant Pend as Fila Pendente
+    participant Inflight as Fila Em Voo
+    participant Sensor as Hardware do Sensor
+    participant ISP as Pipeline ISP
+    participant Buffers as Alocador de Buffer
+    participant CB as Thread do CaptureCallback
 
     User->>Cam: captureSession.capture(jpegRequest, callback, bgHandler)
-    Cam->>Pend: Enqueue jpegRequest (FIFO)
-    Note over Pend: Sits behind any earlier burst/repeating requests
+    Cam->>Pend: Enfileira jpegRequest (FIFO)
+    Note over Pend: Senta atrás de quaisquer solicitações anteriores de burst/repetição
 
-    Cam->>Inflight: Move to In-Flight when HAL slot free
-    Inflight->>Sensor: Apply request settings (exposure, ISO, focus)
-    Sensor->>Sensor: Expose frame (10ms)
+    Cam->>Inflight: Move para Em Voo quando o slot do HAL estiver livre
+    Inflight->>Sensor: Aplica config da solicitação (exposição, ISO, foco)
+    Sensor->>Sensor: Expõe o quadro (10ms)
     Sensor-->>Cam: onCaptureStarted (timestamp N)
     Cam-->>CB: onCaptureStarted(timestamp=N)
 
-    Sensor->>ISP: Read out raw pixels (row-by-row)
-    ISP->>ISP: Demosaic → NR → Sharpen → Color Correction
-    ISP-->>Cam: PartialCaptureResult (AE state now known)
-    Cam-->>CB: onCaptureProgressed(partial)
-    Note over CB: Can update UI with AE_CONVERGED now
+    Sensor->>ISP: Lê os pixels crus (linha por linha)
+    ISP->>ISP: Demosaic → NR → Nitidez → Correção de Cor
+    ISP-->>Cam: PartialCaptureResult (estado AE agora conhecido)
+    Cam-->>CB: onCaptureProgressed(parcial)
+    Note over CB: Pode atualizar a UI com AE_CONVERGED agora
 
-    ISP->>Buffers: Write processed pixels to JPEG Surface buffer
-    Buffers->>Buffers: Compress to JPEG
-    ISP-->>Cam: TotalCaptureResult + buffers ready
+    ISP->>Buffers: Grava pixels processados no buffer da Surface JPEG
+    Buffers->>Buffers: Comprime para JPEG
+    ISP-->>Cam: TotalCaptureResult + buffers prontos
     Cam-->>CB: onCaptureCompleted(totalResult)
-    Note over CB: All metadata fields available
-    Cam-->>User: ImageReader.onImageAvailable() fired
-    Note over User: JPEG buffer now consumable via acquireLatestImage()
+    Note over CB: Todos os campos de metadados disponíveis
+    Cam-->>User: ImageReader.onImageAvailable() disparado
+    Note over User: Buffer JPEG agora consumível via acquireLatestImage()
 ```
 
-## 10.7 Seeing the Pipeline in Action
+## 10.7 Vendo o Pipeline em Ação
 
-The Android Camera Parameters app ([GitHub](https://github.com/zoozooll/AndroidCameraParameters), [Play Store](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)) includes a **Pipeline Visualizer** debug view that overlays the current Pending Queue depth, In-Flight Queue depth, and per-frame timestamps. Open the app, enable **Developer Mode** in settings, select a camera, and switch to the **Pipeline** tab to see:
+O aplicativo Android Camera Parameters ([GitHub](https://github.com/zoozooll/AndroidCameraParameters), [Play Store](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)) inclui uma visualização de depuração do **Pipeline Visualizer** que sobrepõe a profundidade atual da Fila Pendente, a profundidade da Fila Em Voo e os timestamps por quadro. Abra o aplicativo, ative o **Modo Desenvolvedor** nas configurações, selecione uma câmera e mude para a aba **Pipeline** para ver:
 
-- How many requests are queued vs. in-flight
-- Per-frame latency from started → completed
-- Partial result count per frame (how many `onCaptureProgressed` calls fire)
-- Any dropped frames with failure reasons
+- Quantas solicitações estão enfileiradas vs. em voo.
+- Latência por quadro desde o início → conclusão.
+- Contagem de resultados parciais por quadro (quantas chamadas `onCaptureProgressed` disparam).
+- Quaisquer quadros descartados com as razões da falha.
 
-This tab is the single best way to develop intuition for the concepts in this chapter.
+Esta aba é a melhor maneira individual de desenvolver a intuição para os conceitos deste capítulo.
 
-## 10.8 Summary
+## 10.8 Resumo
 
-| Concept | Key Takeaway |
+| Conceito | Conclusão Principal |
 |---------|-------------|
-| **CaptureRequest** | Immutable, per-frame blueprint. Build via Builder. Contains ALL settings (no persistence). |
-| **CaptureResult** | Metadata only (no pixels). Ground truth for what hardware *actually did*. Check AE/AF state, exposure, crop. |
-| **Pending Queue** | FIFO waiting room. Bursts stay contiguous. One-shot jumps ahead of repeating. |
-| **In-Flight Queue** | Requests currently being processed. Depth = pipeline max depth. 3-4 frames typical on FULL devices. |
-| **CaptureCallback** | Four phases: started → progressed → completed (or failed). Partial vs total results. |
-| **Statelessness** | Hardware has no memory. Every request must include every setting you care about. |
-| **Sequential + Async** | FIFO order guaranteed. Callback on different thread from submission. |
-| **Multi-Output** | One request → many Surfaces (preview + JPEG + RAW + video all at once). |
+| **CaptureRequest** | Projeto imutável por quadro. Construa via Builder. Contém TODAS as configurações (sem persistência). |
+| **CaptureResult** | Apenas metadados (sem pixels). Verdade absoluta sobre o que o hardware *realmente fez*. Verifique o estado AE/AF, exposição, corte. |
+| **Fila Pendente** | Sala de espera FIFO. Bursts permanecem contíguos. Disparo único pula para a frente da repetição. |
+| **Fila Em Voo** | Solicitações sendo processadas no momento. Profundidade = prof. máx do pipeline. 3-4 quadros típicos em dispositivos FULL. |
+| **CaptureCallback** | Quatro fases: started → progressed → completed (ou failed). Resultados parciais vs. totais. |
+| **Ausência de Estado**| O hardware não tem memória. Cada solicitação deve incluir cada configuração de seu interesse. |
+| **Sequencial + Assíncrono** | Ordem FIFO garantida. Callback em thread diferente da de envio. |
+| **Multi-Saída** | Uma solicitação → muitas Surfaces (pré-visualização + JPEG + RAW + vídeo de uma só vez). |
 
-## What's Next
+## O Que Vem a Seguir
 
-In [Chapter 11: Capture Types](capture-types.md), we'll look at the three ways to submit requests to this pipeline — one-shot, burst, and repeating — and when to use each. We'll also explore the built-in templates (`TEMPLATE_PREVIEW`, `TEMPLATE_STILL_CAPTURE`, etc.) that preconfigure reasonable defaults for common use cases.
+No [Capítulo 11: Tipos de Captura](capture-types.md), veremos as três maneiras de enviar solicitações para este pipeline — disparo único, sequencial (burst) e repetida — e quando usar cada uma. Também exploraremos os modelos (templates) integrados (`TEMPLATE_PREVIEW`, `TEMPLATE_STILL_CAPTURE`, etc.) que pré-configuram padrões razoáveis para casos de uso comuns.

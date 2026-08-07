@@ -1,30 +1,30 @@
-﻿---
+---
 sidebar_position: 11
-title: "Chapter 11: Capture Types"
-description: Learn the three Camera2 capture types — one-shot (capture), burst (captureBurst), and repeating (setRepeatingRequest) — plus built-in templates (TEMPLATE_PREVIEW, TEMPLATE_STILL_CAPTURE, TEMPLATE_RECORD, and more).
-keywords: [Camera2 capture types, one-shot capture, burst capture, repeating request, captureBurst, setRepeatingRequest, TEMPLATE_PREVIEW, TEMPLATE_STILL_CAPTURE, camera templates]
+title: "第 11 章：捕获类型"
+description: 学习 Camera2 的三种捕获类型 — 单次拍摄 (capture)、连拍 (captureBurst) 和重复请求 (setRepeatingRequest) — 以及内置模板 (TEMPLATE_PREVIEW、TEMPLATE_STILL_CAPTURE、TEMPLATE_RECORD 等)。
+keywords: [Camera2 捕获类型, 单次捕获, 连拍捕获, 重复请求, captureBurst, setRepeatingRequest, TEMPLATE_PREVIEW, TEMPLATE_STILL_CAPTURE, 相机模板]
 ---
 
-## 11.1 Three Ways to Feed the Pipeline
+## 11.1 馈送管线的三种方式
 
-In [Chapter 10](the-camera2-pipeline.md) you saw how requests travel through the Camera2 pipeline: from the Pending Queue to the In-Flight Queue to the HAL to your callback and output surfaces. But *how you submit* those requests matters enormously. Camera2 gives you three submission mechanisms, each with fundamentally different behavior:
+在[第 10 章](the-camera2-pipeline.md)中，你已经看到了请求如何流经 Camera2 管线：从挂起队列到在途队列，到 HAL，再到你的回调和输出 Surface。但是，*如何提交*这些请求至关重要。Camera2 提供了三种提交机制，每种机制的行为都有根本不同：
 
-1. **One-shot** (`capture()`) — execute a single request once
-2. **Burst** (`captureBurst()`) — execute a list of requests contiguously, back-to-back
-3. **Repeating** (`setRepeatingRequest()`) — execute the same request continuously forever (or until interrupted)
+1. **单次 (One-shot)** (`capture()`) — 执行一次单个请求
+2. **连拍 (Burst)** (`captureBurst()`) — 连续执行一组请求，中间无间隔
+3. **重复 (Repeating)** (`setRepeatingRequest()`) — 永久（或直到被中断）连续执行同一个请求
 
-On top of those three submission modes, the framework provides six **capture templates** that pre-populate a `CaptureRequest.Builder` with sensible defaults for common use cases (preview, still capture, video recording, zero-shutter-lag, manual control, etc.).
+除了这三种提交模式外，框架还提供了六个**捕获模板**，它们为常见用例（预览、静态捕获、视频录制、零快门延迟、手动控制等）预先填充了 `CaptureRequest.Builder` 的合理默认值。
 
-By the end of this chapter you will know exactly when to use each capture type and template — including why preview always uses repeating requests, why burst is the only way to do exposure bracketing, and why still photos use one-shot even when a preview is running.
+本章结束时，你将准确了解何时使用每种捕获类型和模板——包括为什么预览始终使用重复请求，为什么连拍是实现曝光包围的唯一方法，以及为什么即使在预览运行时静态照片也使用单次请求。
 
-The Android Camera Parameters app ([GitHub](https://github.com/zoozooll/AndroidCameraParameters), [Play Store](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)) demonstrates all three capture types in its **Capture Demo** tab. Flip between "Preview (Repeating)," "Single Photo (One-Shot)," and "Burst (3 Frames)" modes to see the callback behavior and timing differences live on your device.
+**Android Camera Parameters** 应用（[GitHub](https://github.com/zoozooll/AndroidCameraParameters)，[Play 商店](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)）在 **Capture Demo (捕获演示)** 选项卡中演示了所有三种捕获类型。在 "Preview (Repeating)"、"Single Photo (One-Shot)" 和 "Burst (3 Frames)" 模式之间切换，即可在你自己的设备上实时观察回调行为和时序差异。
 
-## 11.2 One-Shot: capture()
+## 11.2 单次：capture()
 
-The simplest submission mode is **one-shot capture** via `CameraCaptureSession.capture()`. It does exactly what it says on the tin: submits a single `CaptureRequest` to the pipeline, executes it exactly once, and is done.
+最简单的提交模式是通过 `CameraCaptureSession.capture()` 进行的**单次捕获 (one-shot capture)**。它正如其名：向管线提交一个 `CaptureRequest`，执行且仅执行一次。
 
 ```kotlin
-// One-shot: capture a single still frame to JPEG ImageReader
+// 单次：捕获单个静态帧至 JPEG ImageReader
 fun captureStillPhoto() {
     val builder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
     builder.addTarget(jpegReader.surface)
@@ -41,92 +41,92 @@ fun captureStillPhoto() {
             result: TotalCaptureResult
         ) {
             super.onCaptureCompleted(session, request, result)
-            Log.d("Capture", "One-shot photo done. Frame #${result.frameNumber}")
+            Log.d("Capture", "单次照片完成。帧号 #${result.frameNumber}")
         }
     }, backgroundHandler)
 }
 ```
 
-### When to Use One-Shot
+### 何时使用单次模式
 
-| Use Case | Why One-Shot? |
+| 用例 | 为什么用单次？ |
 |----------|--------------|
-| Single still photograph | Execute exactly once per shutter click |
-| Single AF/AE trigger | Fire `CONTROL_AF_TRIGGER_START` for one tap-to-focus event |
-| Snapshot during video | Grab one high-res frame while a repeating video request is active |
-| Capture a single RAW frame | RAW + JPEG dual capture for one photo |
+| 单次静态照片 | 每点击一次快门执行一次 |
+| 单次 AF/AE 触发 | 针对一次点击对焦事件发射 `CONTROL_AF_TRIGGER_START` |
+| 视频期间抓拍 | 在重复视频请求活动期间抓取一帧高分辨率帧 |
+| 捕获单帧 RAW | 针对一张照片同时捕获 RAW + JPEG |
 
-### How One-Shot Interacts with the Repeating Preview
+### 单次捕获如何与重复预览交互
 
-A critical design pattern in Camera2 is: **preview runs as a repeating request, and still photos are injected as one-shot requests**. The one-shot jumps ahead of the repeating request in the Pending Queue (as we discussed in Chapter 10's queue model), so it executes immediately. After the one-shot completes, the framework automatically resumes the repeating preview request — you don't need to resubmit it.
+Camera2 中的一个关键设计模式是：**预览作为重复请求运行，而静态照片作为单次请求注入**。正如我们在第 10 章的队列模型中所讨论的，单次请求会跳到挂起队列中重复请求的前面，因此它会立即执行。单次请求完成后，框架会自动恢复重复的预览请求——你无需重新提交。
 
 ```mermaid
 sequenceDiagram
-    participant App
-    participant Queue as Pending Queue
+    participant App as 应用
+    participant Queue as 挂起队列
     participant HAL
-    participant Prev as Preview Callback
-    participant Photo as Photo Callback
+    participant Prev as 预览回调
+    participant Photo as 照片回调
 
     App->>Queue: setRepeatingRequest(PREVIEW_REQ)
-    loop Continuous preview
+    loop 连续预览
         Queue->>HAL: PREVIEW
-        HAL-->>Prev: onCaptureCompleted(preview result)
-        Note right of Prev: Frame 100, 101, 102...
+        HAL-->>Prev: onCaptureCompleted(预览结果)
+        Note right of Prev: 帧 100, 101, 102...
     end
 
-    Note over App: User taps shutter button
+    Note over App: 用户点击快门按钮
     App->>Queue: capture(STILL_PHOTO_REQ)
-    Note over Queue: STILL_PHOTO jumps to HEAD of queue<br/>Repeating PREVIEW resumes after
+    Note over Queue: STILL_PHOTO 跳至队列头部<br/>重复的 PREVIEW 随后恢复
 
-    Queue->>HAL: STILL_PHOTO (one-shot)
-    HAL-->>Photo: onCaptureCompleted(photo result)
-    Note right of Photo: Frame 103 — JPEG written
+    Queue->>HAL: STILL_PHOTO (单次)
+    HAL-->>Photo: onCaptureCompleted(照片结果)
+    Note right of Photo: 帧 103 — 已写入 JPEG
 
-    loop Preview auto-resumes (no app code needed)
+    loop 预览自动恢复 (无需应用代码)
         Queue->>HAL: PREVIEW
-        HAL-->>Prev: onCaptureCompleted(preview result)
-        Note right of Prev: Frame 104, 105...
+        HAL-->>Prev: onCaptureCompleted(预览结果)
+        Note right of Prev: 帧 104, 105...
     end
 ```
 
 :::tip
-This auto-resume behavior is baked into the Camera2 framework. You never need to manually "restart preview" after a one-shot capture — the framework re-enqueues the repeating request for you.
+这种自动恢复行为是集成在 Camera2 框架中的。在单次捕获后，你永远不需要手动"重新启动预览"——框架会为你重新排队重复请求。
 :::
 
-### One-Shot Execution Flow
+### 单次执行流程
 
 ```mermaid
 flowchart LR
-    A["App calls session.capture(req)"] --> B["Request enqueued at HEAD of Pending Queue"]
-    B --> C["Bypasses repeating requests (highest priority)"]
-    C --> D["HAL processes single frame"]
-    D --> E["Image buffers delivered to target Surfaces"]
-    E --> F["onCaptureCompleted fires ONCE"]
-    F --> G["Framework auto-resumes repeating request (if set)"]
+    A["应用调用 session.capture(req)"] --> B["请求排入挂起队列头部"]
+    B --> C["绕过重复请求 (最高优先级)"]
+    C --> D["HAL 处理单帧"]
+    D --> E["图像缓冲区交付至目标 Surface"]
+    E --> F["onCaptureCompleted 触发一次"]
+    F --> G["框架自动恢复重复请求 (如果设置了)"]
 ```
 
-## 11.3 Burst: captureBurst()
+## 11.3 连拍：captureBurst()
 
-Where `capture()` submits one request, `captureBurst()` submits a **`List&lt;CaptureRequest&gt;`** and guarantees that all N frames in the list execute **contiguously and in order, with no interleaving frames from other sources (including the repeating request)**.
+`capture()` 提交一个请求，而 `captureBurst()` 提交一个 **`List<CaptureRequest>`**，并保证列表中所有的 N 帧**连续且按顺序执行，中间不会穿插来自其他源（包括重复请求）的帧**。
 
-This atomic, gap-free guarantee is what makes burst capture essential for:
+这种原子、无间隙的保证使得连拍捕获对于以下场景至关重要：
 
-- **Exposure bracketing** — Capture 3-5 frames at ±1EV, ±2EV, then merge them into HDR
-- **Focus bracketing** — Sweep through focus distances, then stack for depth-of-field effects
-- **Action / motion capture** — Shoot 10-30 frames of a fast-moving subject, then pick the sharpest
-- **Slow-motion video (high-speed)** — `createHighSpeedRequestList()` + constrained high-speed burst
-- **3A convergence sampling** — Fire AF/AE trigger, then burst until converged
+- **曝光包围 (Exposure bracketing)** — 在 ±1EV、±2EV 处捕获 3-5 帧，然后将其合并为 HDR
+- **对焦包围 (Focus bracketing)** — 扫描对焦距离，然后进行景深合成
+- **动作 / 运动捕捉** — 拍摄 10-30 帧快速移动的主体，然后挑选最清晰的一帧
+- **慢动作视频 (高速)** — `createHighSpeedRequestList()` + 受限高速连拍
+- **3A 收敛采样** — 触发 AF/AE，然后连拍直至收敛
 
 ```kotlin
-// Burst: 3-frame exposure bracketing (-2EV, 0EV, +2EV)
+// 连拍：3 帧曝光包围 (-2EV, 0EV, +2EV)
 fun captureExposureBracket() {
     val baseIso = 100
-    val baseExposure = 10_000_000L  // 10ms = "0EV" baseline
+    val baseExposure = 10_000_000L  // 10ms = "0EV" 基准
 
     val burstList: MutableList<CaptureRequest> = mutableListOf()
 
-    // Frame 0: -2EV (4x shorter exposure = darker)
+    // 帧 0: -2EV (4x 短曝光 = 更暗)
     burstList += cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE).apply {
         addTarget(jpegReader.surface)
         set(CaptureRequest.SENSOR_SENSITIVITY, baseIso)
@@ -134,7 +134,7 @@ fun captureExposureBracket() {
         set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
     }.build()
 
-    // Frame 1: 0EV (correct exposure)
+    // 帧 1: 0EV (正确曝光)
     burstList += cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE).apply {
         addTarget(jpegReader.surface)
         set(CaptureRequest.SENSOR_SENSITIVITY, baseIso)
@@ -142,7 +142,7 @@ fun captureExposureBracket() {
         set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
     }.build()
 
-    // Frame 2: +2EV (4x longer exposure = brighter)
+    // 帧 2: +2EV (4x 长曝光 = 更亮)
     burstList += cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE).apply {
         addTarget(jpegReader.surface)
         set(CaptureRequest.SENSOR_SENSITIVITY, baseIso)
@@ -160,57 +160,57 @@ fun captureExposureBracket() {
         ) {
             super.onCaptureCompleted(session, request, result)
             completedCount++
-            Log.d("Burst", "Burst frame $completedCount/${burstList.size} done. Frame #${result.frameNumber}")
+            Log.d("Burst", "连拍帧 $completedCount/${burstList.size} 完成。帧号 #${result.frameNumber}")
 
             if (completedCount == burstList.size) {
-                Log.d("Burst", "All $burstList.size bracketed frames captured!")
-                // TODO: Merge HDR, focus stack, or let user pick the best frame
+                Log.d("Burst", "所有 ${burstList.size} 个包围帧已捕获！")
+                // TODO: 合并 HDR、对焦堆栈，或让用户挑选最好的一帧
             }
         }
     }, backgroundHandler)
 }
 ```
 
-### The Contiguous Guarantee in Action
+### 连续性保证的运作
 
-The key property of burst is that **the entire list is enqueued atomically** — even if a `setRepeatingRequest()` is active, the N burst frames will all run back-to-back before the repeating request resumes. The repeating request is not interleaved between burst frames.
+连拍的关键属性在于**整个列表是原子排队的**——即使 `setRepeatingRequest()` 处于活动状态，N 个连拍帧也会在重复请求恢复之前背靠背全部运行。重复请求不会穿插在连拍帧之间。
 
 ```mermaid
 flowchart TB
-    subgraph QueueBefore ["Before Burst Submit"]
+    subgraph QueueBefore ["连拍提交前"]
         direction LR
-        R1["PREVIEW (repeating)"] --> R2["PREVIEW (repeating)"] --> R3["PREVIEW (repeating)"]
+        R1["PREVIEW (重复)"] --> R2["PREVIEW (重复)"] --> R3["PREVIEW (重复)"]
     end
 
-    subgraph Arrow ["app calls captureBurst([B1,B2,B3])"]
+    subgraph Arrow ["应用调用 captureBurst([B1,B2,B3])"]
         style Arrow fill:#fff3e0
     end
 
-    subgraph QueueAfter ["After Burst Submit (atomic enqueue)"]
+    subgraph QueueAfter ["连拍提交后 (原子入队)"]
         direction LR
-        B1["BURST FRAME 1"] --> B2["BURST FRAME 2"] --> B3["BURST FRAME 3"] --> R4["PREVIEW (repeating) resumes"] --> R5["PREVIEW"]
+        B1["连拍帧 1"] --> B2["连拍帧 2"] --> B3["连拍帧 3"] --> R4["PREVIEW (重复) 恢复"] --> R5["PREVIEW"]
     end
 
     QueueBefore --> Arrow --> QueueAfter
 
-    Note over B1,B3: No preview frames sneak in between!
+    Note over B1,B3: 预览帧不会从中间溜进来！
 ```
 
-### Burst Size Limits
+### 连拍大小限制
 
-The maximum burst size you can submit in a single `captureBurst()` call is determined by:
-- `CameraCharacteristics.REQUEST_MAX_NUM_OUTPUT_RAW` — for RAW outputs
-- `CameraCharacteristics.REQUEST_MAX_NUM_OUTPUT_PROC` — for processed (YUV/JPEG) outputs
-- Practical hardware bandwidth (4K bursts will be shorter than 1080p bursts)
+单次 `captureBurst()` 调用中可以提交的最大连拍大小由以下因素决定：
+- `CameraCharacteristics.REQUEST_MAX_NUM_OUTPUT_RAW` — 针对 RAW 输出
+- `CameraCharacteristics.REQUEST_MAX_NUM_OUTPUT_PROC` — 针对处理后的（YUV/JPEG）输出
+- 实际硬件带宽（4K 连拍会比 1080p 连拍更短）
 
-For typical FULL devices, processed JPEG bursts of 10-50 frames are fine. RAW bursts may be limited to 5-10 frames depending on sensor and memory.
+对于典型的 FULL 设备，10-50 帧的处理后 JPEG 连拍通常没有问题。RAW 连拍可能受限于传感器和内存，限制在 5-10 帧。
 
-### High-Speed Burst for Slow-Motion
+### 用于慢动作的高速连拍
 
-For slow-motion video, Camera2 provides `CameraDevice.createHighSpeedRequestList()` which converts a normal `CaptureRequest` into a list of burst requests suitable for high-speed, constrained-capture video (e.g., 120fps or 240fps). This is paired with `CameraCaptureSession.captureBurst()` and requires the `CONSTRAINED_HIGH_SPEED_VIDEO` capability:
+对于慢动作视频，Camera2 提供了 `CameraDevice.createHighSpeedRequestList()`，它将一个普通的 `CaptureRequest` 转换为适合高速、受限捕获视频（例如 120fps 或 240fps）的连拍请求列表。这需要与 `CameraCaptureSession.captureBurst()` 配合使用，且需要具备 `CONSTRAINED_HIGH_SPEED_VIDEO` 功能：
 
 ```kotlin
-// Burst: High-speed slow-motion (120fps)
+// 连拍：高速慢动作 (120fps)
 fun captureHighSpeedSlowMo() {
     val capabilities = characteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
     val supportsHighSpeed = capabilities?.contains(
@@ -218,29 +218,29 @@ fun captureHighSpeedSlowMo() {
     ) ?: false
 
     if (!supportsHighSpeed) {
-        Log.w("HighSpeed", "Device does not support constrained high-speed video")
+        Log.w("HighSpeed", "设备不支持受限的高速视频")
         return
     }
 
-    // Build a single base request (targeting the MediaRecorder Surface)
+    // 构建一个基础请求 (目标指向 MediaRecorder Surface)
     val baseBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD)
     baseBuilder.addTarget(mediaRecorderSurface)
     val baseRequest = baseBuilder.build()
 
-    // Expand into high-speed burst list — framework optimizes for 120fps
+    // 展开为高速连拍列表 — 框架针对 120fps 进行了优化
     val highSpeedBurst = cameraDevice.createHighSpeedRequestList(listOf(baseRequest))
 
-    // Submit the optimized burst list via captureBurst
+    // 通过 captureBurst 提交优化的连拍列表
     captureSession.captureBurst(highSpeedBurst, highSpeedCallback, backgroundHandler)
 }
 ```
 
-## 11.4 Repeating: setRepeatingRequest()
+## 11.4 重复：setRepeatingRequest()
 
-The workhorse of Camera2 is the **repeating request**, submitted via `CameraCaptureSession.setRepeatingRequest()`. Instead of executing once, the framework re-enqueues *the same request* after every frame, forever — producing a continuous stream of frames at the hardware's native frame rate.
+Camera2 的主力是**重复请求 (repeating request)**，通过 `CameraCaptureSession.setRepeatingRequest()` 提交。它不是执行一次，而是框架在每一帧之后永远（直到被中断）自动重新排队*同一个请求*，从而以硬件的原生帧率产生连续的帧流。
 
 ```kotlin
-// Repeating: Start camera preview (30fps continuous stream)
+// 重复：启动相机预览 (30fps 连续流)
 fun startPreview() {
     val builder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
     builder.addTarget(previewSurface)
@@ -265,7 +265,7 @@ fun startPreview() {
                 frameCount++
                 val now = System.currentTimeMillis()
                 if (now - lastFpsLogMs > 1000) {
-                    Log.d("Preview", "Preview FPS: $frameCount")
+                    Log.d("Preview", "预览 FPS: $frameCount")
                     frameCount = 0
                     lastFpsLogMs = now
                 }
@@ -276,55 +276,55 @@ fun startPreview() {
 }
 ```
 
-### Why Preview *Must* Use Repeating Requests
+### 为什么预览*必须*使用重复请求
 
-If you tried to implement a 30fps preview using `capture()` called 30 times per second from a timer, you would:
-1. Waste CPU re-submitting identical requests every 33ms
-2. Accumulate drift if your timer is late
-3. Get frame gaps if one-shot callbacks block
-4. Fight with the framework's queue management
+如果你尝试使用每秒调用 30 次 `capture()` 的定时器来实现 30fps 预览，你会：
+1. 每 33ms 重新提交相同的请求，浪费 CPU
+2. 如果你的定时器延迟，会产生漂移
+3. 如果单次回调发生阻塞，会出现帧间隙
+4. 会与框架的队列管理发生冲突
 
-The repeating request is handled entirely inside the framework/HAL. After each frame completes, the HAL automatically schedules the next exposure — no app-thread involvement. This produces smooth, gap-free preview with zero app CPU overhead.
+重复请求完全在框架/HAL 内部处理。每一帧完成后，HAL 会自动调度下一次曝光——无需应用线程参与。这以零应用 CPU 开销产生平滑、无间隙的预览。
 
 ```mermaid
 flowchart LR
-    subgraph RepeatingLoop ["Repeating Request Cycle (Framework-managed)"]
+    subgraph RepeatingLoop ["重复请求循环 (由框架管理)"]
         direction TB
-        S1["HAL finishes frame N"] --> S2["Framework auto-re-enqueues SAME request"]
-        S2 --> S3["HAL dequeues and exposes frame N+1"]
-        S3 --> S4["Repeat forever or until stopRepeating()"]
+        S1["HAL 完成第 N 帧"] --> S2["框架自动重新排队相同请求"]
+        S2 --> S3["HAL 取出请求并曝光第 N+1 帧"]
+        S3 --> S4["循环往复，直至调用 stopRepeating()"]
     end
 
     RepeatingLoop
 ```
 
-### Stopping Repeating Requests
+### 停止重复请求
 
-To stop the repeating stream, call `stopRepeating()`. This removes the repeating request from the queue but does not flush already-in-flight frames. Call `abortCaptures()` to forcibly flush everything (and trigger `onCaptureFailed` with `REASON_FLUSHED` for in-flight frames).
+要停止重复流，调用 `stopRepeating()`。这会从队列中移除重复请求，但不会刷新已经在途的帧。调用 `abortCaptures()` 可强制刷新所有请求（并针对在途帧触发带有 `REASON_FLUSHED` 的 `onCaptureFailed`）。
 
 ```kotlin
-// Temporarily pause preview
+// 暂时暂停预览
 fun pausePreview() {
     captureSession.stopRepeating()
-    Log.d("Preview", "Repeating stopped. In-flight frames will still complete.")
+    Log.d("Preview", "重复已停止。在途帧仍会完成。")
 }
 
-// Emergency stop — drop everything right now
+// 紧急停止 — 立即丢弃所有捕获
 fun emergencyStopAllCaptures() {
     captureSession.stopRepeating()
     captureSession.abortCaptures()
-    // All in-flight frames will fail with REASON_FLUSHED
+    // 所有在途帧将以 REASON_FLUSHED 失败
 }
 ```
 
-### Repeating Requests Are Also for Video Recording
+### 重复请求也用于视频录制
 
-In addition to preview, repeating requests are used for **video recording** (targeting a `MediaRecorder` or `MediaCodec` `Surface`) and **continuous image analysis** (targeting a low-res YUV `ImageReader` for face detection, ML inference, etc.).
+除了预览外，重复请求还用于**视频录制**（针对 `MediaRecorder` 或 `MediaCodec` 的 `Surface`）和**持续图像分析**（针对用于人脸检测、机器学习推理等的低分辨率 YUV `ImageReader`）。
 
-The pattern is always the same: set it once, let it stream, update the request parameters when you want to change settings (e.g., change digital zoom mid-stream by updating the crop region in a new repeating request).
+模式始终相同：设置一次，让它流动，当你想要更改设置时更新请求参数（例如，通过在新的重复请求中更新裁剪区域来在流中途更改数字变焦）。
 
 ```kotlin
-// Repeating: Update zoom level live during preview/video
+// 重复：在预览/视频期间实时更新变焦级别
 fun updateDigitalZoom(cropRegion: Rect) {
     val builder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
     builder.addTarget(previewSurface)
@@ -332,25 +332,25 @@ fun updateDigitalZoom(cropRegion: Rect) {
     builder.set(CaptureRequest.SCALER_CROP_REGION, cropRegion)
     builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
 
-    // Replace the old repeating request with a new one (same targets, new crop)
+    // 使用新请求替换旧的重复请求 (相同目标, 新裁剪区域)
     captureSession.setRepeatingRequest(builder.build(), currentCallback, backgroundHandler)
-    Log.d("Zoom", "Repeating request updated with crop ${cropRegion.width()}x${cropRegion.height()}")
+    Log.d("Zoom", "重复请求已更新，裁剪区域为 ${cropRegion.width()}x${cropRegion.height()}")
 }
 ```
 
-## 11.5 Capture Templates
+## 11.5 捕获模板
 
-Every `CaptureRequest.Builder` starts from a **template**: you call `cameraDevice.createCaptureRequest(TEMPLATE_XXX)` and the framework populates the builder with hardware-optimized defaults for that use case. You then override only the specific settings you need.
+每个 `CaptureRequest.Builder` 都从一个**模板 (template)** 开始：你调用 `cameraDevice.createCaptureRequest(TEMPLATE_XXX)`，框架会针对该用例用硬件优化的默认值填充构建器。然后你只需覆盖你需要的特定设置。
 
-Templates exist because a phone's camera pipeline has dozens of knobs (noise reduction strength, edge enhancement, tone curve, anti-banding mode, frame rate range, ...). Templates set sensible baselines so you don't have to configure every single one from scratch.
+模板之所以存在，是因为手机的相机管线有数十个旋钮（降噪强度、边缘增强、色调曲线、抗条纹模式、帧率范围……）。模板设置了合理的基准，因此你不必从头开始配置每一个。
 
 ```mermaid
 graph TD
-    TD["TEMPLATE_XXX Enum"] -->|"createCaptureRequest(TD)"| B["CaptureRequest.Builder (pre-populated with defaults)"]
-    B -->|"builder.set(X, Y) — override specific fields"| B2["Builder with your overrides"]
-    B2 -->|"builder.build()"| R["CaptureRequest (immutable)"]
+    TD["TEMPLATE_XXX 枚举"] -->|"createCaptureRequest(TD)"| B["CaptureRequest.Builder (预填充默认值)"]
+    B -->|"builder.set(X, Y) — 覆盖特定字段"| B2["带有覆盖设置的 Builder"]
+    B2 -->|"builder.build()"| R["CaptureRequest (不可变)"]
 
-    subgraph TemplateDefinitions ["Six Templates"]
+    subgraph TemplateDefinitions ["六个模板"]
         T1["TEMPLATE_PREVIEW"]
         T2["TEMPLATE_STILL_CAPTURE"]
         T3["TEMPLATE_RECORD"]
@@ -362,94 +362,94 @@ graph TD
     TemplateDefinitions --> TD
 ```
 
-### The Six Templates, What They Preconfigure, and When to Use Them
+### 六个模板：预配置内容及使用时机
 
-| Template | Use Case | Key Preconfigured Settings |
+| 模板 | 用例 | 关键预配置设置 |
 |----------|----------|---------------------------|
-| `TEMPLATE_PREVIEW` | Live viewfinder / preview | Low-latency priority, 3A (AF/AE/AWB) in continuous auto, modest NR/sharpen, high frame rate (30fps). Trades minor quality for smoothness. |
-| `TEMPLATE_STILL_CAPTURE` | Single-shot photo | Max quality priority, AF in picture mode, full NR/sharpen, high-quality JPEG encoding, may lower frame rate to improve quality for that one frame. |
-| `TEMPLATE_RECORD` | Video recording | Stable frame rate (matches MediaRecorder output), continuous AF, audio-video sync timestamps, anti-banding enabled, medium NR — tuned for motion + compression. |
-| `TEMPLATE_VIDEO_SNAPSHOT` | High-res still *during* video recording | Like STILL_CAPTURE but preserves video frame settings — grabs a high-res photo without stopping the video recording stream. |
-| `TEMPLATE_ZERO_SHUTTER_LAG` | ZSL still capture (Chapter 14) | Builds a circular buffer of recent frames. When shutter is pressed, a *past* frame is returned for zero blackout. Requires burst capability and private reprocessing. |
-| `TEMPLATE_MANUAL` | Manual / pro controls | All 3A modes set to OFF by default so you can manually set sensor exposure, ISO, lens focus, and color correction gains without interference. Baseline for a pro-camera UI. |
+| `TEMPLATE_PREVIEW` | 实时取景器 / 预览 | 低延迟优先，3A (AF/AE/AWB) 为连续自动模式，适度的降噪/锐化，高帧率 (30fps)。牺牲微小画质以换取流畅度。 |
+| `TEMPLATE_STILL_CAPTURE` | 单次拍摄照片 | 最高质量优先，AF 为图片模式，完整降噪/锐化，高质量 JPEG 编码。为了提升那一帧的画质可能会降低帧率。 |
+| `TEMPLATE_RECORD` | 视频录制 | 稳定的帧率（匹配 MediaRecorder 输出），连续对焦，音视频同步时间戳，启用抗条纹，中等降噪——针对运动 + 压缩进行了调优。 |
+| `TEMPLATE_VIDEO_SNAPSHOT` | 视频录制期间的高清静态图 | 类似于 STILL_CAPTURE 但保留了视频帧设置——在不停止视频录制流的情况下抓取一张高清照片。 |
+| `TEMPLATE_ZERO_SHUTTER_LAG` | ZSL 静态拍摄 (第 14 章) | 构建一个近期帧的环形缓冲区。当点击快门时，返回一帧*过去*的帧以实现零黑屏。需要连拍能力和私有重处理支持。 |
+| `TEMPLATE_MANUAL` | 手动 / 专业控制 | 默认情况下所有 3A 模式均设置为 OFF，以便你可以手动设置传感器曝光、ISO、镜头焦距和色彩校正增益而无需干扰。作为专业相机 UI 的基准。 |
 
 ```kotlin
-// Template examples — see what happens when you start with each one
+// 模板示例 — 查看从各个模板开始会发生什么
 
-// TEMPLATE_PREVIEW — smooth, low-latency
+// TEMPLATE_PREVIEW — 平滑，低延迟
 val previewBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
 val previewRequest = previewBuilder.build()
 Log.d("Template", "PREVIEW AF_MODE = ${previewRequest.get(CaptureRequest.CONTROL_AF_MODE)}")
-// ^ Typically CONTROL_AF_MODE_CONTINUOUS_PICTURE (always re-focusing)
+// ^ 通常为 CONTROL_AF_MODE_CONTINUOUS_PICTURE (始终在重新对焦)
 
-// TEMPLATE_STILL_CAPTURE — highest quality per frame
+// TEMPLATE_STILL_CAPTURE — 每帧最高画质
 val stillBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
 val stillRequest = stillBuilder.build()
 Log.d("Template", "STILL_CAPTURE JPEG_QUALITY = ${stillRequest.get(CaptureRequest.JPEG_QUALITY)}")
-// ^ Typically 100 (max quality encoding)
+// ^ 通常为 100 (最高质量编码)
 
-// TEMPLATE_MANUAL — all automatic controls disabled
+// TEMPLATE_MANUAL — 禁用所有自动控制
 val manualBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
 val manualRequest = manualBuilder.build()
 Log.d("Template", "MANUAL AE_MODE = ${manualRequest.get(CaptureRequest.CONTROL_AE_MODE)}")
 Log.d("Template", "MANUAL AF_MODE = ${manualRequest.get(CaptureRequest.CONTROL_AF_MODE)}")
 Log.d("Template", "MANUAL AWB_MODE = ${manualRequest.get(CaptureRequest.CONTROL_AWB_MODE)}")
-// ^ Typically AE_MODE_OFF, AF_MODE_OFF, AWB_MODE_OFF — manual from the start
+// ^ 通常为 AE_MODE_OFF, AF_MODE_OFF, AWB_MODE_OFF — 从一开始就是手动的
 ```
 
 :::tip
-Always start with a template and override specific fields. Starting from `TEMPLATE_PREVIEW` and then overriding 2-3 settings (e.g., crop region for zoom, AE target bias for exposure compensation) is massively less error-prone than creating a request from an empty template (which isn't even possible — every `createCaptureRequest` requires a template).
+始终从模板开始并覆盖特定字段。相比于从空模板创建请求（这甚至是不可能的——每一个 `createCaptureRequest` 都需要模板），从 `TEMPLATE_PREVIEW` 开始然后覆盖 2-3 个设置（例如用于变焦的裁剪区域、用于曝光补偿的 AE 目标偏差）出错的可能性要小得多。
 :::
 
-## 11.6 Comparing the Three Capture Types
+## 11.6 三种捕获类型对比
 
-| Dimension | One-Shot `capture()` | Burst `captureBurst()` | Repeating `setRepeatingRequest()` |
+| 维度 | 单次 `capture()` | 连拍 `captureBurst()` | 重复 `setRepeatingRequest()` |
 |-----------|---------------------|----------------------|---------------------------------|
-| **Execution** | Single request runs once | List of N requests runs contiguously | Same request runs every frame (auto re-enqueued) |
-| **Priority** | Highest — jumps to HEAD of Pending Queue | High — all N frames inserted atomically at HEAD | Lowest — one-shot/burst cut in front and repeating resumes after |
-| **Interruption** | Interrupts repeating; repeating resumes after | Interrupts repeating; entire burst completes before repeating resumes | Interrupted by any one-shot or burst; resumes automatically after |
-| **Queue Behavior** | Single request enqueued | N requests enqueued contiguously (no gaps) | One conceptual request re-enqueued each cycle |
-| **Typical Uses** | Single photo, single AF trigger, flash photo | Exposure bracketing, focus stacking, action burst, slow-motion, HDR | Preview, video recording, continuous ML analysis, live face detection |
-| **Result Callback** | `onCaptureCompleted` fires exactly once | `onCaptureCompleted` fires N times (once per burst frame) | `onCaptureCompleted` fires continuously for every frame (30-60x/sec) |
+| **执行** | 单个请求运行一次 | N 个请求列表连续运行 | 同一个请求每帧运行 (自动重新入队) |
+| **优先级** | 最高 — 跳至挂起队列头部 | 高 — 所有 N 帧原子地插入头部 | 最低 — 单次/连拍会在其前面插队，随后恢复重复 |
+| **中断** | 中断重复请求；完成后恢复重复 | 中断重复请求；整个连拍完成后恢复 | 被任何单次或连拍请求抢占；之后自动恢复 |
+| **队列行为** | 单个请求排队 | N 个请求连续排队 (无间隙) | 每个周期重新排队一个概念请求 |
+| **典型用途** | 单张照片、单次 AF 触发、闪光灯照片 | 曝光包围、对焦堆叠、动作连拍、慢动作、HDR | 预览、视频录制、持续 ML 分析、实时人脸检测 |
+| **结果回调** | `onCaptureCompleted` 触发且仅触发一次 | `onCaptureCompleted` 触发 N 次 (每连拍一帧一次) | `onCaptureCompleted` 针对每一帧持续触发 (每秒 30-60 次) |
 
 ```mermaid
 quadrantChart
-    title Capture Type Usage Patterns
-    x-axis ["Low Frame Count", "High Frame Count"]
-    y-axis ["Single Configuration", "Varying Per-Frame Config"]
-    quadrant-1 ["Burst: Exposure / Focus Bracketing"]
-    quadrant-2 ["Burst: High-Speed Slow-Mo"]
-    quadrant-3 ["One-Shot: Still Photo"]
-    quadrant-4 ["Repeating: Preview + Video"]
-    "Single JPEG capture": [0.15, 0.2]
-    "Tap-to-focus trigger": [0.1, 0.15]
-    "3-frame HDR bracket": [0.4, 0.75]
-    "7-frame focus stack": [0.45, 0.8]
-    "120fps slow-mo 2sec": [0.85, 0.25]
-    "CameraFinder preview 30fps": [0.9, 0.1]
-    "4K video recording": [0.88, 0.18]
+    title 捕获类型使用模式
+    x-axis ["低帧数", "高帧数"]
+    y-axis ["单一配置", "变化的逐帧配置"]
+    quadrant-1 ["连拍：曝光 / 对焦包围"]
+    quadrant-2 ["连拍：高速慢动作"]
+    quadrant-3 ["单次：静态照片"]
+    quadrant-4 ["重复：预览 + 视频"]
+    "单张 JPEG 捕获": [0.15, 0.2]
+    "点击对焦触发": [0.1, 0.15]
+    "3 帧 HDR 包围": [0.4, 0.75]
+    "7 帧对焦堆叠": [0.45, 0.8]
+    "120fps 慢动作 2秒": [0.85, 0.25]
+    "CameraFinder 预览 30fps": [0.9, 0.1]
+    "4K 视频录制": [0.88, 0.18]
 ```
 
-## 11.7 Seeing Capture Types in the Android Camera Parameters App
+## 11.7 在 Android Camera Parameters 应用中查看捕获类型
 
-Open the Android Camera Parameters app ([GitHub](https://github.com/zoozooll/AndroidCameraParameters), [Play Store](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)) and navigate to the **Capture Demo** tab. The app exposes all three capture types side-by-side:
+打开 **Android Camera Parameters** 应用（[GitHub](https://github.com/zoozooll/AndroidCameraParameters)，[Play 商店](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)）并导航到 **Capture Demo (捕获演示)** 选项卡。该应用并排展示了所有三种捕获类型：
 
-- Tap **Start Preview** to call `setRepeatingRequest(TEMPLATE_PREVIEW)` and see a live `CaptureCallback` log (frames 1, 2, 3, ... scrolling every ~33ms)
-- Tap **Take Photo** to inject a `capture(TEMPLATE_STILL_CAPTURE)` one-shot while preview is running. You'll see the callback count pause briefly for the high-quality frame, then resume seamlessly as repeating auto-resumes.
-- Tap **Burst 5 Frames** to call `captureBurst(List<CaptureRequest(5)>)`. Observe that exactly 5 frames complete back-to-back before the preview scroll continues — proving the contiguous guarantee.
+- 点击 **Start Preview** 以调用 `setRepeatingRequest(TEMPLATE_PREVIEW)` 并查看实时的 `CaptureCallback` 日志（帧 1, 2, 3, ... 大约每 33ms 滚动一次）
+- 在预览运行时点击 **Take Photo** 以注入一个 `capture(TEMPLATE_STILL_CAPTURE)` 单次请求。你会看到回调计数针对高质量帧短暂暂停，随后随着重复请求的自动恢复而无缝继续。
+- 点击 **Burst 5 Frames** 以调用 `captureBurst(List<CaptureRequest(5)>)`。观察到在预览滚动继续之前，恰好有 5 帧背靠背完成——证明了连续性保证。
 
-You can also inspect `REQUEST_MAX_NUM_OUTPUT_RAW` and `REQUEST_MAX_NUM_OUTPUT_PROC` in the **Raw JSON** tab to see your device's burst size limits.
+你还可以在 **Raw JSON** 选项卡中检查 `REQUEST_MAX_NUM_OUTPUT_RAW` 和 `REQUEST_MAX_NUM_OUTPUT_PROC`，以查看你设备的连拍大小限制。
 
-## 11.8 Summary
+## 11.8 小结
 
-| Concept | Key Takeaway |
+| 概念 | 关键要点 |
 |---------|-------------|
-| **One-shot `capture()`** | Single request, runs once, highest priority. For still photos, AF triggers. Auto-resumes repeating after. |
-| **Burst `captureBurst()`** | List&lt;CaptureRequest&gt; runs contiguously, no interleaving. For bracketing, motion, slow-mo. Whole list jumps queue atomically. |
-| **Repeating `setRepeatingRequest()`** | One request streams continuously. Framework auto-re-enqueues. For preview, video, analysis. Lowest priority. |
-| **Templates** | Six baselines populate Builder with defaults. Start with TEMPLATE_PREVIEW/STILL_CAPTURE/RECORD/ZSL/MANUAL and override only what you need. |
-| **Interruption rules** | One-shot and burst *always* preempt repeating. Repeating auto-resumes after. Burst frames are never split apart. |
+| **单次 `capture()`** | 单个请求，运行一次，优先级最高。用于静态照片、AF 触发。完成后自动恢复重复请求。 |
+| **连拍 `captureBurst()`** | `List<CaptureRequest>` 连续运行，无穿插。用于包围、动作、慢动作。整个列表原子地跳过队列。 |
+| **重复 `setRepeatingRequest()`** | 一个请求流式连续运行。框架自动重新排队。用于预览、视频、分析。优先级最低。 |
+| **模板** | 六个基准模板为 Builder 填充默认值。从 TEMPLATE_PREVIEW/STILL_CAPTURE/RECORD/ZSL/MANUAL 开始，仅覆盖你需要的内容。 |
+| **中断规则** | 单次和连拍*总是*抢占重复请求。重复请求之后自动恢复。连拍帧永远不会被拆散。 |
 
-## What's Next
+## 下一章
 
-In [Chapter 12: CameraCharacteristics Deep Dive](cameracharacteristics-deep-dive.md), we'll dig into the static metadata object that describes *what your camera can even do* before you open it. We'll break down hardware levels (LEGACY → LIMITED → FULL → LEVEL_3 → EXTERNAL), the capability flag system (MANUAL_SENSOR, RAW, DEPTH_OUTPUT, etc.), and how to query all of it at runtime to write apps that work across 10,000+ Android device models.
+在[第 12 章：CameraCharacteristics 深度挖掘](cameracharacteristics-deep-dive.md)中，我们将挖掘在打开相机之前，描述*相机究竟能做什么*的静态元数据对象。我们将分解硬件级别（LEGACY → LIMITED → FULL → LEVEL_3 → EXTERNAL）、性能标志系统（MANUAL_SENSOR、RAW、DEPTH_OUTPUT 等），以及如何在运行时查询所有这些内容，以编写可在 10,000 多种 Android 设备型号上运行的应用。

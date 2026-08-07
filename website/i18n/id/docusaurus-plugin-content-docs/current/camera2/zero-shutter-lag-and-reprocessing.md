@@ -1,77 +1,77 @@
 ---
 sidebar_position: 23
-title: "Chapter 23: Zero Shutter Lag & Reprocessing"
-description: "Build Zero Shutter Lag (ZSL) with circular YUV/PRIVATE buffering, CONTROL_CAPTURE_INTENT_ZERO_SHUTTER_LAG, reprocessable capture sessions via InputConfiguration, ImageWriter frame reinjection, and createReprocessCaptureRequest for heavy post-capture ISP processing. Also covers switchToOffline() for background processing continuity."
-keywords: [Android Camera2, Zero Shutter Lag, ZSL, Reprocessing, InputConfiguration, createReprocessableCaptureSession, ImageWriter, createReprocessCaptureRequest, CONTROL_CAPTURE_INTENT_ZERO_SHUTTER_LAG, PRIVATE_REPROCESSING, YUV_REPROCESSING, LEVEL_3, switchToOffline, CameraOfflineSessionCallback]
+title: "Bab 23: Zero Shutter Lag & Pemrosesan Ulang"
+description: "Bangun Zero Shutter Lag (ZSL) dengan buffering YUV/PRIVATE melingkar, CONTROL_CAPTURE_INTENT_ZERO_SHUTTER_LAG, sesi pengambilan gambar yang dapat diproses ulang via InputConfiguration, injeksi ulang bingkai ImageWriter, dan createReprocessCaptureRequest untuk pemrosesan ISP pasca-pengambilan yang berat. Juga mencakup switchToOffline() untuk kontinuitas pemrosesan latar belakang."
+keywords: [Android Camera2, Zero Shutter Lag, ZSL, Pemrosesan Ulang, InputConfiguration, createReprocessableCaptureSession, ImageWriter, createReprocessCaptureRequest, CONTROL_CAPTURE_INTENT_ZERO_SHUTTER_LAG, PRIVATE_REPROCESSING, YUV_REPROCESSING, LEVEL_3, switchToOffline, CameraOfflineSessionCallback]
 ---
 
-# Chapter 23: Zero Shutter Lag & Reprocessing
+# Bab 23: Zero Shutter Lag & Pemrosesan Ulang
 
-The single most frustrating defect in consumer camera apps is **shutter lag**: tap the shutter button, and the captured photo shows a scene 200–800 ms *after* the tap — the kid has already stopped smiling, the bird has left the branch, the sports car has moved out of frame. Standard Camera2 sessions work like this by design: the shutter tap triggers `session.capture()`, which triggers AE convergence, which triggers a new sensor exposure, which triggers ISP processing. Every step adds latency.
+Cacat yang paling membuat frustrasi dalam aplikasi kamera konsumen adalah **shutter lag (jeda rana)**: ketuk tombol rana, dan foto yang ditangkap menunjukkan adegan 200–800 ms *setelah* ketukan — si anak sudah berhenti tersenyum, burung sudah meninggalkan dahan, mobil sport sudah bergerak keluar dari bingkai. Sesi Camera2 standar bekerja seperti ini secara desain: ketukan rana memicu `session.capture()`, yang memicu pemusatan AE, yang memicu eksposur sensor baru, yang memicu pemrosesan ISP. Setiap langkah menambah latensi.
 
-**Zero Shutter Lag (ZSL)** eliminates this delay by running the sensor continuously at still-capture resolution, buffering the most recent N frames in a circular in-memory queue, and when the user taps the shutter, **capturing the frame that was visible at the moment of the tap**, not a frame from half a second later. The magic comes from the **Reprocessing API**: instead of feeding light through the sensor again, you take an already-exposed YUV or PRIVATE buffer from the circular queue, feed it *back* into the ISP via `ImageWriter` + `InputConfiguration`, then run heavy noise reduction and edge enhancement on it as if it were a fresh capture.
+**Zero Shutter Lag (ZSL)** menghilangkan penundaan ini dengan menjalankan sensor secara terus-menerus pada resolusi pengambilan foto diam, menyangga N bingkai terbaru dalam antrean melingkar di memori, dan saat pengguna mengetuk rana, **menangkap bingkai yang terlihat pada saat ketukan**, bukan bingkai dari setengah detik kemudian. Keajaibannya berasal dari **API Pemrosesan Ulang (Reprocessing API)**: alih-alih memasukkan cahaya melalui sensor lagi, Anda mengambil buffer YUV atau PRIVATE yang sudah diekspos dari antrean melingkar, memasukkannya *kembali* ke ISP via `ImageWriter` + `InputConfiguration`, lalu menjalankan pengurangan noise dan peningkatan tepi yang berat seolah-olah itu adalah pengambilan gambar yang baru.
 
-This chapter follows the exact **4-step ZSL workflow** from the *ZSL / Reprocessing* section of the project research doc, and also covers **`switchToOffline()`** — the Android 12 (API 31) API that transfers the reprocessing pipeline to a background HAL service so your app can be killed (home button press, incoming call) and the user still gets their photo. You can verify which reprocessing capabilities your device supports (`REQUEST_AVAILABLE_CAPABILITIES_YUV_REPROCESSING`, `PRIVATE_REPROCESSING`, or `INFO_SUPPORTED_HARDWARE_LEVEL_LEVEL_3`) in the [Android Camera Parameters](https://github.com/zoozooll/AndroidCameraParameters) app on the [Play Store](https://play.google.com/store/apps/details?id=com.zoozooll.cameraparameters); the ZSL Support tab cross-references all required capabilities and reports a clear YES/NO verdict.
+Bab ini mengikuti **alur kerja ZSL 4-langkah** yang tepat dari bagian *ZSL / Reprocessing* pada dokumen penelitian proyek, dan juga mencakup **`switchToOffline()`** — API Android 12 (API 31) yang mentransfer pipeline pemrosesan ulang ke layanan HAL latar belakang sehingga aplikasi Anda dapat dimatikan (tekan tombol home, panggilan masuk) dan pengguna tetap mendapatkan fotonya. Anda dapat memverifikasi kemampuan pemrosesan ulang mana yang didukung perangkat Anda (`REQUEST_AVAILABLE_CAPABILITIES_YUV_REPROCESSING`, `PRIVATE_REPROCESSING`, atau `INFO_SUPPORTED_HARDWARE_LEVEL_LEVEL_3`) dalam aplikasi [Android Camera Parameters](https://github.com/zoozooll/AndroidCameraParameters) di [Play Store](https://play.google.com/store/apps/details?id=com.zoozooll.cameraparameters); tab Dukungan ZSL mereferensikan silang semua kemampuan yang diperlukan dan melaporkan vonis YA/TIDAK yang jelas.
 
-## Why ZSL Is Hard (and Why Reprocessing Exists)
+## Mengapa ZSL Itu Sulit (dan Mengapa Pemrosesan Ulang Ada)
 
-First, quantify the latency of a standard non-ZSL still capture on a 2023 flagship (Snapdragon 8 Gen 2) per the research doc measurements:
+Pertama, kuantifikasi latensi pengambilan foto diam non-ZSL standar pada ponsel unggulan tahun 2023 (Snapdragon 8 Gen 2) sesuai pengukuran dokumen penelitian:
 
-| Pipeline Stage | Latency | Notes |
+| Tahap Pipeline | Latensi | Catatan |
 |----------------|---------|-------|
-| AE convergence trigger → new exposure programmed | 40 ms | `CONTROL_AE_PRECAPTURE_TRIGGER` |
-| Rolling shutter readout (12 MP full frame) | 32 ms | 1/30 s nominal; actual 32 ms from first to last row |
-| ISP demosaic + standard NR + color | 24 ms | Standard quality pipeline |
-| JPEG encode (12 MP, quality 95) | 18 ms | Hardware JPEG encoder |
-| **Total standard capture latency** | **~114 ms** | Best case; under load 200–800 ms common |
+| Pemicu pemusatan AE → eksposur baru diprogram | 40 ms | `CONTROL_AE_PRECAPTURE_TRIGGER` |
+| Pembacaan rana bergulir (12 MP bingkai penuh) | 32 ms | 1/30 detik nominal; aktual 32 ms dari baris pertama ke terakhir |
+| Demosaic ISP + NR standar + warna | 24 ms | Pipeline kualitas standar |
+| Enkode JPEG (12 MP, kualitas 95) | 18 ms | Encoder JPEG perangkat keras |
+| **Total latensi pengambilan standar** | **~114 ms** | Kasus terbaik; dalam beban berat 200–800 ms adalah umum |
 
-Under real-world conditions (thermal throttling, GPU contention from the UI, a background app doing work) the standard path routinely hits 500 ms of lag. A 5-year-old human can move 40 cm in 500 ms while running — the difference between capturing a smile and capturing the back of a head.
+Di bawah kondisi dunia nyata (pelambatan thermal, persaingan GPU dari UI, aplikasi latar belakang yang sedang bekerja), jalur standar secara rutin mencapai jeda 500 ms. Manusia berusia 5 tahun dapat bergerak sejauh 40 cm dalam 500 ms saat berlari — perbedaan antara menangkap senyuman dan menangkap bagian belakang kepala.
 
-ZSL solves this by reversing the pipeline order: instead of capture → process → store, you do **continuous capture → buffer → tap → reprocess → store**. The sensor and ISP are *always* running at still-capture resolution; the user tap just selects which pre-existing frame to fully process.
+ZSL memecahkan ini dengan membalik urutan pipeline: alih-alih ambil → proses → simpan, Anda melakukan **pengambilan terus menerus → penyangga → ketuk → proses ulang → simpan**. Sensor dan ISP *selalu* berjalan pada resolusi foto diam; ketukan pengguna hanya memilih bingkai yang sudah ada sebelumnya untuk diproses sepenuhnya.
 
 ```mermaid
 flowchart LR
-    subgraph STANDARD["Standard Capture (114 ms LAG)"]
+    subgraph STANDARD["Pengambilan Standar (Jeda 114 ms)"]
         direction TB
-        T1["T=0: User Taps SHUTTER"] --> T2["T+40ms: AE Converges,\nNew Exposure Starts"]
-        T2 --> T3["T+72ms: Sensor Rolling\nShutter Readout Complete"]
-        T3 --> T4["T+96ms: ISP Standard\nProcessing Done"]
-        T4 --> T5["T+114ms: JPEG Stored"]
-        LOST["⚠ Scene Changed DURING T+0 – T+114ms\n→ Missed the decisive moment"]
+        T1["T=0: Pengguna Mengetuk RANA"] --> T2["T+40ms: AE Memusat,<br/>Eksposur Baru Dimulai"]
+        T2 --> T3["T+72ms: Pembacaan Rana Bergulir<br/>Sensor Selesai"]
+        T3 --> T4["T+96ms: Pemrosesan Standar<br/>ISP Selesai"]
+        T4 --> T5["T+114ms: JPEG Disimpan"]
+        LOST["⚠ Adegan Berubah SELAMA T+0 – T+114ms<br/>→ Melewatkan momen yang menentukan"]
     end
 
-    subgraph ZSLFLOW["Zero Shutter Lag (0 ms LAG)"]
+    subgraph ZSLFLOW["Zero Shutter Lag (Jeda 0 ms)"]
         direction TB
-        C0["T=-2000ms: Circular Buffer\nStarts Filling (always running)"]
-        C1["T=-66ms: Frame N-2\n→ Buffer slot 0"]
-        C2["T=-33ms: Frame N-1\n→ Buffer slot 1"]
-        C3["T=0ms: Frame N → Buffer slot 2\n★★★ USER TAPS SHUTTER NOW ★★★"]
-        C4["T=0ms (INSTANT): Select\nFrame N (T=0) from Circular Buffer"]
-        C4 --> C5["T=0ms: ImageWriter\nFeeds Frame N BACK into HAL"]
-        C5 --> C6["T=+30ms: HEAVY ISP\nReprocessing (NR+EDGE)"]
-        C6 --> C7["T=+48ms: JPEG Stored"]
-        PERFECT["✓ Captured EXACTLY the frame the user\nsaw at the moment of the tap"]
+        C0["T=-2000ms: Penyangga Melingkar<br/>Mulai Mengisi (selalu berjalan)"]
+        C1["T=-66ms: Bingkai N-2<br/>→ Slot penyangga 0"]
+        C2["T=-33ms: Bingkai N-1<br/>→ Slot penyangga 1"]
+        C3["T=0ms: Bingkai N → Slot penyangga 2<br/>★★★ PENGGUNA MENGETUK RANA SEKARANG ★★★"]
+        C4["T=0ms (INSTAN): Pilih<br/>Bingkai N (T=0) dari Penyangga Melingkar"]
+        C4 --> C5["T=0ms: ImageWriter<br/>Memasukkan Bingkai N KEMBALI ke HAL"]
+        C5 --> C6["T=+30ms: Pemrosesan Ulang<br/>ISP BERAT (NR+EDGE)"]
+        C6 --> C7["T=+48ms: JPEG Disimpan"]
+        PERFECT["✓ Menangkap TEPAT bingkai yang dilihat pengguna<br/>pada saat pengetukan — zero jeda konten"]
     end
 
     style STANDARD fill:#ffeded,stroke:#b91c1c
     style ZSLFLOW fill:#e6ffef,stroke:#15803d
 ```
 
-The Mermaid diagram shows the conceptual shift: in the standard path, the tap *initiates* the capture; in the ZSL path, the tap *selects* a capture that has already happened. The total time from tap to stored file is still ~48 ms (reprocessing is not free), but **the pixel content is from T=0 (instant), not T=114 ms (late)** — that's what "Zero Shutter Lag" actually means. It's zero lag of content, not zero lag of output file.
+Diagram Mermaid menunjukkan pergeseran konseptual: pada jalur standar, ketukan *memulai* pengambilan gambar; pada jalur ZSL, ketukan *memilih* pengambilan gambar yang sudah terjadi. Total waktu dari ketukan hingga file disimpan tetap ~48 ms (pemrosesan ulang tidak gratis), tetapi **konten piksel berasal dari T=0 (instan), bukan T=114 ms (terlambat)** — itulah arti sebenarnya dari "Zero Shutter Lag". Ini adalah nol jeda konten, bukan nol jeda file output.
 
-## Mandatory Capability Gates (Per Research Doc)
+## Gerbang Kemampuan Wajib (Berdasarkan Dokumen Penelitian)
 
-ZSL + Reprocessing requires hardware cooperation at the HAL level. You must check **one** of the following three conditions before attempting to create a reprocessable session:
+ZSL + Pemrosesan Ulang memerlukan kerja sama perangkat keras di tingkat HAL. Anda harus memeriksa **satu** dari tiga kondisi berikut sebelum mencoba membuat sesi yang dapat diproses ulang:
 
-| Capability Check | When It Passes | Devices That Support It |
+| Cek Kemampuan | Kapan Lulus | Perangkat yang Mendukungnya |
 |------------------|----------------|--------------------------|
-| **A)** `INFO_SUPPORTED_HARDWARE_LEVEL == LEVEL_3` | Full reprocessing (both YUV and PRIVATE) allowed at any size in StreamConfigurationMap. | 2016+ Google Pixel (all generations); 2021+ Samsung Galaxy S/Ultra (Snapdragon variants); 2023+ OnePlus 11/OPPO Find X6 Pro. |
-| **B)** `REQUEST_AVAILABLE_CAPABILITIES contains YUV_REPROCESSING` | YUV_420_888 buffers can be fed back via InputConfiguration at a subset of sizes. | 2019+ Snapdragon 8xx/7xx devices; most MediaTek Dimensity 9000+ devices. |
-| **C)** `REQUEST_AVAILABLE_CAPABILITIES contains PRIVATE_REPROCESSING` | `ImageFormat.PRIVATE` buffers (opaque, stored in vendor compression) can be fed back. Use this preferentially as it uses 2× less memory. | Snapdragon 888+ / Exynos 2100+ and newer. |
+| **A)** `INFO_SUPPORTED_HARDWARE_LEVEL == LEVEL_3` | Pemrosesan ulang penuh (baik YUV maupun PRIVATE) diizinkan pada ukuran apa pun di StreamConfigurationMap. | Google Pixel 2016+ (semua generasi); Samsung Galaxy S/Ultra 2021+ (varian Snapdragon); OnePlus 11/OPPO Find X6 Pro 2023+. |
+| **B)** `REQUEST_AVAILABLE_CAPABILITIES berisi YUV_REPROCESSING` | Buffer YUV_420_888 dapat dimasukkan kembali via InputConfiguration pada subset ukuran. | Perangkat Snapdragon 8xx/7xx 2019+; sebagian besar perangkat MediaTek Dimensity 9000+. |
+| **C)** `REQUEST_AVAILABLE_CAPABILITIES berisi PRIVATE_REPROCESSING` | Buffer `ImageFormat.PRIVATE` (buram, disimpan dalam kompresi vendor) dapat dimasukkan kembali. Gunakan ini secara istimewa karena menggunakan memori 2× lebih sedikit. | Snapdragon 888+ / Exynos 2100+ dan yang lebih baru. |
 
-> Research doc rule ZSL-1: **If none of A/B/C pass, fall back to non-ZSL standard capture.** Do not attempt to build a custom circular buffer of JPEGs and re-decompress them; this yields 6 dB of quality loss from double-encoding and is not a substitute for real reprocessing.
+> Aturan dokumen penelitian ZSL-1: **Jika tidak ada dari A/B/C yang lulus, gunakan pengambilan standar non-ZSL sebagai cadangan.** Jangan mencoba membangun buffer melingkar JPEG kustom dan men-dekompresi-nya kembali; ini menghasilkan kehilangan kualitas 6 dB dari pengkodean ganda dan bukan pengganti pemrosesan ulang yang sebenarnya.
 
-Query the gates with:
+Kueri gerbang tersebut dengan:
 
 ```kotlin
 import android.hardware.camera2.CameraCharacteristics
@@ -87,7 +87,7 @@ fun queryZslSupport(chars: CameraCharacteristics): Pair<ZslSupport, Int> {
 
     return when {
         level == CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_3 ->
-            Pair(ZslSupport.LEVEL3, ImageFormat.PRIVATE) // PRIVATE preferred for memory
+            Pair(ZslSupport.LEVEL3, ImageFormat.PRIVATE) // PRIVATE lebih disukai untuk memori
         caps.contains(
             CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_PRIVATE_REPROCESSING
         ) -> Pair(ZslSupport.PRIVATE_REPROC, ImageFormat.PRIVATE)
@@ -99,15 +99,15 @@ fun queryZslSupport(chars: CameraCharacteristics): Pair<ZslSupport, Int> {
 }
 ```
 
-## The 4-Step ZSL + Reprocessing Workflow (Per Research Doc)
+## Alur Kerja ZSL + Pemrosesan Ulang 4-Langkah (Sesuai Dokumen Penelitian)
 
-The project research doc specifies the exact 4-step pipeline. Every step is mandatory; skipping any step yields a broken session (dropped frames, `IllegalStateException`, or reprocessing output identical to preview quality).
+Dokumen penelitian proyek menentukan pipeline 4-langkah yang tepat. Setiap langkah wajib dilakukan; melewatkan langkah mana pun menghasilkan sesi yang rusak (bingkai terbuang, `IllegalStateException`, atau output pemrosesan ulang yang identik dengan kualitas pratinjau).
 
 ---
 
-### Step 1: Circular Buffering with ImageReader + CONTROL_CAPTURE_INTENT_ZERO_SHUTTER_LAG
+### Langkah 1: Buffering Melingkar dengan ImageReader + CONTROL_CAPTURE_INTENT_ZERO_SHUTTER_LAG
 
-First, create a high-resolution `ImageReader` (the "ZSL buffer") whose `maxImages` parameter is the circular depth (typically 8–16; research doc recommends 8 for memory-constrained devices, 16 for devices with ≥ 8 GB RAM). Tag every repeating request with `CONTROL_CAPTURE_INTENT_ZERO_SHUTTER_LAG` — this tells the HAL to use the shortest-possible preview pipeline and disable preview-specific optimizations that would damage reprocessed output quality (e.g., heavy temporal noise reduction that leaves motion ghost artifacts).
+Pertama, buat `ImageReader` resolusi tinggi ("penyangga ZSL") yang parameter `maxImages`-nya adalah kedalaman melingkar (biasanya 8–16; dokumen penelitian merekomendasikan 8 untuk perangkat dengan memori terbatas, 16 untuk perangkat dengan RAM ≥ 8 GB). Tandai setiap permintaan berulang dengan `CONTROL_CAPTURE_INTENT_ZERO_SHUTTER_LAG` — ini memberi tahu HAL untuk menggunakan pipeline pratinjau sependek mungkin dan menonaktifkan optimalisasi khusus pratinjau yang akan merusak kualitas output yang diproses ulang (misalnya, pengurangan noise temporal yang berat yang meninggalkan artefak hantu gerakan).
 
 ```kotlin
 import android.hardware.camera2.CameraDevice
@@ -122,19 +122,19 @@ import java.util.concurrent.ConcurrentLinkedDeque
 
 data class ZslBufferFrame(
     val timestamp: Long,
-    val imageRef: Image, // Do NOT close; managed by deque GC
+    val imageRef: Image, // JANGAN tutup; dikelola oleh GC deque
     val captureResultRef: android.hardware.camera2.TotalCaptureResult
 )
 
-const val ZSL_BUFFER_DEPTH = 12 // Research doc sweet spot: 12 frames = 400 ms at 30 fps
+const val ZSL_BUFFER_DEPTH = 12 // Titik ideal penelitian: 12 bingkai = 400 ms pada 30 fps
 var zslImageReader: ImageReader? = null
 private val zslCircularBuffer = ConcurrentLinkedDeque<ZslBufferFrame>()
-private var zslStillSize: Size = Size(4000, 3000) // Match max still size
+private var zslStillSize: Size = Size(4000, 3000) // Cocokkan ukuran foto diam maks
 
 fun setupZslCircularBuffer(
     cameraDevice: CameraDevice,
     previewSurface: Surface,
-    reprocessingFormat: Int, // PRIVATE or YUV_420_888
+    reprocessingFormat: Int, // PRIVATE atau YUV_420_888
     backgroundHandler: android.os.Handler
 ) {
     zslImageReader = ImageReader.newInstance(
@@ -153,18 +153,18 @@ fun setupZslCircularBuffer(
 inner class ZslCircularBufferListener : ImageReader.OnImageAvailableListener {
     override fun onImageAvailable(reader: ImageReader) {
         val image = reader.acquireLatestImage() ?: return
-        // We don't have captureResult here yet; pairing happens in CaptureCallback
-        // For brevity, the Timestamp → CaptureResult map mirrors Chapter 18's pattern
-        // Pair them and enqueue:
+        // Kita belum memiliki captureResult di sini; pemasangan terjadi di CaptureCallback
+        // Demi singkatnya, peta Timestamp → CaptureResult mencerminkan pola Bab 18
+        // Pasangkan mereka dan masukkan ke antrean:
         val result = pendingZslResults.remove(image.timestamp) ?: return
         val frame = ZslBufferFrame(image.timestamp, image, result)
 
         zslCircularBuffer.addLast(frame)
 
-        // --- CIRCULAR BUFFER EVICTION (oldest first) ---
+        // --- PENGOSONGAN PENYANGGA MELINGKAR (yang tertua lebih dulu) ---
         while (zslCircularBuffer.size > ZSL_BUFFER_DEPTH) {
             val evicted = zslCircularBuffer.pollFirst()
-            evicted.imageRef.close() // Release old frames to HAL buffer pool
+            evicted.imageRef.close() // Lepaskan bingkai lama ke pool buffer HAL
         }
     }
 }
@@ -192,10 +192,10 @@ fun buildZslSessionAndStartRepeating(
                 ).apply {
                     addTarget(previewSurface)
                     addTarget(zslImageReader!!.surface)
-                    // THE MAGIC INTENT FLAG:
+                    // FLAG MAKSUD AJAIB:
                     set(CaptureRequest.CONTROL_CAPTURE_INTENT,
                         CaptureRequest.CONTROL_CAPTURE_INTENT_ZERO_SHUTTER_LAG)
-                    // HAL: lightweight preview ISP, full-res stream
+                    // HAL: ISP pratinjau ringan, stream resolusi penuh
                     set(CaptureRequest.CONTROL_MODE,
                         CaptureRequest.CONTROL_MODE_AUTO)
                     set(CaptureRequest.CONTROL_AF_MODE,
@@ -210,24 +210,24 @@ fun buildZslSessionAndStartRepeating(
             }
             override fun onConfigureFailed(
                 s: android.hardware.camera2.CameraCaptureSession
-            ) = Log.e(TAG, "ZSL circular buffer session failed")
+            ) = Log.e(TAG, "Sesi penyangga melingkar ZSL gagal")
         }
     )
     cameraDevice.createCaptureSession(sessionConfig)
 }
 ```
 
-Four implementation details from the research doc that are not documented in the official Android SDK reference:
-1. **Use `TEMPLATE_ZERO_SHUTTER_LAG`** as the base template. It configures the sensor readout mode to support simultaneous preview + full-res output, which `TEMPLATE_PREVIEW` does not guarantee.
-2. **`ZSL_BUFFER_DEPTH = 12` at 30 fps** gives exactly 400 ms of past frames to choose from. This is enough to cover the user's own reaction time (150–250 ms tap-to-brain delay) plus Android's input-dispatch jitter (±150 ms). Less than 8 depth and you start discarding useful frames; more than 16 and you waste ~1 GB of RAM for no benefit.
-3. **Eviction order is FIFO, not LRU.** Always evict the oldest frame. If you evict recent frames, you discard the frame the user actually saw at tap time.
-4. **Never call `image.close()` in `onImageAvailable` before enqueuing.** If you close the image, the HAL reclaims the buffer, and when you later try to feed it to ImageWriter, the buffer is invalid → hard crash. Use the eviction loop only.
+Empat detail implementasi dari dokumen penelitian yang tidak didokumentasikan dalam referensi SDK Android resmi:
+1. **Gunakan `TEMPLATE_ZERO_SHUTTER_LAG`** sebagai template dasar. Ia mengonfigurasi mode pembacaan sensor untuk mendukung pratinjau simultan + output resolusi penuh, yang tidak dijamin oleh `TEMPLATE_PREVIEW`.
+2. **`ZSL_BUFFER_DEPTH = 12` pada 30 fps** memberikan tepat 400 ms bingkai masa lalu untuk dipilih. Ini cukup untuk mencakup waktu reaksi pengguna sendiri (penundaan ketukan-ke-otak 150–250 ms) ditambah jitter pengiriman input Android (±150 ms). Kurang dari 8 kedalaman dan Anda mulai membuang bingkai yang berguna; lebih dari 16 dan Anda membuang ~1 GB RAM tanpa manfaat.
+3. **Urutan pengosongan adalah FIFO, bukan LRU.** Selalu kosongkan bingkai tertua. Jika Anda mengosongkan bingkai terbaru, Anda membuang bingkai yang sebenarnya dilihat pengguna pada saat pengetukan.
+4. **Jangan pernah memanggil `image.close()` di `onImageAvailable` sebelum memasukkan ke antrean.** Jika Anda menutup gambar, HAL merebut kembali buffer tersebut, dan saat Anda nanti mencoba memberikannya ke ImageWriter, buffer tersebut tidak valid → crash keras. Gunakan loop pengosongan saja.
 
 ---
 
-### Step 2: InputConfiguration + createReprocessableCaptureSession
+### Langkah 2: InputConfiguration + createReprocessableCaptureSession
 
-A standard capture session has only **output** surfaces (sensor → ISP → surface). A reprocessable session adds **one input surface** (ImageWriter → HAL → ISP → output), enabling the pipeline to process a buffer that never touched the sensor. Create the reprocessable session via `createReprocessableCaptureSession(inputConfig, outputs, callback, handler)` or via the newer `SessionConfiguration` API with `InputConfiguration`.
+Sesi pengambilan gambar standar hanya memiliki surface **output** (sensor → ISP → surface). Sesi yang dapat diproses ulang menambahkan **satu surface input** (ImageWriter → HAL → ISP → output), memungkinkan pipeline memproses buffer yang tidak pernah menyentuh sensor. Buat sesi yang dapat diproses ulang melalui `createReprocessableCaptureSession(inputConfig, outputs, callback, handler)` atau melalui API `SessionConfiguration` yang lebih baru dengan `InputConfiguration`.
 
 ```kotlin
 import android.hardware.camera2.CameraDevice
@@ -264,12 +264,12 @@ fun createZslReprocessableSession(
     )
 
     reprocessingImageWriter = ImageWriter.newInstance(
-        jpegStillReader!!.surface, // Output surface of reprocessing
-        inputConfig,                // Input config to HAL
-        1                           // Max in-flight reprocess requests
+        jpegStillReader!!.surface, // Surface output pemrosesan ulang
+        inputConfig,                // Konfigurasi input ke HAL
+        1                           // Maks permintaan proses ulang dalam proses
     )
 
-    // Outputs of the reprocessed frame: just JPEG for this example
+    // Output dari bingkai yang diproses ulang: hanya JPEG untuk contoh ini
     val reprocessOutputs = listOf(
         OutputConfiguration(jpegStillReader!!.surface)
     )
@@ -285,27 +285,27 @@ fun createZslReprocessableSession(
             }
             override fun onConfigureFailed(
                 s: CameraCaptureSession
-            ) = Log.e(TAG, "Reprocessable session config FAILED. " +
-                  "Check capability gate (LEVEL3/YUV_REPROC/PRIVATE_REPROC)?")
+            ) = Log.e(TAG, "Konfigurasi sesi yang dapat diproses ulang GAGAL. " +
+                  "Cek gerbang kemampuan (LEVEL3/YUV_REPROC/PRIVATE_REPROC)?")
         }
     )
-    sessionConfig.setInputConfiguration(inputConfig) // Mandatory!
+    sessionConfig.setInputConfiguration(inputConfig) // Wajib!
     cameraDevice.createCaptureSession(sessionConfig)
 }
 ```
 
-Research doc note ZSL-2: the reprocessable session and the circular-buffer preview session **do not need to be the same session**. In fact, most production implementations run two sessions simultaneously — a preview session feeding the circular buffer, and a dedicated reprocessable session fed only at tap time. The HAL handles multi-session arbitration internally for LEVEL_3 devices.
+Catatan dokumen penelitian ZSL-2: sesi yang dapat diproses ulang dan sesi pratinjau penyangga melingkar **tidak harus berupa sesi yang sama**. Faktanya, sebagian besar implementasi produksi menjalankan dua sesi secara bersamaan — satu sesi pratinjau yang mengisi penyangga melingkar, dan sesi khusus yang dapat diproses ulang yang hanya diisi pada saat pengetukan. HAL menangani arbitrase multi-sesi secara internal untuk perangkat LEVEL_3.
 
 ---
 
-### Step 3: Shutter Tap → Find Closest Timestamp Frame → ImageWriter Feeds HAL
+### Langkah 3: Ketukan Rana → Cari Bingkai Stempel Waktu Terdekat → ImageWriter Memberi Makan HAL
 
-When the user taps the shutter:
-1. Record the tap's real-time timestamp (`System.currentTimeMillis()` or `System.nanoTime()`)
-2. Walk the circular buffer **from newest to oldest** and find the ZslBufferFrame whose `image.timestamp` (in nanoseconds, `CLOCK_MONOTONIC`) is closest to the tap timestamp
-3. Acquire a free input buffer from `ImageWriter` via `dequeueInputImage()`
-4. Copy the circular buffer frame's pixel planes into the ImageWriter input buffer
-5. Queue the ImageWriter buffer with `queueInputImage()`
+Saat pengguna mengetuk rana:
+1. Rekam stempel waktu real-time pengetukan (`System.currentTimeMillis()` atau `System.nanoTime()`)
+2. Telusuri penyangga melingkar **dari yang terbaru ke yang tertua** dan cari ZslBufferFrame yang `image.timestamp`-nya (dalam nanodetik, `CLOCK_MONOTONIC`) paling dekat dengan stempel waktu pengetukan
+3. Dapatkan buffer input bebas dari `ImageWriter` via `dequeueInputImage()`
+4. Salin bidang piksel (pixel planes) bingkai penyangga melingkar ke dalam buffer input ImageWriter
+5. Masukkan buffer ImageWriter ke antrean dengan `queueInputImage()`
 
 ```kotlin
 import android.hardware.camera2.TotalCaptureResult
@@ -318,7 +318,7 @@ fun onShutterTap(
     imageWriter: ImageWriter,
     captureStartTimeNanos: Long = SystemClock.elapsedRealtimeNanos()
 ) {
-    // --- Step 3a: Walk circular buffer NEWEST → OLDEST ---
+    // --- Langkah 3a: Telusuri penyangga melingkar TERBARU → TERLAMA ---
     var bestFrame: ZslBufferFrame? = null
     var bestDeltaNs = Long.MAX_VALUE
 
@@ -328,20 +328,20 @@ fun onShutterTap(
             bestDeltaNs = delta
             bestFrame = frame
         }
-        // Optimization: once delta starts growing again, we've passed the best frame
+        // Optimalisasi: setelah delta mulai tumbuh kembali, kita telah melewati bingkai terbaik
         if (delta > bestDeltaNs * 1.1) break
     }
     val selectedFrame = bestFrame ?: run {
-        Log.w(TAG, "ZSL buffer empty — fallback to non-ZSL capture")
-        // ... trigger standard capture() fallback ...
+        Log.w(TAG, "Penyangga ZSL kosong — gunakan pengambilan standar sebagai cadangan")
+        // ... picu cadangan capture() standar ...
         return
     }
 
-    // --- Step 3b: Get ImageWriter input buffer, copy pixels, queue ---
+    // --- Langkah 3b: Dapatkan buffer input ImageWriter, salin piksel, masukkan antrean ---
     val writerInputImage: Image = try {
         imageWriter.dequeueInputImage(100 /* timeoutMs */)
     } catch (e: IllegalStateException) {
-        Log.e(TAG, "ImageWriter has no free buffers", e); return
+        Log.e(TAG, "ImageWriter tidak memiliki buffer bebas", e); return
     }
 
     try {
@@ -350,14 +350,14 @@ fun onShutterTap(
             .let { pendingReprocessResults[writerInputImage.timestamp] = it }
         imageWriter.queueInputImage(writerInputImage)
     } finally {
-        // Do NOT close selectedFrame.imageRef yet — only after reprocess completes
-        // (deferred to onCaptureCompleted of the reprocess request)
+        // JANGAN tutup selectedFrame.imageRef dulu — hanya setelah proses ulang selesai
+        // (ditunda ke onCaptureCompleted dari permintaan proses ulang)
     }
 }
 
-// --- Pixel copy helper (handles both PRIVATE and YUV_420_888) ---
+// --- Pembantu penyalinan piksel (menangani baik PRIVATE maupun YUV_420_888) ---
 private fun copyImagePlanes(src: Image, dst: Image) {
-    require(src.format == dst.format) { "Reprocess requires matching formats" }
+    require(src.format == dst.format) { "Proses ulang memerlukan format yang cocok" }
     for (planeIdx in 0 until src.planes.size) {
         val srcPlane = src.planes[planeIdx]
         val dstPlane = dst.planes[planeIdx]
@@ -372,13 +372,13 @@ private val pendingReprocessResults =
     HashMap<Long, TotalCaptureResult>()
 ```
 
-The "closest timestamp" selection is critical because the circular buffer fills every 33 ms (30 fps). The selected frame will be at most ±16 ms away from the actual tap moment — perceptually zero lag for a human observer. Research doc rule ZSL-3: *always* walk descending (newest first); walking ascending increases the probability of selecting a frame that is already 400 ms stale.
+Pemilihan "stempel waktu terdekat" sangat penting karena penyangga melingkar terisi setiap 33 ms (30 fps). Bingkai yang dipilih akan terpaut paling banyak ±16 ms dari momen pengetukan yang sebenarnya — jeda nol yang terasa secara persepsi bagi pengamat manusia. Aturan dokumen penelitian ZSL-3: *selalu* telusuri secara descending (terbaru lebih dulu); menelusuri secara ascending meningkatkan probabilitas memilih bingkai yang sudah basi 400 ms.
 
 ---
 
-### Step 4: createReprocessCaptureRequest(TotalCaptureResult) → Apply Heavy NR + EDGE
+### Langkah 4: createReprocessCaptureRequest(TotalCaptureResult) → Terapkan NR + EDGE Berat
 
-The final step submits the reprocess request, but with a twist: instead of `createCaptureRequest(template)`, you use **`createReprocessCaptureRequest(originalTotalCaptureResult)`**, which re-uses the *original AE, AWB, and AF settings from the preview frame*. On top of those baseline settings, you apply heavy-duty `NOISE_REDUCTION_MODE_HIGH_QUALITY` and `EDGE_MODE_HIGH_QUALITY` — the ISP processing passes that were disabled for the lightweight preview pipeline to save power.
+Langkah terakhir mengirimkan permintaan proses ulang, tetapi dengan twist: alih-alih `createCaptureRequest(template)`, Anda menggunakan **`createReprocessCaptureRequest(originalTotalCaptureResult)`**, yang menggunakan kembali *pengaturan asli AE, AWB, dan AF dari bingkai pratinjau*. Di atas pengaturan garis dasar tersebut, Anda menerapkan `NOISE_REDUCTION_MODE_HIGH_QUALITY` dan `EDGE_MODE_HIGH_QUALITY` tingkat berat — pass pemrosesan ISP yang dinonaktifkan untuk pipeline pratinjau ringan guna menghemat daya.
 
 ```kotlin
 import android.hardware.camera2.CameraCaptureSession
@@ -396,19 +396,19 @@ fun submitZslReprocessRequest(
         .apply {
             addTarget(jpegSurface)
 
-            // --- HEAVY POST-CAPTURE ISP PROCESSING ---
+            // --- PEMROSESAN ISP PASCA-PENGAMBILAN BERAT ---
             set(CaptureRequest.NOISE_REDUCTION_MODE,
                 CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY)
             set(CaptureRequest.EDGE_MODE,
                 CaptureRequest.EDGE_MODE_HIGH_QUALITY)
 
-            // Optional (LEVEL_3 only): re-apply shading and hot-pixel correction
+            // Opsional (hanya LEVEL_3): terapkan ulang shading dan koreksi hot-pixel
             set(CaptureRequest.HOT_PIXEL_MODE,
                 CaptureRequest.HOT_PIXEL_MODE_HIGH_QUALITY)
             set(CaptureRequest.COLOR_CORRECTION_MODE,
                 CaptureRequest.COLOR_CORRECTION_MODE_HIGH_QUALITY)
 
-            // Keep JPEG quality high
+            // Jaga kualitas JPEG tetap tinggi
             set(CaptureRequest.JPEG_QUALITY, REPROC_JPEG_QUALITY.toByte())
             set(CaptureRequest.JPEG_ORIENTATION, getJpegOrientation())
         }
@@ -419,9 +419,9 @@ fun submitZslReprocessRequest(
             request: CaptureRequest,
             result: TotalCaptureResult
         ) {
-            // JPEG will be delivered via jpegStillReader OnImageAvailableListener
+            // JPEG akan dikirim melalui OnImageAvailableListener jpegStillReader
 
-            // Now safe to close the circular buffer reference — reprocessing done
+            // Sekarang aman untuk menutup referensi penyangga melingkar — proses ulang selesai
             val ts = result.get(CaptureResult.SENSOR_TIMESTAMP) ?: return
             pendingReprocessResults.remove(ts)
             val iter = zslCircularBuffer.iterator()
@@ -440,48 +440,48 @@ fun submitZslReprocessRequest(
 }
 ```
 
-`createReprocessCaptureRequest(originalResult)` is not just a convenience wrapper — it validates that the original frame's sensor settings (exposure time, ISO, lens position) are compatible with the reprocessing pipeline. If you use a standard `createCaptureRequest()` on an input-fed session, the HAL may re-converge AE/AWB, defeating the purpose of ZSL (the output would look like a *different* frame than the one selected).
+`createReprocessCaptureRequest(originalResult)` bukan sekadar pembungkus kenyamanan — ia memvalidasi bahwa pengaturan sensor bingkai asli (waktu eksposur, ISO, posisi lensa) kompatibel dengan pipeline pemrosesan ulang. Jika Anda menggunakan `createCaptureRequest()` standar pada sesi yang diisi input, HAL mungkin melakukan pemusatan ulang AE/AWB, yang menggagalkan tujuan ZSL (hasilnya akan terlihat seperti bingkai yang *berbeda* dari yang dipilih).
 
-## ZSL Circular Buffer + Reinjection Flowchart (Mermaid)
+## Diagram Alur Penyangga Melingkar ZSL + Injeksi Ulang (Mermaid)
 
 ```mermaid
 flowchart TD
-    A[Sensor Continuous Readout\n30fps full-res] --> B[ZSL Preview ISP:\nLow-power mode\nEDGE_MODE=FAST\nNR_MODE=FAST]
-    B --> C[Preview SurfaceView\nUser sees live 30fps view]
-    B --> D[ZSL ImageReader\nPRIVATE or YUV full-res]
+    A["Pembacaan Terus Menerus Sensor<br/>30fps resolusi penuh"] --> B["ISP Pratinjau ZSL:<br/>Mode daya rendah<br/>EDGE_MODE=FAST<br/>NR_MODE=FAST"]
+    B --> C[Preview SurfaceView<br/>Pengguna melihat tampilan langsung 30fps]
+    B --> D[ImageReader ZSL<br/>PRIVATE atau YUV resolusi penuh]
     
-    subgraph CB["🗘 Circular Buffer (Depth 12, 400ms history)"]
+    subgraph CB["🗘 Penyangga Melingkar (Kedalaman 12, sejarah 400ms)"]
         direction TB
         CB1["Slot N-11 (T-366ms)"]
         CB2["..."]
         CB3["Slot N-1 (T-33ms)"]
-        CB4["★ Slot N (T=0ms) ★\nCLOSEST TO TAP TIME"]
+        CB4["★ Slot N (T=0ms) ★<br/>PALING DEKAT DENGAN WAKTU KETUK"]
     end
     D --> CB
 
-    E[★ USER TAPS SHUTTER AT T=0ms ★] --> F{Walk CB NEWEST → OLDEST\nFind min |frame.ts − tap.ts|}
-    F -->|"Selected: Slot N"| G[ImageWriter.dequeueInputImage()]
-    G --> H[Copy selected frame's\nPlanes → ImageWriter buffer]
-    H --> I[ImageWriter.queueInputImage()\n→ Feeds BACK into HAL Input Port]
+    E["★ PENGGUNA MENGETUK RANA PADA T=0ms ★"] --> F{Telusuri CB TERBARU → TERLAMA<br/>Cari min |frame.ts − tap.ts|}
+    F -->|"Terpilih: Slot N"| G[ImageWriter.dequeueInputImage()]
+    G --> H[Salin bidang bingkai terpilih<br/>Planes → buffer ImageWriter]
+    H --> I[ImageWriter.queueInputImage()<br/>→ Memasukkan KEMBALI ke Port Input HAL]
     
-    subgraph REPROC["🔄 Reprocessing Pipeline (HEAVY QUALITY)"]
+    subgraph REPROC["🔄 Pipeline Pemrosesan Ulang (KUALITAS BERAT)"]
         direction TB
-        R1["ISP NR_MODE = HIGH_QUALITY\n(Multi-frame spatial+TNR)"]
-        R2["ISP EDGE_MODE = HIGH_QUALITY\n(Unsharp mask + LPA sharpening)"]
-        R3["ISP COLOR_CORRECTION =\nHIGH_QUALITY (3D LUT)"]
-        R4["Hardware JPEG Encoder\nQ=95"]
+        R1["ISP NR_MODE = HIGH_QUALITY<br/>(Spasial multi-bingkai + TNR)"]
+        R2["ISP EDGE_MODE = HIGH_QUALITY<br/>(Unsharp mask + penajaman LPA)"]
+        R3["ISP COLOR_CORRECTION =<br/>HIGH_QUALITY (3D LUT)"]
+        R4["Encoder JPEG Perangkat Keras<br/>Q=95"]
     end
 
     I --> REPROC
-    REPROC --> J["JPEG Stored\nContent = EXACT frame user\n saw at T=0ms — ✓ ZERO LAG"]
+    REPROC --> J["JPEG Disimpan<br/>Konten = bingkai TEPAT yang dilihat<br/> pengguna pada T=0ms — ✓ JEDA NOL"]
 
     style CB fill:#eff6ff,stroke:#2563eb
     style REPROC fill:#fef3c7,stroke:#d97706
 ```
 
-## switchToOffline(): Background Processing Continuity
+## switchToOffline(): Kontinuitas Pemrosesan Latar Belakang
 
-One of the worst UX defects a camera app can have is: user taps shutter → immediately gets a phone call or presses home → app process is killed → the in-progress photo is lost. Android 12 (API 31) solved this with **`CameraCaptureSession.switchToOffline()`**, which transfers ownership of the reprocessing pipeline from your app process to a persistent HAL service. The HAL service completes any in-flight capture/reprocess even if your app is killed by the system, and notifies you via `CameraOfflineSessionCallback.onReady()` when the app is relaunched.
+Salah satu cacat UX terburuk yang bisa dimiliki aplikasi kamera adalah: pengguna mengetuk rana → langsung mendapat panggilan telepon atau menekan home → proses aplikasi dimatikan → foto yang sedang diproses hilang. Android 12 (API 31) memecahkan ini dengan **`CameraCaptureSession.switchToOffline()`**, yang mentransfer kepemilikan pipeline pemrosesan ulang dari proses aplikasi Anda ke layanan HAL yang persisten. Layanan HAL menyelesaikan setiap pengambilan/proses ulang yang sedang berlangsung bahkan jika aplikasi Anda dimatikan oleh sistem, dan memberi tahu Anda via `CameraOfflineSessionCallback.onReady()` saat aplikasi diluncurkan kembali.
 
 ```kotlin
 import android.hardware.camera2.CameraCaptureSession
@@ -495,22 +495,22 @@ fun moveToOfflineOnBackground(
 ) {
     val offlineCallback = object : CameraOfflineSessionCallback() {
         override fun onReady(session: CameraOfflineSession) {
-            // HAL has taken ownership. App can die now — photo will be saved.
-            Log.i(TAG, "Offline session ready. Pending captures will complete.")
-            // At this point you can finish() the Activity or release cameraDevice
+            // HAL telah mengambil alih kepemilikan. Aplikasi bisa mati sekarang — foto akan disimpan.
+            Log.i(TAG, "Sesi offline siap. Pengambilan yang tertunda akan diselesaikan.")
+            // Pada titik ini Anda dapat memanggil finish() Activity atau melepas cameraDevice
         }
         override fun onError(
             session: CameraOfflineSession,
             errorCode: Int
-        ) = Log.e(TAG, "Offline session error: $errorCode")
+        ) = Log.e(TAG, "Kesalahan sesi offline: $errorCode")
 
         override fun onCaptureCompleted(
             offlineSession: CameraOfflineSession,
             captureResult: android.hardware.camera2.CaptureResult
         ) {
-            // Optional: called when the offline pipeline finishes each frame
-            // JPEG bytes are still delivered via the original ImageReader
-            // On app restart, query CameraOfflineSession for pending
+            // Opsional: dipanggil saat pipeline offline menyelesaikan setiap bingkai
+            // Byte JPEG tetap dikirim melalui ImageReader asli
+            // Saat aplikasi dimulai ulang, kueri CameraOfflineSession untuk yang tertunda
         }
     }
 
@@ -522,31 +522,31 @@ fun moveToOfflineOnBackground(
 }
 ```
 
-`switchToOffline()` requires `INFO_SUPPORTED_HARDWARE_LEVEL >= LEVEL_3` on the device. It's recommended to call it in `Activity.onPause()` **only if** the app has in-flight ZSL reprocesses; never call it during idle because the offline session consumes HAL resources for up to 30 seconds post-close.
+`switchToOffline()` memerlukan `INFO_SUPPORTED_HARDWARE_LEVEL >= LEVEL_3` pada perangkat. Disarankan untuk memanggilnya di `Activity.onPause()` **hanya jika** aplikasi memiliki pemrosesan ulang ZSL yang sedang berjalan; jangan pernah memanggilnya saat idle karena sesi offline menghabiskan sumber daya HAL hingga 30 detik pasca-tutup.
 
-## Summary
+## Ringkasan
 
-This chapter implemented the complete Zero Shutter Lag + Reprocessing pipeline as specified in the research doc:
+Bab ini mengimplementasikan pipeline Zero Shutter Lag + Pemrosesan Ulang yang lengkap seperti yang ditentukan dalam dokumen penelitian:
 
-- **ZSL Problem Definition**: Standard capture has 114 ms (best-case) to 800 ms (worst-case) lag. ZSL captures the *exact frame the user saw at tap time* by using a continuously-filling circular buffer.
-- **Capability Gates**: One of three mandatory checks must pass: `HARDWARE_LEVEL_LEVEL_3`, `CAPABILITIES_PRIVATE_REPROCESSING`, or `CAPABILITIES_YUV_REPROCESSING`.
-- **4-step ZSL Workflow** (from the *ZSL / Reprocessing* research section):
-  1. **Circular buffering** with `ImageReader` (depth 12 = 400 ms history) + `CONTROL_CAPTURE_INTENT_ZERO_SHUTTER_LAG` + `TEMPLATE_ZERO_SHUTTER_LAG`.
-  2. **`InputConfiguration` + `createReprocessableCaptureSession`** with `ImageWriter` to re-inject pixel buffers back into the HAL.
-  3. **Shutter tap → closest timestamp selection** (walk newest → oldest, ±16 ms target). Copy selected planes into ImageWriter, queue.
-  4. **`createReprocessCaptureRequest(originalResult)`** with `NOISE_REDUCTION_MODE_HIGH_QUALITY` + `EDGE_MODE_HIGH_QUALITY` for heavy post-capture ISP processing.
-- **`switchToOffline()`** (Android 12 API 31, LEVEL_3 only) transfers ownership to HAL service so in-flight reprocesses complete even if the app is killed.
-- Two Mermaid diagrams (Standard vs ZSL timeline, full circular buffer + reinjection flowchart) visualize the content-lag difference and pipeline flow.
+- **Definisi Masalah ZSL**: Pengambilan standar memiliki jeda 114 ms (kasus terbaik) hingga 800 ms (kasus terburuk). ZSL menangkap *bingkai tepat yang dilihat pengguna pada saat ketukan* dengan menggunakan penyangga melingkar yang terus terisi.
+- **Gerbang Kemampuan**: Salah satu dari tiga pemeriksaan wajib harus lulus: `HARDWARE_LEVEL_LEVEL_3`, `CAPABILITIES_PRIVATE_REPROCESSING`, atau `CAPABILITIES_YUV_REPROCESSING`.
+- **Alur Kerja ZSL 4-langkah** (dari bagian penelitian *ZSL / Reprocessing*):
+  1. **Penyanggaan melingkar** dengan `ImageReader` (kedalaman 12 = sejarah 400 ms) + `CONTROL_CAPTURE_INTENT_ZERO_SHUTTER_LAG` + `TEMPLATE_ZERO_SHUTTER_LAG`.
+  2. **`InputConfiguration` + `createReprocessableCaptureSession`** dengan `ImageWriter` untuk menyuntikkan kembali buffer piksel ke dalam HAL.
+  3. **Ketukan rana → pemilihan stempel waktu terdekat** (telusuri terbaru → tertua, target ±16 ms). Salin bidang terpilih ke ImageWriter, masukkan antrean.
+  4. **`createReprocessCaptureRequest(originalResult)`** dengan `NOISE_REDUCTION_MODE_HIGH_QUALITY` + `EDGE_MODE_HIGH_QUALITY` untuk pemrosesan ISP pasca-pengambilan yang berat.
+- **`switchToOffline()`** (Android 12 API 31, hanya LEVEL_3) mentransfer kepemilikan ke layanan HAL agar proses ulang yang sedang berjalan selesai meskipun aplikasi dimatikan.
+- Dua diagram Mermaid (lini masa Standar vs ZSL, diagram alur penyangga melingkar + injeksi ulang penuh) memvisualisasikan perbedaan jeda konten dan alur pipeline.
 
-## What's Next — End of Professional Camera Features Part V
+## Apa Selanjutnya — Akhir dari Fitur Kamera Profesional Bagian V
 
-You have now completed **Part V: Professional Camera Features** — the final part of the Android Camera2 API tutorial series. You learned:
+Anda sekarang telah menyelesaikan **Bagian V: Fitur Kamera Profesional** — bagian terakhir dari seri tutorial API Android Camera2. Anda telah mempelajari:
 
-- Chapter 18: RAW photography with RAW_SENSOR + DngCreator + simultaneous RAW+JPEG capture.
-- Chapter 19: 120/240 fps high-speed video via `CameraConstrainedHighSpeedCaptureSession` + `createHighSpeedRequestList`.
-- Chapter 20: Logical multi-camera, physical camera IDs, CALIBRATED sync, and dual-physical simultaneous capture.
-- Chapter 21: HDR10 / HLG video and Android 14 JPEG_R Ultra HDR stills with gain maps.
-- Chapter 22: OEM Camera Extensions — Night, Bokeh, HDR, Face Retouch, Automatic.
-- Chapter 23: Zero Shutter Lag circular buffer + reprocessing pipeline and offline session support.
+- Bab 18: Fotografi RAW dengan RAW_SENSOR + DngCreator + pengambilan RAW+JPEG simultan.
+- Bab 19: Video kecepatan tinggi 120/240 fps via `CameraConstrainedHighSpeedCaptureSession` + `createHighSpeedRequestList`.
+- Bab 20: Multi-kamera logis, ID kamera fisik, sinkronisasi CALIBRATED, dan pengambilan simultan fisik ganda.
+- Bab 21: Video HDR10 / HLG dan foto diam Ultra HDR JPEG_R Android 14 dengan peta penguatan (gain map).
+- Bab 22: Ekstensi Kamera OEM — Malam, Bokeh, HDR, Retouch Wajah, Otomatis.
+- Bab 23: Penyangga melingkar Zero Shutter Lag + pipeline pemrosesan ulang dan dukungan sesi offline.
 
-To validate every feature from Parts I–V on your device, install the [Android Camera Parameters app](https://play.google.com/store/apps/details?id=com.zoozooll.cameraparameters). It enumerates every capability, size, FPS range, extension, dynamic range profile, RAW variant, and sync type discussed in this series, and exports full device reports as JSON. Contribute reports for unsupported devices by opening a pull request on the open-source [GitHub repository](https://github.com/zoozooll/AndroidCameraParameters) — the community database is used by thousands of developers to pre-filter feature support in their camera apps.
+Untuk memvalidasi setiap fitur dari Bagian I–V pada perangkat Anda, instal [aplikasi Android Camera Parameters](https://play.google.com/store/apps/details?id=com.zoozooll.cameraparameters). Aplikasi ini menghitung setiap kemampuan, ukuran, rentang FPS, ekstensi, profil rentang dinamis, varian RAW, dan jenis sinkronisasi yang dibahas dalam seri ini, dan mengekspor laporan perangkat lengkap sebagai JSON. Berikan kontribusi laporan untuk perangkat yang belum didukung dengan membuka pull request pada repositori [GitHub](https://github.com/zoozooll/AndroidCameraParameters) sumber terbuka — basis data komunitas tersebut digunakan oleh ribuan pengembang untuk memfilter dukungan fitur dalam aplikasi kamera mereka.

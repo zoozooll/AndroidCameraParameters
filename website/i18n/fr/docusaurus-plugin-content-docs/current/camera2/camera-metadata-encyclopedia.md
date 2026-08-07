@@ -1,31 +1,31 @@
 ﻿---
 sidebar_position: 29
-title: "Camera Metadata Encyclopedia"
-description: Complete reference guide for all essential CameraCharacteristics metadata keys including Sensor, Lens, Control, Scaler, Request, Flash, JPEG, Statistics, and Info categories.
-keywords: [CameraCharacteristics, CameraMetadata, Sensor, Lens, Control, Scaler, camera metadata reference]
+title: "Encyclopédie des métadonnées de la caméra"
+description: Guide de référence complet pour toutes les clés de métadonnées CameraCharacteristics essentielles, incluant les catégories Sensor, Lens, Control, Scaler, Request, Flash, JPEG, Statistics et Info.
+keywords: [CameraCharacteristics, CameraMetadata, Sensor, Lens, Control, Scaler, référence métadonnées caméra]
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-# Camera Metadata Encyclopedia
+# Encyclopédie des métadonnées de la caméra
 
-## Companion App
+## Application compagnon
 
-Inspect every key in this encyclopedia live on your own device — install the Android Camera Parameters app:
+Inspectez chaque clé de cette encyclopédie en direct sur votre propre appareil — installez l'application Android Camera Parameters :
 
-- **GitHub (Open Source):** [github.com/zoozooll/AndroidCameraParameters](https://github.com/zoozooll/AndroidCameraParameters)
-- **Google Play:** [play.google.com/store/apps/details?id=com.minininja.cameraparams](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)
+- **GitHub (Open Source) :** [github.com/zoozooll/AndroidCameraParameters](https://github.com/zoozooll/AndroidCameraParameters)
+- **Google Play :** [play.google.com/store/apps/details?id=com.minininja.cameraparams](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)
 
-The app is a living implementation of every concept on this page. Every metadata entry below tells you exactly which tab and screen displays that value so you can cross-reference with a real device in your hand.
+L'application est une implémentation vivante de chaque concept de cette page. Chaque entrée de métadonnées ci-dessous vous indique exactement quel onglet et quel écran affiche cette valeur afin que vous puissiez effectuer des recoupements avec un appareil réel entre vos mains.
 
 ---
 
-## Metadata Taxonomy
+## Taxonomie des métadonnées
 
 ```mermaid
 mindmap
-  root((Camera2 Metadata))
+  root((Métadonnées Camera2))
     Sensor
       SENSOR_INFO_ACTIVE_ARRAY_SIZE
       SENSOR_INFO_PIXEL_ARRAY_SIZE
@@ -70,60 +70,60 @@ mindmap
 
 ## Introduction
 
-Welcome to the Camera Metadata Encyclopedia, the definitive reference for understanding the 300+ metadata keys that describe every capability of an Android camera device. If the previous chapters in this series taught you *how* to operate Camera2 — opening sessions, building requests, streaming surfaces — this encyclopedia teaches you *what* your camera is actually capable of doing. Every feature you enable in a `CaptureRequest.Builder` must first be validated against `CameraCharacteristics`. Skip this validation and your app will crash on a certain percentage of devices, or worse, silently produce corrupted output.
+Bienvenue dans l'Encyclopédie des métadonnées de la caméra, la référence définitive pour comprendre les plus de 300 clés de métadonnées qui décrivent chaque capacité d'un appareil photo Android. Si les chapitres précédents de cette série vous ont appris *comment* utiliser Camera2 — ouvrir des sessions, construire des requêtes, diffuser des surfaces — cette encyclopédie vous enseigne *ce dont* votre caméra est réellement capable. Chaque fonctionnalité que vous activez dans un `CaptureRequest.Builder` doit d'abord être validée par rapport aux `CameraCharacteristics`. Ignorez cette validation et votre application plantera sur un certain pourcentage d'appareils, ou pire, produira silencieusement une sortie corrompue.
 
-This encyclopedia exists because Camera2 metadata is notoriously under-documented in the official Android SDK reference. The documentation tells you the type of each key (a `Range&lt;Int&gt;`, a `FloatArray`, etc.) but rarely tells you the *semantics*: what a "diopter" means in practice, why an active array size differs from a pixel array size, or which sequence of keys you must check together before exposing a manual-ISO button. The entries here bridge that gap with production-grade code, common OEM pitfalls, and real device behavior drawn from thousands of device profiles in the Android Camera Parameters database.
+Cette encyclopédie existe parce que les métadonnées Camera2 sont notoirement sous-documentées dans la référence officielle du SDK Android. La documentation vous indique le type de chaque clé (un `Range<Int>`, un `FloatArray`, etc.) mais mentionne rarement la *sémantique* : ce qu'une "dioptrie" signifie en pratique, pourquoi la taille de la matrice active diffère de la taille de la matrice de pixels, ou quelle séquence de clés vous devez vérifier ensemble avant d'exposer un bouton d'ISO manuel. Les entrées ici comblent cette lacune avec du code de qualité production, les pièges courants des OEM et le comportement réel des appareils tiré de milliers de profils d'appareils dans la base de données Android Camera Parameters.
 
-Think of this page as a lookup table for your camera application architecture. When you design a settings screen, go to the Control section. When you build a zoom UI, go to Scaler. When you write a RAW processing pipeline, go to Sensor. Every entry follows the same six-point structure so you can jump directly to the code you need without re-learning layout. The companion app on your phone then validates that the same queries work against real silicon from Samsung, Sony, HiSilicon, MediaTek, and Google Tensor.
+Considérez cette page comme une table de consultation pour l'architecture de votre application de caméra. Lorsque vous concevez un écran de paramètres, allez à la section Control. Lorsque vous construisez une interface utilisateur de zoom, allez à Scaler. Lorsque vous écrivez un pipeline de traitement RAW, allez à Sensor. Chaque entrée suit la même structure en six points afin que vous puissiez accéder directement au code dont vous avez besoin sans avoir à réapprendre la mise en page. L'application compagnon sur votre téléphone valide ensuite que les mêmes requêtes fonctionnent sur du matériel réel provenant de Samsung, Sony, HiSilicon, MediaTek et Google Tensor.
 
-No device supports every key in this encyclopedia. That is the entire point. The correct pattern for Camera2 development is: query the key → null-check the result → feature-gate the UI → document the fallback path. This page gives you the query, the check, and the pitfall you will hit if you skip it.
-
----
-
-## How Camera2 Metadata is Organized
-
-Camera2 metadata lives in three parallel class hierarchies, all rooted in `android.hardware.camera2.CameraMetadata`. The static description of what a camera *can* do lives in `CameraCharacteristics` — you query this exactly once per camera ID after discovering it via `CameraManager.getCameraIdList()`. The per-request description of what you *want* the camera to do lives in `CaptureRequest` — you populate keys via `CaptureRequest.Builder.set()`. The per-frame description of what the camera *actually did* lives in `CaptureResult` (or its total variant `TotalCaptureResult`) — you read keys from the callback in `CameraCaptureSession.CaptureCallback.onCaptureCompleted()`.
-
-Every key in all three hierarchies extends `CaptureResult.Key<T>` (or its siblings `CameraCharacteristics.Key<T>` and `CaptureRequest.Key<T>`) and is a strongly-typed field descriptor. There are over 300 public keys across the three classes, plus additional OEM-private keys accessible via `CameraCharacteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_SESSION_KEYS)` on certain vendor extensions. The categories in this encyclopedia follow the conceptual groupings used by the HAL3 interface specification: Sensor describes the imager, Lens describes the optics, Control describes the 3A (auto-exposure, auto-focus, auto-white-balance) algorithms, Scaler describes the crop-and-resize pipeline, Request describes cross-cutting capability flags, Flash describes the torch/flash LED, JPEG describes the still-image encoder, and Info describes the camera package and HAL version.
+Aucun appareil ne supporte toutes les clés de cette encyclopédie. C'est tout l'intérêt. Le modèle correct pour le développement Camera2 est : interroger la clé → vérifier si le résultat est null → restreindre l'interface utilisateur → documenter le chemin de secours (fallback). Cette page vous donne la requête, la vérification et le piège que vous rencontrerez si vous l'ignorez.
 
 ---
 
-## Conventions Used in This Encyclopedia
+## Comment les métadonnées Camera2 sont organisées
 
-Every metadata entry below follows exactly six sections:
+Les métadonnées Camera2 résident dans trois hiérarchies de classes parallèles, toutes ancrées dans `android.hardware.camera2.CameraMetadata`. La description statique de ce qu'une caméra *peut* faire se trouve dans `CameraCharacteristics` — vous interrogez ces clés exactement une fois par ID de caméra après l'avoir découvert via `CameraManager.getCameraIdList()`. La description par requête de ce que vous *voulez* que la caméra fasse se trouve dans `CaptureRequest` — vous remplissez les clés via `CaptureRequest.Builder.set()`. La description par image de ce que la caméra a *réellement fait* se trouve dans `CaptureResult` (ou sa variante totale `TotalCaptureResult`) — vous lisez les clés à partir du rappel dans `CameraCaptureSession.CaptureCallback.onCaptureCompleted()`.
 
-1. **What is it?** A 1–2 paragraph definition of the key, its type, and its semantics.
-2. **Why does it exist?** The design rationale that led Android engineers to expose this key rather than deriving the value implicitly.
-3. **Which devices support it?** The minimum hardware level, capability flags, and Android version where this key becomes meaningful.
-4. **How do I query it?** A complete Kotlin code snippet with null-safety, showing the exact `characteristics.get()` call plus error handling.
-5. **How can I inspect it with Android Camera Parameters?** The exact tab hierarchy in the companion app where you can see this value rendered on a device.
-6. **Common pitfalls.** One or more real-world issues developers hit, usually involving OEM fragmentation, hidden state coupling between keys, or misunderstanding of units.
-
-Code snippets use idiomatic Kotlin with nullable-safe operators (`?.`) and the Elvis operator (`?:`) plus `run` blocks for fallback. All snippets assume you already hold a `CameraCharacteristics` instance named `characteristics` obtained via `cameraManager.getCameraCharacteristics(cameraId)`. Snippets that produce user-visible output use string formatting with units (diopters, nanoseconds, EV steps) so you can drop them directly into a `PreferenceScreen` or a `TextView` debug overlay.
-
-The companion app references always use the same pattern: *Tab Name / Sub-tab Name*. For example "Overview / Hardware Level" means: open the app, tap the Overview tab in the bottom navigation, then look for the Hardware Level card. If a key appears in multiple screens we list the canonical primary location first.
+Chaque clé dans les trois hiérarchies étend `CaptureResult.Key<T>` (ou ses homologues `CameraCharacteristics.Key<T>` et `CaptureRequest.Key<T>`) et est un descripteur de champ fortement typé. Il existe plus de 300 clés publiques dans les trois classes, plus des clés privées OEM supplémentaires accessibles via `CameraCharacteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_SESSION_KEYS)` sur certaines extensions de fournisseur. Les catégories de cette encyclopédie suivent les groupements conceptuels utilisés par la spécification d'interface HAL3 : Sensor décrit l'imageur, Lens décrit l'optique, Control décrit les algorithmes 3A (exposition automatique, mise au point automatique, balance des blancs automatique), Scaler décrit le pipeline de recadrage et de redimensionnement, Request décrit les drapeaux de capacités transversales, Flash décrit la LED de torche/flash, JPEG décrit l'encodeur d'images fixes et Info décrit le package de la caméra et la version du HAL.
 
 ---
 
-## Sensor Category
+## Conventions utilisées dans cette Encyclopédie
+
+Chaque entrée de métadonnées ci-dessous suit exactement six sections :
+
+1. **Qu'est-ce que c'est ?** Une définition de 1 à 2 paragraphes de la clé, de son type et de sa sémantique.
+2. **Pourquoi cela existe-t-il ?** La justification de conception qui a conduit les ingénieurs Android à exposer cette clé plutôt qu'à dériver la valeur implicitement.
+3. **Quels appareils le supportent ?** Le niveau matériel minimum, les indicateurs de capacités et la version Android où cette clé devient significative.
+4. **Comment l'interroger ?** Un extrait de code Kotlin complet avec sécurité contre les nulls, montrant l'appel `characteristics.get()` exact plus la gestion des erreurs.
+5. **Comment l'inspecter avec Android Camera Parameters ?** La hiérarchie exacte des onglets dans l'application compagnon où vous pouvez voir cette valeur rendue sur un appareil.
+6. **Pièges courants.** Un ou plusieurs problèmes réels que les développeurs rencontrent, impliquant généralement la fragmentation des OEM, le couplage d'état caché entre les clés ou une mauvaise compréhension des unités.
+
+Les extraits de code utilisent un Kotlin idiomatique avec les opérateurs de sécurité contre les nulls (`?.`) et l'opérateur Elvis (`?:`) plus des blocs `run` pour le repli. Tous les extraits supposent que vous détenez déjà une instance de `CameraCharacteristics` nommée `characteristics` obtenue via `cameraManager.getCameraCharacteristics(cameraId)`. Les extraits qui produisent des sorties visibles par l'utilisateur utilisent un formatage de chaîne avec des unités (dioptries, nanosecondes, pas d'EV) afin que vous puissiez les déposer directement dans un `PreferenceScreen` ou une superposition de débogage `TextView`.
+
+Les références de l'application compagnon utilisent toujours le même modèle : *Nom de l'onglet / Nom du sous-onglet*. Par exemple, "Overview / Hardware Level" signifie : ouvrez l'application, appuyez sur l'onglet Overview dans la navigation du bas, puis cherchez la carte Hardware Level. Si une clé apparaît dans plusieurs écrans, nous listons l'emplacement principal canonique en premier.
+
+---
+
+## Catégorie Sensor (Capteur)
 
 ### SENSOR_INFO_ACTIVE_ARRAY_SIZE
 
-**1. What is it?**
+**1. Qu'est-ce que c'est ?**
 
-`SENSOR_INFO_ACTIVE_ARRAY_SIZE` is a `android.graphics.Rect` describing the pixel coordinates of the active imaging area within the full sensor die. In practice this is the largest rectangle of pixels that can actually be read out and delivered to an output stream. The rectangle is always axis-aligned and expressed in pixel-coordinate space where `(0,0)` is the top-left corner of the full pixel array. Typical values look like `Rect(0, 0, 8000, 6000)` for an 8K×6K sensor, or `Rect(120, 160, 3880, 2880)` when the sensor manufacturer leaves a small inactive border (optically-black pixels) around the edge.
+`SENSOR_INFO_ACTIVE_ARRAY_SIZE` est un `android.graphics.Rect` décrivant les coordonnées des pixels de la zone d'imagerie active au sein de la matrice complète du capteur. En pratique, il s'agit du plus grand rectangle de pixels qui peut réellement être lu et délivré à un flux de sortie. Le rectangle est toujours aligné sur les axes et exprimé dans l'espace des coordonnées de pixels où `(0,0)` est le coin supérieur gauche de la matrice de pixels complète. Les valeurs typiques ressemblent à `Rect(0, 0, 8000, 6000)` pour un capteur 8K×6K, ou `Rect(120, 160, 3880, 2880)` lorsque le fabricant du capteur laisse une petite bordure inactive (pixels optiquement noirs) sur le bord.
 
-Every output stream you configure — whether JPEG, YUV_420_888, RAW, or a preview SurfaceTexture — is ultimately cropped from this active area. When you request a 4:3 JPEG at 12MP the camera ISP crops the active array to 4:3 aspect ratio and scales down. When you apply digital zoom via `SCALER_CROP_REGION`, that crop region is itself cropped relative to the active array, not the pixel array.
+Chaque flux de sortie que vous configurez — qu'il s'agisse de JPEG, YUV_420_888, RAW ou d'une SurfaceTexture d'aperçu — est finalement recadré à partir de cette zone active. Lorsque vous demandez un JPEG 4:3 à 12 MP, l'ISP de la caméra recadre la matrice active au format 4:3 et réduit la taille. Lorsque vous appliquez un zoom numérique via `SCALER_CROP_REGION`, cette zone de recadrage est elle-même recadrée par rapport à la matrice active, et non à la matrice de pixels.
 
-**2. Why does it exist?**
+**2. Pourquoi cela existe-t-il ?**
 
-Sensor dies always contain more physical photodiodes than are delivered to the ISP pipeline. The outermost rows and columns are "dummy" or "optically black" pixels used for dark-current calibration and lens-shading correction — not real picture data. Without `SENSOR_INFO_ACTIVE_ARRAY_SIZE` developers would have no way to know which coordinate system to use for `SCALER_CROP_REGION` or face-based crop tracking. Camera1 used to hide this distinction entirely, which made digital-zoom math inconsistent across OEMs. Camera2 exposes it explicitly so crop regions can be calculated with pixel-perfect precision.
+Les matrices de capteurs contiennent toujours plus de photodiodes physiques que celles qui sont délivrées au pipeline ISP. Les lignes et colonnes les plus externes sont des pixels "fantômes" ou "optiquement noirs" utilisés pour l'étalonnage du courant d'obscurité et la correction de l'ombrage de l'objectif — pas de vraies données d'image. Sans `SENSOR_INFO_ACTIVE_ARRAY_SIZE`, les développeurs n'auraient aucun moyen de savoir quel système de coordonnées utiliser pour `SCALER_CROP_REGION` ou pour le suivi du recadrage basé sur les visages. Camera1 cachait entièrement cette distinction, ce qui rendait les calculs de zoom numérique incohérents entre les OEM. Camera2 l'expose explicitement afin que les zones de recadrage puissent être calculées avec une précision au pixel près.
 
-**3. Which devices support it?**
+**3. Quels appareils le supportent ?**
 
-All Camera2 devices support this key at all hardware levels: LEGACY, LIMITED, FULL, and LEVEL_3. It is listed in `CameraCharacteristics.getAvailableCaptureResultKeys()` for every camera ID, including external USB cameras. The rect is always non-empty and its width/height never exceed `SENSOR_INFO_PIXEL_ARRAY_SIZE`.
+Tous les appareils Camera2 supportent cette clé à tous les niveaux matériels : LEGACY, LIMITED, FULL et LEVEL_3. Elle est listée dans `CameraCharacteristics.getAvailableCaptureResultKeys()` pour chaque ID de caméra, y compris les caméras USB externes. Le rectangle est toujours non vide et sa largeur/hauteur ne dépassent jamais `SENSOR_INFO_PIXEL_ARRAY_SIZE`.
 
-**4. How do I query it?**
+**4. Comment l'interroger ?**
 
 ```kotlin
 val activeArray: Rect? = characteristics.get(
@@ -134,44 +134,44 @@ activeArray?.let { rect ->
     val widthPx = rect.width()
     val heightPx = rect.height()
     val megapixels = (widthPx * heightPx) / 1_000_000.0
-    Log.d(TAG, "Active array: ${widthPx}×${heightPx}px (%.1f MP)".format(megapixels))
-    Log.d(TAG, "  Left=${rect.left}, Top=${rect.top}, Right=${rect.right}, Bottom=${rect.bottom}")
+    Log.d(TAG, "Matrice active : ${widthPx}×${heightPx}px (%.1f MP)".format(megapixels))
+    Log.d(TAG, "  Gauche=${rect.left}, Haut=${rect.top}, Droite=${rect.right}, Bas=${rect.bottom}")
 } ?: run {
-    Log.w(TAG, "Active array size not available on this device")
+    Log.w(TAG, "Taille de la matrice active non disponible sur cet appareil")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Comment l'inspecter avec Android Camera Parameters ?**
 
-Navigate to **Sensor / Sensor Info**. The active array is rendered as the second line of the "Sensor Geometry" card, below the pixel array size. The companion app also draws the active array rectangle visually superimposed on a scaled representation of the pixel array, so you can see at a glance how much of the physical die is actually usable.
+Naviguez vers **Sensor / Sensor Info**. La matrice active est affichée sur la deuxième ligne de la carte "Sensor Geometry", sous la taille de la matrice de pixels. L'application compagnon dessine également le rectangle de la matrice active visuellement superposé sur une représentation à l'échelle de la matrice de pixels, afin que vous puissiez voir en un coup d'œil quelle partie de la matrice physique est réellement utilisable.
 
-**6. Common pitfalls**
+**6. Pièges courants**
 
-The single biggest mistake is querying `SENSOR_INFO_PIXEL_ARRAY_SIZE` and then expecting JPEG output at that resolution. Full-size still images always use the active array dimensions, never the pixel array. On a typical 50MP Samsung ISOCELL sensor the pixel array might be 8192×6144 but the active array is 8000×6000. If you allocate a 50.3MP buffer (from pixel array) you get a 48MP image and the remaining pixels are silently dropped, or worse, you get a corrupted buffer on legacy HAL devices. Always use `activeArray.width() * activeArray.height()` for buffer sizing, never the pixel array product. The second common pitfall is using active array coordinates without including the offset: when the rect top/left are non-zero, your crop-region math must add that origin or the zoom drifts toward the top-left.
+La plus grande erreur consiste à interroger `SENSOR_INFO_PIXEL_ARRAY_SIZE` et à s'attendre à une sortie JPEG à cette résolution. Les images fixes de taille réelle utilisent toujours les dimensions de la matrice active, jamais celles de la matrice de pixels. Sur un capteur Samsung ISOCELL typique de 50 MP, la matrice de pixels peut être de 8192×6144 mais la matrice active est de 8000×6000. Si vous allouez un tampon de 50,3 MP (à partir de la matrice de pixels), vous obtenez une image de 48 MP et les pixels restants sont silencieusement abandonnés, ou pire, vous obtenez un tampon corrompu sur les appareils à HAL hérité. Utilisez toujours `activeArray.width() * activeArray.height()` pour le dimensionnement du tampon, jamais le produit de la matrice de pixels. Le deuxième piège courant consiste à utiliser les coordonnées de la matrice active sans inclure le décalage : lorsque le haut/gauche du rectangle est non nul, vos calculs de zone de recadrage doivent ajouter cette origine, sinon le zoom dérivera vers le coin supérieur gauche.
 
 ---
 
 ### SENSOR_INFO_PIXEL_ARRAY_SIZE
 
-**1. What is it?**
+**1. Qu'est-ce que c'est ?**
 
-`SENSOR_INFO_PIXEL_ARRAY_SIZE` is a `android.util.Size` representing the total number of physical photodiodes on the sensor die, including any optically-black or dummy border pixels. This is the "marketing megapixel" number: a 108MP sensor advertises pixel array dimensions of 12000×9000 regardless of how many are actually delivered to the ISP pipeline. Type-wise it is a simple `Size` with `.width` and `.height` fields.
+`SENSOR_INFO_PIXEL_ARRAY_SIZE` est un `android.util.Size` représentant le nombre total de photodiodes physiques sur la matrice du capteur, y compris les pixels de bordure optiquement noirs ou fantômes. C'est le chiffre des "mégapixels marketing" : un capteur de 108 MP annonce des dimensions de matrice de pixels de 12000×9000, quel que soit le nombre de pixels réellement délivrés au pipeline ISP. Au niveau du type, il s'agit d'un simple `Size` avec des champs `.width` et `.height`.
 
-The relationship to the active array is always:
+La relation avec la matrice active est toujours :
 - `pixelArray.width >= activeArray.width`
 - `pixelArray.height >= activeArray.height`
 
-The difference is typically 100–400 pixels on each axis, used for optical black (OB) lines and factory lens-shading calibration.
+La différence est typiquement de 100 à 400 pixels sur chaque axe, utilisés pour les lignes optiquement noires (OB) et l'étalonnage de l'ombrage de l'objectif en usine.
 
-**2. Why does it exist?**
+**2. Pourquoi cela existe-t-il ?**
 
-RAW capture pipelines need the full pixel dimensions to parse RAW10/RAW12/RAW16 buffers correctly, because the RAW format (when `SENSOR_INFO_PRE_CORRECTION_ACTIVE_ARRAY_SIZE` is not available) sometimes includes the OB lines. Developers writing custom demosaic or dark-frame subtraction code also need to know how many pixels on each border to strip before processing. On the consumer-facing side, marketing teams and benchmark apps use pixel array size to report "true" sensor resolution without the OEM's ISP crop.
+Les pipelines de capture RAW ont besoin des dimensions complètes des pixels pour analyser correctement les tampons RAW10/RAW12/RAW16, car le format RAW (lorsque `SENSOR_INFO_PRE_CORRECTION_ACTIVE_ARRAY_SIZE` n'est pas disponible) inclut parfois les lignes OB. Les développeurs écrivant leur propre code de démosatrisation ou de soustraction de trame noire ont également besoin de savoir combien de pixels sur chaque bordure doivent être retirés avant le traitement. Côté consommateur, les équipes marketing et les applications de benchmark utilisent la taille de la matrice de pixels pour rapporter la résolution "réelle" du capteur sans le recadrage de l'ISP de l'OEM.
 
-**3. Which devices support it?**
+**3. Quels appareils le supportent ?**
 
-All hardware levels expose this key. There is no capability flag prerequisite. RAW-capable devices (those advertising `REQUEST_AVAILABLE_CAPABILITIES_RAW`) are required by the Camera2 CDD to report pixel array size accurate to within one row/column of the physical sensor specification.
+Tous les niveaux matériels exposent cette clé. Il n'y a pas de prérequis d'indicateur de capacité. Les appareils capables de produire du RAW (ceux annonçant `REQUEST_AVAILABLE_CAPABILITIES_RAW`) sont tenus par le CDD Android de rapporter une taille de matrice de pixels précise à une ligne/colonne près de la spécification physique du capteur.
 
-**4. How do I query it?**
+**4. Comment l'interroger ?**
 
 ```kotlin
 val pixelArray: Size? = characteristics.get(
@@ -180,45 +180,45 @@ val pixelArray: Size? = characteristics.get(
 
 pixelArray?.let { size ->
     val mp = (size.width * size.height) / 1_000_000.0
-    Log.d(TAG, "Pixel array: ${size.width}×${size.height}px (%.1f MP marketing)".format(mp))
+    Log.d(TAG, "Matrice de pixels : ${size.width}×${size.height}px (%.1f MP marketing)".format(mp))
     
     characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)?.let { active ->
         val usablePct = (active.width() * active.height()).toDouble() /
                         (size.width * size.height).toDouble() * 100.0
-        Log.d(TAG, "  %.1f%% of pixels are deliverable via active array".format(usablePct))
+        Log.d(TAG, "  %.1f%% des pixels sont délivrables via la matrice active".format(usablePct))
     }
 } ?: run {
-    Log.w(TAG, "Pixel array size not available")
+    Log.w(TAG, "Taille de la matrice de pixels non disponible")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Comment l'inspecter avec Android Camera Parameters ?**
 
-Open **Sensor / Sensor Info** and look at the first entry in the "Sensor Geometry" card, labeled "Pixel Array". The app renders it as width×height with the marketing megapixel count in parentheses (e.g. "8192 × 6144 (50.3 MP)"). If you tap the row a dialog opens with a comparison table of pixel array vs. active array vs. pre-correction active array.
+Ouvrez **Sensor / Sensor Info** et regardez la première entrée de la carte "Sensor Geometry", intitulée "Pixel Array". L'application l'affiche sous la forme largeur×hauteur avec le nombre de mégapixels marketing entre parenthèses (ex : "8192 × 6144 (50,3 MP)"). Si vous appuyez sur la ligne, une boîte de dialogue s'ouvre avec un tableau de comparaison matrice de pixels vs matrice active vs matrice active avant correction.
 
-**6. Common pitfalls**
+**6. Pièges courants**
 
-Confusing pixel array with deliverable JPEG size is universal among first-time Camera2 developers. The sequence is always: (1) query `SCALER_STREAM_CONFIGURATION_MAP.getOutputSizes(ImageFormat.JPEG)` to get the *actual* resolutions the encoder can produce, (2) the largest JPEG size will equal (or be a scaled crop of) `SENSOR_INFO_ACTIVE_ARRAY_SIZE`, never the pixel array. If you write code that computes a 4:3 crop from pixel array dimensions, the result will be slightly wider than what the ISP can actually deliver, and the camera device will silently clamp it — introducing subtle pixel drift in face-tracking zoom. Second, on reprocessing-capable devices that advertise `REQUEST_AVAILABLE_CAPABILITIES_PRIVATE_REPROCESSING`, the reprocessing input size uses pixel array semantics; using active array for reprocessing causes frame-alignment errors.
+Confondre la matrice de pixels avec la taille JPEG délivrable est universel chez les nouveaux développeurs Camera2. La séquence est toujours : (1) interroger `SCALER_STREAM_CONFIGURATION_MAP.getOutputSizes(ImageFormat.JPEG)` pour obtenir les résolutions *réelles* que l'encodeur peut produire, (2) la plus grande taille JPEG sera égale à (ou un recadrage à l'échelle de) `SENSOR_INFO_ACTIVE_ARRAY_SIZE`, jamais à la matrice de pixels. Si vous écrivez du code qui calcule un recadrage 4:3 à partir des dimensions de la matrice de pixels, le résultat sera légèrement plus large que ce que l'ISP peut réellement délivrer, et l'appareil photo le bridera silencieusement — introduisant un léger décalage des pixels dans le zoom de suivi des visages. Deuxièmement, sur les appareils capables de retraitement qui annoncent `REQUEST_AVAILABLE_CAPABILITIES_PRIVATE_REPROCESSING`, la taille d'entrée du retraitement utilise la sémantique de la matrice de pixels ; utiliser la matrice active pour le retraitement provoque des erreurs d'alignement de trame.
 
 ---
 
 ### SENSOR_INFO_SENSITIVITY_RANGE
 
-**1. What is it?**
+**1. Qu'est-ce que c'est ?**
 
-`SENSOR_INFO_SENSITIVITY_RANGE` is a `android.util.Range&lt;Int&gt;` specifying the minimum and maximum ISO (analog gain) values the sensor can apply *during raw readout*. Units are ISO arithmetic: 100 is base ISO (cleanest image, lowest noise), 6400 or higher is high-sensitivity mode (noisier image, shorter shutter time for the same EV). Typical ranges on modern devices are `[100, 6400]` for mid-range phones and `[50, 12800]` or `[32, 25600]` for flagship sensors with large pixel wells.
+`SENSOR_INFO_SENSITIVITY_RANGE` est un `android.util.Range<Int>` spécifiant les valeurs minimale et maximale d'ISO (gain analogique) que le capteur peut appliquer *pendant la lecture brute*. Les unités sont l'arithmétique ISO : 100 est l'ISO de base (image la plus propre, bruit le plus faible), 6400 ou plus est le mode haute sensibilité (image plus bruitée, temps d'obturation plus court pour le même EV). Les plages typiques sur les appareils modernes sont `[100, 6400]` pour les téléphones de milieu de gamme et `[50, 12800]` ou `[32, 25600]` pour les capteurs phares avec de grands puits de pixels.
 
-Sensitivity is applied *before* any digital gain in the ISP pipeline. The values returned here correspond to what you set in `CaptureRequest.SENSOR_SENSITIVITY` when manual control is enabled.
+La sensibilité est appliquée *avant* tout gain numérique dans le pipeline ISP. Les valeurs renvoyées ici correspondent à ce que vous définissez dans `CaptureRequest.SENSOR_SENSITIVITY` lorsque le contrôle manuel est activé.
 
-**2. Why does it exist?**
+**2. Pourquoi cela existe-t-il ?**
 
-Every CMOS sensor has a physical minimum gain level (determined by the readout amplifier) and a maximum level (determined by how much the analog signal can be amplified before clipping or unacceptable noise). Without an explicit range, each OEM would use different implicit defaults. Camera2 exposes the range so that manual-exposure UI sliders can have correct min/max endpoints, and so developers can validate a manual ISO request *before* submitting it to the capture session — avoiding the vague `IllegalArgumentException` the session throws if you request out-of-range values.
+Chaque capteur CMOS a un niveau de gain physique minimum (déterminé par l'amplificateur de lecture) et un niveau maximum (déterminé par la quantité d'amplification que le signal analogique peut subir avant écrêtage ou bruit inacceptable). Sans une plage explicite, chaque OEM utiliserait des réglages par défaut implicites différents. Camera2 expose la plage afin que les curseurs d'UI d'exposition manuelle puissent avoir des points de terminaison min/max corrects, et pour que les développeurs puissent valider une requête d'ISO manuel *avant* de la soumettre à la session de capture — évitant ainsi la vague `IllegalArgumentException` que la session lance si vous demandez des valeurs hors plage.
 
-**3. Which devices support it?**
+**3. Quels appareils le supportent ?**
 
-All devices expose this key as a `Range&lt;Int&gt;`. However, the values are only *controllable* if the device advertises `REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR` in its capability list. On LIMITED-level devices without that flag, the range will still return values (typically `[100, 800]`) but setting `SENSOR_SENSITIVITY` in a CaptureRequest is ignored — the AE algorithm remains in charge. Always feature-gate manual ISO UI on the MANUAL_SENSOR flag, not on the range being non-null.
+Tous les appareils exposent cette clé sous forme de `Range<Int>`. Cependant, les valeurs ne sont *contrôlables* que si l'appareil annonce `REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR` dans sa liste de capacités. Sur les appareils de niveau LIMITED sans cet indicateur, la plage renverra toujours des valeurs (typiquement `[100, 800]`) mais la définition de `SENSOR_SENSITIVITY` dans une CaptureRequest est ignorée — l'algorithme AE reste aux commandes. Filtrez toujours l'UI d'ISO manuel sur l'indicateur MANUAL_SENSOR, et non sur le fait que la plage est non nulle.
 
-**4. How do I query it?**
+**4. Comment l'interroger ?**
 
 ```kotlin
 val sensitivityRange: Range<Int>? = characteristics.get(
@@ -233,53 +233,53 @@ val hasManualSensor = capabilities?.contains(
 ) ?: false
 
 sensitivityRange?.let { range ->
-    Log.d(TAG, "Sensitivity range: ISO ${range.lower} to ISO ${range.upper}")
-    Log.d(TAG, "  Manual ISO control available: $hasManualSensor")
+    Log.d(TAG, "Plage de sensibilité : ISO ${range.lower} à ISO ${range.upper}")
+    Log.d(TAG, "  Contrôle ISO manuel disponible : $hasManualSensor")
     
     if (hasManualSensor) {
         val stopCount = log2(range.upper.toDouble() / range.lower.toDouble())
-        Log.d(TAG, "  Dynamic range: %.1f stops".format(stopCount))
+        Log.d(TAG, "  Plage dynamique : %.1f paliers".format(stopCount))
     } else {
-        Log.w(TAG, "  WARNING: Range reported but MANUAL_SENSOR flag is ABSENT.")
-        Log.w(TAG, "  Setting SENSOR_SENSITIVITY will be IGNORED by AE algorithm!")
+        Log.w(TAG, "  AVERTISSEMENT : Plage rapportée mais l'indicateur MANUAL_SENSOR est ABSENT.")
+        Log.w(TAG, "  La définition de SENSOR_SENSITIVITY sera IGNORÉE par l'algorithme AE !")
     }
 } ?: run {
-    Log.w(TAG, "Sensitivity range not available")
+    Log.w(TAG, "Plage de sensibilité non disponible")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Comment l'inspecter avec Android Camera Parameters ?**
 
-Navigate to **Sensor / Manual Sensor** where the sensitivity range appears as "ISO Range" in the first card. On devices with MANUAL_SENSOR capability the range is shown with a slider preview indicating what the manual UI exposes. On non-manual devices the app explicitly marks the range as "Read Only" and displays a warning banner explaining that values are for informational purposes only.
+Naviguez vers **Sensor / Manual Sensor** où la plage de sensibilité apparaît comme "ISO Range" dans la première carte. Sur les appareils dotés de la capacité MANUAL_SENSOR, la plage est affichée avec un aperçu de curseur indiquant ce que l'UI manuelle expose. Sur les appareils non manuels, l'application marque explicitement la plage comme "Lecture seule" et affiche une bannière d'avertissement expliquant que les valeurs sont à titre informatif uniquement.
 
-**6. Common pitfalls**
+**6. Pièges courants**
 
-The first pitfall: seeing a valid sensitivity range and enabling manual ISO controls without checking `MANUAL_SENSOR`. This works on the developer's test device (a Pixel 8, say, which has FULL hardware level) but the slider silently does nothing on 60% of mid-range phones in the field. The user sees the UI, drags the slider, sees no noise difference, and leaves a one-star review. Always check both keys together.
+Le premier piège : voir une plage de sensibilité valide et activer les contrôles d'ISO manuels sans vérifier `MANUAL_SENSOR`. Cela fonctionne sur l'appareil de test du développeur (un Pixel 8, par exemple, qui a le niveau matériel FULL) mais le curseur ne fait rien silencieusement sur 60 % des téléphones de milieu de gamme sur le terrain. L'utilisateur voit l'UI, déplace le curseur, ne voit aucune différence de bruit et laisse un avis d'une étoile. Vérifiez toujours les deux clés ensemble.
 
-The second pitfall: units confusion. `SENSOR_SENSITIVITY` uses ISO *arithmetic*, not logarithmic. A slider that goes from 100 to 6400 *linearly* makes the top 75% of the track feel identical (6400 to 3200 is one stop, 3200 to 1600 is another stop, ..., 200 to 100 is the last stop) while the bottom 25% covers 6 stops. Correct sliders interpolate values using a logarithmic scale so each 10% of track equals roughly one stop.
+Le deuxième piège : confusion sur les unités. `SENSOR_SENSITIVITY` utilise l'arithmétique ISO, pas logarithmique. Un curseur qui va de 100 à 6400 de manière *linéaire* rend les 75 % supérieurs de la piste identiques (6400 à 3200 est un palier, 3200 à 1600 est un autre palier, ..., 200 à 100 est le dernier palier) alors que les 25 % inférieurs couvrent 6 paliers. Les curseurs corrects interpolent les valeurs à l'aide d'une échelle logarithmique afin que chaque 10 % de piste soit égal à environ un palier.
 
 ---
 
 ### SENSOR_INFO_EXPOSURE_TIME_RANGE
 
-**1. What is it?**
+**1. Qu'est-ce que c'est ?**
 
-`SENSOR_INFO_EXPOSURE_TIME_RANGE` is a `android.util.Range&lt;Long&gt;` specifying the minimum and maximum shutter duration the sensor can expose a single frame for, measured in **nanoseconds**. Every value in this range corresponds to a valid argument for `CaptureRequest.SENSOR_EXPOSURE_TIME` when manual sensor control is enabled. Typical ranges span from roughly `Range(1_000_000L, 1_000_000_000L)` (1 millisecond minimum up to 1 second maximum) on mid-range devices, up to `Range(100_000L, 10_000_000_000L)` (0.1 ms to 10 seconds) on flagship FULL-level devices with dedicated night-mode support. A few LEVEL_3 cinema-grade external cameras go up to 30 seconds or longer.
+`SENSOR_INFO_EXPOSURE_TIME_RANGE` est un `android.util.Range<Long>` spécifiant les durées d'obturation minimale et maximale pendant lesquelles le capteur peut exposer une seule image, mesurées en **nanosecondes**. Chaque valeur de cette plage correspond à un argument valide pour `CaptureRequest.SENSOR_EXPOSURE_TIME` lorsque le contrôle manuel du capteur est activé. Les plages typiques s'étendent d'environ `Range(1_000_000L, 1_000_000_000L)` (minimum 1 milliseconde jusqu'à maximum 1 seconde) sur les appareils de milieu de gamme, jusqu'à `Range(100_000L, 10_000_000_000L)` (0,1 ms à 10 secondes) sur les appareils phares de niveau FULL avec support dédié au mode nuit. Quelques caméras externes de catégorie cinéma de niveau LEVEL_3 vont jusqu'à 30 secondes ou plus.
 
-The conversion between nanoseconds and common time units is:
-- 1 microsecond = 1,000 ns
-- 1 millisecond = 1,000,000 ns
-- 1 second = 1,000,000,000 ns
+La conversion entre les nanosecondes et les unités de temps courantes est :
+- 1 microseconde = 1 000 ns
+- 1 milliseconde = 1 000 000 ns
+- 1 seconde = 1 000 000 000 ns
 
-**2. Why does it exist?**
+**2. Pourquoi cela existe-t-il ?**
 
-The Camera HAL needs an explicit shutter-time contract with the application layer for two reasons. First, long exposures interact with `SENSOR_FRAME_DURATION` in non-obvious ways: if you request a 5-second exposure, the minimum frame duration jumps to 5 seconds plus sensor blanking, which means preview callbacks stop arriving for 5 seconds and the UI appears frozen. Second, the very shortest exposures (microseconds) interact with the rolling-shutter skew of the sensor; below the minimum exposure time the sensor's readout timing can't keep up and output frames contain corrupted scan lines.
+Le HAL de la caméra a besoin d'un contrat explicite de temps d'obturation avec la couche application pour deux raisons. Premièrement, les expositions longues interagissent avec `SENSOR_FRAME_DURATION` de manière non évidente : si vous demandez une exposition de 5 secondes, la durée minimale de l'image passe à 5 secondes plus l'obturation électronique du capteur, ce qui signifie que les rappels d'aperçu cessent d'arriver pendant 5 secondes et l'interface utilisateur semble figée. Deuxièmement, les expositions les plus courtes (microsecondes) interagissent avec le décalage de l'obturateur roulant (rolling shutter) du capteur ; en dessous du temps d'exposition minimum, le timing de lecture du capteur ne peut pas suivre et les images de sortie contiennent des lignes de balayage corrompues.
 
-**3. Which devices support it?**
+**3. Quels appareils le supportent ?**
 
-Like sensitivity range, this key is present on all devices but only *controllable* when `MANUAL_SENSOR` is in the capability list. LIMITED devices that lack manual-sensor support will still report a plausible exposure range (usually 1 ms to 1/30 s) so that AE-timing analysis tools can reason about the AE algorithm's behavior, but manual settings are ignored. Full manual control requires both the range *and* the capability flag.
+Comme la plage de sensibilité, cette clé est présente sur tous les appareils mais n'est *contrôlable* que lorsque `MANUAL_SENSOR` figure dans la liste des capacités. Les appareils de niveau LIMITED qui ne supportent pas le capteur manuel rapporteront toujours une plage d'exposition plausible (généralement de 1 ms à 1/30 s) afin que les outils d'analyse de timing AE puissent raisonner sur le comportement de l'algorithme AE, mais les réglages manuels sont ignorés. Le contrôle manuel complet nécessite à la fois la plage *et* l'indicateur de capacité.
 
-**4. How do I query it?**
+**4. Comment l'interroger ?**
 
 ```kotlin
 fun Long.nanosToSeconds(): Double = this / 1_000_000_000.0
@@ -295,12 +295,12 @@ val hasManualSensor = characteristics.get(
 )?.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR) ?: false
 
 exposureRange?.let { range ->
-    Log.d(TAG, "Exposure time range:")
-    Log.d(TAG, "  Min: ${range.lower} ns = %.4f ms = %.7f s"
+    Log.d(TAG, "Plage de temps d'exposition :")
+    Log.d(TAG, "  Min : ${range.lower} ns = %.4f ms = %.7f s"
         .format(range.lower.nanosToMillis(), range.lower.nanosToSeconds()))
-    Log.d(TAG, "  Max: ${range.upper} ns = %.2f ms = %.4f s"
+    Log.d(TAG, "  Max : ${range.upper} ns = %.2f ms = %.4f s"
         .format(range.upper.nanosToMillis(), range.upper.nanosToSeconds()))
-    Log.d(TAG, "  Manual shutter control available: $hasManualSensor")
+    Log.d(TAG, "  Contrôle manuel de l'obturateur disponible : $hasManualSensor")
     
     val shutterSpeeds = listOf(
         0.001, 0.002, 0.004, 0.008, 0.016, 0.033,
@@ -310,41 +310,41 @@ exposureRange?.let { range ->
         val ns = s.secondsToNanos()
         ns >= range.lower && ns <= range.upper
     }
-    Log.d(TAG, "  Supported common stops: $supportedSpeeds seconds")
+    Log.d(TAG, "  Temps de pose courants supportés : $supportedSpeeds secondes")
 } ?: run {
-    Log.w(TAG, "Exposure time range not available")
+    Log.w(TAG, "Plage de temps d'exposition non disponible")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Comment l'inspecter avec Android Camera Parameters ?**
 
-Go to **Sensor / Manual Sensor** card, titled "Exposure Range". The app shows the value three ways: raw nanoseconds, milliseconds, and seconds for both endpoints. A horizontal timeline below visualizes the range with common shutter-speed stops (1/1000 s through 8 s) marked as ticks, so you can see at a glance whether long-exposure night photography is possible. Manual control capability is indicated by a green checkmark (controllable) or red "read-only" label.
+Allez sur la carte **Sensor / Manual Sensor**, intitulée "Exposure Range". L'application affiche la valeur de trois manières : nanosecondes brutes, millisecondes et secondes pour les deux extrémités. Une chronologie horizontale en dessous visualise la plage avec des repères pour les temps de pose courants (de 1/1000 s à 8 s), afin que vous puissiez voir en un coup d'œil si la photographie de nuit à longue exposition est possible. La capacité de contrôle manuel est indiquée par une coche verte (contrôlable) ou une étiquette rouge "lecture seule".
 
-**6. Common pitfalls**
+**6. Pièges courants**
 
-The preview-freeze pitfall: developers set a 4-second exposure for a low-light still capture but forget that the same `CaptureRequest` applies to ALL surfaces in the session, including the preview `SurfaceTexture`. Result: for 4 seconds, no preview frames arrive, the screen freezes, and the user thinks the app crashed. The fix is a single-frame repeating request for the preview surface at normal 30 fps, then a separate `setRepeatingBurst` or `capture` call with the long exposure applied only to the JPEG/RAW surfaces via `CaptureRequest.Builder.addTarget()`.
+Le piège du gel de l'aperçu : les développeurs définissent une exposition de 4 secondes pour une capture fixe en basse lumière mais oublient que la même `CaptureRequest` s'applique à TOUTES les surfaces de la session, y compris la `SurfaceTexture` d'aperçu. Résultat : pendant 4 secondes, aucune image d'aperçu n'arrive, l'écran se fige et l'utilisateur pense que l'application a planté. La solution est une requête répétée d'une seule image pour la surface d'aperçu à 30 fps normaux, puis un appel séparé `setRepeatingBurst` ou `capture` avec l'exposition longue appliquée uniquement aux surfaces JPEG/RAW via `CaptureRequest.Builder.addTarget()`.
 
-The second pitfall is integer overflow in conversions. Multiplication and division with `1_000_000_000` pushes against the 32-bit integer limit. Always use `Long` (64-bit) for any variable that holds nanoseconds, and write explicit helper extension functions (like `nanosToSeconds()` above) so you never divide in the wrong order. A 1-second exposure stored as an Int overflows at roughly 2.1 seconds, causing the HAL to receive a negative exposure time, which either crashes the session or clamps silently to minimum on certain MediaTek HALs.
+Le deuxième piège est le dépassement d'entier dans les conversions. La multiplication et la division par `1_000_000_000` s'approchent de la limite des entiers 32 bits. Utilisez toujours `Long` (64 bits) pour toute variable contenant des nanosecondes, et écrivez des fonctions d'extension explicites (comme `nanosToSeconds()` ci-dessus) pour ne jamais diviser dans le mauvais ordre. Une exposition de 1 seconde stockée sous forme d'Int déborde à environ 2,1 secondes, ce qui fait que le HAL reçoit un temps d'exposition négatif, ce qui fait planter la session ou bride silencieusement au minimum sur certains HAL MediaTek.
 
 ---
 
 ### SENSOR_INFO_WHITE_LEVEL
 
-**1. What is it?**
+**1. Qu'est-ce que c'est ?**
 
-`SENSOR_INFO_WHITE_LEVEL` is a single `Int` representing the maximum analog-to-digital converter (ADC) code value that a RAW sensor pixel can reach before clipping. For a RAW10 sensor (10 bits per pixel per channel) the white level is typically 1023 (2¹⁰−1). For RAW12 it is typically 4095. For RAW14 it is typically 16383. Some sensors round down slightly (e.g. 16300 instead of 16383 for RAW14) to leave headroom for HDR highlights or pixel-defect correction; the exact value is sensor-calibrated at the factory.
+`SENSOR_INFO_WHITE_LEVEL` est un simple `Int` représentant la valeur maximale du code du convertisseur analogique-numérique (ADC) qu'un pixel de capteur RAW peut atteindre avant l'écrêtage. Pour un capteur RAW10 (10 bits par pixel par canal), le niveau de blanc est typiquement de 1023 (2¹⁰−1). Pour le RAW12, il est typiquement de 4095. Pour le RAW14, il est typiquement de 16383. Certains capteurs arrondissent légèrement vers le bas (ex : 16300 au lieu de 16383 pour le RAW14) afin de laisser de la marge pour les hautes lumières HDR ou la correction des pixels défectueux ; la valeur exacte est étalonnée sur le capteur en usine.
 
-This is the per-channel saturation value. In any RAW frame from this sensor, any pixel channel at (or above) the white level represents blown-out highlights with no recoverable detail.
+Il s'agit de la valeur de saturation par canal. Dans n'importe quelle image RAW de ce capteur, tout canal de pixel se trouvant au niveau de blanc (ou au-dessus) représente des hautes lumières brûlées sans aucun détail récupérable.
 
-**2. Why does it exist?**
+**2. Pourquoi cela existe-t-il ?**
 
-The RAW pixel format always uses the same bit depth per channel. A RAW10 buffer stores every pixel in 16-bit aligned integers, and developers unfamiliar with RAW processing naturally divide by 65535 (the max 16-bit value) when normalizing to floating point. This produces images that are dim, washed-out, and with incorrect black point subtraction. `SENSOR_INFO_WHITE_LEVEL` gives you the correct divisor: divide RAW pixels by `WHITE_LEVEL - BLACK_LEVEL_PATTERN` (not 65535) to get the 0.0–1.0 linear light range. Every RAW sensor also has a `SENSOR_BLACK_LEVEL_PATTERN` key giving the per-channel zero-exposure offset; combining the two gives you the full RAW-to-float normalization curve.
+Le format de pixel RAW utilise toujours la même profondeur de bits par canal. Un tampon RAW10 stocke chaque pixel dans des entiers alignés sur 16 bits, et les développeurs peu familiers avec le traitement RAW divisent naturellement par 65535 (la valeur 16 bits max) lors de la normalisation en virgule flottante. Cela produit des images ternes, délavées et avec une soustraction incorrecte du point noir. `SENSOR_INFO_WHITE_LEVEL` vous donne le bon diviseur : divisez les pixels RAW par `WHITE_LEVEL - BLACK_LEVEL_PATTERN` (et non par 65535) pour obtenir la plage de lumière linéaire de 0,0 à 1,0. Chaque capteur RAW possède également une clé `SENSOR_BLACK_LEVEL_PATTERN` donnant le décalage à exposition nulle par canal ; la combinaison des deux vous donne la courbe complète de normalisation RAW-vers-flottant.
 
-**3. Which devices support it?**
+**3. Quels appareils le supportent ?**
 
-This key is required on any device that reports `REQUEST_AVAILABLE_CAPABILITIES_RAW` in its capability list — i.e. any camera that can output RAW10/RAW12/RAW16 buffers via `ImageReader`. On non-RAW devices the key may still be present (returning a nominal value matching the sensor's native bit depth) but there is no way to read RAW pixels, so the key is purely informational.
+Cette clé est requise sur tout appareil qui rapporte `REQUEST_AVAILABLE_CAPABILITIES_RAW` dans sa liste de capacités — c'est-à-dire toute caméra capable de produire des tampons RAW10/RAW12/RAW16 via `ImageReader`. Sur les appareils sans sortie RAW, la clé peut toujours être présente (renvoyant une valeur nominale correspondant à la profondeur de bits native du capteur) mais il n'y a aucun moyen de lire les pixels RAW, donc la clé est purement informative.
 
-**4. How do I query it?**
+**4. Comment l'interroger ?**
 
 ```kotlin
 val whiteLevel: Int? = characteristics.get(
@@ -359,60 +359,60 @@ whiteLevel?.let { wl ->
     Log.d(TAG, "SENSOR_INFO_WHITE_LEVEL = $wl")
     
     val bits = ceil(log2(wl.toDouble() + 1.0)).toInt()
-    Log.d(TAG, "  Effective RAW bit depth: $bits bits per channel")
-    Log.d(TAG, "  Largest RAW pixel value (saturation): $wl")
+    Log.d(TAG, "  Profondeur de bits RAW effective : $bits bits par canal")
+    Log.d(TAG, "  Plus grande valeur de pixel RAW (saturation) : $wl")
     
     blackLevelPattern?.let { bl ->
         if (bl.size == 4) {
-            Log.d(TAG, "  Black level pattern (R, Gr, Gb, B) = [${bl[0]}, ${bl[1]}, ${bl[2]}, ${bl[3]}]")
+            Log.d(TAG, "  Motif du niveau de noir (R, Gr, Gb, B) = [${bl[0]}, ${bl[1]}, ${bl[2]}, ${bl[3]}]")
             val avgBlack = (bl[0] + bl[1] + bl[2] + bl[3]) / 4.0
             val usableDnRange = wl - avgBlack
             val stops = log2(usableDnRange / avgBlack)
-            Log.d(TAG, "  Normalization divisor: ${wl - avgBlack.toInt()}")
-            Log.d(TAG, "  Estimated RAW dynamic range: %.1f stops".format(stops))
+            Log.d(TAG, "  Diviseur de normalisation : ${wl - avgBlack.toInt()}")
+            Log.d(TAG, "  Plage dynamique RAW estimée : %.1f paliers".format(stops))
         }
     } ?: run {
-        Log.d(TAG, "  No black-level pattern. Assume 0. Normalize by $wl directly.")
+        Log.d(TAG, "  Pas de motif de niveau de noir. Assumez 0. Normalisez par $wl directement.")
     }
 } ?: run {
-    Log.w(TAG, "White level not available — RAW output may not be supported")
+    Log.w(TAG, "Niveau de blanc non disponible — la sortie RAW n'est peut-être pas supportée")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Comment l'inspecter avec Android Camera Parameters ?**
 
-The white level is in **Sensor / Sensor Info** under the "RAW Sensor Parameters" card, next to black level pattern and color filter arrangement. If RAW capability is present the companion app shows a live preview of a horizontal gradient bar normalized correctly with the device's own white level, so you can visually compare the correct normalization (using the key) against the common mistake of dividing by 65535 — the mistaken version appears visibly darker.
+Le niveau de blanc se trouve dans **Sensor / Sensor Info** sous la carte "RAW Sensor Parameters", à côté du motif du niveau de noir et de la disposition des filtres colorés. Si la capacité RAW est présente, l'application compagnon affiche un aperçu en direct d'une barre de dégradé horizontal normalisée correctement avec le niveau de blanc propre à l'appareil, afin que vous puissiez comparer visuellement la normalisation correcte (utilisant la clé) avec l'erreur courante consistant à diviser par 65535 — la version erronée apparaît visiblement plus sombre.
 
-**6. Common pitfalls**
+**6. Pièges courants**
 
-Normalizing by 65535 instead of white level is the universal first mistake in RAW processing. A RAW10 photo normalized by 65535 comes out at roughly 1/64th brightness — nearly pure black. Developers notice this and apply a 64× gain multiplier to compensate, which introduces banding because they're stretching 10 bits of information into 16 bits of precision, compressing the tonal range. Correct code subtracts the black level first, then divides by (white level minus black level). This gives a properly-exposed linear light image ready for gamma and tone-mapping.
+Normaliser par 65535 au lieu du niveau de blanc est la première erreur universelle en traitement RAW. Une photo RAW10 normalisée par 65535 ressort à environ 1/64e de la luminosité — presque du noir pur. Les développeurs s'en aperçoivent et appliquent un multiplicateur de gain de 64× pour compenser, ce qui introduit de la postérisation car ils étirent 10 bits d'information dans 16 bits de précision, comprimant la plage tonale. Le code correct soustrait d'abord le niveau de noir, puis divise par (niveau de blanc moins niveau de noir). Cela donne une image en lumière linéaire correctement exposée, prête pour le gamma et le mappage tonal.
 
-A second pitfall: white level can vary *per frame* on certain HDR sensors, where the ADC gain changes between long and short exposures for staggered-HDR readout. Check `CaptureResult.SENSOR_DYNAMIC_WHITE_LEVEL` in each `onCaptureCompleted` callback on Android 13+ devices; use the per-frame value when available instead of the static `CameraCharacteristics` constant. Sticky caching of the static white level on HDR sensors produces clipped highlights on the short-exposure frame.
+Un deuxième piège : le niveau de blanc peut varier *par image* sur certains capteurs HDR, où le gain de l'ADC change entre les expositions longues et courtes pour une lecture HDR décalée (staggered-HDR). Vérifiez `CaptureResult.SENSOR_DYNAMIC_WHITE_LEVEL` dans chaque rappel `onCaptureCompleted` sur les appareils Android 13+ ; utilisez la valeur par image lorsqu'elle est disponible au lieu de la constante statique `CameraCharacteristics`. La mise en cache persistante du niveau de blanc statique sur les capteurs HDR produit des hautes lumières brûlées sur l'image à exposition courte.
 
 ---
 
 ### SENSOR_INFO_COLOR_FILTER_ARRANGEMENT
 
-**1. What is it?**
+**1. Qu'est-ce que c'est ?**
 
-`SENSOR_INFO_COLOR_FILTER_ARRANGEMENT` is an `Int` enum describing the layout of the Bayer color filter array (CFA) on top of the sensor's photodiodes. The CFA is the microscopic color mosaic that gives each pixel a red, green, or blue color sensitivity (two green pixels per 2×2 block). Possible values are:
-- `SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_RGGB` — the most common (top row Red-Green, second row Green-Blue)
-- `SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_GRBG` — green-red / blue-green variant
-- `SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_BGGR` — blue-green / green-red variant (common on Sony sensors)
-- `SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_GBRG` — green-blue / red-green variant
-- `SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_MONOCHROME` — no color filter, pure luminance sensor (infrared or dedicated night-vision cameras)
+`SENSOR_INFO_COLOR_FILTER_ARRANGEMENT` est un enum `Int` décrivant la disposition de la matrice de filtres colorés (CFA - Color Filter Array) de Bayer sur les photodiodes du capteur. La CFA est la mosaïque colorée microscopique qui donne à chaque pixel une sensibilité au rouge, au vert ou au bleu (deux pixels verts par bloc 2×2). Les valeurs possibles sont :
+- `SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_RGGB` — le plus courant (ligne supérieure Rouge-Vert, deuxième ligne Vert-Bleu).
+- `SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_GRBG` — variante vert-rouge / bleu-vert.
+- `SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_BGGR` — variante bleu-vert / vert-rouge (courant sur les capteurs Sony).
+- `SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_GBRG` — variante vert-bleu / rouge-vert.
+- `SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_MONOCHROME` — pas de filtre coloré, capteur de luminance pure (caméras infrarouges ou dédiées à la vision nocturne).
 
-The arrangement describes the (x=0, y=0) top-left pixel of the active array. Every 2×2 block repeats this pattern across the entire sensor surface.
+La disposition décrit le pixel supérieur gauche (x=0, y=0) de la matrice active. Chaque bloc 2×2 répète ce motif sur toute la surface du capteur.
 
-**2. Why does it exist?**
+**2. Pourquoi cela existe-t-il ?**
 
-RAW sensor data is monochrome-by-nature. A demosaic algorithm must be applied to reconstruct a full RGB image by interpolating the missing two color channels for each pixel. The demosaic algorithm *must* know which color is at each physical location. If you run an RGGB demosaic on a BGGR sensor you get an image with inverted colors: red pixels become blue, blue become red, and the human eye immediately notices the wrong skin tones. Demosaic quality is also CFA-dependent — adaptive algorithms like AMaZE or LMMSE need the exact arrangement to pick the correct interpolation direction.
+Les données brutes du capteur sont monochromes par nature. Un algorithme de démosatrisation doit être appliqué pour reconstruire une image RVB complète en interpolant les deux canaux de couleur manquants pour chaque pixel. L'algorithme de démosatrisation *doit* savoir quelle couleur se trouve à chaque emplacement physique. Si vous exécutez une démosatrisation RGGB sur un capteur BGGR, vous obtenez une image avec des couleurs inversées : les pixels rouges deviennent bleus, les bleus rouges, et l'œil humain remarque immédiatement les mauvais tons de peau. La qualité de la démosatrisation dépend également de la CFA — les algorithmes adaptatifs comme AMaZE ou LMMSE ont besoin de la disposition exacte pour choisir la bonne direction d'interpolation.
 
-**3. Which devices support it?**
+**3. Quels appareils le supportent ?**
 
-Required on all RAW-capable devices. On devices without RAW output the key may still be present (allowing analytical tools to describe sensor construction) but there's no code path that *needs* the value. External USB cameras via the EXTERNAL hardware level sometimes omit this key; you must fall back to a `SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_RGGB` default, because USB UVC cameras almost universally use RGGB.
+Requis sur tous les appareils capables de RAW. Sur les appareils sans sortie RAW, la clé peut toujours être présente (permettant aux outils d'analyse de décrire la construction du capteur) mais aucun chemin de code n'a *besoin* de la valeur. Les caméras USB externes via le niveau matériel EXTERNAL omettent parfois cette clé ; vous devez vous rabattre sur un réglage par défaut `SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_RGGB`, car les caméras USB UVC utilisent presque universellement le RGGB.
 
-**4. How do I query it?**
+**4. Comment l'interroger ?**
 
 ```kotlin
 val cfa: Int? = characteristics.get(
@@ -426,66 +426,66 @@ cfa?.let { arrangement ->
         CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_BGGR -> "BGGR"
         CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_GBRG -> "GBRG"
         CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_MONOCHROME -> "MONOCHROME"
-        else -> "UNKNOWN (value=$arrangement)"
+        else -> "INCONNU (valeur=$arrangement)"
     }
-    Log.d(TAG, "Color Filter Arrangement = $arrangementName")
+    Log.d(TAG, "Disposition du filtre coloré = $arrangementName")
     
     val isMono = arrangement == CameraCharacteristics
         .SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_MONOCHROME
     
-    Log.d(TAG, "  Is monochrome sensor: $isMono")
+    Log.d(TAG, "  Capteur monochrome : $isMono")
     if (isMono) {
-        Log.d(TAG, "  Demosaic: NOT REQUIRED. Pixels are already luminance-only.")
-        Log.d(TAG, "  Tip: Skip de-Bayer step. Directly treat RAW as grayscale.")
+        Log.d(TAG, "  Démosatrisation : NON REQUISE. Les pixels sont déjà en luminance seule.")
+        Log.d(TAG, "  Conseil : Sautez l'étape de dé-Bayer. Traitez directement le RAW comme des niveaux de gris.")
     } else {
-        Log.d(TAG, "  Demosaic: REQUIRED. Use CFA '$arrangementName' in RAW decoder.")
-        Log.d(TAG, "  Pixel (0,0) channel: " + when (arrangement) {
-            CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_RGGB -> "Red"
-            CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_GRBG -> "Green (Red row)"
-            CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_BGGR -> "Blue"
-            CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_GBRG -> "Green (Blue row)"
+        Log.d(TAG, "  Démosatrisation : REQUISE. Utilisez la CFA '$arrangementName' dans le décodeur RAW.")
+        Log.d(TAG, "  Canal du pixel (0,0) : " + when (arrangement) {
+            CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_RGGB -> "Rouge"
+            CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_GRBG -> "Vert (ligne Rouge)"
+            CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_BGGR -> "Bleu"
+            CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_GBRG -> "Vert (ligne Bleue)"
             else -> "?"
         })
     }
 } ?: run {
-    Log.w(TAG, "No CFA info. Defaulting to RGGB for external USB / legacy devices.")
+    Log.w(TAG, "Aucune info CFA. Valeur par défaut RGGB pour les appareils USB externes / hérités.")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Comment l'inspecter avec Android Camera Parameters ?**
 
-Open **Sensor / Sensor Info** and look at the "Color Filter Array" row in the RAW Sensor Parameters card. The app renders a 4×4 pixel visual representation of the mosaic using the actual arrangement reported by the sensor — red, green, and blue squares tiled the way the silicon sees them. Monochrome sensors are rendered as a flat gray grid with the label "NO CFA".
+Ouvrez **Sensor / Sensor Info** et regardez la ligne "Color Filter Array" dans la carte RAW Sensor Parameters. L'application affiche une représentation visuelle de 4×4 pixels de la mosaïque en utilisant la disposition réelle rapportée par le capteur — des carrés rouges, verts et bleus disposés comme le silicium les voit. Les capteurs monochromes sont affichés sous la forme d'une grille grise plate avec l'étiquette "NO CFA".
 
-**6. Common pitfalls**
+**6. Pièges courants**
 
-The hard failure mode is hardcoding RGGB demosaic. Every Sony Exmor-RS sensor on the market ships with BGGR, so if you hardcode RGGB your code works on the Samsung ISOCELL phone you tested with and produces a color-inverted image on every Xperia, most Pixels, and all iPhones running Android (if such a thing existed). The fix is straightforward: read the key and branch your demosaic. Many open-source RAW libraries (libraw, OpenImageIO) accept a CFA enum directly, so map the Android CFA value to the library constant and pass it through.
+Le mode d'échec radical consiste à coder en dur la démosatrisation RGGB. Chaque capteur Sony Exmor-RS sur le marché est livré avec BGGR, donc si vous codez en dur RGGB, votre code fonctionnera sur le téléphone Samsung ISOCELL avec lequel vous avez testé et produira une image aux couleurs inversées sur chaque Xperia, la plupart des Pixels et tous les iPhones fonctionnant sous Android (si une telle chose existait). La solution est simple : lisez la clé et bifurquez votre démosatrisation. De nombreuses bibliothèques RAW open-source (libraw, OpenImageIO) acceptent directement un enum CFA, donc mappez la valeur CFA d'Android sur la constante de la bibliothèque et transmettez-la.
 
-The second pitfall: `SENSOR_INFO_COLOR_FILTER_ARRANGEMENT` describes the active array top-left pixel. If you crop the RAW buffer (say, to extract a 1000×1000 region for face processing), the CFA pattern *shifts* by (crop.left mod 2, crop.top mod 2). Cropping one pixel right converts an RGGB pattern to GRBG in the cropped sub-image. Cropping both one right and one down converts RGGB to BGGR. Most developers forget this and demosaic the crop with the original pattern, producing a high-frequency color moiré that looks like a demosaic bug but is actually a coordinate bug. Fix by adjusting the CFA for the crop parity or by always cropping on even boundaries.
+Le deuxième piège : `SENSOR_INFO_COLOR_FILTER_ARRANGEMENT` décrit le pixel supérieur gauche de la matrice active. Si vous recadrez le tampon RAW (disons, pour extraire une région de 1000×1000 pour le traitement des visages), le motif CFA *se décalera* de (crop.left mod 2, crop.top mod 2). Un recadrage d'un pixel vers la droite convertit un motif RGGB en GRBG dans la sous-image recadrée. Un recadrage à la fois d'un pixel vers la droite et d'un vers le bas convertit le RGGB en BGGR. La plupart des développeurs l'oublient et démosatrisent le recadrage avec le motif original, produisant un moiré coloré à haute fréquence qui ressemble à un bug de démosatrisation mais qui est en fait un bug de coordonnées. Corrigez en ajustant la CFA pour la parité du recadrage ou en recadrant toujours sur des limites paires.
 
 ---
 
-## Lens Category
+## Catégorie Lens (Objectif)
 
 ### LENS_FACING
 
-**1. What is it?**
+**1. Qu'est-ce que c'est ?**
 
-`LENS_FACING` is an `Int` enum describing the physical mounting direction of the camera module relative to the device screen. The three possible values are:
-- `LENS_FACING_BACK` — camera points away from the user (the "main" camera, used for landscape photography)
-- `LENS_FACING_FRONT` — camera points toward the user (selfie camera, always mounted in the screen bezel or notch)
-- `LENS_FACING_EXTERNAL` — USB webcam, HDMI capture card, or other hot-pluggable camera with unknown orientation
+`LENS_FACING` est un enum `Int` décrivant la direction de montage physique du module caméra par rapport à l'écran de l'appareil. Les trois valeurs possibles sont :
+- `LENS_FACING_BACK` — la caméra pointe à l'opposé de l'utilisateur (la caméra "principale", utilisée pour la photographie de paysage).
+- `LENS_FACING_FRONT` — la caméra pointe vers l'utilisateur (caméra selfie, toujours montée dans la bordure ou l'encoche de l'écran).
+- `LENS_FACING_EXTERNAL` — webcam USB, carte de capture HDMI ou autre caméra connectable à chaud avec une orientation inconnue.
 
-This key is static per camera ID; it never changes during the lifetime of a device (foldables excepted — see `INFO_DEVICE_STATE_ORIENTATIONS` for dynamic state).
+Cette clé est statique par ID de caméra ; elle ne change jamais pendant la durée de vie d'un appareil (excepté pour les pliables — voir `INFO_DEVICE_STATE_ORIENTATIONS` pour l'état dynamique).
 
-**2. Why does it exist?**
+**2. Pourquoi cela existe-t-il ?**
 
-The most visible impact of facing is in the preview transform. Android requires that the back-facing camera preview rotate with the device orientation using the sensor's natural landscape orientation plus `SENSOR_ORIENTATION`; for the front-facing camera the preview must also be **mirrored horizontally** so the user sees themselves as though looking in a mirror. Without a facing key each application would have to guess which camera is which using heuristics (first ID = back, second = front) which break on multi-camera devices where IDs 0, 1, 2, 3 are all back-facing.
+L'impact le plus visible de l'orientation (facing) se trouve dans la transformation de l'aperçu. Android exige que l'aperçu de la caméra arrière pivote avec l'orientation de l'appareil en utilisant l'orientation paysage naturelle du capteur plus `SENSOR_ORIENTATION` ; pour la caméra avant, l'aperçu doit également être **miroité horizontalement** afin que l'utilisateur se voit comme s'il regardait dans un miroir. Sans une clé d'orientation, chaque application devrait deviner quelle caméra est laquelle en utilisant des heuristiques (premier ID = arrière, deuxième = avant) qui échouent sur les appareils multi-caméras où les ID 0, 1, 2, 3 sont tous orientés vers l'arrière.
 
-**3. Which devices support it?**
+**3. Quels appareils le supportent ?**
 
-Every camera ID on every device reports this key. It is impossible to enumerate a valid camera ID via `CameraManager.getCameraIdList()` that does not have `LENS_FACING` populated. Even LEGACY-level Camera1-wrapped devices expose it. External USB cameras get `LENS_FACING_EXTERNAL` by default.
+Chaque ID de caméra sur chaque appareil rapporte cette clé. Il est impossible d'énumérer un ID de caméra valide via `CameraManager.getCameraIdList()` qui ne possède pas `LENS_FACING` renseigné. Même les appareils de niveau matériel LEGACY (enveloppant Camera1) l'exposent. Les caméras USB externes reçoivent `LENS_FACING_EXTERNAL` par défaut.
 
-**4. How do I query it?**
+**4. Comment l'interroger ?**
 
 ```kotlin
 val facing: Int? = characteristics.get(
@@ -494,10 +494,10 @@ val facing: Int? = characteristics.get(
 
 facing?.let { f ->
     val (name, emoji) = when (f) {
-        CameraCharacteristics.LENS_FACING_BACK -> "Back" to "📷"
-        CameraCharacteristics.LENS_FACING_FRONT -> "Front" to "🤳"
-        CameraCharacteristics.LENS_FACING_EXTERNAL -> "External" to "🔌"
-        else -> "Unknown ($f)" to "❓"
+        CameraCharacteristics.LENS_FACING_BACK -> "Arrière" to "📷"
+        CameraCharacteristics.LENS_FACING_FRONT -> "Avant" to "🤳"
+        CameraCharacteristics.LENS_FACING_EXTERNAL -> "Externe" to "🔌"
+        else -> "Inconnu ($f)" to "❓"
     }
     Log.d(TAG, "LENS_FACING = $name $emoji")
     
@@ -505,7 +505,7 @@ facing?.let { f ->
         CameraCharacteristics.SENSOR_ORIENTATION
     ) ?: 0
     
-    Log.d(TAG, "  Sensor orientation (natural rotation): $sensorOrientation°")
+    Log.d(TAG, "  Orientation du capteur (rotation naturelle) : $sensorOrientation°")
     
     val totalDisplayRotation = when (f) {
         CameraCharacteristics.LENS_FACING_FRONT -> {
@@ -518,40 +518,40 @@ facing?.let { f ->
         }
         else -> displayRotation
     }
-    Log.d(TAG, "  Calculated display rotation: $totalDisplayRotation°")
-    Log.d(TAG, "  Front camera: MUST horizontally mirror preview TextureView/SurfaceView")
+    Log.d(TAG, "  Rotation d'affichage calculée : $totalDisplayRotation°")
+    Log.d(TAG, "  Caméra avant : DOIT miroiter horizontalement la TextureView/SurfaceView d'aperçu")
 } ?: run {
-    Log.e(TAG, "LENS_FACING is null — this should never happen on a valid camera ID")
+    Log.e(TAG, "LENS_FACING est null — cela ne devrait jamais arriver sur un ID de caméra valide")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Comment l'inspecter avec Android Camera Parameters ?**
 
-Navigate to **Overview / Cameras**. The first card lists every camera ID as a row, showing facing, sensor orientation, megapixel count, and hardware level in compact form. Front cameras have a "🤳" badge, back cameras have "📷", and external USB cameras show "🔌". Tapping any camera row opens the detail view where facing is shown as the first metadata field.
+Naviguez vers **Overview / Cameras**. La première carte liste chaque ID de caméra sous forme de ligne, affichant l'orientation, l'orientation du capteur, le nombre de mégapixels et le niveau matériel sous forme compacte. Les caméras avant ont un badge "🤳", les caméras arrière ont "📷", et les caméras USB externes affichent "🔌". Taper sur n'importe quelle ligne de caméra ouvre la vue détaillée où l'orientation est affichée comme premier champ de métadonnées.
 
-**6. Common pitfalls**
+**6. Pièges courants**
 
-The selfie mirroring pitfall is universal: developers correctly mirror the preview `TextureView` for a natural "looking in a mirror" experience, but then capture the JPEG via `ImageReader` and wonder why the photo is *not* mirrored. The mirroring is a **display-only transform** applied to the preview surface. The actual sensor pixels (and therefore the JPEG bytes) are never mirrored. Users hate this: "My selfies look flipped!" The fix is to write the horizontal flip into the JPEG's EXIF orientation tag using `ExifInterface`. Set `TAG_ORIENTATION` to `ORIENTATION_FLIP_HORIZONTAL` for front cameras. Most gallery apps respect this flag and display the photo mirrored; photo editors do the same. If you truly need pixel-fliped output (for upload to a server that ignores EXIF), then post-process the `Bitmap` with `Canvas` and a horizontal `Matrix.preScale(-1f, 1f)` before saving.
+Le piège de l'effet miroir des selfies est universel : les développeurs miroitent correctement la `TextureView` d'aperçu pour une expérience naturelle "comme dans un miroir", mais capturent ensuite le JPEG via `ImageReader` et se demandent pourquoi la photo n'est *pas* miroitée. Le miroitement est une **transformation d'affichage uniquement** appliquée à la surface d'aperçu. Les pixels réels du capteur (et donc les octets du JPEG) ne sont jamais miroités. Les utilisateurs détestent cela : "Mes selfies ont l'air inversés !" La solution consiste à écrire l'inversion horizontale dans la balise d'orientation EXIF du JPEG en utilisant `ExifInterface`. Réglez `TAG_ORIENTATION` sur `ORIENTATION_FLIP_HORIZONTAL` pour les caméras avant. La plupart des applications de galerie respectent cet indicateur et affichent la photo miroitée ; les éditeurs de photos font de même. Si vous avez vraiment besoin d'une sortie avec les pixels inversés (pour l'envoi vers un serveur qui ignore l'EXIF), alors post-traitez le `Bitmap` avec `Canvas` et une `Matrix.preScale(-1f, 1f)` horizontale avant l'enregistrement.
 
-A second pitfall: foldable devices with under-display cameras. The same logical camera ID can report `LENS_FACING_FRONT` when unfolded but the preview transform changes because the sensor orientation changes. See `INFO_DEVICE_STATE_ORIENTATIONS` in the Info section. Never cache `LENS_FACING` + `SENSOR_ORIENTATION` as a static pair — requery both when the device reports a configuration change.
+Un deuxième piège : les appareils pliables avec caméras sous l'écran. Le même ID de caméra logique peut rapporter `LENS_FACING_FRONT` lorsqu'il est déplié, mais la transformation de l'aperçu change car l'orientation du capteur change. Voir `INFO_DEVICE_STATE_ORIENTATIONS` dans la section Info. Ne mettez jamais en cache la paire `LENS_FACING` + `SENSOR_ORIENTATION` comme une constante statique — ré-interrogez les deux lorsque l'appareil signale un changement de configuration.
 
 ---
 
 ### LENS_INFO_AVAILABLE_FOCAL_LENGTHS
 
-**1. What is it?**
+**1. Qu'est-ce que c'est ?**
 
-`LENS_INFO_AVAILABLE_FOCAL_LENGTHS` is a `FloatArray` listing the discrete optical focal lengths (in millimeters) that this camera can produce via physical lens movement or multi-camera switching. Single-camera devices report a one-element array like `[4.2]` meaning a 4.2 mm prime lens. Multi-camera logical devices (backing the same camera ID with multiple physical sensors) report an array like `[1.7, 5.0, 12.0]` meaning ultra-wide (1.7 mm), wide-angle (5.0 mm), and periscope telephoto (12.0 mm) options are available. Note this is **optical** focal length, not the 35mm-equivalent marketing number. To get 35mm-equivalent multiply by `LENS_INFO_AVAILABLE_FOCAL_LENGTHS[i] / SENSOR_INFO_PHYSICAL_SIZE.width`.
+`LENS_INFO_AVAILABLE_FOCAL_LENGTHS` est un `FloatArray` listant les distances focales optiques discrètes (en millimètres) que cette caméra peut produire via le mouvement physique de l'objectif ou le basculement multi-caméras. Les appareils à caméra unique rapportent un tableau à un élément comme `[4.2]`, ce qui signifie un objectif fixe de 4,2 mm. Les appareils logiques multi-caméras (soutenant le même ID de caméra avec plusieurs capteurs physiques) rapportent un tableau comme `[1.7, 5.0, 12.0]`, ce qui signifie que des options ultra-grand-angle (1,7 mm), grand-angle (5,0 mm) et téléobjectif périscopique (12,0 mm) sont disponibles. Notez qu'il s'agit de la distance focale **optique**, et non du chiffre marketing équivalent 35 mm. Pour obtenir l'équivalent 35 mm, multipliez par `LENS_INFO_AVAILABLE_FOCAL_LENGTHS[i] / SENSOR_INFO_PHYSICAL_SIZE.width`.
 
-**2. Why does it exist?**
+**2. Pourquoi cela existe-t-il ?**
 
-Focal length is the fundamental property that determines the angle of view of a photograph. The Camera2 zoom subsystem was redesigned for multi-camera devices to allow the framework to *seamlessly switch* between physical cameras as the user pinches to zoom. Without knowing which optical focal lengths are available, developers cannot design a zoom UI that highlights optical zoom "sweet spots" (1×, 3×, 5×) where the framework is using a real lens with no digital crop. This key lets you render a zoom bar with visual notches at each focal length.
+La distance focale est la propriété fondamentale qui détermine l'angle de vue d'une photographie. Le sous-système de zoom de Camera2 a été repensé pour les appareils multi-caméras afin de permettre au framework de *basculer de manière transparente* entre les caméras physiques au fur et à mesure que l'utilisateur pince pour zoomer. Sans savoir quelles distances focales optiques sont disponibles, les développeurs ne peuvent pas concevoir une UI de zoom qui met en évidence les "points idéaux" du zoom optique (1×, 3×, 5×) où le framework utilise un véritable objectif sans recadrage numérique. Cette clé vous permet de rendre une barre de zoom avec des encoches visuelles à chaque distance focale.
 
-**3. Which devices support it?**
+**3. Quels appareils le supportent ?**
 
-All hardware levels. Single-camera devices always have a single-element array. Multi-camera capability (`REQUEST_AVAILABLE_CAPABILITIES_LOGICAL_MULTI_CAMERA`) is correlated with longer arrays, but not strictly required — some OEMs expose a multi-focal-length array via LEGACY-level camera wrapping. The array is guaranteed to be sorted in increasing order on compliant devices.
+Tous les niveaux matériels. Les appareils à caméra unique ont toujours un tableau à un seul élément. La capacité multi-caméra (`REQUEST_AVAILABLE_CAPABILITIES_LOGICAL_MULTI_CAMERA`) est corrélée à des tableaux plus longs, mais n'est pas strictement requise — certains OEM exposent un tableau de distances focales multiples via un wrapper de niveau matériel LEGACY. Le tableau est garanti être trié par ordre croissant sur les appareils conformes.
 
-**4. How do I query it?**
+**4. Comment l'interroger ?**
 
 ```kotlin
 val focalLengths: FloatArray? = characteristics.get(
@@ -563,62 +563,62 @@ val sensorSize: SizeF? = characteristics.get(
 )
 
 focalLengths?.let { fLengths ->
-    Log.d(TAG, "Optical focal lengths (${fLengths.size} discrete values):")
+    Log.d(TAG, "Distances focales optiques (${fLengths.size} valeurs discrètes) :")
     
     fLengths.sort()
     fLengths.forEachIndexed { index, mm ->
-        Log.d(TAG, "  [$index] ${"%.2f".format(mm)}mm (optical)")
+        Log.d(TAG, "  [$index] ${"%.2f".format(mm)}mm (optique)")
         
         sensorSize?.let { size ->
             val fullFrameDiagonalMm = 43.27
             val cropFactor = fullFrameDiagonalMm / hypot(size.width.toDouble(), size.height.toDouble())
             val equivalent35mm = mm * cropFactor
             val angleOfViewDeg = 2.0 * atan(size.width.toDouble() / (2.0 * mm.toDouble())) * 180.0 / Math.PI
-            Log.d(TAG, "       35mm-equiv: ${"%.1f".format(equivalent35mm)}mm | " +
-                       "AoV: ${"%.0f".format(angleOfViewDeg)}° | " +
-                       "Crop: ${"%.2f".format(cropFactor)}×")
+            Log.d(TAG, "       équiv-35mm : ${"%.1f".format(equivalent35mm)}mm | " +
+                       "AoV : ${"%.0f".format(angleOfViewDeg)}° | " +
+                       "Crop : ${"%.2f".format(cropFactor)}×")
         }
     }
     
     if (fLengths.size > 1) {
         val zoomRatios = fLengths.map { it / fLengths[0] }
-        Log.d(TAG, "  Optical zoom steps (relative to widest): " +
+        Log.d(TAG, "  Étapes de zoom optique (relatif au plus large) : " +
                    zoomRatios.joinToString("×, ") { "%.1f".format(it) } + "×")
     }
 } ?: run {
-    Log.w(TAG, "Available focal lengths array unavailable")
+    Log.w(TAG, "Tableau des distances focales disponibles non disponible")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Comment l'inspecter avec Android Camera Parameters ?**
 
-Open **Lens / Lens Info**. The focal lengths appear as the "Focal Lengths" card showing each optical focal length with its 35mm-equivalent, angle of view, and crop factor. On multi-camera logical devices each focal length has a badge that says which physical camera ID backs it, and tapping renders a visual representation of the angle of view cone (the wider the angle, the wider the triangle diagram).
+Ouvrez **Lens / Lens Info**. Les distances focales apparaissent dans la carte "Focal Lengths" affichant chaque distance focale optique avec son équivalent 35 mm, son angle de vue et son facteur de recadrage (crop factor). Sur les appareils logiques multi-caméras, chaque distance focale possède un badge indiquant quel ID de caméra physique la soutient, et taper dessus affiche une représentation visuelle du cône d'angle de vue (plus l'angle est large, plus le diagramme en triangle est large).
 
-**6. Common pitfalls**
+**6. Pièges courants**
 
-Focal length vs. focus distance: the most commonly confused pair in all of Camera2. `LENS_INFO_AVAILABLE_FOCAL_LENGTHS` (in mm) is the **optical property of the lens** — how wide or narrow the scene is. `LENS_FOCUS_DISTANCE` (in diopters, 1/m) is the **current AF position** — how far away the camera is focused. Setting `LENS_FOCAL_LENGTH` switches between physical cameras; setting `LENS_FOCUS_DISTANCE` moves the autofocus motor inside one lens. The two are orthogonal and independent. Developers often build one slider that tries to control both, with bizarre results.
+Distance focale vs distance de mise au point : la paire la plus souvent confondue dans tout Camera2. `LENS_INFO_AVAILABLE_FOCAL_LENGTHS` (en mm) est la **propriété optique de l'objectif** — la largeur ou l'étroitesse de la scène. `LENS_FOCUS_DISTANCE` (en dioptries, 1/m) est la **position actuelle de l'AF** — à quelle distance la caméra fait la mise au point. Régler `LENS_FOCAL_LENGTH` bascule entre les caméras physiques ; régler `LENS_FOCUS_DISTANCE` déplace le moteur d'autofocus à l'intérieur d'un seul objectif. Les deux sont orthogonaux et indépendants. Les développeurs construisent souvent un seul curseur qui tente de contrôler les deux, avec des résultats bizarres.
 
-Second pitfall: assuming the array is sorted. On most FULL-level devices it is, but on certain LEGACY wrappers from Xiaomi and Oppo the widest lens is the last element, not the first. Always call `fLengths.sort()` before computing zoom-step ratios. Computing ratio against the wrong element yields a 0.25× "zoom" that your UI cannot display correctly.
+Deuxième piège : supposer que le tableau est trié. Sur la plupart des appareils de niveau FULL, il l'est, mais sur certains wrappers LEGACY de chez Xiaomi et Oppo, l'objectif le plus large est le dernier élément, pas le premier. Appelez toujours `fLengths.sort()` avant de calculer les rapports d'étape de zoom. Calculer un rapport par rapport au mauvais élément donne un "zoom" de 0,25× que votre UI ne pourra pas afficher correctement.
 
 ---
 
 ### LENS_INFO_MINIMUM_FOCUS_DISTANCE
 
-**1. What is it?**
+**1. Qu'est-ce que c'est ?**
 
-`LENS_INFO_MINIMUM_FOCUS_DISTANCE` is a single `Float` measured in **diopters (D)**, defined as the inverse of the closest focusable distance in meters. A value of `10.0` means the lens can focus on objects as close as 0.1 meters (10 cm). A value of `0.0` means the lens is fixed-focus ("focus free") — it cannot change its focus distance at all, because it is optimized for infinity. Most selfie cameras, budget phone cameras, and wide-angle front cameras are fixed-focus. Values of 20D or higher indicate a macro-capable module that can focus on objects touching the lens.
+`LENS_INFO_MINIMUM_FOCUS_DISTANCE` est un simple `Float` mesuré en **dioptries (D)**, défini comme l'inverse de la distance de mise au point la plus proche en mètres. Une valeur de `10.0` signifie que l'objectif peut faire la mise au point sur des objets aussi proches que 0,1 mètre (10 cm). Une valeur de `0.0` signifie que l'objectif est à mise au point fixe ("focus free") — il ne peut pas du tout changer sa distance de mise au point car il est optimisé pour l'infini. La plupart des caméras selfie, des caméras de téléphones budget et des caméras avant ultra-grand-angle sont à mise au point fixe. Des valeurs de 20 D ou plus indiquent un module capable de macro qui peut faire la mise au point sur des objets touchant l'objectif.
 
-Diopters are mathematically convenient because they're linear in the lens equation: `1 / distance = 1 / focal_length + 1 / sensor_distance`. When you set `CaptureRequest.LENS_FOCUS_DISTANCE` to a value, the HAL interprets it as a diopter.
+Les dioptries sont mathématiquement pratiques car elles sont linéaires dans l'équation de l'objectif : `1 / distance = 1 / distance_focale + 1 / distance_capteur`. Lorsque vous réglez `CaptureRequest.LENS_FOCUS_DISTANCE` sur une valeur, le HAL l'interprète comme une dioptrie.
 
-**2. Why does it exist?**
+**2. Pourquoi cela existe-t-il ?**
 
-Without a minimum focus distance, there is no programmatic way to know whether a camera is even capable of manual focus. If you show a manual focus slider on a fixed-focus camera (0.0 diopters) the slider's movement produces zero change in the image — confusing users. The key also defines the valid range of the `LENS_FOCUS_DISTANCE` request parameter: valid values always span `[0.0, minimum_focus_distance]` (infinity to closest-focus). For macro photography you know exactly how close you can get before the image goes soft.
+Sans une distance de mise au point minimale, il n'y a aucun moyen programmatique de savoir si une caméra est même capable de mise au point manuelle. Si vous affichez un curseur de mise au point manuelle sur une caméra à mise au point fixe (0,0 dioptrie), le mouvement du curseur ne produit aucun changement dans l'image — ce qui déroute les utilisateurs. La clé définit également la plage valide du paramètre de requête `LENS_FOCUS_DISTANCE` : les valeurs valides couvrent toujours `[0.0, distance_mise_au_point_minimale]` (de l'infini à la mise au point la plus proche). Pour la photographie macro, vous savez exactement à quel point vous pouvez vous approcher avant que l'image ne devienne floue.
 
-**3. Which devices support it?**
+**3. Quels appareils le supportent ?**
 
-Exposed on all devices, but meaningful only when combined with manual control. The `MANUAL_SENSOR` capability flag (again) determines whether setting `LENS_FOCUS_DISTANCE` actually changes the lens. LIMITED-level devices may report `LENS_INFO_MINIMUM_FOCUS_DISTANCE = 10.0` but if `MANUAL_SENSOR` is absent, writing `LENS_FOCUS_DISTANCE` in a capture request is silently ignored by the AF system. LEGACY-wrapped devices sometimes report `0.0` even though the physical module *can* focus — this is a known LEGACY wrapper limitation.
+Exposé sur tous les appareils, mais significatif uniquement lorsqu'il est combiné avec le contrôle manuel. L'indicateur de capacité `MANUAL_SENSOR` (encore lui) détermine si le réglage de `LENS_FOCUS_DISTANCE` modifie réellement l'objectif. Les appareils de niveau LIMITED peuvent rapporter `LENS_INFO_MINIMUM_FOCUS_DISTANCE = 10.0` mais si `MANUAL_SENSOR` est absent, l'écriture de `LENS_FOCUS_DISTANCE` dans une requête de capture est silencieusement ignorée par le système AF. Les wrappers de niveau matériel LEGACY rapportent parfois `0.0` même si le module physique *peut* faire la mise au point — c'est une limitation connue des wrappers LEGACY.
 
-**4. How do I query it?**
+**4. Comment l'interroger ?**
 
 ```kotlin
 val minFocusDiopters: Float? = characteristics.get(
@@ -630,73 +630,73 @@ val hasManualSensor = characteristics.get(
 )?.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR) ?: false
 
 minFocusDiopters?.let { d ->
-    Log.d(TAG, "LENS_INFO_MINIMUM_FOCUS_DISTANCE = %.2f D (diopters)".format(d))
+    Log.d(TAG, "LENS_INFO_MINIMUM_FOCUS_DISTANCE = %.2f D (dioptries)".format(d))
     
     val closestFocusMeters = if (d > 0.0f) (1.0 / d.toDouble()) else Double.POSITIVE_INFINITY
     val closestFocusCm = if (d > 0.0f) (100.0 / d.toDouble()) else Double.POSITIVE_INFINITY
     
     when {
         d == 0.0f -> {
-            Log.d(TAG, "  Lens type: FIXED-FOCUS (cannot change focus at all)")
-            Log.d(TAG, "  Closest focus: effectively infinity (landscape only)")
-            Log.d(TAG, "  UI action: HIDE manual focus slider entirely.")
+            Log.d(TAG, "  Type d'objectif : MISE AU POINT FIXE (ne peut pas changer du tout)")
+            Log.d(TAG, "  Mise au point la plus proche : effectivement l'infini (paysage uniquement)")
+            Log.d(TAG, "  Action UI : MASQUER entièrement le curseur de mise au point manuelle.")
         }
         d < 2.0f -> {
-            Log.d(TAG, "  Lens type: Soft-focusable (close focus is ~${"%.0f".format(closestFocusCm)} cm)")
-            Log.d(TAG, "  UI: Show slider but user won't see much change.")
+            Log.d(TAG, "  Type d'objectif : Mise au point 'molle' (proche à env. ${"%.0f".format(closestFocusCm)} cm)")
+            Log.d(TAG, "  UI : Afficher le curseur mais l'utilisateur ne verra pas grand changement.")
         }
         d >= 2.0f && d < 10.0f -> {
-            Log.d(TAG, "  Lens type: Standard focus (closest ~${"%.0f".format(closestFocusCm)} cm)")
+            Log.d(TAG, "  Type d'objectif : Mise au point standard (plus proche env. ${"%.0f".format(closestFocusCm)} cm)")
         }
         d >= 10.0f && d < 20.0f -> {
-            Log.d(TAG, "  Lens type: Close-focus capable (closest ~${"%.0f".format(closestFocusCm)} cm)")
+            Log.d(TAG, "  Type d'objectif : Capable de mise au point rapprochée (env. ${"%.0f".format(closestFocusCm)} cm)")
         }
         else -> {
-            Log.d(TAG, "  Lens type: MACRO capable (closest ${"%.1f".format(closestFocusCm)} cm!)")
+            Log.d(TAG, "  Type d'objectif : Capable de MACRO (plus proche à ${"%.1f".format(closestFocusCm)} cm !)")
         }
     }
     
     if (hasManualSensor) {
-        Log.d(TAG, "  Manual focus: CONTROLLABLE via CaptureRequest.LENS_FOCUS_DISTANCE")
-        Log.d(TAG, "  Valid range: [0.0 (∞) → %.2f D (${"%.0f".format(closestFocusCm)} cm)]".format(d))
+        Log.d(TAG, "  Mise au point manuelle : CONTRÔLABLE via CaptureRequest.LENS_FOCUS_DISTANCE")
+        Log.d(TAG, "  Plage valide : [0.0 (∞) → %.2f D (${"%.0f".format(closestFocusCm)} cm)]".format(d))
     } else {
-        Log.w(TAG, "  WARNING: Lens reports focus range but MANUAL_SENSOR absent.")
-        Log.w(TAG, "  Manual focus slider would do nothing. Hide it.")
+        Log.w(TAG, "  AVERTISSEMENT : L'objectif rapporte une plage de mise au point mais MANUAL_SENSOR est absent.")
+        Log.w(TAG, "  Le curseur de mise au point manuelle ne ferait rien. Masquez-le.")
     }
 } ?: run {
-    Log.w(TAG, "Minimum focus distance not available")
+    Log.w(TAG, "Distance de mise au point minimale non disponible")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Comment l'inspecter avec Android Camera Parameters ?**
 
-Look in **Lens / Lens Info** under "Minimum Focus Distance". The app renders the value three ways: raw diopters, closest distance in centimeters, and closest distance in inches, so you can immediately tell if a camera is macro-capable. If the value is 0.0 a red banner warns "FIXED FOCUS — manual focus slider not available". The manual focus screen in the app reads this key first and refuses to show its slider when minimum focus is 0.0 or when MANUAL_SENSOR is missing.
+Regardez dans **Lens / Lens Info** sous "Minimum Focus Distance". L'application affiche la valeur de trois manières : dioptries brutes, distance la plus proche en centimètres et distance la plus proche en pouces, afin que vous puissiez immédiatement savoir si une caméra est capable de macro. Si la valeur est 0,0, une bannière rouge avertit "MISE AU POINT FIXE — curseur de mise au point manuelle non disponible". L'écran de mise au point manuelle de l'application lit cette clé en premier et refuse d'afficher son curseur lorsque la mise au point minimale est de 0,0 ou lorsque MANUAL_SENSOR manque.
 
-**6. Common pitfalls**
+**6. Pièges courants**
 
-Number one: showing a manual focus slider when `minFocusDistance == 0.0f`. The slider goes from 0.0 to 0.0 — a single point. UI-wise this is a no-op track that does nothing, and QA will file it as a bug. The correct behavior is to check both `minFocusDistance > 0.0` and `MANUAL_SENSOR` capability. If either check fails, remove or disable the focus slider from the settings panel. In Compose: `if (minFocus > 0f && hasManualSensor) { ManualFocusSlider(...) }`.
+Numéro un : afficher un curseur de mise au point manuelle lorsque `minFocusDistance == 0.0f`. Le curseur va de 0,0 à 0,0 — un seul point. Au niveau de l'UI, c'est une piste sans effet qui ne fait rien, et la QA le signalera comme un bug. Le comportement correct est de vérifier à la fois `minFocusDistance > 0.0` et la capacité `MANUAL_SENSOR`. Si l'une des vérifications échoue, retirez ou désactivez le curseur de mise au point du panneau de réglages. En Compose : `if (minFocus > 0f && hasManualSensor) { ManualFocusSlider(...) }`.
 
-Second pitfall: diopter scale inverted on the slider. Diopters grow *toward* the camera (10 D = 10 cm, 1 D = 1 m, 0 D = ∞). If you naively map slider-left = 0.0 and slider-right = minFocusDistance, "pulling the slider right" focuses *closer* instead of farther, which is opposite user expectation for a "focus near → far" slider. Flip the mapping: slider position `p ∈ [0,1]` should map to `focus = (1.0 - p) * minFocusDistance` so that slider-left = infinity and slider-right = closest focus.
+Deuxième piège : échelle des dioptries inversée sur le curseur. Les dioptries croissent *vers* la caméra (10 D = 10 cm, 1 D = 1 m, 0 D = ∞). Si vous mappez naïvement curseur-gauche = 0,0 et curseur-droite = minFocusDistance, "tirer le curseur vers la droite" fait la mise au point *plus près* au lieu de plus loin, ce qui est opposé à l'attente de l'utilisateur pour un curseur "proche → loin". Inversez le mappage : la position du curseur `p ∈ [0,1]` doit mapper vers `focus = (1.0 - p) * minFocusDistance` afin que curseur-gauche = infini et curseur-droite = mise au point la plus proche.
 
 ---
 
 ### LENS_INFO_AVAILABLE_APERTURES
 
-**1. What is it?**
+**1. Qu'est-ce que c'est ?**
 
-`LENS_INFO_AVAILABLE_APERTURES` is a `FloatArray` of f-stop numbers representing the discrete aperture sizes the lens can achieve. An f-stop is the ratio `focal_length / iris_diameter` — lower numbers mean a wider aperture (more light, shallower depth of field), higher numbers mean a narrower aperture (less light, deeper focus). Most modern smartphones have a fixed aperture: `[1.8]` or `[1.7]` or `[2.2]` depending on the lens. A small number of premium devices (Samsung Galaxy S9–S23 Ultra, some Xiaomi flagships) feature a *mechanical dual-aperture* iris that physically switches between two stops like `[1.5, 2.4]`.
+`LENS_INFO_AVAILABLE_APERTURES` est un `FloatArray` de nombres d'ouverture (f-stop) représentant les tailles d'ouverture discrètes que l'objectif peut atteindre. Un f-stop est le rapport `distance_focale / diametre_iris` — des chiffres plus bas signifient une ouverture plus large (plus de lumière, profondeur de champ plus courte), des chiffres plus élevés signifient une ouverture plus étroite (moins de lumière, mise au point plus profonde). La plupart des smartphones modernes ont une ouverture fixe : `[1.8]` ou `[1.7]` ou `[2.2]` selon l'objectif. Un petit nombre d'appareils premium (Samsung Galaxy S9–S23 Ultra, certains fleurons Xiaomi) disposent d'un iris à *double ouverture mécanique* qui commute physiquement entre deux réglages comme `[1.5, 2.4]`.
 
-The array is sorted in increasing order on CDD-compliant devices.
+Le tableau est trié par ordre croissant sur les appareils conformes au CDD.
 
-**2. Why does it exist?**
+**2. Pourquoi cela existe-t-il ?**
 
-Photography's "exposure triangle" is ISO, shutter speed, and aperture. On smartphones with fixed apertures the triangle collapses to two variables because aperture is locked. The available apertures array tells the developer exactly whether the "A" in ISO+SS+A is actually a third variable or a constant. Manual exposure UIs that show an aperture slider for fixed-aperture cameras are buggy.
+Le "triangle de l'exposition" en photographie est composé des ISO, de la vitesse d'obturation et de l'ouverture. Sur les smartphones à ouverture fixe, le triangle s'effondre à deux variables car l'ouverture est verrouillée. Le tableau des ouvertures disponibles indique au développeur exactement si le "A" (Aperture) de ISO+SS+A est réellement une troisième variable ou une constante. Les UI d'exposition manuelle qui affichent un curseur d'ouverture pour les caméras à ouverture fixe sont buggées.
 
-**3. Which devices support it?**
+**3. Quels appareils le supportent ?**
 
-All devices report this array. Single-element arrays (fixed aperture) dominate the market. Multi-element arrays exist only on flagship devices with physical dual-aperture mechanisms, approximately &lt;1% of the active device population as of 2024. No capability flag prerequisites: if the array has more than one entry, you can set `CaptureRequest.LENS_APERTURE` to any of those entries and it will work — no MANUAL_SENSOR check required, because the mechanical iris switching is independent of the sensor gain/timing controls.
+Tous les appareils rapportent ce tableau. Les tableaux à un seul élément (ouverture fixe) dominent le marché. Les tableaux multi-éléments n'existent que sur les appareils phares dotés de mécanismes physiques à double ouverture, soit environ &lt;1 % de la population des appareils actifs en 2024. Aucun prérequis d'indicateur de capacité : si le tableau contient plus d'une entrée, vous pouvez régler `CaptureRequest.LENS_APERTURE` sur n'importe laquelle de ces entrées et cela fonctionnera — aucun contrôle MANUAL_SENSOR n'est requis, car le basculement mécanique de l'iris est indépendant des contrôles de gain/timing du capteur.
 
-**4. How do I query it?**
+**4. Comment l'interroger ?**
 
 ```kotlin
 val apertures: FloatArray? = characteristics.get(
@@ -705,64 +705,64 @@ val apertures: FloatArray? = characteristics.get(
 
 apertures?.let { stops ->
     stops.sort()
-    Log.d(TAG, "Available apertures: f/${stops.joinToString(", f/") { "%.1f".format(it) }}")
+    Log.d(TAG, "Ouvertures disponibles : f/${stops.joinToString(", f/") { "%.1f".format(it) }}")
     
     when (stops.size) {
         0 -> {
-            Log.e(TAG, "  ERROR: Empty aperture array (HAL violation)")
+            Log.e(TAG, "  ERREUR : Tableau d'ouvertures vide (violation du HAL)")
         }
         1 -> {
             val f = stops[0]
-            Log.d(TAG, "  FIXED aperture f/${"%.1f".format(f)}.")
-            Log.d(TAG, "  Exposure triangle: 2 variables (ISO + Shutter Speed only).")
-            Log.d(TAG, "  UI: HIDE aperture selector / disable button.")
+            Log.d(TAG, "  Ouverture FIXE f/${"%.1f".format(f)}.")
+            Log.d(TAG, "  Triangle d'exposition : 2 variables (ISO + vitesse d'obturation uniquement).")
+            Log.d(TAG, "  UI : MASQUER le sélecteur d'ouverture / désactiver le bouton.")
         }
         else -> {
-            Log.d(TAG, "  VARIABLE aperture (${stops.size} stops — mechanical iris!)")
+            Log.d(TAG, "  Ouverture VARIABLE (${stops.size} réglages — iris mécanique !)")
             stops.forEachIndexed { i, f ->
                 val lightGainedVersusSmallest = (stops.last() / f) * (stops.last() / f)
-                Log.d(TAG, "    [$i] f/${"%.1f".format(f)} — ${"%.1f".format(lightGainedVersusSmallest)}× light vs f/${"%.1f".format(stops.last())}")
+                Log.d(TAG, "    [$i] f/${"%.1f".format(f)} — ${"%.1f".format(lightGainedVersusSmallest)}× plus de lumière que f/${"%.1f".format(stops.last())}")
             }
-            Log.d(TAG, "  UI: SHOW aperture selector. Set via CaptureRequest.LENS_APERTURE.")
+            Log.d(TAG, "  UI : AFFICHER le sélecteur d'ouverture. Régler via CaptureRequest.LENS_APERTURE.")
         }
     }
 } ?: run {
-    Log.w(TAG, "Available apertures array unavailable")
+    Log.w(TAG, "Tableau des ouvertures disponibles non disponible")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Comment l'inspecter avec Android Camera Parameters ?**
 
-Go to **Lens / Lens Info** — the apertures appear as "Aperture" with one or more pill-shaped buttons for each available stop. On variable-aperture devices tapping each button live-switches the aperture and dims/brightens the preview accordingly so you can see the real depth-of-field change. On fixed-aperture devices the pill is grayed out and the tooltip explains "Fixed aperture — not controllable".
+Allez sur **Lens / Lens Info** — les ouvertures apparaissent comme "Aperture" avec un ou plusieurs boutons en forme de pilule pour chaque réglage disponible. Sur les appareils à ouverture variable, taper sur chaque bouton change l'ouverture en direct et assombrit/éclaircit l'aperçu en conséquence afin que vous puissiez voir le réel changement de profondeur de champ. Sur les appareils à ouverture fixe, la pilule est grisée et l'info-bulle explique "Ouverture fixe — non contrôlable".
 
-**6. Common pitfalls**
+**6. Pièges courants**
 
-Treating aperture as a controllable parameter on every device. Many developers learn the exposure triangle from a DSLR and assume all three controls exist on a phone. When they write `captureRequest.set(CaptureRequest.LENS_APERTURE, 2.8f)` on a fixed f/1.8 camera, the HAL silently ignores the request (on good HALs) or crashes the session (on bad LEGACY wrappers). Always check `apertures.size > 1` before exposing aperture UI. Count on two fingers: fewer than 2 entries = no selector.
+Traiter l'ouverture comme un paramètre contrôlable sur tous les appareils. De nombreux développeurs apprennent le triangle de l'exposition avec un reflex numérique et supposent que les trois contrôles existent sur un téléphone. Lorsqu'ils écrivent `captureRequest.set(CaptureRequest.LENS_APERTURE, 2.8f)` sur un appareil fixe f/1,8, le HAL ignore silencieusement la requête (sur les bons HAL) ou fait planter la session (sur les mauvais wrappers LEGACY). Vérifiez toujours `apertures.size > 1` avant d'exposer une UI d'ouverture. Comptez sur vos doigts : moins de 2 entrées = pas de sélecteur.
 
-The second pitfall: confusing f-stop units with linear brightness. F/stops are quadratic. f/1.4 lets in 2× more light than f/2.0 and 4× more light than f/2.8. When displaying an aperture slider, label it with the actual f-stops from the array, not with linear percentages, because each full stop step visually halves or doubles the image brightness.
+Le deuxième piège : confondre les unités f-stop avec la luminosité linéaire. Les nombres f/ sont quadratiques. f/1,4 laisse entrer 2× plus de lumière que f/2,0 et 4× plus de lumière que f/2,8. Lors de l'affichage d'un curseur d'ouverture, étiquetez-le avec les f-stops réels du tableau, pas avec des pourcentages linéaires, car chaque étape d'un palier complet divise ou double visuellement la luminosité de l'image.
 
 ---
 
 ### LENS_INFO_OPTICAL_STABILIZATION_MODE
 
-**1. What is it?**
+**1. Qu'est-ce que c'est ?**
 
-`LENS_INFO_OPTICAL_STABILIZATION_MODE` (note: paired with `LENS_INFO_AVAILABLE_OPTICAL_STABILIZATION` for the array of modes) is an `IntArray` listing whether hardware optical image stabilization (OIS) is available and which modes the HAL supports. Standard values are:
-- `LENS_OPTICAL_STABILIZATION_MODE_OFF` — no OIS, all stabilization must be done in software (EIS)
-- `LENS_OPTICAL_STABILIZATION_MODE_ON` — standard still-image OIS, gyro moves the lens group up/down/left/right by fractions of a millimeter to cancel hand tremor
-- `LENS_OPTICAL_STABILIZATION_MODE_VIDEO_STABILIZATION` — optimized OIS profile for video capture, with tuned filtering to match frame timing
+`LENS_INFO_OPTICAL_STABILIZATION_MODE` (note : jumelé avec `LENS_INFO_AVAILABLE_OPTICAL_STABILIZATION` pour le tableau des modes) est un `IntArray` listant si la stabilisation optique de l'image matérielle (OIS) est disponible et quels modes le HAL supporte. Les valeurs standard sont :
+- `LENS_OPTICAL_STABILIZATION_MODE_OFF` — pas d'OIS, toute la stabilisation doit être faite de manière logicielle (EIS).
+- `LENS_OPTICAL_STABILIZATION_MODE_ON` — stabilisation OIS standard pour image fixe ; le gyroscope déplace le groupe de lentilles vers le haut/bas/gauche/droite par fractions de millimètre pour annuler le tremblement de la main.
+- `LENS_OPTICAL_STABILIZATION_MODE_VIDEO_STABILIZATION` — profil OIS optimisé pour la capture vidéo, avec un filtrage réglé pour correspondre au timing des images.
 
-The companion key in CaptureRequests is `LENS_OPTICAL_STABILIZATION_MODE` which selects the active mode from the available list.
+La clé complémentaire dans les CaptureRequests est `LENS_OPTICAL_STABILIZATION_MODE` qui sélectionne le mode actif dans la liste disponible.
 
-**2. Why does it exist?**
+**2. Pourquoi cela existe-t-il ?**
 
-OIS and software EIS (electronic image stabilization) are two separate stabilization technologies that interact with each other in important ways. OIS physically moves the lens, requiring the crop margin reserved for EIS warping to be adjusted. On the majority of 2019–2024 Android devices the HAL does not permit both OIS and `CONTROL_VIDEO_STABILIZATION_MODE_ON` to be enabled simultaneously — enabling both causes a HAL conflict because the ISP's EIS warp calculator expects a static optical path and the OIS motor moves it anyway.
+L'OIS et l'EIS (stabilisation électronique de l'image) logicielle sont deux technologies de stabilisation distinctes qui interagissent de manière importante. L'OIS déplace physiquement l'objectif, ce qui nécessite d'ajuster la marge de recadrage réservée à la déformation de l'EIS. Sur la majorité des appareils Android de 2019–2024, le HAL ne permet pas d'activer simultanément l'OIS et `CONTROL_VIDEO_STABILIZATION_MODE_ON` — activer les deux provoque un conflit de HAL car le calculateur de déformation EIS de l'ISP attend un chemin optique statique et le moteur OIS le déplace de toute façon.
 
-**3. Which devices support it?**
+**3. Quels appareils le supportent ?**
 
-All devices expose the available-modes array. The presence of `ON` in the array indicates actual OIS hardware. Flagship phones, most mid-range phones, and modern telephoto/periscope lenses include OIS. Budget phones (under $300 USD) and selfie cameras typically have `[OFF]` only. OIS is independent of hardware level: there exist LIMITED-level devices with OIS and FULL-level devices without.
+Tous les appareils exposent le tableau des modes disponibles. La présence de `ON` dans le tableau indique un matériel OIS réel. Les téléphones phares, la plupart des téléphones de milieu de gamme et les objectifs téléobjectifs/périscopiques modernes incluent l'OIS. Les téléphones budget (moins de 300 USD) et les caméras selfie n'ont typiquement que `[OFF]`. L'OIS est indépendant du niveau matériel : il existe des appareils de niveau LIMITED dotés d'OIS et des appareils de niveau FULL sans OIS.
 
-**4. How do I query it?**
+**4. Comment l'interroger ?**
 
 ```kotlin
 val availableOisModes: IntArray? = characteristics.get(
@@ -775,10 +775,10 @@ availableOisModes?.let { modes ->
             CameraCharacteristics.LENS_OPTICAL_STABILIZATION_MODE_OFF -> "OFF"
             CameraCharacteristics.LENS_OPTICAL_STABILIZATION_MODE_ON -> "ON"
             CameraCharacteristics.LENS_OPTICAL_STABILIZATION_MODE_VIDEO_STABILIZATION -> "VIDEO"
-            else -> "UNKNOWN($m)"
+            else -> "INCONNU($m)"
         }
     }
-    Log.d(TAG, "Available OIS modes: [${modeNames.joinToString(", ")}]")
+    Log.d(TAG, "Modes OIS disponibles : [${modeNames.joinToString(", ")}]")
     
     val hasOisHardware = modes.contains(
         CameraCharacteristics.LENS_OPTICAL_STABILIZATION_MODE_ON
@@ -786,7 +786,7 @@ availableOisModes?.let { modes ->
         CameraCharacteristics.LENS_OPTICAL_STABILIZATION_MODE_VIDEO_STABILIZATION
     )
     
-    Log.d(TAG, "  Hardware OIS present: $hasOisHardware")
+    Log.d(TAG, "  Matériel OIS présent : $hasOisHardware")
     
     characteristics.get(
         CameraCharacteristics.CONTROL_AVAILABLE_VIDEO_STABILIZATION_MODES
@@ -794,65 +794,65 @@ availableOisModes?.let { modes ->
         val hasEis = eisModes.contains(
             CameraCharacteristics.CONTROL_VIDEO_STABILIZATION_MODE_ON
         )
-        Log.d(TAG, "  Software EIS available: $hasEis")
+        Log.d(TAG, "  EIS logicielle disponible : $hasEis")
         
         if (hasOisHardware && hasEis) {
-            Log.w(TAG, "  CAUTION: Device claims both OIS + EIS.")
-            Log.w(TAG, "  Many HALs allow ONLY ONE AT A TIME — test simultaneously.")
-            Log.w(TAG, "  If session creation fails with both enabled, pick ONE.")
+            Log.w(TAG, "  ATTENTION : L'appareil revendique à la fois OIS + EIS.")
+            Log.w(TAG, "  Beaucoup de HAL ne permettent QU'UN SEUL À LA FOIS — testez simultanément.")
+            Log.w(TAG, "  Si la création de session échoue avec les deux activés, choisissez-en UN.")
         }
     }
     
     val recommendedMode = when {
         modes.contains(CameraCharacteristics
-            .LENS_OPTICAL_STABILIZATION_MODE_VIDEO_STABILIZATION) -> "VIDEO profile"
+            .LENS_OPTICAL_STABILIZATION_MODE_VIDEO_STABILIZATION) -> "profil VIDEO"
         modes.contains(CameraCharacteristics
             .LENS_OPTICAL_STABILIZATION_MODE_ON) -> "ON"
-        else -> "OFF (no OIS hardware)"
+        else -> "OFF (pas de matériel OIS)"
     }
-    Log.d(TAG, "  Recommended OIS for video recording: $recommendedMode")
+    Log.d(TAG, "  OIS recommandée pour l'enregistrement vidéo : $recommendedMode")
 } ?: run {
-    Log.w(TAG, "OIS info unavailable")
+    Log.w(TAG, "Infos OIS non disponibles")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Comment l'inspecter avec Android Camera Parameters ?**
 
-Navigate to **Lens / Stabilization**. The card shows "Available OIS Modes" as a list with ON/OFF state indicators. Below it the companion app also shows EIS modes and a warning banner if both are available, explaining the mutual-exclusivity risk. The preview activity in the app allows toggling OIS and EIS independently so you can immediately see whether enabling both causes a session failure on your device.
+Naviguez vers **Lens / Stabilization**. La carte affiche "Available OIS Modes" sous forme de liste avec des indicateurs d'état ON/OFF. En dessous, l'application compagnon affiche également les modes EIS et une bannière d'avertissement si les deux sont disponibles, expliquant le risque d'exclusivité mutuelle. L'activité d'aperçu de l'application permet de basculer l'OIS et l'EIS indépendamment afin que vous puissiez immédiatement voir si l'activation des deux provoque un échec de session sur votre appareil.
 
-**6. Common pitfalls**
+**6. Pièges courants**
 
-Mutual exclusivity: the number one issue is enabling `LENS_OPTICAL_STABILIZATION_MODE = ON` and `CONTROL_VIDEO_STABILIZATION_MODE = ON` simultaneously. On Samsung Exynos devices this silently drops OIS (stabilization is less effective than pure OIS). On MediaTek devices the CaptureSession creation throws a `CameraAccessException` with no diagnostic message. On Snapdragon 8 Gen 1+ devices it works but introduces a jittery 1–2 frame delay in the preview because the EIS warp waits for the OIS gyro delay. The safe rule: choose OIS OR EIS, never both. Prefer OIS when available (it corrects before capture, preserves more light), fall back to EIS when the lens lacks the hardware.
+Exclusivité mutuelle : le problème numéro un est d'activer simultanément `LENS_OPTICAL_STABILIZATION_MODE = ON` et `CONTROL_VIDEO_STABILIZATION_MODE = ON`. Sur les appareils Samsung Exynos, cela désactive silencieusement l'OIS (la stabilisation est moins efficace que l'OIS pure). Sur les appareils MediaTek, la création de la `CaptureSession` lève une `CameraAccessException` sans message de diagnostic. Sur les appareils Snapdragon série 8 Gen 1+, cela fonctionne mais introduit un délai saccadé de 1 à 2 images dans l'aperçu car la déformation EIS attend le délai du gyroscope OIS. La règle de sécurité : choisissez l'OIS OU l'EIS, jamais les deux. Préférer l'OIS quand elle est disponible (elle corrige avant la capture, préserve plus de lumière), se rabattre sur l'EIS lorsque l'objectif manque de matériel.
 
-Second pitfall: video-optimized OIS vs. still OIS. Many flagships ship with `LENS_OPTICAL_STABILIZATION_MODE_VIDEO_STABILIZATION` in the array as a separate mode. If you set `ON` for video recording the OIS uses the still-image gyro filter, which over-corrects fast pans and makes the footage look "jittery stuck in place". Use the VIDEO-specific mode for video capture sessions and `ON` only for stills.
+Deuxième piège : OIS optimisée pour la vidéo vs OIS pour image fixe. De nombreux fleurons sont livrés avec `LENS_OPTICAL_STABILIZATION_MODE_VIDEO_STABILIZATION` dans le tableau comme un mode distinct. Si vous réglez `ON` pour l'enregistrement vidéo, l'OIS utilise le filtre gyroscopique d'image fixe, qui sur-corrige les panoramiques rapides et donne au métrage un aspect "saccadé restant sur place". Utilisez le mode spécifique VIDEO pour les sessions de capture vidéo et `ON` uniquement pour les photos fixes.
 
 ---
 
-## Control Category
+## Catégorie Control (Contrôle)
 
 ### CONTROL_AE_AVAILABLE_MODES
 
-**1. What is it?**
+**1. Qu'est-ce que c'est ?**
 
-`CONTROL_AE_AVAILABLE_MODES` is an `IntArray` of `CONTROL_AE_MODE_*` constants describing which auto-exposure operating modes the 3A AE algorithm supports. The standard values are:
-- `CONTROL_AE_MODE_OFF` — AE locked; exposure time and ISO are taken from the manual `SENSOR_EXPOSURE_TIME` and `SENSOR_SENSITIVITY` keys only.
-- `CONTROL_AE_MODE_ON` — standard automatic exposure; the camera adjusts both shutter and gain automatically.
-- `CONTROL_AE_MODE_ON_AUTO_FLASH` — AE + automatic flash firing in low light.
-- `CONTROL_AE_MODE_ON_ALWAYS_FLASH` — AE + forced flash firing.
-- `CONTROL_AE_MODE_ON_AUTO_FLASH_REDEYE` — AE + pre-flash pulse for red-eye reduction.
-- `CONTROL_AE_MODE_ON_EXTERNAL_FLASH` — AE configured for an off-camera strobe.
+`CONTROL_AE_AVAILABLE_MODES` est un `IntArray` de constantes `CONTROL_AE_MODE_*` décrivant les modes de fonctionnement de l'exposition automatique que l'algorithme 3A AE supporte. Les valeurs standard sont :
+- `CONTROL_AE_MODE_OFF` — AE verrouillée ; le temps d'exposition et l'ISO sont pris uniquement à partir des clés manuelles `SENSOR_EXPOSURE_TIME` et `SENSOR_SENSITIVITY`.
+- `CONTROL_AE_MODE_ON` — exposition automatique standard ; la caméra ajuste automatiquement l'obturateur et le gain.
+- `CONTROL_AE_MODE_ON_AUTO_FLASH` — AE + déclenchement automatique du flash en basse lumière.
+- `CONTROL_AE_MODE_ON_ALWAYS_FLASH` — AE + déclenchement forcé du flash.
+- `CONTROL_AE_MODE_ON_AUTO_FLASH_REDEYE` — AE + impulsion pré-flash pour la réduction des yeux rouges.
+- `CONTROL_AE_MODE_ON_EXTERNAL_FLASH` — AE configurée pour un stroboscope externe à la caméra.
 
-The CaptureRequest equivalent `CONTROL_AE_MODE` selects one of these values per request.
+L'équivalent en CaptureRequest `CONTROL_AE_MODE` sélectionne l'une de ces valeurs par requête.
 
-**2. Why does it exist?**
+**2. Pourquoi cela existe-t-il ?**
 
-Each AE mode requires different internal HAL state. For example, red-eye reduction mode needs to configure a pre-flash sequence (typically three short pulses at ~1/16th power) timed 20–50 ms before the main flash. External flash mode disables built-in flash metering entirely and expects a sync cable signal. If the HAL does not support red-eye (e.g. budget phone with only a single flash driver), the mode must be absent from the available list. Asking the HAL to use a mode it doesn't support results in either a fallback to `ON` (good HALs) or a session crash (bad LEGACY wrappers).
+Chaque mode AE nécessite un état interne du HAL différent. Par exemple, le mode de réduction des yeux rouges doit configurer une séquence de pré-flash (généralement trois impulsions courtes à ~1/16ème de puissance) synchronisées 20 à 50 ms avant le flash principal. Le mode flash externe désactive entièrement la mesure du flash intégré et attend un signal de câble de synchronisation. Si le HAL ne supporte pas la réduction des yeux rouges (ex : téléphone budget avec un seul pilote de flash), le mode doit être absent de la liste des modes disponibles. Demander au HAL d'utiliser un mode qu'il ne supporte pas entraîne soit un repli vers `ON` (bons HAL), soit un plantage de session (mauvais wrappers LEGACY).
 
-**3. Which devices support it?**
+**3. Quels appareils le supportent ?**
 
-All hardware levels. The absolute minimum set, guaranteed on any valid camera ID, is `[OFF, ON]`. Flash-related modes are present only when `FLASH_INFO_AVAILABLE = true`. Red-eye is optional even on flash-equipped devices; many budget HALs skip the pre-flash pulse circuit for cost reasons.
+Tous les niveaux matériels. L'ensemble minimum absolu, garanti sur tout ID de caméra valide, est `[OFF, ON]`. Les modes liés au flash ne sont présents que lorsque `FLASH_INFO_AVAILABLE = true`. La réduction des yeux rouges est optionnelle même sur les appareils équipés d'un flash ; de nombreux HAL budget ignorent le circuit d'impulsion pré-flash pour des raisons de coût.
 
-**4. How do I query it?**
+**4. Comment l'interroger ?**
 
 ```kotlin
 val aeModes: IntArray? = characteristics.get(
@@ -862,16 +862,16 @@ val aeModes: IntArray? = characteristics.get(
 aeModes?.let { modes ->
     val map = modes.map { m ->
         m to when (m) {
-            CameraCharacteristics.CONTROL_AE_MODE_OFF -> "OFF (manual only)"
+            CameraCharacteristics.CONTROL_AE_MODE_OFF -> "OFF (manuel uniquement)"
             CameraCharacteristics.CONTROL_AE_MODE_ON -> "ON"
             CameraCharacteristics.CONTROL_AE_MODE_ON_AUTO_FLASH -> "ON_AUTO_FLASH"
             CameraCharacteristics.CONTROL_AE_MODE_ON_ALWAYS_FLASH -> "ON_ALWAYS_FLASH"
             CameraCharacteristics.CONTROL_AE_MODE_ON_AUTO_FLASH_REDEYE -> "ON_AUTO_FLASH_REDEYE"
             CameraCharacteristics.CONTROL_AE_MODE_ON_EXTERNAL_FLASH -> "ON_EXTERNAL_FLASH"
-            else -> "UNKNOWN($m)"
+            else -> "INCONNU($m)"
         }
     }
-    Log.d(TAG, "Available AE modes:")
+    Log.d(TAG, "Modes AE disponibles :")
     map.forEach { (v, s) -> Log.d(TAG, "  $v — $s") }
     
     val hasFlash = characteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE)
@@ -884,24 +884,24 @@ aeModes?.let { modes ->
     )
     
     if (!hasAutoFlash && hasFlash) {
-        Log.w(TAG, "  Flash exists but AUTO_FLASH mode is missing? " +
-                   "Fallback: ALWAYS_FLASH or manual torch.")
+        Log.w(TAG, "  Le flash existe mais le mode AUTO_FLASH est manquant ? " +
+                   "Repli : ALWAYS_FLASH ou torche manuelle.")
     }
     if (hasRedeye) {
-        Log.d(TAG, "  Red-eye reduction: SUPPORTED via pre-flash pulses.")
+        Log.d(TAG, "  Réduction des yeux rouges : SUPPORTÉE via impulsions pré-flash.")
     }
 } ?: run {
-    Log.w(TAG, "AE modes list unavailable")
+    Log.w(TAG, "Liste des modes AE non disponible")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Comment l'inspecter avec Android Camera Parameters ?**
 
-Look in **Control / 3A Modes**, the first card titled "AE Modes". Every available mode is rendered as a toggleable button. Tapping the button live-applies that mode to the preview capture session so you can observe the behavior change — for example tapping RED_EYE while pointing at a person's face triggers the pre-flash sequence visible in the preview frame.
+Regardez dans **Control / 3A Modes**, la première carte intitulée "AE Modes". Chaque mode disponible est rendu sous forme de bouton à bascule. Appuyer sur le bouton applique ce mode en direct à la session de capture d'aperçu afin que vous puissiez observer le changement de comportement — par exemple, appuyer sur RED_EYE tout en pointant vers le visage d'une personne déclenche la séquence de pré-flash visible dans l'image d'aperçu.
 
-**6. Common pitfalls**
+**6. Pièges courants**
 
-The double-OFF pitfall: `CONTROL_AE_MODE_OFF` alone does **NOT** enable manual exposure. Every developer hits this within the first week of Camera2. There is a global "master override" key called `CONTROL_MODE`. If `CONTROL_MODE` is still set to the default `CONTROL_MODE_AUTO`, the HAL interprets individual 3A-mode OFF values as "don't change the auto behavior" — exactly the opposite of what you expect. The correct manual-exposure sequence is:
+Le piège du double-OFF : `CONTROL_AE_MODE_OFF` seul ne permet **PAS** d'activer l'exposition manuelle. Chaque développeur rencontre cela dès la première semaine avec Camera2. Il existe une clé de "surcharge globale" appelée `CONTROL_MODE`. Si `CONTROL_MODE` est toujours réglé sur la valeur par défaut `CONTROL_MODE_AUTO`, le HAL interprète les valeurs OFF des modes 3A individuels comme "ne pas changer le comportement automatique" — exactement le contraire de ce que vous attendez. La séquence d'exposition manuelle correcte est :
 
 ```kotlin
 builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
@@ -912,31 +912,31 @@ builder.set(CaptureRequest.SENSOR_SENSITIVITY, iso)
 builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, exposureNs)
 ```
 
-Both `CONTROL_MODE` and `CONTROL_AE_MODE` must be `OFF`. Setting only the second yields a request that looks valid (no exception thrown) but AE continues to run — developers stare at their logging and cannot understand why ISO keeps changing despite setting it explicitly.
+`CONTROL_MODE` et `CONTROL_AE_MODE` doivent tous deux être à `OFF`. Ne régler que le second donne une requête qui semble valide (pas d'exception levée) mais l'AE continue de s'exécuter — les développeurs regardent leurs journaux et ne comprennent pas pourquoi l'ISO continue de changer malgré un réglage explicite.
 
 ---
 
 ### CONTROL_AF_AVAILABLE_MODES
 
-**1. What is it?**
+**1. Qu'est-ce que c'est ?**
 
-`CONTROL_AF_AVAILABLE_MODES` is an `IntArray` listing all supported autofocus operating modes. Standard values:
-- `CONTROL_AF_MODE_OFF` — AF disabled; lens focus position is taken from `LENS_FOCUS_DISTANCE` (requires MANUAL_SENSOR).
-- `CONTROL_AF_MODE_AUTO` — single-shot AF: trigger focus with `CONTROL_AF_TRIGGER = START`, locks when converged.
-- `CONTROL_AF_MODE_MACRO` — single-shot AF with search algorithm optimized for close distances (&lt;30 cm).
-- `CONTROL_AF_MODE_CONTINUOUS_PICTURE` — continuous refocusing, aggressive, tuned for still capture: hunts quickly, refocuses whenever scene changes.
-- `CONTROL_AF_MODE_CONTINUOUS_VIDEO` — continuous refocusing, slow and smooth: avoids "focus breathing" artifacts during video recording by driving the lens gradually.
-- `CONTROL_AF_MODE_EDOF` — extended depth-of-field: software post-processing simulates sharp focus from ~30 cm to infinity, no physical lens motor movement.
+`CONTROL_AF_AVAILABLE_MODES` est un `IntArray` listant tous les modes de fonctionnement de l'autofocus supportés. Valeurs standard :
+- `CONTROL_AF_MODE_OFF` — AF désactivé ; la position de mise au point de l'objectif est prise à partir de `LENS_FOCUS_DISTANCE` (nécessite MANUAL_SENSOR).
+- `CONTROL_AF_MODE_AUTO` — AF ponctuel : déclenchez la mise au point avec `CONTROL_AF_TRIGGER = START`, se verrouille une fois la convergence atteinte.
+- `CONTROL_AF_MODE_MACRO` — AF ponctuel avec algorithme de recherche optimisé pour les distances proches (&lt;30 cm).
+- `CONTROL_AF_MODE_CONTINUOUS_PICTURE` — recentrage continu, agressif, optimisé pour la capture d'images fixes : cherche rapidement, refait la mise au point dès que la scène change.
+- `CONTROL_AF_MODE_CONTINUOUS_VIDEO` — recentrage continu, lent et fluide : évite les artefacts de "pompage" de mise au point pendant l'enregistrement vidéo en déplaçant l'objectif progressivement.
+- `CONTROL_AF_MODE_EDOF` — profondeur de champ étendue : le post-traitement logiciel simule une mise au point nette de ~30 cm à l'infini, sans mouvement physique du moteur de l'objectif.
 
-**2. Why does it exist?**
+**2. Pourquoi cela existe-t-il ?**
 
-Different use cases require fundamentally different AF strategies. Video cannot tolerate the aggressive hunting of still-image continuous AF because each focus change visibly warps the image (focus breathing) and produces audible motor noise on the microphone track. Macro scenes need a search range limited to close distances because searching the full ∞→0.1m range takes 800 ms or longer. EDOF requires no lens motor at all. The key communicates which HAL algorithms are actually compiled in.
+Différents cas d'utilisation nécessitent des stratégies d'AF fondamentalement différentes. La vidéo ne peut pas tolérer le pompage agressif de l'AF continu pour images fixes car chaque changement de mise au point déforme visiblement l'image (focus breathing) et produit un bruit de moteur audible sur la piste du microphone. Les scènes macro nécessitent une plage de recherche limitée aux distances proches car la recherche sur toute la plage ∞→0,1 m prend 800 ms ou plus. L'EDOF ne nécessite aucun moteur d'objectif. La clé communique quels algorithmes HAL sont réellement compilés.
 
-**3. Which devices support it?**
+**3. Quels appareils le supportent ?**
 
-All hardware levels. Minimum set: almost every device includes `[AUTO, CONTINUOUS_PICTURE]`. `MACRO` is optional on fixed-focus devices (when `LENS_INFO_MINIMUM_FOCUS_DISTANCE = 0.0` then MACRO is typically omitted because AF can't close-focus anyway). `EDOF` appears only on budget devices with small sensors and post-processing focus. `CONTINUOUS_VIDEO` is present on any device that can record video via `MediaRecorder` — i.e., almost all.
+Tous les niveaux matériels. Ensemble minimum : presque tous les appareils incluent `[AUTO, CONTINUOUS_PICTURE]`. `MACRO` est optionnel sur les appareils à mise au point fixe (lorsque `LENS_INFO_MINIMUM_FOCUS_DISTANCE = 0.0`, alors MACRO est généralement omis car l'AF ne peut pas faire de mise au point rapprochée de toute façon). `EDOF` n'apparaît que sur les appareils budget équipés de petits capteurs et d'un post-traitement de mise au point. `CONTINUOUS_VIDEO` est présent sur tout appareil capable d'enregistrer de la vidéo via `MediaRecorder` — soit presque tous.
 
-**4. How do I query it?**
+**4. Comment l'interroger ?**
 
 ```kotlin
 val afModes: IntArray? = characteristics.get(
@@ -944,16 +944,16 @@ val afModes: IntArray? = characteristics.get(
 )
 
 afModes?.let { modes ->
-    Log.d(TAG, "Available AF modes:")
+    Log.d(TAG, "Modes AF disponibles :")
     modes.forEach { m ->
         val s = when (m) {
-            CameraCharacteristics.CONTROL_AF_MODE_OFF -> "OFF (manual focus position)"
-            CameraCharacteristics.CONTROL_AF_MODE_AUTO -> "AUTO (single-shot, trigger once)"
-            CameraCharacteristics.CONTROL_AF_MODE_MACRO -> "MACRO (single-shot, near-optimized)"
-            CameraCharacteristics.CONTROL_AF_MODE_CONTINUOUS_PICTURE -> "CONTINUOUS_PICTURE (fast hunt, stills)"
-            CameraCharacteristics.CONTROL_AF_MODE_CONTINUOUS_VIDEO -> "CONTINUOUS_VIDEO (smooth, no breathing)"
-            CameraCharacteristics.CONTROL_AF_MODE_EDOF -> "EDOF (software-extended DoF, no motor)"
-            else -> "UNKNOWN($m)"
+            CameraCharacteristics.CONTROL_AF_MODE_OFF -> "OFF (position de mise au point manuelle)"
+            CameraCharacteristics.CONTROL_AF_MODE_AUTO -> "AUTO (ponctuel, déclenchement unique)"
+            CameraCharacteristics.CONTROL_AF_MODE_MACRO -> "MACRO (ponctuel, optimisé proximité)"
+            CameraCharacteristics.CONTROL_AF_MODE_CONTINUOUS_PICTURE -> "CONTINUOUS_PICTURE (recherche rapide, fixes)"
+            CameraCharacteristics.CONTROL_AF_MODE_CONTINUOUS_VIDEO -> "CONTINUOUS_VIDEO (fluide, pas de pompage)"
+            CameraCharacteristics.CONTROL_AF_MODE_EDOF -> "EDOF (DoF étendue logicielle, pas de moteur)"
+            else -> "INCONNU($m)"
         }
         Log.d(TAG, "  $m — $s")
     }
@@ -967,57 +967,57 @@ afModes?.let { modes ->
     val hasEdof = modes.contains(CameraCharacteristics.CONTROL_AF_MODE_EDOF)
     
     if (hasEdof) {
-        Log.w(TAG, "  EDOF present: AF state machine will always report INACTIVE.")
-        Log.w(TAG, "  Do not wait for AF_STATE_FOCUSED_LOCKED on EDOF lenses.")
+        Log.w(TAG, "  EDOF présent : la machine à états AF rapportera toujours INACTIVE.")
+        Log.w(TAG, "  Ne pas attendre AF_STATE_FOCUSED_LOCKED sur les objectifs EDOF.")
     }
     
-    Log.d(TAG, "  Mode selector for video recording: " +
+    Log.d(TAG, "  Sélecteur de mode pour l'enregistrement vidéo : " +
                if (hasContinuousVideo) "CONTINUOUS_VIDEO" else
-               if (hasContinuousPicture) "CONTINUOUS_PICTURE (FALLBACK)" else
-               "AUTO (FALLBACK)")
+               if (hasContinuousPicture) "CONTINUOUS_PICTURE (REPLI)" else
+               "AUTO (REPLI)")
 } ?: run {
-    Log.w(TAG, "AF modes list unavailable")
+    Log.w(TAG, "Liste des modes AF non disponible")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Comment l'inspecter avec Android Camera Parameters ?**
 
-Open **Control / 3A Modes** and look at the "AF Modes" card. Each available mode is a button. The companion app shows a live AF state indicator alongside each mode: when you tap CONTINUOUS_PICTURE while waving your hand in front of the lens, the state machine cycles PASSIVE_SCAN → PASSIVE_FOCUSED; when you tap CONTINUOUS_VIDEO the state machine transitions only every ~2 seconds even with scene motion — visible proof of the slower tuning. EDOF mode displays a tooltip explaining that no motor movement occurs.
+Ouvrez **Control / 3A Modes** et regardez la carte "AF Modes". Chaque mode disponible est un bouton. L'application compagnon affiche un indicateur d'état AF en direct à côté de chaque mode : lorsque vous appuyez sur CONTINUOUS_PICTURE tout en agitant la main devant l'objectif, la machine à états cycle entre PASSIVE_SCAN → PASSIVE_FOCUSED ; lorsque vous appuyez sur CONTINUOUS_VIDEO, la machine à états ne change que toutes les ~2 secondes environ, même en cas de mouvement de la scène — preuve visible du réglage plus lent. Le mode EDOF affiche une info-bulle expliquant qu'aucun mouvement de moteur ne se produit.
 
-**6. Common pitfalls**
+**6. Pièges courants**
 
-Using CONTINUOUS_PICTURE for video: this produces footage that "breathes" with each refocus because the still-mode tuning drives the AF motor to its new position in ~80 ms. When the lens is wide-aperture (f/1.8) the focus plane visibly shifts, which users perceive as a "jittery video". Worse, on phones with microphones close to the lens motor, the recording picks up a faint but audible "tick tick tick" as the motor moves each frame. Use CONTINUOUS_VIDEO (or fall back to AUTO with periodic triggering) for any MediaRecorder/MediaCodec output surface.
+Utiliser CONTINUOUS_PICTURE pour la vidéo : cela produit un métrage qui "respire" à chaque recentrage car le réglage du mode fixe pousse le moteur AF vers sa nouvelle position en ~80 ms. Lorsque l'objectif a une grande ouverture (f/1,8), le plan de mise au point se déplace visiblement, ce qui est perçu par les utilisateurs comme une "vidéo instable". Pire encore, sur les téléphones dont les microphones sont proches du moteur de l'objectif, l'enregistrement capte un léger mais audible "tic-tic-tic" lorsque le moteur se déplace à chaque image. Utilisez CONTINUOUS_VIDEO (ou rabattez-vous sur AUTO avec déclenchement périodique) pour toute surface de sortie MediaRecorder/MediaCodec.
 
-EDOF is the second pitfall: on EDOF devices the AF state machine *never transitions to FOCUSED_LOCKED*. Developers that block capture on `CaptureResult.CONTROL_AF_STATE == CONTROL_AF_STATE_FOCUSED_LOCKED` hang forever waiting for a state that will never arrive. EDOF uses `CONTROL_AF_STATE_INACTIVE` for the steady state because there is no physical motor to lock. The correct pattern when starting a still capture is: if `AF_MODE == EDOF` → skip AF trigger, fire immediately. Otherwise: trigger AF, wait for FOCUSED_LOCKED or NOT_FOCUSED_LOCKED, then fire.
+L'EDOF est le deuxième piège : sur les appareils EDOF, la machine à états AF *ne passe jamais à FOCUSED_LOCKED*. Les développeurs qui bloquent la capture sur `CaptureResult.CONTROL_AF_STATE == CONTROL_AF_STATE_FOCUSED_LOCKED` attendent indéfiniment un état qui n'arrivera jamais. L'EDOF utilise `CONTROL_AF_STATE_INACTIVE` pour l'état stable car il n'y a pas de moteur physique à verrouiller. Le modèle correct lors du démarrage d'une capture fixe est : si `AF_MODE == EDOF` → ignorer le déclenchement AF, déclencher immédiatement la capture. Sinon : déclencher l'AF, attendre FOCUSED_LOCKED ou NOT_FOCUSED_LOCKED, puis capturer.
 
 ---
 
 ### CONTROL_AWB_AVAILABLE_MODES
 
-**1. What is it?**
+**1. Qu'est-ce que c'est ?**
 
-`CONTROL_AWB_AVAILABLE_MODES` is an `IntArray` enumerating the auto-white-balance and fixed-color-temperature modes the AWB algorithm supports. Standard values:
-- `CONTROL_AWB_MODE_OFF` — AWB disabled; color correction is taken from `COLOR_CORRECTION_TRANSFORM` and `COLOR_CORRECTION_GAINS` (requires MANUAL_POST_PROCESSING capability for manual control, otherwise ignored).
-- `CONTROL_AWB_MODE_AUTO` — continuous AWB convergence; estimates scene color temperature from image statistics.
-- `CONTROL_AWB_MODE_INCANDESCENT` — fixed warm white balance ~2700K (tungsten / indoor light bulbs).
-- `CONTROL_AWB_MODE_FLUORESCENT` — fixed cool-white fluorescent ~4500K.
-- `CONTROL_AWB_MODE_WARM_FLUORESCENT` — fixed warm fluorescent ~3000K.
-- `CONTROL_AWB_MODE_DAYLIGHT` — fixed daylight ~5500K.
-- `CONTROL_AWB_MODE_CLOUDY_DAYLIGHT` — fixed overcast daylight ~6500K.
-- `CONTROL_AWB_MODE_TWILIGHT` — fixed dusk/dawn ~4000K.
-- `CONTROL_AWB_MODE_SHADE` — fixed deep-shade ~7500K.
+`CONTROL_AWB_AVAILABLE_MODES` est un `IntArray` énumérant les modes de balance des blancs automatique et les modes de température de couleur fixe supportés par l'algorithme AWB. Valeurs standard :
+- `CONTROL_AWB_MODE_OFF` — AWB désactivée ; la correction des couleurs est tirée de `COLOR_CORRECTION_TRANSFORM` et `COLOR_CORRECTION_GAINS` (nécessite la capacité MANUAL_POST_PROCESSING pour le contrôle manuel, sinon ignoré).
+- `CONTROL_AWB_MODE_AUTO` — convergence AWB continue ; estime la température de couleur de la scène à partir des statistiques de l'image.
+- `CONTROL_AWB_MODE_INCANDESCENT` — balance des blancs chaude fixe ~2700K (tungstène / ampoules d'intérieur).
+- `CONTROL_AWB_MODE_FLUORESCENT` — blanc froid fluorescent fixe ~4500K.
+- `CONTROL_AWB_MODE_WARM_FLUORESCENT` — fluorescent chaud fixe ~3000K.
+- `CONTROL_AWB_MODE_DAYLIGHT` — lumière du jour fixe ~5500K.
+- `CONTROL_AWB_MODE_CLOUDY_DAYLIGHT` — lumière du jour couverte fixe ~6500K.
+- `CONTROL_AWB_MODE_TWILIGHT` — crépuscule/aube fixe ~4000K.
+- `CONTROL_AWB_MODE_SHADE` — ombre profonde fixe ~7500K.
 
-Each preset corresponds to a fixed set of RGB gains applied in the ISP color-correction pipeline.
+Chaque préréglage correspond à un ensemble fixe de gains RVB appliqués dans le pipeline de correction des couleurs de l'ISP.
 
-**2. Why does it exist?**
+**2. Pourquoi cela existe-t-il ?**
 
-AWB presets solve the "how do I make the photo look like what my eye saw" problem under predictable lighting. The generic `AUTO` mode sometimes makes incorrect decisions: a wall painted pure red causes the AWB algorithm to think the scene is lit by cyan light, so it applies an overall green cast. If the user is explicitly taking a photo under a tungsten bulb, selecting `INCANDESCENT` tells the HAL: "I know the light temperature — use the gains calibrated for this illuminant, not the auto estimator."
+Les préréglages AWB résolvent le problème "comment faire en sorte que la photo ressemble à ce que mon œil a vu" sous un éclairage prévisible. Le mode générique `AUTO` prend parfois des décisions incorrectes : un mur peint en rouge pur fait croire à l'algorithme AWB que la scène est éclairée par une lumière cyan, il applique donc une dominante verte globale. Si l'utilisateur prend explicitement une photo sous une ampoule tungstène, la sélection de `INCANDESCENT` indique au HAL : "Je connais la température de la lumière — utilise les gains étalonnés pour cet illuminant, pas l'estimateur automatique."
 
-**3. Which devices support it?**
+**3. Quels appareils le supportent ?**
 
-All devices. The minimum set is `[OFF, AUTO]`. All eight preset modes appear on ~70% of devices; the remaining 30% (older devices, certain USB cameras) omit the rarer ones like `WARM_FLUORESCENT` or `SHADE`. There is no flash dependency: these are fixed color calibration values independent of illumination source.
+Tous les appareils. L'ensemble minimum est `[OFF, AUTO]`. Les huit modes préréglés apparaissent sur environ 70 % des appareils ; les 30 % restants (appareils plus anciens, certaines caméras USB) omettent les plus rares comme `WARM_FLUORESCENT` ou `SHADE`. Il n'y a pas de dépendance au flash : ce sont des valeurs d'étalonnage de couleurs fixes indépendantes de la source d'éclairage.
 
-**4. How do I query it?**
+**4. Comment l'interroger ?**
 
 ```kotlin
 val awbModes: IntArray? = characteristics.get(
@@ -1027,29 +1027,29 @@ val awbModes: IntArray? = characteristics.get(
 awbModes?.let { modes ->
     val labelFor: (Int) -> Pair<String, Int> = { m ->
         when (m) {
-            CameraCharacteristics.CONTROL_AWB_MODE_OFF -> "OFF (manual CC gains)" to 0
-            CameraCharacteristics.CONTROL_AWB_MODE_AUTO -> "AUTO (continuous estimate)" to -1
-            CameraCharacteristics.CONTROL_AWB_MODE_INCANDESCENT -> "INCANDESCENT (Tungsten)" to 2700
-            CameraCharacteristics.CONTROL_AWB_MODE_FLUORESCENT -> "FLUORESCENT (Cool White)" to 4500
+            CameraCharacteristics.CONTROL_AWB_MODE_OFF -> "OFF (gains CC manuels)" to 0
+            CameraCharacteristics.CONTROL_AWB_MODE_AUTO -> "AUTO (estimation continue)" to -1
+            CameraCharacteristics.CONTROL_AWB_MODE_INCANDESCENT -> "INCANDESCENT (Tungstène)" to 2700
+            CameraCharacteristics.CONTROL_AWB_MODE_FLUORESCENT -> "FLUORESCENT (Blanc froid)" to 4500
             CameraCharacteristics.CONTROL_AWB_MODE_WARM_FLUORESCENT -> "WARM_FLUORESCENT" to 3000
             CameraCharacteristics.CONTROL_AWB_MODE_DAYLIGHT -> "DAYLIGHT" to 5500
             CameraCharacteristics.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT -> "CLOUDY_DAYLIGHT" to 6500
             CameraCharacteristics.CONTROL_AWB_MODE_TWILIGHT -> "TWILIGHT" to 4000
             CameraCharacteristics.CONTROL_AWB_MODE_SHADE -> "SHADE" to 7500
-            else -> "UNKNOWN($m)" to -1
+            else -> "INCONNU($m)" to -1
         }
     }
     
-    Log.d(TAG, "Available AWB modes:")
+    Log.d(TAG, "Modes AWB disponibles :")
     modes.forEach { m ->
         val (s, k) = labelFor(m)
-        val kelvinStr = if (k > 0) " ~${k}K" else if (k == 0) " (manual CTCC via MANUAL_POST_PROCESSING)" else ""
+        val kelvinStr = if (k > 0) " ~${k}K" else if (k == 0) " (CTCC manuel via MANUAL_POST_PROCESSING)" else ""
         Log.d(TAG, "  $m — $s$kelvinStr")
     }
     
     val presetCount = modes.count { it != CameraCharacteristics.CONTROL_AWB_MODE_OFF &&
                                      it != CameraCharacteristics.CONTROL_AWB_MODE_AUTO }
-    Log.d(TAG, "  Fixed presets available: $presetCount / 7 standard")
+    Log.d(TAG, "  Préréglages fixes disponibles : $presetCount / 7 standard")
     
     val missing = listOf(
         CameraCharacteristics.CONTROL_AWB_MODE_INCANDESCENT,
@@ -1062,52 +1062,52 @@ awbModes?.let { modes ->
     ).filter { !modes.contains(it) }
     
     if (missing.isNotEmpty()) {
-        Log.w(TAG, "  Missing standard AWB presets: $missing")
-        Log.w(TAG, "  UI: Show only presets that exist. Don't hardcode all 8.")
+        Log.w(TAG, "  Préréglages AWB standard manquants : $missing")
+        Log.w(TAG, "  UI : Afficher uniquement les préréglages qui existent. Ne pas coder en dur les 8.")
     }
 } ?: run {
-    Log.w(TAG, "AWB modes list unavailable")
+    Log.w(TAG, "Liste des modes AWB non disponible")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Comment l'inspecter avec Android Camera Parameters ?**
 
-Look in **Control / 3A Modes** under the "AWB Modes" card. Each preset is a button with a small color swatch showing the approximate cast of that preset. If you start with AUTO under indoor lighting then tap INCANDESCENT, the preview immediately cools down (less orange) because the preset removes the tungsten orange cast. Tapping SHADE under daylight warms up the preview slightly because the preset compensates for the blue shift of shade light.
+Regardez dans **Control / 3A Modes** sous la carte "AWB Modes". Chaque préréglage est un bouton avec un petit échantillon de couleur montrant la dominante approximative de ce préréglage. Si vous commencez par AUTO sous un éclairage intérieur puis appuyez sur INCANDESCENT, l'aperçu se refroidit immédiatement (moins orange) car le préréglage supprime la dominante orange du tungstène. Appuyer sur SHADE sous la lumière du jour réchauffe légèrement l'aperçu car le préréglage compense le décalage bleu de la lumière à l'ombre.
 
-**6. Common pitfalls**
+**6. Pièges courants**
 
-Assuming preset temperature values match across OEMs. Android CDD does not require `DAYLIGHT` to be exactly 5500K; it only requires the preset to be "approximately daylight." In practice: Samsung's `DAYLIGHT` is ~5200K (slightly warm), Google Pixel's `DAYLIGHT` is ~5700K (slightly cool), and OnePlus's `DAYLIGHT` is ~5400K. If you build a custom color pipeline and rely on DAYLIGHT producing exact 5500K gains, the output colors will shift 200–500K depending on device. For precise cross-device color, use `MANUAL_POST_PROCESSING` capability and set `COLOR_CORRECTION_GAINS` + `COLOR_CORRECTION_TRANSFORM` manually using a calibrated scene (X-Rite color chart).
+Supposer que les valeurs de température des préréglages correspondent entre les OEM. Le CDD Android n'exige pas que `DAYLIGHT` soit exactement à 5500K ; il exige seulement que le préréglage soit "approximativement la lumière du jour". En pratique : le `DAYLIGHT` de Samsung est à ~5200K (légèrement chaud), celui du Google Pixel est à ~5700K (légèrement froid) et celui d'OnePlus est à ~5400K. Si vous construisez un pipeline de couleurs personnalisé et comptez sur DAYLIGHT pour produire des gains exacts à 5500K, les couleurs de sortie varieront de 200 à 500K selon l'appareil. Pour des couleurs précises sur tous les appareils, utilisez la capacité `MANUAL_POST_PROCESSING` et réglez `COLOR_CORRECTION_GAINS` + `COLOR_CORRECTION_TRANSFORM` manuellement à l'aide d'une scène étalonnée (charte de couleurs X-Rite).
 
-AWB_MODE_OFF without MANUAL_POST_PROCESSING is the second pitfall. Like AE, the global master override matters. Setting AWB to OFF while `CONTROL_MODE != OFF` produces a request where the HAL ignores the OFF setting. Manual AWB (custom color temperature) requires both `CONTROL_MODE = OFF` AND `MANUAL_POST_PROCESSING` capability, not just `MANUAL_SENSOR`. MANUAL_SENSOR gives ISO/shutter; MANUAL_POST_PROCESSING gives color gains and tonemap.
+AWB_MODE_OFF sans MANUAL_POST_PROCESSING est le deuxième piège. Comme pour l'AE, le master override global compte. Régler l'AWB sur OFF alors que `CONTROL_MODE != OFF` produit une requête où le HAL ignore le réglage OFF. L'AWB manuelle (température de couleur personnalisée) nécessite à la fois `CONTROL_MODE = OFF` ET la capacité `MANUAL_POST_PROCESSING`, pas seulement `MANUAL_SENSOR`. MANUAL_SENSOR donne les ISO/obturateur ; MANUAL_POST_PROCESSING donne les gains de couleur et le mappage tonal (tonemap).
 
 ---
 
 ### CONTROL_AVAILABLE_EFFECTS
 
-**1. What is it?**
+**1. Qu'est-ce que c'est ?**
 
-`CONTROL_AVAILABLE_EFFECTS` is an `IntArray` of built-in OEM color filters that apply inside the ISP pipeline. Standard effect values:
-- `CONTROL_EFFECT_MODE_OFF` — no color effect (default).
-- `CONTROL_EFFECT_MODE_MONO` — grayscale / black-and-white.
-- `CONTROL_EFFECT_MODE_NEGATIVE` — inverted colors (film negative look).
-- `CONTROL_EFFECT_MODE_SOLARIZE` — Sabattier-style partial inversion.
-- `CONTROL_EFFECT_MODE_SEPIA` — brown-tone vintage look.
-- `CONTROL_EFFECT_MODE_POSTERIZE` — reduced color palette / banded.
-- `CONTROL_EFFECT_MODE_WHITEBOARD` — enhanced for whiteboard capture (boost contrast, remove shadows).
-- `CONTROL_EFFECT_MODE_BLACKBOARD` — enhanced for dark chalkboard capture (boost dim strokes, crop to board edges on some HALs).
-- `CONTROL_EFFECT_MODE_AQUA` — boosted blue channel / underwater look.
+`CONTROL_AVAILABLE_EFFECTS` est un `IntArray` de filtres colorés OEM intégrés qui s'appliquent à l'intérieur du pipeline ISP. Valeurs d'effets standard :
+- `CONTROL_EFFECT_MODE_OFF` — pas d'effet de couleur (par défaut).
+- `CONTROL_EFFECT_MODE_MONO` — niveaux de gris / noir et blanc.
+- `CONTROL_EFFECT_MODE_NEGATIVE` — couleurs inversées (look négatif de film).
+- `CONTROL_EFFECT_MODE_SOLARIZE` — inversion partielle de style Sabattier.
+- `CONTROL_EFFECT_MODE_SEPIA` — look vintage aux tons bruns.
+- `CONTROL_EFFECT_MODE_POSTERIZE` — palette de couleurs réduite / postérisée.
+- `CONTROL_EFFECT_MODE_WHITEBOARD` — optimisé pour la capture de tableau blanc (boost du contraste, suppression des ombres).
+- `CONTROL_EFFECT_MODE_BLACKBOARD` — optimisé pour la capture de tableau noir (boost des traits sombres, recadrage sur les bords du tableau sur certains HAL).
+- `CONTROL_EFFECT_MODE_AQUA` — canal bleu boosté / look sous-marin.
 
-Plus OEM-specific values (100+, 101+, etc.) that are entirely vendor-defined.
+Plus des valeurs spécifiques aux OEM (100+, 101+, etc.) qui sont entièrement définies par le fabricant.
 
-**2. Why does it exist?**
+**2. Pourquoi cela existe-t-il ?**
 
-Built-in ISP effects run at full preview resolution and zero CPU cost because they are implemented in hardware lookup tables inside the camera ISP. Running the equivalent effect on the CPU/GPU via RenderScript or Vulkan costs 5–15 ms per frame at 4K resolution, eating into frame budget. The key advertises which LUTs are baked into the HAL.
+Les effets ISP intégrés s'exécutent en pleine résolution d'aperçu avec un coût CPU nul car ils sont implémentés dans des tables de correspondance matérielles (lookup tables) à l'intérieur de l'ISP de la caméra. L'exécution de l'effet équivalent sur le CPU/GPU via RenderScript ou Vulkan coûte 5 à 15 ms par image en résolution 4K, entamant le budget de temps par image. La clé annonce quelles LUT sont intégrées au HAL.
 
-**3. Which devices support it?**
+**3. Quels appareils le supportent ?**
 
-All devices list at minimum `[OFF]`. Mid-range and budget phones typically include 3–6 effects (MONO, SEPIA, NEGATIVE, plus maybe POSTERIZE). Flagship Samsung and Xiaomi devices offer 12+ effects including OEM extensions like "Vintage," "Blue Ice," and "Provia" via vendor-private values not in the standard enum. Pixel devices have the fewest effects, offering only OFF and MONO in most generations.
+Tous les appareils listent au minimum `[OFF]`. Les téléphones de milieu de gamme et budget incluent généralement 3 à 6 effets (MONO, SEPIA, NEGATIVE, plus peut-être POSTERIZE). Les appareils phares de Samsung et Xiaomi offrent plus de 12 effets incluant des extensions OEM comme "Vintage", "Blue Ice" et "Provia" via des valeurs privées de fournisseur absentes de l'enum standard. Les appareils Pixel ont le moins d'effets, n'offrant que OFF et MONO sur la plupart des générations.
 
-**4. How do I query it?**
+**4. Comment l'interroger ?**
 
 ```kotlin
 val effects: IntArray? = characteristics.get(
@@ -1116,9 +1116,9 @@ val effects: IntArray? = characteristics.get(
 
 effects?.let { effs ->
     val standardName = mapOf(
-        CameraCharacteristics.CONTROL_EFFECT_MODE_OFF to "OFF (no effect)",
-        CameraCharacteristics.CONTROL_EFFECT_MODE_MONO to "MONO (B&W)",
-        CameraCharacteristics.CONTROL_EFFECT_MODE_NEGATIVE to "NEGATIVE (invert)",
+        CameraCharacteristics.CONTROL_EFFECT_MODE_OFF to "OFF (pas d'effet)",
+        CameraCharacteristics.CONTROL_EFFECT_MODE_MONO to "MONO (N&B)",
+        CameraCharacteristics.CONTROL_EFFECT_MODE_NEGATIVE to "NEGATIVE (inversion)",
         CameraCharacteristics.CONTROL_EFFECT_MODE_SOLARIZE to "SOLARIZE",
         CameraCharacteristics.CONTROL_EFFECT_MODE_SEPIA to "SEPIA",
         CameraCharacteristics.CONTROL_EFFECT_MODE_POSTERIZE to "POSTERIZE",
@@ -1127,57 +1127,57 @@ effects?.let { effs ->
         CameraCharacteristics.CONTROL_EFFECT_MODE_AQUA to "AQUA"
     )
     
-    Log.d(TAG, "Available ISP effects (${effs.size} modes):")
+    Log.d(TAG, "Effets ISP disponibles (${effs.size} modes) :")
     effs.forEach { e ->
         val standard = standardName[e]
         if (standard != null) {
             Log.d(TAG, "  $e — $standard")
         } else {
-            Log.d(TAG, "  $e — OEM_PRIVATE_EFFECT (vendor-defined)")
+            Log.d(TAG, "  $e — OEM_PRIVATE_EFFECT (défini par le fabricant)")
         }
     }
     
     val oemCount = effs.count { it > CameraCharacteristics.CONTROL_EFFECT_MODE_AQUA }
     if (oemCount > 0) {
-        Log.w(TAG, "  OEM-private effects: $oemCount. Behavior NOT portable across devices.")
-        Log.w(TAG, "  Same numeric effect on Samsung ≠ same visual result on Xiaomi.")
+        Log.w(TAG, "  Effets privés OEM : $oemCount. Comportement NON portable entre appareils.")
+        Log.w(TAG, "  Même effet numérique sur Samsung ≠ même résultat visuel sur Xiaomi.")
     }
 } ?: run {
-    Log.w(TAG, "Effects list unavailable")
+    Log.w(TAG, "Liste des effets indisponible")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Comment l'inspecter avec Android Camera Parameters ?**
 
-Navigate to **Control / Effects**. Each effect is a small thumbnail showing a preview swatch with the effect name. Tapping the thumbnail applies the effect to the live preview instantly — you can compare MONO vs. SEPIA vs. AQUA side by side by switching quickly. OEM-private effects are labeled "OEM [number]" with a warning tooltip explaining they may not be portable. Below the effects gallery is a benchmark card showing the frame rate with effects ON vs. OFF, demonstrating the zero-cost nature of ISP effects vs. GPU processing.
+Naviguez vers **Control / Effects**. Chaque effet est une petite vignette montrant un aperçu avec le nom de l'effet. Appuyer sur la vignette applique l'effet instantanément à l'aperçu en direct — vous pouvez comparer MONO vs SEPIA vs AQUA côte à côte en basculant rapidement. Les effets privés OEM sont étiquetés "OEM [numéro]" avec une info-bulle d'avertissement expliquant qu'ils peuvent ne pas être portables. Sous la galerie d'effets se trouve une carte de benchmark montrant la fréquence d'images avec les effets ON vs OFF, démontrant le coût nul des effets ISP par rapport au traitement GPU.
 
-**6. Common pitfalls**
+**6. Pièges courants**
 
-Portability: built-in effects are the single most OEM-variable feature in all of Camera2. Even the *standard* MONO mode is not visually consistent: Samsung MONO applies a red-channel-weighted luminance (`0.30R + 0.50G + 0.20B`) with a slight S-curve; Pixel MONO uses BT.709 weighting (`0.2126R + 0.7152G + 0.0722B`) with no S-curve. SEPIA tones range from reddish-brown (LG) through pure yellow-sepia (Sony) to near-cool-brown (OnePlus). If your app's core visual identity depends on a specific filter look, implement it in GPU shaders with fixed coefficients. Reserve ISP effects for: (1) zero-cost preview convenience, or (2) platform-specific features on devices you have QA-tested. Never advertise an effect as "Sepia" in your marketing if the visual output varies by 100ΔE across devices.
+Portabilité : les effets intégrés sont la fonctionnalité la plus variable selon les OEM dans tout Camera2. Même le mode MONO *standard* n'est pas visuellement cohérent : le MONO de Samsung applique une luminance pondérée sur le canal rouge (`0,30R + 0,50G + 0,20B`) avec une légère courbe en S ; le MONO du Pixel utilise la pondération BT.709 (`0,2126R + 0,7152G + 0,0722B`) sans courbe en S. Les tons SEPIA vont du brun-rougeâtre (LG) au brun presque froid (OnePlus) en passant par le jaune-sépia pur (Sony). Si l'identité visuelle de votre application dépend d'un filtre spécifique, implémentez-le dans des shaders GPU avec des coefficients fixes. Réservez les effets ISP pour : (1) le confort de l'aperçu à coût nul, ou (2) les fonctionnalités spécifiques à une plateforme sur des appareils que vous avez testés. Ne vendez jamais un effet comme "Sépia" dans votre marketing si le rendu visuel varie de 100ΔE selon les appareils.
 
-Second pitfall: effects + face detection + HDR pipeline interact. On certain Sony and MediaTek HALs, enabling SEPIA or NEGATIVE effect disables HDR processing (because the ISP HDR tonemap and SEPIA LUT share the same hardware pipeline stage). Developers enable HDR and SEPIA, capture an image, and see no HDR highlights recovery. The only fix is to apply effects post-capture when HDR is active.
+Deuxième piège : interaction entre effets + détection de visages + pipeline HDR. Sur certains HAL Sony et MediaTek, l'activation de l'effet SEPIA ou NEGATIVE désactive le traitement HDR (car le mappage tonal HDR de l'ISP et la LUT SEPIA partagent le même étage du pipeline matériel). Les développeurs activent le HDR et le SEPIA, capturent une image et ne voient aucune récupération des hautes lumières HDR. La seule solution est d'appliquer les effets après la capture lorsque le HDR est actif.
 
 ---
 
 ### CONTROL_AE_COMPENSATION_RANGE
 
-**1. What is it?**
+**1. Qu'est-ce que c'est ?**
 
-`CONTROL_AE_COMPENSATION_RANGE` is a `android.util.Range&lt;Int&gt;` specifying the minimum and maximum EV adjustment offsets you can pass to `CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION`. Critically, the values are **in integer steps**, not in stops. Each step corresponds to `CONTROL_AE_COMPENSATION_STEP`, which is a `Rational` (fraction) like `Rational(1, 3)` (0.333 EV per step). Combined:
-- `range = [-12, +12]`, `step = 1/3 EV` → effective EV range = -4 EV to +4 EV (in 1/3 stop increments)
-- `range = [-24, +24]`, `step = 1/2 EV` → effective EV range = -12 EV to +12 EV (in 1/2 stop increments)
+`CONTROL_AE_COMPENSATION_RANGE` est un `android.util.Range<Int>` spécifiant les décalages de réglage EV minimum et maximum que vous pouvez passer à `CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION`. Crucialement, les valeurs sont en **pas entiers**, pas en stops. Chaque pas correspond à `CONTROL_AE_COMPENSATION_STEP`, qui est un `Rational` (fraction) comme `Rational(1, 3)` (0,333 EV par pas). Combinés :
+- `range = [-12, +12]`, `step = 1/3 EV` → plage EV effective = -4 EV à +4 EV (par incréments de 1/3 de stop)
+- `range = [-24, +24]`, `step = 1/2 EV` → plage EV effective = -12 EV à +12 EV (par incréments de 1/2 stop)
 
-The compensation value is added to whatever exposure the AE algorithm would have chosen, biasing the image brighter (+) or darker (−).
+La valeur de compensation est ajoutée à l'exposition que l'algorithme AE aurait choisie, biaisant l'image vers plus de luminosité (+) ou d'obscurité (−).
 
-**2. Why does it exist?**
+**2. Pourquoi cela existe-t-il ?**
 
-The AE algorithm makes global scene-based decisions. When a bright light occupies 10% of the frame (window in an indoor scene), AE underexposes the indoor area. The user wants to "add +1 EV" and have the indoor area brighter, even if the window clips. EV compensation is the standard photographer's control for this — every DSLR has a ± dial.
+L'algorithme AE prend des décisions globales basées sur la scène. Lorsqu'une lumière vive occupe 10 % du cadre (fenêtre dans une scène intérieure), l'AE sous-expose la zone intérieure. L'utilisateur veut "ajouter +1 EV" pour que la zone intérieure soit plus lumineuse, même si la fenêtre est brûlée. La compensation d'exposition est le contrôle standard du photographe pour cela — chaque reflex possède une molette ±.
 
-**3. Which devices support it?**
+**3. Quels appareils le supportent ?**
 
-All hardware levels, with a CDD minimum requirement of at least ±3 EV of range in some step size. LIMITED devices typically offer `[-12, +12]` with 1/3 or 1/2 step (±4 EV or ±6 EV total). FULL devices offer `[-24, +24]` or wider. No capability flags required — if the range exists (and it always does), setting `CONTROL_AE_EXPOSURE_COMPENSATION` works regardless of MANUAL_SENSOR.
+Tous les niveaux matériels, avec une exigence minimale du CDD d'au moins ±3 EV de plage dans une certaine taille de pas. Les appareils LIMITED offrent généralement `[-12, +12]` avec un pas de 1/3 ou 1/2 (±4 EV ou ±6 EV au total). Les appareils FULL offrent `[-24, +24]` ou plus large. Aucun indicateur de capacité requis — si la plage existe (et c'est toujours le cas), le réglage de `CONTROL_AE_EXPOSURE_COMPENSATION` fonctionne quel que soit le MANUAL_SENSOR.
 
-**4. How do I query it?**
+**4. Comment l'interroger ?**
 
 ```kotlin
 val compensationRange: Range<Int>? = characteristics.get(
@@ -1195,68 +1195,68 @@ compensationRange?.let { rng ->
     val evMin = rng.lower * stepValue
     val evMax = rng.upper * stepValue
     
-    Log.d(TAG, "CONTROL_AE_COMPENSATION_RANGE = [${rng.lower}, ${rng.upper}] (steps)")
-    Log.d(TAG, "CONTROL_AE_COMPENSATION_STEP = ${step.numerator}/${step.denominator} = ${"%.4f".format(stepValue)} EV/step")
-    Log.d(TAG, "  EFFECTIVE EV range: ${"%.1f".format(evMin)} EV — ${"%.1f".format(evMax)} EV")
-    Log.d(TAG, "  Total latitude: ${"%.1f".format(evMax - evMin)} EV")
+    Log.d(TAG, "CONTROL_AE_COMPENSATION_RANGE = [${rng.lower}, ${rng.upper}] (pas)")
+    Log.d(TAG, "CONTROL_AE_COMPENSATION_STEP = ${step.numerator}/${step.denominator} = ${"%.4f".format(stepValue)} EV/pas")
+    Log.d(TAG, "  Plage EV EFFECTIVE : ${"%.1f".format(evMin)} EV — ${"%.1f".format(evMax)} EV")
+    Log.d(TAG, "  Latitude totale : ${"%.1f".format(evMax - evMin)} EV")
     
     val discreteSteps = (rng.upper - rng.lower) + 1
-    Log.d(TAG, "  Discrete positions: $discreteSteps (including 0)")
+    Log.d(TAG, "  Positions discrètes : $discreteSteps (incluant 0)")
     
     val sliderPositions: List<Pair<Int, Double>> = (rng.lower..rng.upper step max(1, discreteSteps / 10))
         .map { stepIdx -> stepIdx to stepIdx * stepValue }
     
-    Log.d(TAG, "  Sample slider positions (step → EV):")
+    Log.d(TAG, "  Exemples de positions du curseur (pas → EV) :")
     sliderPositions.take(11).forEach { (idx, ev) ->
         val marker = when {
             idx == rng.lower -> " (MIN)"
-            idx == 0 -> " (ZERO/METERED)"
+            idx == 0 -> " (ZÉRO/MESURE)"
             idx == rng.upper -> " (MAX)"
             else -> ""
         }
-        Log.d(TAG, "    step=$idx → EV=${"%+.2f".format(ev)}$marker")
+        Log.d(TAG, "    pas=$idx → EV=${"%+.2f".format(ev)}$marker")
     }
 } ?: run {
-    Log.w(TAG, "AE compensation info unavailable")
+    Log.w(TAG, "Infos de compensation AE indisponibles")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Comment l'inspecter avec Android Camera Parameters ?**
 
-Navigate to **Control / 3A Modes** and look at the "Exposure Compensation" card. The card shows the effective EV range as a double-ended label (e.g. "−4 EV to +4 EV"), the step size (e.g. "1/3 EV steps"), and a live draggable slider with 21 discrete notches for the example above. Dragging the slider applies the compensation in real time and the preview brightens or darkens immediately. Below the slider the raw integer step value and effective EV value are displayed side by side, so you can see the step-to-EV multiplication in action.
+Naviguez vers **Control / 3A Modes** et regardez la carte "Exposure Compensation". La carte montre la plage EV effective sous forme d'étiquette à deux extrémités (ex : "−4 EV à +4 EV"), la taille du pas (ex : "pas de 1/3 EV") et un curseur en direct avec 21 encoches discrètes pour l'exemple ci-dessus. Faire glisser le curseur applique la compensation en temps réel et l'aperçu s'éclaircit ou s'assombrit immédiatement. Sous le curseur, la valeur du pas entier brut et la valeur EV effective sont affichées côte à côte, afin que vous puissiez voir la multiplication pas-vers-EV en action.
 
-**6. Common pitfalls**
+**6. Pièges courants**
 
-Units, units, units. The number-one mistake: treating the `Range&lt;Int&gt;` values as *stops* directly. A developer sees `[-12, +12]`, shows a slider with labels "−12 EV" through "+12 EV", and the slider's maximum effect is only +4 EV (because step is 1/3). The user complains: "Why is the +12 EV setting only +4 stops?" The fix is simple: multiply `sliderInt × step.numerator / step.denominator` before formatting the EV label, and set the slider's internal max to `range.upper`, not to the human-readable stop count. UI sliders should store the integer step internally and display the converted EV value to the user.
+Unités, unités, unités. L'erreur numéro un : traiter les valeurs du `Range<Int>` directement comme des *stops*. Un développeur voit `[-12, +12]`, affiche un curseur avec les étiquettes "−12 EV" à "+12 EV", mais l'effet maximum du curseur n'est que de +4 EV (car le pas est de 1/3). L'utilisateur se plaint : "Pourquoi le réglage +12 EV n'est-il qu'à +4 stops ?" Le correctif est simple : multipliez `sliderInt × step.numerator / step.denominator` avant de formater l'étiquette EV, et réglez le maximum interne du curseur sur `range.upper`, pas sur le nombre de stops lisible par l'humain. Les curseurs d'interface utilisateur doivent stocker le pas entier en interne et afficher la valeur EV convertie à l'utilisateur.
 
-Second pitfall: compensation persists across requests. Unlike ISO or shutter time, AE compensation is a sticky state within the 3A algorithm on most HALs. If you set compensation = +6 for one still capture and then forget to reset it to 0 for the next capture, the next preview and capture will all be 2 stops bright. Always return compensation to 0 after a one-off shot, or explicitly set it in every repeating request rather than relying on the HAL's default state.
+Deuxième piège : la compensation persiste entre les requêtes. Contrairement aux ISO ou au temps d'obturation, la compensation AE est un état persistant au sein de l'algorithme 3A sur la plupart des HAL. Si vous réglez la compensation à +6 pour une capture fixe et que vous oubliez ensuite de la remettre à 0 pour la capture suivante, l'aperçu et la capture suivants seront tous trop clairs de 2 stops. Remettez toujours la compensation à 0 après une prise de vue ponctuelle, ou réglez-la explicitement dans chaque requête répétée plutôt que de compter sur l'état par défaut du HAL.
 
 ---
 
-## Scaler Category
+## Catégorie Scaler (Redimensionneur)
 
 ### SCALER_STREAM_CONFIGURATION_MAP
 
-**1. What is it?**
+**1. Qu'est-ce que c'est ?**
 
-`SCALER_STREAM_CONFIGURATION_MAP` is a `android.hardware.camera2.params.StreamConfigurationMap` object — the single most important data structure in all of Camera2 for discovering supported output. It contains:
-- `getOutputSizes(int format)` — supported resolutions for `ImageFormat.JPEG`, `ImageFormat.YUV_420_888`, `ImageFormat.RAW_SENSOR`, etc.
-- `getOutputSizes(Class<T> klass)` — supported resolutions for `SurfaceTexture` (preview), `MediaRecorder`, `MediaCodec`, `RenderScript.Allocation`.
-- `getHighSpeedVideoSizes()` / `getHighSpeedVideoFpsRanges()` — resolutions and framerates for constrained high-speed video (120 fps, 240 fps, etc.).
-- `getValidOutputFormatsForInput()` — input formats supported for reprocessing on `PRIVATE_REPROCESSING` or `YUV_REPROCESSING` devices.
-- `getOutputMinFrameDuration(int format, Size size)` — fastest possible frame interval (nanoseconds) for this format/size pair, i.e., max fps = 1e9 / minFrameDuration.
+`SCALER_STREAM_CONFIGURATION_MAP` est un objet `android.hardware.camera2.params.StreamConfigurationMap` — la structure de données la plus importante de tout Camera2 pour découvrir les sorties supportées. Elle contient :
+- `getOutputSizes(int format)` — résolutions supportées pour `ImageFormat.JPEG`, `ImageFormat.YUV_420_888`, `ImageFormat.RAW_SENSOR`, etc.
+- `getOutputSizes(Class<T> klass)` — résolutions supportées pour `SurfaceTexture` (aperçu), `MediaRecorder`, `MediaCodec`, `RenderScript.Allocation`.
+- `getHighSpeedVideoSizes()` / `getHighSpeedVideoFpsRanges()` — résolutions et fréquences d'images pour la vidéo haute vitesse contrainte (120 fps, 240 fps, etc.).
+- `getValidOutputFormatsForInput()` — formats d'entrée supportés pour le retraitement sur les appareils `PRIVATE_REPROCESSING` ou `YUV_REPROCESSING`.
+- `getOutputMinFrameDuration(int format, Size size)` — intervalle d'image le plus rapide possible (nanosecondes) pour cette paire format/taille, c'est-à-dire max fps = 1e9 / minFrameDuration.
 
-This map is the authoritative source for "what resolutions can I configure"; never use hardcoded 1920×1080 or 3840×2160 values without checking the map first.
+Cette carte est la source faisant autorité pour "quelles résolutions puis-je configurer" ; n'utilisez jamais de valeurs codées en dur comme 1920×1080 ou 3840×2160 sans vérifier la carte au préalable.
 
-**2. Why does it exist?**
+**2. Pourquoi cela existe-t-il ?**
 
-Camera2 supports 8+ output formats × 30+ possible surface classes × vendor-specific resolutions. Before `StreamConfigurationMap` existed (Camera1 era), developers had to iterate through the `getSupportedPictureSizes()` / `getSupportedPreviewSizes()` lists separately for each surface class and manually cross-match aspect ratios. The unified map solves this by returning, for every format-surface pair, the exact resolution list the HAL can drive. Min-frame-duration data lets you determine whether 4K60 is possible or if 4K30 is the ceiling on a given device.
+Camera2 supporte plus de 8 formats de sortie × plus de 30 classes de surfaces possibles × des résolutions spécifiques aux fabricants. Avant l'existence de `StreamConfigurationMap` (ère Camera1), les développeurs devaient parcourir les listes `getSupportedPictureSizes()` / `getSupportedPreviewSizes()` séparément pour chaque classe de surface et faire correspondre manuellement les ratios d'aspect. La carte unifiée résout ce problème en renvoyant, pour chaque paire format-surface, la liste exacte des résolutions que le HAL peut piloter. Les données de durée minimale d'image vous permettent de déterminer si la 4K60 est possible ou si la 4K30 est le plafond sur un appareil donné.
 
-**3. Which devices support it?**
+**3. Quels appareils le supportent ?**
 
-All valid Camera2 devices. LEGACY-level devices generate the map internally by wrapping Camera1's `Parameters.getSupported*Sizes()` methods, which can occasionally cause LEGACY quirks (resolutions reported but not drivable, or vice-versa). FULL-level devices guarantee every size in the map is actually drivable at its listed min-frame-duration. High-speed sizes are only populated for devices with `CONSTRAINED_HIGH_SPEED_VIDEO` capability.
+Tous les appareils Camera2 valides. Les appareils de niveau LEGACY génèrent la carte en interne en enveloppant les méthodes `Parameters.getSupported*Sizes()` de Camera1, ce qui peut occasionnellement causer des bizarreries (résolutions rapportées mais non pilotables, ou vice versa). Les appareils de niveau FULL garantissent que chaque taille dans la carte est réellement pilotable à sa durée minimale d'image listée. Les tailles haute vitesse ne sont renseignées que pour les appareils dotés de la capacité `CONSTRAINED_HIGH_SPEED_VIDEO`.
 
-**4. How do I query it?**
+**4. Comment l'interroger ?**
 
 ```kotlin
 val configMap: StreamConfigurationMap? = characteristics.get(
@@ -1264,49 +1264,49 @@ val configMap: StreamConfigurationMap? = characteristics.get(
 )
 
 configMap?.let { map ->
-    Log.d(TAG, "Stream Configuration Map summary:")
+    Log.d(TAG, "Résumé de la carte de configuration de flux :")
     
-    // JPEG (still photos)
+    // JPEG (photos fixes)
     val jpegSizes = map.getOutputSizes(ImageFormat.JPEG)?.sortedByDescending { it.width * it.height }
         ?: emptyArray()
-    Log.d(TAG, "  JPEG still sizes (${jpegSizes.size}): " +
+    Log.d(TAG, "  Tailles JPEG fixes (${jpegSizes.size}) : " +
                if (jpegSizes.isNotEmpty())
                    "${jpegSizes.first().width}×${jpegSizes.first().height} (max) " +
-                   "down to ${jpegSizes.last().width}×${jpegSizes.last().height}"
-               else "none")
+                   "jusqu'à ${jpegSizes.last().width}×${jpegSizes.last().height}"
+               else "aucune")
     
-    // YUV_420_888 (image analysis)
+    // YUV_420_888 (analyse d'image)
     val yuvSizes = map.getOutputSizes(ImageFormat.YUV_420_888)?.sortedByDescending { it.width * it.height }
         ?: emptyArray()
-    Log.d(TAG, "  YUV_420_888 sizes (${yuvSizes.size}): " +
-               if (yuvSizes.isNotEmpty()) "${yuvSizes.first()} (max)" else "none")
+    Log.d(TAG, "  Tailles YUV_420_888 (${yuvSizes.size}) : " +
+               if (yuvSizes.isNotEmpty()) "${yuvSizes.first()} (max)" else "aucune")
     
-    // SurfaceTexture (preview)
+    // SurfaceTexture (aperçu)
     val previewSizes = map.getOutputSizes(SurfaceTexture::class.java)
         ?.sortedByDescending { it.width * it.height } ?: emptyArray()
-    Log.d(TAG, "  Preview (SurfaceTexture) sizes (${previewSizes.size}): " +
-               if (previewSizes.isNotEmpty()) "${previewSizes.first()} (max)" else "none")
+    Log.d(TAG, "  Tailles aperçu (SurfaceTexture) (${previewSizes.size}) : " +
+               if (previewSizes.isNotEmpty()) "${previewSizes.first()} (max)" else "aucune")
     
-    // RAW10/RAW12 (if supported)
+    // RAW10/RAW12 (si supporté)
     if (characteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
             ?.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW) == true) {
         val rawSizes = map.getOutputSizes(ImageFormat.RAW_SENSOR)
-        Log.d(TAG, "  RAW_SENSOR sizes (${rawSizes?.size ?: 0}): ${rawSizes?.joinToString() ?: "none"}")
+        Log.d(TAG, "  Tailles RAW_SENSOR (${rawSizes?.size ?: 0}) : ${rawSizes?.joinToString() ?: "aucune"}")
     }
     
-    // Max frame rates
+    // Taux de rafraîchissement max
     jpegSizes.firstOrNull()?.let { maxJpeg ->
         val ns = map.getOutputMinFrameDuration(ImageFormat.JPEG, maxJpeg)
         val fps = 1_000_000_000.0 / ns.toDouble()
-        Log.d(TAG, "  Max JPEG (${maxJpeg}): ${ns}ns/frame = ${"%.1f".format(fps)} fps ceiling")
+        Log.d(TAG, "  Max JPEG (${maxJpeg}) : ${ns}ns/image = plafond de ${"%.1f".format(fps)} fps")
     }
     
     previewSizes.firstOrNull { it.width <= 1920 && it.height <= 1080 }?.let { fhd ->
         val ns = map.getOutputMinFrameDuration(SurfaceTexture::class.java, fhd)
-        Log.d(TAG, "  1080p preview min frame: ${ns}ns (${"%.0f".format(1e9 / ns)} fps max)")
+        Log.d(TAG, "  Aperçu 1080p durée min : ${ns}ns (${"%.0f".format(1e9 / ns)} fps max)")
     }
     
-    // High-speed video
+    // Vidéo haute vitesse
     val hsCaps = characteristics.get(
         CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES
     )?.contains(
@@ -1315,29 +1315,29 @@ configMap?.let { map ->
     if (hsCaps) {
         val hsSizes = map.highSpeedVideoSizes
         val hsRanges = map.highSpeedVideoFpsRanges
-        Log.d(TAG, "  High-speed video sizes: ${hsSizes?.joinToString() ?: "none"}")
-        Log.d(TAG, "  High-speed FPS ranges: ${hsRanges?.joinToString() ?: "none"}")
+        Log.d(TAG, "  Tailles vidéo haute vitesse : ${hsSizes?.joinToString() ?: "aucune"}")
+        Log.d(TAG, "  Plages FPS haute vitesse : ${hsRanges?.joinToString() ?: "aucune"}")
     }
     
-    // Aspect ratio matching helper demonstration
+    // Démonstration d'aide à la correspondance de ratio d'aspect
     val sensor = characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)!!
     val sensorAr = sensor.width().toDouble() / sensor.height().toDouble()
     val ratios = setOf(4.0/3.0, 16.0/9.0, 18.0/9.0, 1.0, 20.0/9.0, sensorAr)
-    Log.d(TAG, "  Sensor aspect ratio: ${"%.3f".format(sensorAr)} (w:h)")
-    Log.d(TAG, "  Common target ratios: 4:3=${"%.3f".format(4.0/3.0)}, " +
+    Log.d(TAG, "  Ratio d'aspect du capteur : ${"%.3f".format(sensorAr)} (l:h)")
+    Log.d(TAG, "  Ratios cibles courants : 4:3=${"%.3f".format(4.0/3.0)}, " +
                "16:9=${"%.3f".format(16.0/9.0)}, 1:1=1.000")
 } ?: run {
-    Log.w(TAG, "Stream configuration map unavailable — this is a FATAL error")
+    Log.w(TAG, "Carte de configuration de flux indisponible — ceci est une erreur FATALE")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Comment l'inspecter avec Android Camera Parameters ?**
 
-Go to **Streams / Formats**. The tab opens with a format selector chip bar (JPEG, YUV, RAW, Preview SurfaceTexture, MediaRecorder, ...). Selecting a format renders the supported resolutions sorted by pixel count descending. Each resolution row shows: pixel dimensions, megapixels, aspect ratio badge, and the min-frame-duration-derived max FPS. Tapping any resolution opens a detail sheet with `getOutputMinFrameDuration()` for that specific format-size pair, plus a "Try this size in preview" button that live-switches the companion app's preview to the selected resolution so you can confirm it actually works. The Streams tab also has a dedicated "High Speed" sub-tab for `getHighSpeedVideoSizes()` when the capability is present.
+Allez dans **Streams / Formats**. L'onglet s'ouvre avec une barre de puces de sélection de format (JPEG, YUV, RAW, Preview SurfaceTexture, MediaRecorder, ...). La sélection d'un format affiche les résolutions supportées triées par nombre de pixels décroissant. Chaque ligne de résolution affiche : dimensions en pixels, mégapixels, badge de ratio d'aspect et le FPS max dérivé de la durée minimale d'image. Taper sur n'importe quelle résolution ouvre une fiche détaillée avec `getOutputMinFrameDuration()` pour cette paire format-taille spécifique, ainsi qu'un bouton "Essayer cette taille en aperçu" qui bascule en direct l'aperçu de l'application compagnon vers la résolution sélectionnée afin que vous puissiez confirmer qu'elle fonctionne réellement. L'onglet Streams possède également un sous-onglet dédié "High Speed" pour `getHighSpeedVideoSizes()` lorsque la capacité est présente.
 
-**6. Common pitfalls**
+**6. Pièges courants**
 
-Rotation / orientation in aspect ratio math. The camera's natural orientation is landscape: `SENSOR_ORIENTATION = 90` means the sensor's pixel rows run portrait relative to the device's portrait screen. A `getOutputSizes()` call for JPEG returns `3840×2160` (landscape) but on a portrait-oriented back camera this appears to the user as 2160×3840 (portrait). If your UI computes aspect ratios using the raw `Size.width / Size.height` values without accounting for 90°/270° rotation, you will swap 16:9 and 9:16 and label 3840×2160 as "widescreen" when it should match the screen's 9:19.5 aspect ratio. Correct code:
+Rotation / orientation dans les calculs de ratio d'aspect. L'orientation naturelle de la caméra est le paysage : `SENSOR_ORIENTATION = 90` signifie que les lignes de pixels du capteur s'exécutent en portrait par rapport à l'écran portrait de l'appareil. Un appel à `getOutputSizes()` pour le JPEG renvoie `3840×2160` (paysage) mais sur une caméra arrière orientée portrait, cela apparaît à l'utilisateur comme 2160×3840 (portrait). Si votre interface utilisateur calcule les ratios d'aspect en utilisant les valeurs brutes `Size.width / Size.height` sans tenir compte de la rotation de 90°/270°, vous inverserez le 16:9 et le 9:16 et étiqueterez le 3840×2160 comme "grand écran" alors qu'il devrait correspondre au ratio d'aspect 9:19,5 de l'écran. Code correct :
 
 ```kotlin
 fun Size.aspectRatioForDisplay(sensorOrientationDeg: Int): Double {
@@ -1347,27 +1347,27 @@ fun Size.aspectRatioForDisplay(sensorOrientationDeg: Int): Double {
 }
 ```
 
-Second pitfall: LEGACY-wrapped HALs report sizes in the StreamConfigurationMap that Camera1 cannot actually drive. A common pattern is `LEGACY` map listing 4K JPEG when the maximum Camera1 can produce is 1080p. If `INFO_SUPPORTED_HARDWARE_LEVEL == LEGACY`, treat the maximum JPEG size with suspicion; prefer `Parameters.getSupportedPictureSizes()` or verify by actually creating an `ImageReader` and performing one test capture before exposing it in the UI.
+Deuxième piège : les HAL enveloppés LEGACY rapportent des tailles dans la StreamConfigurationMap que Camera1 ne peut pas réellement piloter. Un modèle courant est une carte `LEGACY` listant le JPEG 4K alors que le maximum que Camera1 peut produire est le 1080p. Si `INFO_SUPPORTED_HARDWARE_LEVEL == LEGACY`, traitez la taille JPEG maximale avec suspicion ; préférez `Parameters.getSupportedPictureSizes()` ou vérifiez en créant réellement un `ImageReader` et en effectuant une capture de test avant de l'exposer dans l'interface utilisateur.
 
 ---
 
 ### SCALER_AVAILABLE_MAX_DIGITAL_ZOOM
 
-**1. What is it?**
+**1. Qu'est-ce que c'est ?**
 
-`SCALER_AVAILABLE_MAX_DIGITAL_ZOOM` is a single `Float` representing the maximum allowable crop ratio for digital zoom. A value of `10.0f` means you can crop to 1/10th of the active array in each dimension (the crop region's width and height are no smaller than 1/10th of the active array's width and height). This is *purely digital zoom* — it is a ISP crop + upscale operation with inherent quality loss. For example, zoom = 2.0× means: crop the active array to 50% width × 50% height, then scale it back up to output stream size using the ISP's scaler block.
+`SCALER_AVAILABLE_MAX_DIGITAL_ZOOM` est un simple `Float` représentant le rapport de recadrage maximum autorisé pour le zoom numérique. Une valeur de `10.0f` signifie que vous pouvez recadrer jusqu'à 1/10e de la matrice active dans chaque dimension (la largeur et la hauteur de la zone de recadrage ne sont pas inférieures à 1/10e de la largeur et de la hauteur de la matrice active). Il s'agit d'un **zoom purement numérique** — c'est une opération de recadrage ISP + mise à l'échelle avec une perte de qualité inhérente. Par exemple, zoom = 2,0× signifie : recadrer la matrice active à 50 % de largeur × 50 % de hauteur, puis la redimensionner à la taille du flux de sortie en utilisant le bloc de redimensionnement de l'ISP.
 
-This key defines the valid range of the `CaptureRequest.SCALER_CROP_REGION` rectangle's inverse size.
+Cette clé définit la plage valide de l'inverse de la taille du rectangle `CaptureRequest.SCALER_CROP_REGION`.
 
-**2. Why does it exist?**
+**2. Pourquoi cela existe-t-il ?**
 
-Without an explicit max zoom ratio, developers would crop the active array to arbitrary sizes. Cropping to 1 pixel × 1 pixel and asking the HAL to upscale to 4K output is mathematically legal but produces a 0.0-MP image. The HAL uses minimum-dimension limits (each output surface has a minimum output size, typically ≥64 px on each axis) and the max-zoom key communicates the combined constraints as a single developer-friendly ratio.
+Sans un rapport de zoom maximum explicite, les développeurs recadreraient la matrice active à des tailles arbitraires. Recadrer à 1 pixel × 1 pixel et demander au HAL de mettre à l'échelle vers une sortie 4K est mathématiquement légal mais produit une image de 0,0 MP. Le HAL utilise des limites de dimensions minimales (chaque surface de sortie a une taille de sortie minimale, généralement ≥64 px sur chaque axe) et la clé de zoom max communique les contraintes combinées sous la forme d'un rapport unique facile à utiliser pour le développeur.
 
-**3. Which devices support it?**
+**3. Quels appareils le supportent ?**
 
-All hardware levels. The value is always ≥ 1.0. LIMITED devices typically ship with max zoom between 4× and 8×. FULL devices and devices with `LOGICAL_MULTI_CAMERA` capability often ship with 10×, 20×, or even 100× max digital zoom to match the marketing zoom specifications. No capability flag prerequisites.
+Tous les niveaux matériels. La valeur est toujours ≥ 1,0. Les appareils LIMITED sont généralement livrés avec un zoom max compris entre 4× et 8×. Les appareils FULL et les appareils dotés de la capacité `LOGICAL_MULTI_CAMERA` sont souvent livrés avec un zoom numérique maximum de 10×, 20× ou même 100× pour correspondre aux spécifications de zoom marketing. Aucun indicateur de capacité prérequis.
 
-**4. How do I query it?**
+**4. Comment l'interroger ?**
 
 ```kotlin
 val maxDigitalZoom: Float? = characteristics.get(
@@ -1381,67 +1381,67 @@ maxDigitalZoom?.let { maxZoom ->
     val activeW = active.width()
     val activeH = active.height()
     
-    Log.d(TAG, "  Active array: ${activeW}×${activeH}")
+    Log.d(TAG, "  Matrice active : ${activeW}×${activeH}")
     val minCropW = ceil(activeW / maxZoom).toInt()
     val minCropH = ceil(activeH / maxZoom).toInt()
-    Log.d(TAG, "  Minimum crop region size at max zoom: ${minCropW}×${minCropH}px")
+    Log.d(TAG, "  Taille min de zone de recadrage au zoom max : ${minCropW}×${minCropH}px")
     
     val optical = characteristics.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS)
     if (optical != null && optical.size > 1) {
         val opticalMax = optical.last() / optical[0]
-        Log.d(TAG, "  Optical zoom from multi-camera: ${"%.1f".format(opticalMax)}×")
-        Log.d(TAG, "  'Marketing' zoom (optical × digital): " +
+        Log.d(TAG, "  Zoom optique via multi-caméra : ${"%.1f".format(opticalMax)}×")
+        Log.d(TAG, "  Zoom 'Marketing' (optique × numérique) : " +
                    "${"%.1f".format(opticalMax)} × ${"%.1f".format(maxZoom)} = " +
                    "${"%.0f".format(opticalMax * maxZoom)}×")
     }
     
     val stepCount = 100
-    Log.d(TAG, "  Slider zoom values (0 → $stepCount):")
+    Log.d(TAG, "  Valeurs de zoom du curseur (0 → $stepCount) :")
     for (i in 0..stepCount step 25) {
         val zoom = 1.0 + (maxZoom - 1.0) * (i.toDouble() / stepCount.toDouble())
         Log.d(TAG, "    pos $i → zoom=${"%.2f".format(zoom)}×")
     }
 } ?: run {
-    Log.w(TAG, "Max digital zoom not available")
+    Log.w(TAG, "Zoom numérique max non disponible")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Comment l'inspecter avec Android Camera Parameters ?**
 
-Navigate to **Zoom / Crop Region**. The card titled "Maximum Digital Zoom" shows the ratio (e.g. "10.0×") and a visual crop-rectangle preview that is draggable and pinchable up to exactly this maximum. The companion app draws a "quality gradient" on the zoom slider: the zoom ratio at which physical cameras switch (based on focal lengths) is marked as the quality transition line; below that line the zoom is optical (green) and above that line the slider turns amber (digital, quality degradation). You can visually compare 1×, 3× optical, and 10× digital zoom side by side in the preview.
+Naviguez vers **Zoom / Crop Region**. La carte intitulée "Maximum Digital Zoom" affiche le rapport (ex : "10.0×") et un aperçu visuel du rectangle de recadrage qui peut être déplacé et pincé jusqu'à exactement ce maximum. L'application compagnon dessine un "gradient de qualité" sur le curseur de zoom : le rapport de zoom auquel les caméras physiques basculent (basé sur les distances focales) est marqué comme la ligne de transition de qualité ; en dessous de cette ligne, le zoom est optique (vert) et au-dessus de cette ligne, le curseur devient orange (numérique, dégradation de la qualité). Vous pouvez comparer visuellement le zoom optique 1×, 3× et le zoom numérique 10× côte à côte dans l'aperçu.
 
-**6. Common pitfalls**
+**6. Pièges courants**
 
-Treating max digital zoom as "quality zoom". Marketing materials advertise "100× Space Zoom" but this key tells you the *digital* zoom ceiling. 100× zoom on a 48MP active array crops to roughly 480×360 pixels and upscales 100× — the result has fewer than 0.17 megapixels of real information, blurred beyond recognition except for bright point light sources against dark backgrounds (the moon, stars). Correct UI: mark zoom values on the slider with color coding. Green region = pure optical zoom positions (switching between physical cameras at the focal length sweet spots). Yellow = small digital crop (1×–3× optical-camera base, still reasonable). Red = heavy digital zoom (5×+) that is effectively marketing-only and produces unusable detail at anything other than the moon.
+Traiter le zoom numérique max comme un "zoom de qualité". Les supports marketing annoncent un "Space Zoom 100×", mais cette clé vous indique le plafond du zoom *numérique*. Un zoom 100× sur une matrice active de 48 MP recadre à environ 480×360 pixels et agrandit 100× — le résultat contient moins de 0,17 mégapixels d'informations réelles, floues au-delà de toute reconnaissance, sauf pour les sources lumineuses ponctuelles brillantes sur fonds sombres (la lune, les étoiles). Interface utilisateur correcte : marquez les valeurs de zoom sur le curseur avec un code couleur. Région verte = positions de zoom purement optiques (commutation entre caméras physiques aux points idéaux de distance focale). Jaune = petit recadrage numérique (base de caméra optique 1×–3×, encore raisonnable). Rouge = zoom numérique lourd (5×+) qui est effectivement purement marketing et produit des détails inutilisables pour tout autre chose que la lune.
 
-Second pitfall: zoom math sign error. The crop rectangle for zoom ratio z is computed as:
+Deuxième piège : erreur de signe dans les calculs de zoom. Le rectangle de recadrage pour un rapport de zoom z est calculé comme :
 ```
 cropWidth  = activeWidth  / z
 cropHeight = activeHeight / z
 ```
-Common mistake is `crop = size * z` which produces a crop rectangle LARGER than the active array. The HAL will then clamp the crop to the active array, so zoom appears stuck at 1× for values of z > 1. Always **divide** active array size by zoom ratio.
+L'erreur courante est `crop = size * z` ce qui produit un rectangle de recadrage PLUS GRAND que la matrice active. Le HAL bridera alors le recadrage à la matrice active, de sorte que le zoom semblera bloqué à 1× pour des valeurs de z > 1. **Divisez** toujours la taille de la matrice active par le rapport de zoom.
 
 ---
 
 ### SCALER_CROPPING_TYPE
 
-**1. What is it?**
+**1. Qu'est-ce que c'est ?**
 
-`SCALER_CROPPING_TYPE` is an `Int` enum describing how the HAL validates the `SCALER_CROP_REGION` rectangle you submit in each CaptureRequest. Two values:
-- `SCALER_CROPPING_TYPE_CENTER_ONLY` — the crop region is *always centered* within the active array, regardless of the (left, top) you submit. The HAL ignores the offset and centers the crop automatically.
-- `SCALER_CROPPING_TYPE_FREEFORM` — the crop region may be placed anywhere inside the active array with arbitrary (left, top) as long as the dimensions match the zoom scale.
+`SCALER_CROPPING_TYPE` est un enum `Int` décrivant comment le HAL valide le rectangle `SCALER_CROP_REGION` que vous soumettez dans chaque CaptureRequest. Deux valeurs :
+- `SCALER_CROPPING_TYPE_CENTER_ONLY` — la zone de recadrage est *toujours centrée* dans la matrice active, quels que soient les (gauche, haut) que vous soumettez. Le HAL ignore le décalage et centre le recadrage automatiquement.
+- `SCALER_CROPPING_TYPE_FREEFORM` — la zone de recadrage peut être placée n'importe où à l'intérieur de la matrice active avec des (gauche, haut) arbitraires tant que les dimensions correspondent à l'échelle du zoom.
 
-The distinction is critical for face-tracked zoom, action sports framing, and any application where you want the crop to move off-center to follow a moving subject.
+La distinction est cruciale pour le zoom avec suivi de visage, le cadrage de sports d'action et toute application où vous voulez que le recadrage se déplace hors centre pour suivre un sujet en mouvement.
 
-**2. Why does it exist?**
+**2. Pourquoi cela existe-t-il ?**
 
-CENTER_ONLY cropping exists because it is cheap in hardware. The ISP scaler needs only a single division operation per frame to compute the crop. Freeform cropping adds a programmable offset register to the scaler pipeline, which adds gate count to the ISP silicon. Budget SoCs (MediaTek Helio G-series, Snapdragon 4-series) ship with CENTER_ONLY to save cost. The key lets the framework advertise which kind of scaler is on the silicon so the application can gracefully degrade.
+Le recadrage CENTER_ONLY existe parce qu'il est peu coûteux au niveau matériel. Le redimensionneur de l'ISP n'a besoin que d'une seule opération de division par image pour calculer le recadrage. Le recadrage Freeform ajoute un registre de décalage programmable au pipeline du redimensionneur, ce qui augmente le nombre de portes logiques sur le silicium de l'ISP. Les SoC budget (MediaTek série Helio G, Snapdragon série 4) sont livrés avec CENTER_ONLY pour réduire les coûts. La clé permet au framework d'annoncer quel type de redimensionneur est sur le silicium afin que l'application puisse se dégrader gracieusement.
 
-**3. Which devices support it?**
+**3. Quels appareils le supportent ?**
 
-All hardware levels. FULL-level devices almost always have FREEFORM because the CDD strongly recommends it for FULL conformance. LIMITED devices split roughly 50/50 FREEFORM vs. CENTER_ONLY depending on SoC vintage and cost. LEGACY devices always report CENTER_ONLY (Camera1 API never had a "move crop offset" API). Roughly 60% of active 2020–2024 mid-range Android devices ship with CENTER_ONLY.
+Tous les niveaux matériels. Les appareils de niveau FULL disposent presque toujours du FREEFORM car le CDD le recommande fortement pour la conformité FULL. Les appareils LIMITED sont divisés environ à 50/50 entre FREEFORM et CENTER_ONLY selon l'ancienneté et le coût du SoC. Les appareils LEGACY rapportent toujours CENTER_ONLY (l'API Camera1 n'a jamais eu d'API pour déplacer le décalage de recadrage). Environ 60 % des appareils Android de milieu de gamme actifs de 2020 à 2024 sont livrés avec CENTER_ONLY.
 
-**4. How do I query it?**
+**4. Comment l'interroger ?**
 
 ```kotlin
 val croppingType: Int? = characteristics.get(
@@ -1454,81 +1454,81 @@ croppingType?.let { type ->
             "CENTER_ONLY" to false
         CameraCharacteristics.SCALER_CROPPING_TYPE_FREEFORM ->
             "FREEFORM" to true
-        else -> "UNKNOWN($type)" to false
+        else -> "INCONNU($type)" to false
     }
     Log.d(TAG, "SCALER_CROPPING_TYPE = $name")
-    Log.d(TAG, "  SCALER_CROP_REGION offset honored? $free")
+    Log.d(TAG, "  Décalage SCALER_CROP_REGION respecté ? $free")
     
     if (free) {
-        Log.d(TAG, "  Supported use cases:")
-        Log.d(TAG, "    ✓ Face-tracking crop (move zoom region to face)")
-        Log.d(TAG, "    ✓ Action framing (follow subject moving horizontally)")
-        Log.d(TAG, "    ✓ Rule-of-thirds offset crop")
+        Log.d(TAG, "  Cas d'utilisation supportés :")
+        Log.d(TAG, "    ✓ Recadrage avec suivi de visage (déplacer la zone de zoom sur le visage)")
+        Log.d(TAG, "    ✓ Cadrage d'action (suivre un sujet se déplaçant horizontalement)")
+        Log.d(TAG, "    ✓ Recadrage décalé selon la règle des tiers")
     } else {
-        Log.w(TAG, "  CENTER_ONLY crop limitations:")
-        Log.w(TAG, "    ✗ Face-tracking crop: HAL ignores offset, stays centered")
-        Log.w(TAG, "    ✗ Subject-tracking zoom: will NOT follow movement")
-        Log.w(TAG, "    ✗ Any non-centered crop rectangle")
-        Log.w(TAG, "  UI: Disable 'track face' and 'follow subject' controls.")
+        Log.w(TAG, "  Limitations du recadrage CENTER_ONLY :")
+        Log.w(TAG, "    ✗ Suivi de visage : le HAL ignore le décalage, reste centré")
+        Log.w(TAG, "    ✗ Zoom de suivi de sujet : ne suivra PAS le mouvement")
+        Log.w(TAG, "    ✗ Tout rectangle de recadrage non centré")
+        Log.w(TAG, "  UI : Désactiver les contrôles 'suivre le visage' et 'suivre le sujet'.")
     }
     
     characteristics.get(CameraCharacteristics.STATISTICS_INFO_AVAILABLE_FACE_DETECT_MODES)
         ?.let { faceModes ->
             val hasFace = faceModes.any { it > 0 }
             if (hasFace && !free) {
-                Log.w(TAG, "  Face detection present but CENTER_ONLY crop: " +
-                           "cannot move crop rectangle to detected face.")
-                Log.w(TAG, "  Implement face track via UI post-crop + re-scale, not via CROP_REGION.")
+                Log.w(TAG, "  Détection de visages présente mais recadrage CENTER_ONLY : " +
+                           "impossible de déplacer le rectangle de recadrage sur le visage détecté.")
+                Log.w(TAG, "  Implémentez le suivi via l'UI post-recadrage + redimensionnement, pas via CROP_REGION.")
             }
         }
 } ?: run {
-    Log.w(TAG, "Cropping type unavailable — assume CENTER_ONLY for safety")
+    Log.w(TAG, "Type de recadrage indisponible — assumez CENTER_ONLY par sécurité")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Comment l'inspecter avec Android Camera Parameters ?**
 
-Open **Zoom / Crop Region**. The top-right of the screen shows a badge: either "FREEFORM CROP" (green badge with "Arbitrary position OK") or "CENTER ONLY" (amber badge with "Fixed center position"). The draggable crop-rectangle overlay enforces the actual HAL behavior: if the type is CENTER_ONLY, dragging the rectangle springs back to the center with an animated bounce, and a toast explains "CENTER_ONLY: offset is ignored by the HAL." If FREEFORM, you can drag the crop rectangle anywhere inside the active array bounds and the live preview re-crops accordingly.
+Ouvrez **Zoom / Crop Region**. Le coin supérieur droit de l'écran affiche un badge : soit "FREEFORM CROP" (badge vert avec "Position arbitraire OK"), soit "CENTER ONLY" (badge orange avec "Position centrale fixe"). La superposition du rectangle de recadrage déplaçable applique le comportement réel du HAL : si le type est CENTER_ONLY, le déplacement du rectangle le fait revenir au centre avec un rebond animé, et un message toast explique : "CENTER_ONLY : le décalage est ignoré par le HAL." Si FREEFORM, vous pouvez faire glisser le rectangle de recadrage n'importe où à l'intérieur des limites de la matrice active et l'aperçu en direct se recadre en conséquence.
 
-**6. Common pitfalls**
+**6. Pièges courants**
 
-Implementing face-tracked zoom on CENTER_ONLY devices. The naïve approach: detect face at (x=60% of frame, y=30%), then build a `SCALER_CROP_REGION` centered at those coordinates with zoom 2.0×. Result: on CENTER_ONLY HALs, the HAL drops the offset and centers the crop — the face appears in the same (60%, 30%) position of the cropped image instead of being framed center. Users report: "Face tracking does nothing." The correct fallback on CENTER_ONLY devices is to (a) zoom centered as always via `CROP_REGION`, and (b) implement the lateral face-tracking **after** the stream as a GPU transformation (crop + translate the preview texture, and crop + translate the JPEG bytes post-capture with Bitmap region decode). This requires keeping the full stream in a buffer for the post-crop, which has memory cost. Alternatively, disable face-tracking UI entirely on CENTER_ONLY devices.
+Implémenter le zoom avec suivi de visage sur les appareils CENTER_ONLY. L'approche naïve : détecter le visage à (x=60 % de l'image, y=30 %), puis construire une `SCALER_CROP_REGION` centrée sur ces coordonnées avec un zoom 2,0×. Résultat : sur les HAL CENTER_ONLY, le HAL abandonne le décalage et centre le recadrage — le visage apparaît dans la même position (60 %, 30 %) de l'image recadrée au lieu d'être cadré au centre. Les utilisateurs signalent : "Le suivi de visage ne fait rien." Le repli correct sur les appareils CENTER_ONLY consiste à (a) zoomer de manière centrée comme toujours via `CROP_REGION`, et (b) implémenter le suivi latéral du visage **après** le flux sous forme de transformation GPU (recadrer + décaler la texture d'aperçu, et recadrer + décaler les octets JPEG post-capture avec un décodage de région de Bitmap). Cela nécessite de conserver le flux complet dans un tampon pour le post-recadrage, ce qui a un coût en mémoire. Alternativement, désactivez entièrement l'interface utilisateur de suivi de visage sur les appareils CENTER_ONLY.
 
 ---
 
-## Request Category
+## Catégorie Request (Requête)
 
 ### REQUEST_AVAILABLE_CAPABILITIES
 
-**1. What is it?**
+**1. Qu'est-ce que c'est ?**
 
-`REQUEST_AVAILABLE_CAPABILITIES` is the single most important metadata key. It is an `IntArray` containing capability flags that describe which advanced features the HAL supports. Every advanced feature in Camera2 has a matching flag. The most important flags:
+`REQUEST_AVAILABLE_CAPABILITIES` est la clé de métadonnées la plus importante. Il s'agit d'un `IntArray` contenant des drapeaux (flags) de capacités qui décrivent les fonctionnalités avancées supportées par le HAL. Chaque fonctionnalité avancée dans Camera2 possède un drapeau correspondant. Les drapeaux les plus importants :
 
-| Flag | Meaning |
+| Drapeau | Signification |
 |---|---|
-| `BACKWARD_COMPATIBLE` | Default baseline; always present. |
-| `MANUAL_SENSOR` | Manual ISO, exposure time, frame duration, lens focus distance. |
-| `MANUAL_POST_PROCESSING` | Manual color correction gains/transform, tonemap curve, lens shading, edge mode, noise reduction mode. |
-| `RAW` | `ImageReader` with `ImageFormat.RAW_SENSOR` (RAW10/12/16) output. |
-| `PRIVATE_REPROCESSING` | Feed a `PRIVATE`-format Image back into the session as input for zero-shutter-lag reprocessing. |
-| `YUV_REPROCESSING` | Feed a `YUV_420_888` Image back into the session as input. |
-| `DEPTH_OUTPUT` | Output `DEPTH16` or `DEPTH_POINT_CLOUD` buffers via dedicated depth stream. |
-| `LOGICAL_MULTI_CAMERA` | This camera ID is backed by multiple physical sensors; the HAL can switch between them transparently during zoom. |
-| `BURST_CAPTURE` | The HAL can process a full-size burst of ≥20 full-size frames per second without dropping. |
-| `CONSTRAINED_HIGH_SPEED_VIDEO` | High-speed recording ≥120 fps via constrained high-speed session. |
-| `MOTION_TRACKING` | Camera can produce motion tracking frames for AR-style stabilized output. |
+| `BACKWARD_COMPATIBLE` | Base de référence par défaut ; toujours présent. |
+| `MANUAL_SENSOR` | ISO manuels, temps d'exposition, durée d'image, distance de mise au point. |
+| `MANUAL_POST_PROCESSING` | Gains/transformations manuels de correction des couleurs, courbe de mappage tonal, ombrage de l'objectif, mode de bord, mode de réduction de bruit. |
+| `RAW` | Sortie `ImageReader` avec format `ImageFormat.RAW_SENSOR` (RAW10/12/16). |
+| `PRIVATE_REPROCESSING` | Réinjection d'une image au format `PRIVATE` dans la session comme entrée pour le retraitement avec un délai d'obturation nul (ZSL). |
+| `YUV_REPROCESSING` | Réinjection d'une image `YUV_420_888` dans la session comme entrée. |
+| `DEPTH_OUTPUT` | Sortie de tampons `DEPTH16` ou `DEPTH_POINT_CLOUD` via un flux de profondeur dédié. |
+| `LOGICAL_MULTI_CAMERA` | Cet ID de caméra est soutenu par plusieurs capteurs physiques ; le HAL peut basculer entre eux de manière transparente pendant le zoom. |
+| `BURST_CAPTURE` | Le HAL peut traiter une rafale en pleine résolution de ≥20 images par seconde sans perte. |
+| `CONSTRAINED_HIGH_SPEED_VIDEO` | Enregistrement haute vitesse ≥120 fps via une session haute vitesse contrainte. |
+| `MOTION_TRACKING` | La caméra peut produire des images de suivi de mouvement pour une sortie stabilisée de style AR. |
 
-Every feature-gate in your app should check this array. The combination `MANUAL_SENSOR + MANUAL_POST_PROCESSING` is what defines a "pro mode" capable device.
+Chaque restriction de fonctionnalité (feature-gate) dans votre application doit vérifier ce tableau. La combinaison `MANUAL_SENSOR + MANUAL_POST_PROCESSING` est ce qui définit un appareil capable d'un "mode pro".
 
-**2. Why does it exist?**
+**2. Pourquoi cela existe-t-il ?**
 
-`INFO_SUPPORTED_HARDWARE_LEVEL` buckets devices into coarse tiers (LEGACY / LIMITED / FULL / LEVEL_3 / EXTERNAL). But hardware level is *cumulative* and non-granular: FULL implies MANUAL_SENSOR, RAW, and BURST_CAPTURE — but LIMITED devices can have MANUAL_SENSOR *without* RAW, or RAW without BURST_CAPTURE. Samsung's mid-range A-series 2023 devices are LIMITED + MANUAL_SENSOR + RAW (partial FULL feature set without BURST_CAPTURE or full tonemap control). Without per-capability flags, developers would have to check hardware level and lose access to these partial LIMITED features. The capability array is the fine-grained switch.
+`INFO_SUPPORTED_HARDWARE_LEVEL` regroupe les appareils en niveaux grossiers (LEGACY / LIMITED / FULL / LEVEL_3 / EXTERNAL). Mais le niveau matériel est **cumulatif** et non granulaire : FULL implique MANUAL_SENSOR, RAW et BURST_CAPTURE — mais les appareils LIMITED peuvent avoir MANUAL_SENSOR *sans* RAW, ou RAW sans BURST_CAPTURE. Les appareils Samsung de la série A de 2023 sont LIMITED + MANUAL_SENSOR + RAW (ensemble de fonctionnalités FULL partiel sans BURST_CAPTURE ni contrôle complet du mappage tonal). Sans drapeaux par capacité, les développeurs devraient vérifier le niveau matériel et perdraient l'accès à ces fonctionnalités LIMITED partielles. Le tableau des capacités est le commutateur de précision.
 
-**3. Which devices support it?**
+**3. Quels appareils le supportent ?**
 
-Every camera ID on every hardware level. `BACKWARD_COMPATIBLE` is always included; it is impossible for the array to be empty. The full list of flags grows with each Android release: Android 11 added ULTRA_HIGH_RESOLUTION_SENSOR capability, Android 12 added DYNAMIC_RANGE_TEN_BIT, etc. New flags on older devices are not present — so always check `.contains()` with null safety.
+Chaque ID de caméra sur chaque niveau matériel. `BACKWARD_COMPATIBLE` est toujours inclus ; il est impossible que le tableau soit vide. La liste complète des drapeaux s'allonge avec chaque version d'Android : Android 11 a ajouté la capacité ULTRA_HIGH_RESOLUTION_SENSOR, Android 12 a ajouté DYNAMIC_RANGE_TEN_BIT, etc. Les nouveaux drapeaux sur les anciens appareils ne sont pas présents — vérifiez donc toujours `.contains()` avec une sécurité contre les nulls.
 
-**4. How do I query it?**
+**4. Comment l'interroger ?**
 
 ```kotlin
 val capabilities: IntArray? = characteristics.get(
@@ -1563,7 +1563,7 @@ capabilities?.let { caps ->
             .REQUEST_AVAILABLE_CAPABILITIES_MOTION_TRACKING
     )
     
-    Log.d(TAG, "REQUEST_AVAILABLE_CAPABILITIES (${caps.size} flags):")
+    Log.d(TAG, "REQUEST_AVAILABLE_CAPABILITIES (${caps.size} drapeaux) :")
     flagMap.entries.forEach { (name, id) ->
         val present = has(id)
         Log.d(TAG, "  ${if (present) "✓" else "✗"} $name")
@@ -1572,26 +1572,26 @@ capabilities?.let { caps ->
     val hwLevel = characteristics.get(
         CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL
     )
-    Log.d(TAG, "  Hardware level relationship:")
-    Log.d(TAG, "    Hardware level reported: ${hwLevelToString(hwLevel)}")
+    Log.d(TAG, "  Relation avec le niveau matériel :")
+    Log.d(TAG, "    Niveau matériel rapporté : ${hwLevelToString(hwLevel)}")
     
     val impliedFull = has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR)
             && has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_POST_PROCESSING)
             && has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW)
             && has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_BURST_CAPTURE)
-    Log.d(TAG, "    Implied FULL-level from caps: $impliedFull")
+    Log.d(TAG, "    Niveau FULL implicite d'après les caps : $impliedFull")
     
-    // UI gating: show/hide entire screens based on caps
-    Log.d(TAG, "  UI feature gating recommendations:")
-    Log.d(TAG, "    Manual ISO/SS button: ${has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR)}")
-    Log.d(TAG, "    Manual WB/tonemap:   ${has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_POST_PROCESSING)}")
-    Log.d(TAG, "    RAW photo format:    ${has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW)}")
-    Log.d(TAG, "    Portrait (depth):    ${has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_DEPTH_OUTPUT)}")
-    Log.d(TAG, "    Burst mode:          ${has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_BURST_CAPTURE)}")
-    Log.d(TAG, "    Slow-mo 120+ fps:    ${has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_CONSTRAINED_HIGH_SPEED_VIDEO)}")
-    Log.d(TAG, "    Multi-camera zoom:   ${has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_LOGICAL_MULTI_CAMERA)}")
+    // Gating UI : afficher/masquer des écrans entiers selon les caps
+    Log.d(TAG, "  Recommandations pour le feature gating de l'UI :")
+    Log.d(TAG, "    Bouton ISO/Obturation manuel : ${has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR)}")
+    Log.d(TAG, "    WB/tonemap manuel :           ${has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_POST_PROCESSING)}")
+    Log.d(TAG, "    Format photo RAW :            ${has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW)}")
+    Log.d(TAG, "    Portrait (profondeur) :       ${has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_DEPTH_OUTPUT)}")
+    Log.d(TAG, "    Mode rafale :                 ${has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_BURST_CAPTURE)}")
+    Log.d(TAG, "    Ralenti 120+ fps :            ${has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_CONSTRAINED_HIGH_SPEED_VIDEO)}")
+    Log.d(TAG, "    Zoom multi-caméra :           ${has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_LOGICAL_MULTI_CAMERA)}")
 } ?: run {
-    Log.e(TAG, "Capability list missing — FATAL. Cannot gate features.")
+    Log.e(TAG, "Liste des capacités manquante — FATAL. Impossible de restreindre les fonctionnalités.")
 }
 
 private fun hwLevelToString(level: Int?): String = when (level) {
@@ -1600,37 +1600,37 @@ private fun hwLevelToString(level: Int?): String = when (level) {
     CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL -> "FULL"
     CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_3 -> "LEVEL_3"
     CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL -> "EXTERNAL"
-    else -> "UNKNOWN($level)"
+    else -> "INCONNU($level)"
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Comment l'inspecter avec Android Camera Parameters ?**
 
-Navigate to **Overview / Hardware Level**. The capability list is the second card on this screen, rendered as a grid of on/off switches (green = supported, gray = unsupported) with a short name and the integer flag value in parentheses. Tapping any capability opens an info dialog explaining exactly which UI screens in the app are gated on that flag, with screenshots of those screens appearing/disappearing. This is the canonical screen in the companion app because every other screen's visibility flows from this card. The hardware-level card sits directly above it, showing the relationship: the "Full implies" checklist shows which flags are expected for each hardware bucket, highlighting any mismatches (e.g., a LIMITED device that happens to have FULL-level capabilities flagged).
+Naviguez vers **Overview / Hardware Level**. La liste des capacités est la deuxième carte sur cet écran, rendue sous forme d'une grille de commutateurs on/off (vert = supporté, gris = non supporté) avec un nom court et la valeur entière du drapeau entre parenthèses. Appuyer sur n'importe quelle capacité ouvre une boîte de dialogue d'information expliquant exactement quels écrans d'interface utilisateur de l'application sont restreints par ce drapeau, avec des captures d'écran de ces écrans apparaissant/disparaissant. C'est l'écran canonique de l'application compagnon car la visibilité de tous les autres écrans découle de cette carte. La carte du niveau matériel se trouve directement au-dessus, montrant la relation : la liste de contrôle "Full implique" montre quels drapeaux sont attendus pour chaque panier de matériel, mettant en évidence d'éventuelles incohérences (ex : un appareil LIMITED qui possède des capacités de niveau FULL).
 
-**6. Common pitfalls**
+**6. Pièges courants**
 
-Checking hardware level instead of capabilities. The anti-pattern: `if (hwLevel == FULL) { showManualControls() }`. Problem: roughly 25% of 2021–2024 LIMITED devices (e.g. Samsung A53, A54, Xiaomi Redmi Note 12 Pro, Motorola Edge 30 Neo) ship with MANUAL_SENSOR even though their hardware level is LIMITED. The anti-pattern hides manual ISO on those devices for no reason — users with capable mid-range phones get gimped features. Correct gating is *always* capability-based: `if (caps.contains(MANUAL_SENSOR)) { showManualControls() }`. Hardware level is useful for logging only, not for feature gating.
+Vérifier le niveau matériel au lieu des capacités. L'anti-pattern : `if (hwLevel == FULL) { showManualControls() }`. Problème : environ 25 % des appareils LIMITED de 2021–2024 (ex : Samsung A53, A54, Xiaomi Redmi Note 12 Pro, Motorola Edge 30 Neo) sont livrés avec MANUAL_SENSOR même si leur niveau matériel est LIMITED. L'anti-pattern masque les ISO manuels sur ces appareils sans raison — les utilisateurs ayant des téléphones de milieu de gamme performants se retrouvent avec des fonctionnalités bridées. Le gating correct est **toujours** basé sur les capacités : `if (caps.contains(MANUAL_SENSOR)) { showManualControls() }`. Le niveau matériel n'est utile que pour la journalisation (logging), pas pour la restriction de fonctionnalités.
 
-A second pitfall: capabilities array grows with Android version. On Android 13 a new flag `ULTRA_HIGH_RESOLUTION_SENSOR` was added. If your app is compiled with targetSdk=33 and you check `caps.contains(ULTRA_HIGH_RESOLUTION_SENSOR)` on a device running Android 11, the flag simply isn't in the array (it was not defined yet). The `.contains()` call correctly returns false — no crash. But if you use a `when` statement with a full enumeration without an `else` branch, the compiler does not warn you. Always include an else branch for unknown future capability flags.
+Un deuxième piège : le tableau des capacités s'agrandit avec la version d'Android. Sous Android 13, un nouveau drapeau `ULTRA_HIGH_RESOLUTION_SENSOR` a été ajouté. Si votre application est compilée avec targetSdk=33 et que vous vérifiez `caps.contains(ULTRA_HIGH_RESOLUTION_SENSOR)` sur un appareil sous Android 11, le drapeau n'est tout simplement pas dans le tableau (il n'était pas encore défini). L'appel `.contains()` renvoie correctement false — pas de crash. Mais si vous utilisez une instruction `when` avec une énumération complète sans branche `else`, le compilateur ne vous avertira pas. Incluez toujours une branche `else` pour les futurs drapeaux de capacités inconnus.
 
 ---
 
 ### REQUEST_PARTIAL_RESULT_COUNT
 
-**1. What is it?**
+**1. Qu'est-ce que c'est ?**
 
-`REQUEST_PARTIAL_RESULT_COUNT` is a single `Int` describing how many *partial* `CaptureResult` callbacks the HAL fires per frame, in addition to the final `TotalCaptureResult` at frame-end. A value of `1` means no partials — only the final total result is delivered. A value greater than 1 (typical values: 4, 5, 6, or 8 on FULL devices) means `onCaptureProgressed()` is fired N-1 times with progressively more fields populated as the ISP hardware completes each pipeline stage. The fields arrive in a fixed order matching the HAL3 pipeline: AE state + sensitivity land in partial 1 (read from sensor timing registers early), AF state + focus distances land in partial 3–4 (after lens converges), AWB state + color correction gains land last in partial 5, and everything else arrives together in the TotalCaptureResult.
+`REQUEST_PARTIAL_RESULT_COUNT` est un simple `Int` décrivant combien de rappels de `CaptureResult` *partiels* le HAL déclenche par image, en plus du `TotalCaptureResult` final à la fin de l'image. Une valeur de `1` signifie aucun résultat partiel — seul le résultat total final est délivré. Une valeur supérieure à 1 (valeurs typiques : 4, 5, 6 ou 8 sur les appareils FULL) signifie que `onCaptureProgressed()` est déclenché N-1 fois avec progressivement plus de champs renseignés au fur et à mesure que le matériel de l'ISP termine chaque étage du pipeline. Les champs arrivent dans un ordre fixe correspondant au pipeline HAL3 : l'état AE + la sensibilité arrivent dans le partiel 1 (lus tôt dans les registres de timing du capteur), l'état AF + les distances de mise au point arrivent dans les partiels 3-4 (après convergence de l'objectif), l'état AWB + les gains de correction des couleurs arrivent en dernier dans le partiel 5, et tout le reste arrive ensemble dans le TotalCaptureResult.
 
-**2. Why does it exist?**
+**2. Pourquoi cela existe-t-il ?**
 
-Low-latency responsiveness. A full-resolution still capture frame on a 50MP sensor takes 40–80 ms end-to-end. If the AE algorithm decides it needs to increase ISO by +2 stops to maintain exposure target, that decision is known after 10 ms (partial 1) but applications without partials only learn it 30–70 ms later when the full result arrives. That 60 ms lag makes manual UI sliders feel "sticky." Partials allow UI-heavy applications (manual camera, cinematography monitor viewfinder) to update AE status indicators, focus peaking overlays, and AWB temperature readouts much earlier than the frame-final callback.
+Réactivité à faible latence. Une image de capture fixe en pleine résolution sur un capteur de 50 MP prend 40 à 80 ms de bout en bout. Si l'algorithme AE décide qu'il doit augmenter l'ISO de +2 stops pour maintenir la cible d'exposition, cette décision est connue après 10 ms (partiel 1) mais les applications sans partiels ne l'apprennent que 30 à 70 ms plus tard lorsque le résultat complet arrive. Ce décalage de 60 ms rend les curseurs d'interface manuelle "collants". Les partiels permettent aux applications lourdes en UI (caméra manuelle, viseur de moniteur de cinématographie) de mettre à jour les indicateurs d'état AE, les superpositions de focus peaking et les lectures de température AWB beaucoup plus tôt que le rappel de fin d'image.
 
-**3. Which devices support it?**
+**3. Quels appareils le supportent ?**
 
-The key exists on all devices. Values of 1 (no partials) are typical on LEGACY and ~50% of LIMITED devices. FULL hardware level requires at least N ≥ 4 per CDD. LEVEL_3 devices typically offer N = 8 or more with more granular stage reporting. The CDD guarantees that the number of partial results returned per frame is *exactly* N-1, followed by one TotalCaptureResult — never a different count.
+La clé existe sur tous les appareils. Des valeurs de 1 (pas de partiels) sont typiques sur les appareils LEGACY et environ 50 % des LIMITED. Le niveau matériel FULL requiert au moins N ≥ 4 par le CDD. Les appareils LEVEL_3 offrent généralement N = 8 ou plus avec un rapport d'étape plus granulaire. Le CDD garantit que le nombre de résultats partiels renvoyés par image est **exactement** N-1, suivis d'un TotalCaptureResult — jamais un compte différent.
 
-**4. How do I query it?**
+**4. Comment l'interroger ?**
 
 ```kotlin
 val partialCount: Int? = characteristics.get(
@@ -1642,66 +1642,66 @@ partialCount?.let { count ->
     val numPartialCallbacks = count - 1
     when {
         count <= 1 -> {
-            Log.w(TAG, "  No partial results available.")
-            Log.w(TAG, "  All metadata available ONLY in TotalCaptureResult.")
-            Log.w(TAG, "  UI implications:")
-            Log.w(TAG, "    - AE state indicator lags by full frame latency (40-80ms)")
-            Log.w(TAG, "    - Focus peaking overlay updates only after frame done")
-            Log.w(TAG, "    - ISO/SS readout cannot be faster than capture pipeline")
+            Log.w(TAG, "  Aucun résultat partiel disponible.")
+            Log.w(TAG, "  Toutes les métadonnées sont disponibles UNIQUEMENT dans TotalCaptureResult.")
+            Log.w(TAG, "  Implications pour l'UI :")
+            Log.w(TAG, "    - L'indicateur d'état AE accuse un retard de latence d'une image complète (40-80ms)")
+            Log.w(TAG, "    - La superposition du focus peaking ne se met à jour qu'après la fin de l'image")
+            Log.w(TAG, "    - La lecture ISO/SS ne peut pas être plus rapide que le pipeline de capture")
         }
         count <= 3 -> {
-            Log.d(TAG, "  Minimal partials: $numPartialCallbacks partial callbacks per frame")
-            Log.d(TAG, "  AE state typically available mid-pipeline (partial 1-2)")
+            Log.d(TAG, "  Partiels minimaux : $numPartialCallbacks rappels partiels par image")
+            Log.d(TAG, "  L'état AE est typiquement disponible à mi-pipeline (partiel 1-2)")
         }
         else -> {
-            Log.d(TAG, "  Rich partials: $numPartialCallbacks partial callbacks per frame")
-            Log.d(TAG, "  Typical arrival order (device-specific):")
-            Log.d(TAG, "    Partial 1: SENSOR_SENSITIVITY, SENSOR_EXPOSURE_TIME, CONTROL_AE_STATE")
-            Log.d(TAG, "    Partial 2: LENS_FOCUS_DISTANCE (pre-convergence estimate)")
-            Log.d(TAG, "    Partial 3: CONTROL_AF_STATE, LENS_FOCUS_DISTANCE (final)")
-            Log.d(TAG, "    Partial 4: STATISTICS_FACE_DETECT_MODE, face rectangles")
-            Log.d(TAG, "    Partial 5: CONTROL_AWB_STATE, COLOR_CORRECTION_GAINS")
-            Log.d(TAG, "    TotalCaptureResult: ALL FIELDS + JPEG/YUV bytes")
+            Log.d(TAG, "  Partiels riches : $numPartialCallbacks rappels partiels par image")
+            Log.d(TAG, "  Ordre d'arrivée typique (spécifique à l'appareil) :")
+            Log.d(TAG, "    Partiel 1 : SENSOR_SENSITIVITY, SENSOR_EXPOSURE_TIME, CONTROL_AE_STATE")
+            Log.d(TAG, "    Partiel 2 : LENS_FOCUS_DISTANCE (estimation pré-convergence)")
+            Log.d(TAG, "    Partiel 3 : CONTROL_AF_STATE, LENS_FOCUS_DISTANCE (final)")
+            Log.d(TAG, "    Partiel 4 : STATISTICS_FACE_DETECT_MODE, rectangles de visages")
+            Log.d(TAG, "    Partiel 5 : CONTROL_AWB_STATE, COLOR_CORRECTION_GAINS")
+            Log.d(TAG, "    TotalCaptureResult : TOUS LES CHAMPS + octets JPEG/YUV")
         }
     }
 } ?: run {
-    Log.w(TAG, "Partial result count unavailable — assume = 1 (no partials)")
+    Log.w(TAG, "Nombre de résultats partiels indisponible — assumez = 1 (pas de partiels)")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Comment l'inspecter avec Android Camera Parameters ?**
 
-Go to **Request / Results**. The first card is "Partial Results" with the integer count prominently displayed. A live "per-frame timing" diagram below plots a horizontal timeline for each of the last 8 frames: the left end is capture start, the right end is TotalCaptureResult arrival, and dots in between show each partial callback arrival with its key populated. If count = 1 you see one dot per frame at the far right; if count = 5 you see 4 evenly-spaced dots plus a final total dot. Tapping each dot opens a flyout listing which keys were present in that partial for the selected frame.
+Allez dans **Request / Results**. La première carte est "Partial Results" avec le compte entier affiché en évidence. Un diagramme de "timing par image" en dessous trace une chronologie horizontale pour chacune des 8 dernières images : l'extrémité gauche est le début de la capture, l'extrémité droite est l'arrivée du TotalCaptureResult, et les points entre les deux montrent l'arrivée de chaque rappel partiel avec sa clé renseignée. Si compte = 1, vous voyez un seul point par image à l'extrême droite ; si compte = 5, vous voyez 4 points régulièrement espacés plus un point total final. Appuyer sur chaque point ouvre un menu déroulant listant quelles clés étaient présentes dans ce partiel pour l'image sélectionnée.
 
-**6. Common pitfalls**
+**6. Pièges courants**
 
-Assuming every key is populated in every partial. On a FULL device with count = 5, partial 1 contains AE-related keys only. If you read `CONTROL_AF_STATE` from partial 1, the value will be `null` (the key is not present yet). The correct pattern is always null-safe access per key with fallback: in each `onCaptureProgressed()`, check the keys you need individually and update UI only if they are non-null. The TotalCaptureResult at frame-end always contains every available key, so update UI fields for which you only received partials *again* from the total result. If you only read from partials and never read the total result, some UI fields never populate.
+Supposer que chaque clé est renseignée dans chaque partiel. Sur un appareil FULL avec compte = 5, le partiel 1 contient uniquement des clés liées à l'AE. Si vous lisez `CONTROL_AF_STATE` depuis le partiel 1, la valeur sera `null` (la clé n'est pas encore présente). Le modèle correct est toujours un accès sécurisé par clé avec repli : dans chaque `onCaptureProgressed()`, vérifiez individuellement les clés dont vous avez besoin et ne mettez à jour l'UI que si elles ne sont pas nulles. Le TotalCaptureResult à la fin de l'image contient toujours toutes les clés disponibles, donc mettez à jour les champs d'UI pour lesquels vous n'avez reçu que des partiels **à nouveau** à partir du résultat total. Si vous ne lisez qu'à partir des partiels et ne lisez jamais le résultat total, certains champs d'UI ne se rempliront jamais.
 
-Second pitfall: assuming the partial N has the same keys across devices. A Pixel 8 populates AF state in partial 3, but a Samsung S24 populates it in partial 2. The CDD only guarantees "progressively more fields per partial" — not a fixed ordering. Code that switches on partial index `if (partial == 3) updateAfIndicator()` will fail on devices with a different schedule. Correct code is key-based, not index-based: `result[CaptureResult.CONTROL_AF_STATE]?.let { updateAfIndicator(it) }`.
+Deuxième piège : supposer que le partiel N possède les mêmes clés sur tous les appareils. Un Pixel 8 renseigne l'état AF dans le partiel 3, mais un Samsung S24 le renseigne dans le partiel 2. Le CDD garantit uniquement "progressivement plus de champs par partiel" — pas un ordre fixe. Le code qui s'appuie sur l'index du partiel `if (partial == 3) updateAfIndicator()` échouera sur les appareils ayant un calendrier différent. Le code correct est basé sur les clés, pas sur l'index : `result[CaptureResult.CONTROL_AF_STATE]?.let { updateAfIndicator(it) }`.
 
 ---
 
 ### REQUEST_MAX_NUM_OUTPUT_STREAMS
 
-**1. What is it?**
+**1. Qu'est-ce que c'est ?**
 
-`REQUEST_MAX_NUM_OUTPUT_STREAMS` is an `IntArray` with exactly **3 elements** describing the maximum number of output streams (surfaces/ImageReaders) of each *stall class* that can be created simultaneously in one `CameraCaptureSession`. Stall classes are:
+`REQUEST_MAX_NUM_OUTPUT_STREAMS` est un `IntArray` avec exactement **3 éléments** décrivant le nombre maximum de flux de sortie (surfaces/ImageReaders) de chaque *classe d'attente (stall class)* pouvant être créés simultanément dans une `CameraCaptureSession`. Les classes d'attente sont :
 
-- **Index 0 (RAW)** — maximum number of RAW-SENSOR-format output streams (RAW10/12/16 ImageReaders). These consume extreme ISP/CPHY bus bandwidth; the limit is typically 1 on RAW-capable devices, 0 on devices without RAW capability.
-- **Index 1 (Non-stalling processables)** — maximum number of non-stalling, processable streams (YUV_420_888 ImageReader, PRIVATE-format surfaces like SurfaceTexture/MediaRecorder/MediaCodec, RenderScript Allocations). These are typically limited to 3–5 concurrent surfaces.
-- **Index 2 (Stalling processables)** — maximum number of *stalling* processable streams (JPEG ImageReader, HEIC/JPEG_R output). Stalling formats are encoded in hardware and require a dedicated encoder pipeline block; the limit is typically 1 for JPEG alone, or 2 if you share encoder capacity across JPEG + YUV.
+- **Index 0 (RAW)** — nombre maximum de flux de sortie au format RAW-SENSOR (ImageReaders RAW10/12/16). Ceux-ci consomment une bande passante extrême du bus ISP/CPHY ; la limite est typiquement de 1 sur les appareils capables de RAW, 0 sur les appareils sans capacité RAW.
+- **Index 1 (Processables sans attente)** — nombre maximum de flux processables sans attente (ImageReader YUV_420_888, surfaces au format PRIVATE comme SurfaceTexture/MediaRecorder/MediaCodec, Allocations RenderScript). Ceux-ci sont généralement limités à 3–5 surfaces simultanées.
+- **Index 2 (Processables avec attente)** — nombre maximum de flux processables *avec attente* (ImageReader JPEG, sortie HEIC/JPEG_R). Les formats avec attente sont encodés matériellement et nécessitent un bloc de pipeline d'encodeur dédié ; la limite est typiquement de 1 pour le JPEG seul, ou 2 si vous partagez la capacité de l'encodeur entre JPEG + YUV.
 
-If you create more surfaces than the per-index limit, the `createCaptureSession()` call returns a failure via `onConfigureFailed()`.
+Si vous créez plus de surfaces que la limite par index, l'appel `createCaptureSession()` renvoie un échec via `onConfigureFailed()`.
 
-**2. Why does it exist?**
+**2. Pourquoi cela existe-t-il ?**
 
-Each output stream in a camera session consumes hardware resources: MIPI-DPHY bandwidth, ISP writeback pipeline ports, JPEG encoder queue slots, and DRAM. A single camera session trying to output RAW + 1080p preview + 4K video + 4K JPEG + face-analysis YUV + machine-learning-pipeline YUV simultaneously exceeds the physical bandwidth of the camera bus on all but LEVEL_3 devices. Rather than have each device fail in a different way (sometimes silent corruption, sometimes session failure after 2 minutes), the CDD requires devices to publish explicit per-stall-class limits upfront.
+Chaque flux de sortie dans une session de caméra consomme des ressources matérielles : bande passante MIPI-DPHY, ports de pipeline de réécriture ISP, emplacements de file d'attente de l'encodeur JPEG et DRAM. Une seule session de caméra tentant de sortir simultanément RAW + aperçu 1080p + vidéo 4K + JPEG 4K + YUV d'analyse de visage + YUV de pipeline d'apprentissage automatique dépasserait la bande passante physique du bus de la caméra sur tous les appareils sauf ceux de niveau LEVEL_3. Plutôt que de laisser chaque appareil échouer d'une manière différente (parfois corruption silencieuse, parfois échec de la session après 2 minutes), le CDD exige que les appareils publient à l'avance des limites explicites par classe d'attente.
 
-**3. Which devices support it?**
+**3. Quels appareils le supportent ?**
 
-All valid Camera2 devices. The 3-element-array contract is part of the base Camera2 specification. LEGACY-level devices have tight limits: often `[0, 2, 1]` meaning no RAW, maximum 2 non-stall (preview + YUV analysis), maximum 1 JPEG. FULL devices are typically `[1, 4, 2]` or `[1, 5, 2]`. LEVEL_3 cinema-grade chips go as high as `[2, 10, 3]`.
+Tous les appareils Camera2 valides. Le contrat du tableau à 3 éléments fait partie de la spécification de base de Camera2. Les appareils de niveau LEGACY ont des limites serrées : souvent `[0, 2, 1]`, ce qui signifie pas de RAW, maximum 2 sans attente (aperçu + analyse YUV), maximum 1 JPEG. Les appareils FULL sont typiquement à `[1, 4, 2]` ou `[1, 5, 2]`. Les puces de qualité cinéma LEVEL_3 vont jusqu'à `[2, 10, 3]`.
 
-**4. How do I query it?**
+**4. Comment l'interroger ?**
 
 ```kotlin
 val maxStreams: IntArray? = characteristics.get(
@@ -1709,24 +1709,24 @@ val maxStreams: IntArray? = characteristics.get(
 )
 
 maxStreams?.let { max ->
-    check(max.size == 3) { "Malformed max streams array: size=${max.size}" }
+    check(max.size == 3) { "Tableau de flux max mal formé : taille=${max.size}" }
     
     val (maxRaw, maxProcessNoStall, maxProcessStall) = Triple(max[0], max[1], max[2])
     
     Log.d(TAG, "REQUEST_MAX_NUM_OUTPUT_STREAMS = [RAW=${max[0]}, PROC=${max[1]}, STALL=${max[2]}]")
-    Log.d(TAG, "  RAW streams (RAW_SENSOR ImageReader):      $maxRaw simultaneous max")
-    Log.d(TAG, "  Non-stalling (YUV_420/SurfaceTexture/etc): $maxProcessNoStall simultaneous max")
-    Log.d(TAG, "  Stalling (JPEG/HEIC ImageReader):          $maxProcessStall simultaneous max")
+    Log.d(TAG, "  Flux RAW (ImageReader RAW_SENSOR) :      $maxRaw simultanés max")
+    Log.d(TAG, "  Sans attente (YUV_420/SurfaceTexture/etc) : $maxProcessNoStall simultanés max")
+    Log.d(TAG, "  Avec attente (ImageReader JPEG/HEIC) :          $maxProcessStall simultanés max")
     
     data class StreamPlan(
         val label: String, val format: Int, val stallClass: Int
     )
     
     val plannedStreams = mutableListOf(
-        StreamPlan("Preview SurfaceTexture", -1, 1),
-        StreamPlan("4K video MediaCodec", -1, 1),
-        StreamPlan("Full-res JPEG ImageReader", ImageFormat.JPEG, 2),
-        StreamPlan("ML analysis YUV ImageReader", ImageFormat.YUV_420_888, 1)
+        StreamPlan("Aperçu SurfaceTexture", -1, 1),
+        StreamPlan("Vidéo 4K MediaCodec", -1, 1),
+        StreamPlan("JPEG pleine rés. ImageReader", ImageFormat.JPEG, 2),
+        StreamPlan("Analyse ML ImageReader YUV", ImageFormat.YUV_420_888, 1)
     )
     
     val counts = plannedStreams.groupingBy { it.stallClass }.eachCount()
@@ -1734,53 +1734,53 @@ maxStreams?.let { max ->
     val procNeeded = counts[1] ?: 0
     val stallNeeded = counts[2] ?: 0
     
-    Log.d(TAG, "  Proposed session stream count:")
-    Log.d(TAG, "    RAW: needed=$rawNeeded / max=$maxRaw → ${if (rawNeeded <= maxRaw) "✓ OK" else "✗ OVER LIMIT"}")
-    Log.d(TAG, "    PROC: needed=$procNeeded / max=$maxProcessNoStall → ${if (procNeeded <= maxProcessNoStall) "✓ OK" else "✗ OVER LIMIT"}")
-    Log.d(TAG, "    STALL: needed=$stallNeeded / max=$maxProcessStall → ${if (stallNeeded <= maxProcessStall) "✓ OK" else "✗ OVER LIMIT"}")
+    Log.d(TAG, "  Nombre de flux de session proposé :")
+    Log.d(TAG, "    RAW : besoin=$rawNeeded / max=$maxRaw → ${if (rawNeeded <= maxRaw) "✓ OK" else "✗ LIMITE DÉPASSÉE"}")
+    Log.d(TAG, "    PROC : besoin=$procNeeded / max=$maxProcessNoStall → ${if (procNeeded <= maxProcessNoStall) "✓ OK" else "✗ LIMITE DÉPASSÉE"}")
+    Log.d(TAG, "    STALL : besoin=$stallNeeded / max=$maxProcessStall → ${if (stallNeeded <= maxProcessStall) "✓ OK" else "✗ LIMITE DÉPASSÉE"}")
     
     val sessionValid = rawNeeded <= maxRaw
             && procNeeded <= maxProcessNoStall
             && stallNeeded <= maxProcessStall
     
     if (!sessionValid) {
-        Log.w(TAG, "  SESSION WOULD FAIL CONFIGURATION. Reduce stream count.")
-        Log.w(TAG, "  Common fix: combine ML analysis + preview single YUV + GPU readback.")
+        Log.w(TAG, "  LA CONFIGURATION DE LA SESSION ÉCHOUERAIT. Réduisez le nombre de flux.")
+        Log.w(TAG, "  Solution courante : combiner analyse ML + aperçu sur un seul YUV + lecture GPU.")
     }
 } ?: run {
-    Log.w(TAG, "Max streams array unavailable — assume tight limits [0,2,1] (LEGACY baseline)")
+    Log.w(TAG, "Tableau de flux max indisponible — assumez des limites serrées [0,2,1] (base LEGACY)")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Comment l'inspecter avec Android Camera Parameters ?**
 
-Navigate to **Streams / Limits**. The first card renders the three-element array as three large number tiles: RAW (red), NON-STALL (green), STALL (blue). Below the tiles, the app shows a "Session Builder" sandbox where you can tap add buttons to add surfaces to a hypothetical session (preview, video, JPEG, YUV analysis, RAW, face detection) and see in real time whether each stall class count exceeds the limit. A session that exceeds the limit gets a red banner and the OK/FAIL status is displayed at the bottom. This is the quickest way to prototype a multi-surface session configuration.
+Naviguez vers **Streams / Limits**. La première carte rend le tableau à trois éléments sous forme de trois grandes tuiles numériques : RAW (rouge), NON-STALL (vert), STALL (bleu). Sous les tuiles, l'application affiche un bac à sable "Session Builder" où vous pouvez appuyer sur des boutons d'ajout pour ajouter des surfaces à une session hypothétique (aperçu, vidéo, JPEG, analyse YUV, RAW, détection de visages) et voir en temps réel si le compte de chaque classe d'attente dépasse la limite. Une session qui dépasse la limite reçoit une bannière rouge et l'état OK/ÉCHEC est affiché en bas. C'est le moyen le plus rapide de prototyper une configuration de session multi-surfaces.
 
-**6. Common pitfalls**
+**6. Pièges courants**
 
-Adding a second JPEG `ImageReader`. Many developers add one JPEG reader for thumbnails at 1080p and a second JPEG reader for full-res at 48MP. But `JPEG` is a stalling format with a typical limit of 1. Session creation fails on 60% of devices. Correct pattern: use a *single* full-res JPEG `ImageReader` and generate thumbnails post-capture by decoding the full JPEG to a 1080×1080 thumbnail via `BitmapFactory` with `inSampleSize`. The disk/CPU cost of re-encoding a thumbnail is negligible compared to the cost of a second encoder pipeline.
+Ajouter un deuxième `ImageReader` JPEG. De nombreux développeurs ajoutent un lecteur JPEG pour les vignettes en 1080p et un deuxième lecteur JPEG pour la pleine résolution en 48 MP. Mais le `JPEG` est un format avec attente (stalling) avec une limite typique de 1. La création de la session échoue sur 60 % des appareils. Modèle correct : utilisez un **unique** `ImageReader` JPEG pleine résolution et générez des vignettes après la capture en décodant le JPEG complet en une vignette 1080×1080 via `BitmapFactory` avec `inSampleSize`. Le coût disque/CPU du ré-encodage d'une vignette est négligeable par rapport au coût d'un second pipeline d'encodeur.
 
-Second pitfall: confusing stall classes. A `MediaRecorder` surface is non-stalling (index 1), even though `MediaRecorder` internally produces a stalling H.264/H.265 output. The stall-class taxonomy counts the *camera-facing* side of the surface, not the downstream consumer. Camera-facing `MediaRecorder` is PRIVATE-format and non-stalling; only `JPEG`/`HEIC` `ImageReaders` consume the stalling encoder slot. When building your stream-plan accounting, treat `MediaRecorder`, `MediaCodec`, `SurfaceTexture`, and `SurfaceHolder` all as class 1. Treat only `ImageFormat.JPEG`, `JPEG_R`, `HEIC` ImageReaders as class 2.
+Deuxième piège : confondre les classes d'attente. Une surface `MediaRecorder` est sans attente (index 1), même si `MediaRecorder` produit en interne une sortie H.264/H.265 avec attente. La taxonomie des classes d'attente compte le côté **faisant face à la caméra** de la surface, et non le consommateur en aval. Le `MediaRecorder` faisant face à la caméra est au format PRIVATE et sans attente ; seuls les `ImageReaders` `JPEG`/`HEIC` consomment l'emplacement de l'encodeur avec attente. Lors de l'élaboration de votre plan de flux, traitez `MediaRecorder`, `MediaCodec`, `SurfaceTexture` et `SurfaceHolder` tous comme étant de classe 1. Traitez uniquement les ImageReaders `ImageFormat.JPEG`, `JPEG_R`, `HEIC` comme étant de classe 2.
 
 ---
 
-## Flash Category
+## Catégorie Flash (Flash)
 
 ### FLASH_INFO_AVAILABLE
 
-**1. What is it?**
+**1. Qu'est-ce que c'est ?**
 
-`FLASH_INFO_AVAILABLE` is a single `Boolean` indicating whether the camera module has a flash LED (torch/strobe) physically soldered to it. `true` = flash hardware exists; `false` = no flash hardware. This is the canonical boolean for whether the app may try to use torch mode, flash fire, or any flash-related CaptureRequest keys. On multi-camera logical devices, each physical camera can independently have or lack a flash: the ultra-wide rear camera often has no flash, the main wide-angle does have one, and the telephoto sometimes shares the wide-angle's flash via a light-guide.
+`FLASH_INFO_AVAILABLE` est un simple `Boolean` indiquant si le module caméra possède une LED de flash (torche/stroboscope) physiquement soudée sur lui. `true` = le matériel de flash existe ; `false` = pas de matériel de flash. C'est le booléen canonique pour savoir si l'application peut essayer d'utiliser le mode torche, le déclenchement du flash ou toute clé de CaptureRequest liée au flash. Sur les appareils logiques multi-caméras, chaque caméra physique peut indépendamment avoir ou non un flash : la caméra arrière ultra-grand-angle n'a souvent pas de flash, la grand-angle principale en a un, et le téléobjectif partage parfois le flash de la grand-angle via un guide de lumière.
 
-**2. Why does it exist?**
+**2. Pourquoi cela existe-t-il ?**
 
-Without this boolean, every call to `CaptureRequest.FLASH_MODE = TORCH` or `FLASH_MODE = SINGLE` would need to be wrapped in a try/catch for `CameraAccessException`. Since flash is absent on approximately 25% of camera IDs (selfie cameras, ultra-wide rear cameras, USB webcams, foldable under-display cameras), a static boolean is vastly cheaper and safer than a dynamic exception on every attempted call.
+Sans ce booléen, chaque appel à `CaptureRequest.FLASH_MODE = TORCH` ou `FLASH_MODE = SINGLE` devrait être enveloppé dans un bloc try/catch pour `CameraAccessException`. Comme le flash est absent sur environ 25 % des ID de caméra (caméras selfie, caméras arrière ultra-grand-angle, webcams USB, caméras sous l'écran des pliables), un booléen statique est beaucoup moins coûteux et plus sûr qu'une exception dynamique à chaque tentative d'appel.
 
-**3. Which devices support it?**
+**3. Quels appareils le supportent ?**
 
-All camera IDs on every device report this boolean. No capability flags required. LEGACY, LIMITED, FULL, LEVEL_3, and EXTERNAL devices all have the key. USB cameras typically return `false` unless the camera module includes a built-in LED ring.
+Tous les ID de caméra sur chaque appareil rapportent ce booléen. Aucun indicateur de capacité requis. Les appareils LEGACY, LIMITED, FULL, LEVEL_3 et EXTERNAL possèdent tous cette clé. Les caméras USB renvoient généralement `false`, sauf si le module caméra inclut un anneau LED intégré.
 
-**4. How do I query it?**
+**4. Comment l'interroger ?**
 
 ```kotlin
 val flashAvailable: Boolean? = characteristics.get(
@@ -1799,52 +1799,52 @@ if (hasFlash) {
             CameraCharacteristics.FLASH_MODE_OFF -> "OFF"
             CameraCharacteristics.FLASH_MODE_SINGLE -> "SINGLE"
             CameraCharacteristics.FLASH_MODE_TORCH -> "TORCH"
-            else -> "UNKNOWN($m)"
+            else -> "INCONNU($m)"
         }
     }
-    Log.d(TAG, "  Flash modes available: [${modeNames.joinToString(", ")}]")
-    Log.d(TAG, "  UI: Show flash-mode icon + torch toggle.")
+    Log.d(TAG, "  Modes flash disponibles : [${modeNames.joinToString(", ")}]")
+    Log.d(TAG, "  UI : Afficher l'icône de mode flash + le bouton torche.")
     
     val maxLevel = characteristics.get(
         CameraCharacteristics.FLASH_INFO_STRENGTH_MAXIMUM_LEVEL
     ) ?: 0
-    Log.d(TAG, "  Variable torch strength levels (0=ON/OFF only): $maxLevel")
+    Log.d(TAG, "  Niveaux de puissance torche variables (0=ON/OFF uniquement) : $maxLevel")
 } else {
-    Log.w(TAG, "  No flash hardware on this camera ID.")
-    Log.w(TAG, "  UI: HIDE flash-mode selector, HIDE torch button entirely.")
-    Log.w(TAG, "  Any call to set FLASH_MODE will throw CameraAccessException.")
+    Log.w(TAG, "  Pas de matériel flash sur cet ID de caméra.")
+    Log.w(TAG, "  UI : MASQUER le sélecteur de mode flash, MASQUER entièrement le bouton torche.")
+    Log.w(TAG, "  Tout appel pour définir FLASH_MODE lèvera une CameraAccessException.")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Comment l'inspecter avec Android Camera Parameters ?**
 
-Navigate to **Flash / Info**. The top card is "Flash Available" with a simple boolean badge: green "PRESENT" when true, red "ABSENT" when false. Below, the **Flash / Control** tab is enabled only when the boolean is true, showing a live TORCH toggle button and flash mode selector buttons. If `FLASH_INFO_AVAILABLE = false`, the Control tab shows a disabled state and an explanation card: "No flash LED — torch is not available on this camera."
+Naviguez vers **Flash / Info**. La carte du haut est "Flash Available" avec un simple badge booléen : vert "PRÉSENT" quand true, rouge "ABSENT" quand false. En dessous, l'onglet **Flash / Control** n'est activé que lorsque le booléen est true, affichant un bouton de bascule TORCHE en direct et des boutons de sélection de mode flash. Si `FLASH_INFO_AVAILABLE = false`, l'onglet Control affiche un état désactivé et une carte d'explication : "Pas de LED de flash — la torche n'est pas disponible sur cette caméra."
 
-**6. Common pitfalls**
+**6. Pièges courants**
 
-Number one: null check + global true assumption. Developers write `val hasFlash = characteristics.get(FLASH_INFO_AVAILABLE)` and forget ` ?: false`, so the variable is `Boolean?` instead of `Boolean`. Passing this nullable to `if (hasFlash)` works in Kotlin (auto-cast), but `if (!hasFlash)` is a compile error or, worse, on a `null` value the Elvis operator fallback in your UI code is skipped and the torch button is shown. Always `val hasFlash = characteristics.get(...) == true` or `val hasFlash = characteristics.get(...) ?: false`. The first pattern (exact `== true`) is safer because it rejects both null and false uniformly.
+Numéro un : vérification de nullité + hypothèse de true global. Les développeurs écrivent `val hasFlash = characteristics.get(FLASH_INFO_AVAILABLE)` et oublient le ` ?: false`, la variable est donc `Boolean?` au lieu de `Boolean`. Passer cette valeur nullable à `if (hasFlash)` fonctionne en Kotlin (auto-cast), mais `if (!hasFlash)` provoque une erreur de compilation ou, pire, sur une valeur `null`, le repli de l'opérateur Elvis dans votre code d'UI est ignoré et le bouton torche est affiché. Utilisez toujours `val hasFlash = characteristics.get(...) == true` ou `val hasFlash = characteristics.get(...) ?: false`. Le premier modèle (`== true` exact) est plus sûr car il rejette uniformément null et false.
 
-Second pitfall: selfie camera + torch toggle. The user switches to the front camera and the app still shows the torch button. Tapping it throws `CameraAccessException: setTorchMode failed: The camera device has no flash unit`. Always re-query `FLASH_INFO_AVAILABLE` every time the user switches cameras — do not cache the value from the previous back-facing camera. Every camera ID has its own independent flash hardware. The correct lifecycle callback is: inside `openCamera(cameraId)` → query characteristics → set flash button visibility based on the new camera's boolean, before the user can interact with the viewfinder.
+Deuxième piège : caméra selfie + bouton torche. L'utilisateur passe à la caméra avant et l'application affiche toujours le bouton torche. Appuyer dessus lève une `CameraAccessException: setTorchMode failed: The camera device has no flash unit`. Ré-interrogez toujours `FLASH_INFO_AVAILABLE` chaque fois que l'utilisateur change de caméra — ne mettez pas en cache la valeur de la caméra arrière précédente. Chaque ID de caméra possède son propre matériel de flash indépendant. Le rappel de cycle de vie correct est : à l'intérieur de `openCamera(cameraId)` → interroger les caractéristiques → définir la visibilité du bouton flash en fonction du booléen de la nouvelle caméra, avant que l'utilisateur ne puisse interagir avec le viseur.
 
 ---
 
 ### FLASH_INFO_STRENGTH_MAXIMUM_LEVEL
 
-**1. What is it?**
+**1. Qu'est-ce que c'est ?**
 
-`FLASH_INFO_STRENGTH_MAXIMUM_LEVEL` is a single `Int` describing the maximum brightness level for linear torch and flash control, introduced in Android 13 (API level 33). A value of `0` means only ON/OFF control is supported (binary torch via `FLASH_MODE_TORCH` / `FLASH_MODE_OFF`). A value of `10` means 10 linear brightness steps (0 = off, 1 = 10% brightness, …, 10 = 100% brightness). A value of `100` means 100 linear steps (1% per step). The corresponding request key in CaptureRequest is `FLASH_STRENGTH_DEFAULT_LEVEL` which accepts any integer from 0 to MAX.
+`FLASH_INFO_STRENGTH_MAXIMUM_LEVEL` est un simple `Int` décrivant le niveau de luminosité maximum pour le contrôle linéaire de la torche et du flash, introduit sous Android 13 (niveau d'API 33). Une valeur de `0` signifie que seul le contrôle ON/OFF est supporté (torche binaire via `FLASH_MODE_TORCH` / `FLASH_MODE_OFF`). Une valeur de `10` signifie 10 étapes de luminosité linéaire (0 = éteint, 1 = 10 % de luminosité, ..., 10 = 100 % de luminosité). La clé de requête correspondante dans CaptureRequest est `FLASH_STRENGTH_DEFAULT_LEVEL` qui accepte n'importe quel entier de 0 à MAX.
 
-The corresponding request key in CaptureResult is `FLASH_STATE` combined with `FLASH_STRENGTH_LEVEL` per frame for monitoring.
+La clé de requête correspondante dans CaptureResult est `FLASH_STATE` combiné avec `FLASH_STRENGTH_LEVEL` par image pour la surveillance.
 
-**2. Why does it exist?**
+**2. Pourquoi cela existe-t-il ?**
 
-Previous Android versions offered only binary flash control. Users wanted a torch dimmer for close-up photography (overexposed at 100% power) and for video recording (adjustable fill light). OEMs had implemented variable-torch functionality in their stock camera apps via vendor-private metadata keys for years. Android 13 standardized the API so the same slider works across Pixel, Samsung, Xiaomi, and OnePlus.
+Les versions précédentes d'Android n'offraient qu'un contrôle binaire du flash. Les utilisateurs voulaient un variateur de torche pour la photographie rapprochée (surexposée à 100 % de puissance) et pour l'enregistrement vidéo (lumière d'appoint réglable). Les OEM avaient implémenté la fonctionnalité de torche variable dans leurs applications de caméra d'origine via des clés de métadonnées privées depuis des années. Android 13 a standardisé l'API afin que le même curseur fonctionne sur Pixel, Samsung, Xiaomi et OnePlus.
 
-**3. Which devices support it?**
+**3. Quels appareils le supportent ?**
 
-All devices running Android 13 or later that have `FLASH_INFO_AVAILABLE = true`. Devices *with* flash but running Android 12 or earlier report the key but the value is 0 (no dimmer, only ON/OFF). Not all Android 13 flash-equipped devices have a linear dimmer in hardware: approximately 60% of 2023 devices ship with MAX_LEVEL ≥ 1, the remaining 40% (budget devices) have MAX_LEVEL = 0.
+Tous les appareils fonctionnant sous Android 13 ou version ultérieure et ayant `FLASH_INFO_AVAILABLE = true`. Les appareils *avec* flash mais fonctionnant sous Android 12 ou antérieur rapportent la clé mais la valeur est 0 (pas de variateur, seulement ON/OFF). Tous les appareils équipés d'un flash sous Android 13 n'ont pas de variateur linéaire matériel : environ 60 % des appareils de 2023 sont livrés avec MAX_LEVEL ≥ 1, les 40 % restants (appareils budget) ont MAX_LEVEL = 0.
 
-**4. How do I query it?**
+**4. Comment l'interroger ?**
 
 ```kotlin
 val flashAvailable = characteristics.get(
@@ -1856,7 +1856,7 @@ val maxStrengthLevel: Int? = if (Build.VERSION.SDK_INT >= 33) {
         CameraCharacteristics.FLASH_INFO_STRENGTH_MAXIMUM_LEVEL
     )
 } else {
-    Log.w(TAG, "Device is Android 12 or earlier — variable strength unsupported.")
+    Log.w(TAG, "L'appareil est sous Android 12 ou antérieur — puissance variable non supportée.")
     0
 }
 
@@ -1864,59 +1864,59 @@ Log.d(TAG, "FLASH_INFO_STRENGTH_MAXIMUM_LEVEL = $maxStrengthLevel")
 
 when {
     !flashAvailable -> {
-        Log.w(TAG, "  No flash hardware. Strength irrelevant.")
+        Log.w(TAG, "  Pas de matériel flash. Puissance non pertinente.")
     }
     maxStrengthLevel == null || maxStrengthLevel <= 0 -> {
-        Log.d(TAG, "  Binary torch only: ON/OFF, no dimmer.")
-        Log.d(TAG, "  Use FLASH_MODE_TORCH / FLASH_MODE_OFF for control.")
-        Log.d(TAG, "  UI: Show torch ToggleButton, hide strength slider.")
+        Log.d(TAG, "  Torche binaire uniquement : ON/OFF, pas de variateur.")
+        Log.d(TAG, "  Utilisez FLASH_MODE_TORCH / FLASH_MODE_OFF pour le contrôle.")
+        Log.d(TAG, "  UI : Afficher le ToggleButton torche, masquer le curseur de puissance.")
     }
     else -> {
-        Log.d(TAG, "  Linear torch dimmer: 0 (off) .. $maxStrengthLevel (max)")
+        Log.d(TAG, "  Variateur de torche linéaire : 0 (éteint) .. $maxStrengthLevel (max)")
         val pctPerStep = 100.0 / maxStrengthLevel
-        Log.d(TAG, "  Step granularity: ${"%.1f".format(pctPerStep)}% per step")
-        Log.d(TAG, "  Use CaptureRequest.FLASH_STRENGTH_DEFAULT_LEVEL = 0..$maxStrengthLevel")
-        Log.d(TAG, "  UI: Show torch toggle + SeekBar with ${maxStrengthLevel + 1} notches.")
+        Log.d(TAG, "  Granularité des pas : ${"%.1f".format(pctPerStep)}% par pas")
+        Log.d(TAG, "  Utilisez CaptureRequest.FLASH_STRENGTH_DEFAULT_LEVEL = 0..$maxStrengthLevel")
+        Log.d(TAG, "  UI : Afficher la bascule torche + SeekBar avec ${maxStrengthLevel + 1} crans.")
         
         val commonLevels = (0..100 step 25).mapNotNull { pct ->
             val level = (maxStrengthLevel * pct / 100.0).roundToInt()
             if (level in 0..maxStrengthLevel) level to pct else null
         }
-        Log.d(TAG, "  Common preset levels: " +
+        Log.d(TAG, "  Niveaux préréglés courants : " +
                    commonLevels.joinToString { (l, p) -> "$l=${p}%" })
     }
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Comment l'inspecter avec Android Camera Parameters ?**
 
-Open **Flash / Control**. The strength level appears as "Max Level" tile at the top of the control card. When the level is > 0, a live `SeekBar` appears below the torch toggle, with labels "0% / 25% / 50% / 75% / 100%" mapped to integer values 0, max/4, max/2, 3max/4, max. Dragging the slider instantly changes torch brightness in the real world, so you can verify the dimming is actually linear (non-linear drivers produce jumps in brightness rather than a smooth ramp). If level is 0 the slider is hidden and only the ON/OFF toggle is shown.
+Ouvrez **Flash / Control**. Le niveau de puissance apparaît sous la forme d'une tuile "Max Level" en haut de la carte de contrôle. Lorsque le niveau est > 0, une `SeekBar` en direct apparaît sous la bascule torche, avec les étiquettes "0% / 25% / 50% / 75% / 100%" mappées sur les valeurs entières 0, max/4, max/2, 3max/4, max. Faire glisser le curseur change instantanément la luminosité de la torche dans le monde réel, ce qui vous permet de vérifier si la gradation est réellement linéaire (les pilotes non linéaires produisent des sauts de luminosité plutôt qu'une rampe fluide). Si le niveau est 0, le curseur est masqué et seule la bascule ON/OFF est affichée.
 
-**6. Common pitfalls**
+**6. Pièges courants**
 
-Using `FLASH_STRENGTH_DEFAULT_LEVEL` on older Android versions. The key is `@RequiresApi(33)`. If your `minSdk` is 28 or 30, calling `builder.set(FLASH_STRENGTH_DEFAULT_LEVEL, 5)` on Android 12 throws `NoSuchFieldError` at runtime because the key doesn't exist in that SDK's CameraMetadata class. Correct code is guarded with `if (Build.VERSION.SDK_INT >= 33 && maxStrengthLevel > 0) { builder.set(...) }` *and* `characteristics.get(...)` for the key returns non-null. Never assume because you set `targetSdk=34` that all devices support the key.
+Utiliser `FLASH_STRENGTH_DEFAULT_LEVEL` sur d'anciennes versions d'Android. La clé est annotée `@RequiresApi(33)`. Si votre `minSdk` est 28 ou 30, l'appel `builder.set(FLASH_STRENGTH_DEFAULT_LEVEL, 5)` sous Android 12 lève une `NoSuchFieldError` à l'exécution car la clé n'existe pas dans la classe CameraMetadata de ce SDK. Le code correct est protégé par `if (Build.VERSION.SDK_INT >= 33 && maxStrengthLevel > 0) { builder.set(...) }` *et* `characteristics.get(...)` pour la clé renvoie une valeur non nulle. Ne supposez jamais que parce que vous avez défini `targetSdk=34`, tous les appareils supportent la clé.
 
-Second pitfall: non-linear dimming. The CDD describes the levels as "linear perceived brightness" but some budget devices map MAX_LEVEL = 10 onto PWM duty cycles logarithmically: step 1 = 0.1% brightness, step 2 = 0.5%, step 10 = 100%. The user perceives the bottom half of the slider as "no change" and the top half as "sudden jump to full." There is no metadata key describing the brightness curve; the only reliable way to get linear-perceived output is to measure with a light meter on a per-device basis and ship a per-OEM correction curve for known-bad devices, or accept that some OEMs cheat on the linearity contract.
+Deuxième piège : gradation non linéaire. Le CDD décrit les niveaux comme une "luminosité perçue linéaire", mais certains appareils budget mappent MAX_LEVEL = 10 sur des cycles de service PWM de manière logarithmique : étape 1 = 0,1 % de luminosité, étape 2 = 0,5 %, étape 10 = 100 %. L'utilisateur perçoit la moitié inférieure du curseur comme "pas de changement" et la moitié supérieure comme un "saut soudain vers le maximum". Il n'y a pas de clé de métadonnées décrivant la courbe de luminosité ; la seule façon fiable d'obtenir une sortie perçue linéaire est de mesurer avec un luxmètre appareil par appareil et d'intégrer une courbe de correction par OEM pour les appareils connus comme défaillants, ou d'accepter que certains OEM trichent sur le contrat de linéarité.
 
 ---
 
-## JPEG Category
+## Catégorie JPEG (JPEG)
 
 ### JPEG_AVAILABLE_THUMBNAIL_SIZES
 
-**1. What is it?**
+**1. Qu'est-ce que c'est ?**
 
-`JPEG_AVAILABLE_THUMBNAIL_SIZES` is an array of `android.util.Size` objects, each representing a valid `(width, height)` resolution for the embedded EXIF thumbnail that the JPEG encoder writes alongside the full-size main image. A special sentinel value `Size(0, 0)` is present when the encoder supports writing *no* thumbnail (zero bytes, saving ~30–50 KB per JPEG file). Standard sizes on modern devices are typically `[0×0, 96×96, 160×120, 176×144, 256×144]`. The corresponding request key is `CaptureRequest.JPEG_THUMBNAIL_SIZE` which you must set to one of the sizes from this list; any other size is undefined behavior per CDD.
+`JPEG_AVAILABLE_THUMBNAIL_SIZES` est un tableau d'objets `android.util.Size`, chacun représentant une résolution `(largeur, hauteur)` valide pour la vignette EXIF intégrée que l'encodeur JPEG écrit aux côtés de l'image principale en taille réelle. Une valeur sentinelle spéciale `Size(0, 0)` est présente lorsque l'encodeur supporte l'écriture de **aucune** vignette (zéro octet, économisant environ 30 à 50 Ko par fichier JPEG). Les tailles standard sur les appareils modernes sont typiquement `[0×0, 96×96, 160×120, 176×144, 256×144]`. La clé de requête correspondante est `CaptureRequest.JPEG_THUMBNAIL_SIZE`, que vous devez définir sur l'une des tailles de cette liste ; toute autre taille entraîne un comportement indéfini selon le CDD.
 
-**2. Why does it exist?**
+**2. Pourquoi cela existe-t-il ?**
 
-Gallery apps and image file managers use EXIF thumbnails to render grid views of thousands of photos without decoding the 12–48 MB full-size JPEG. Decoding 5000×5000 JPEGs for a 48×48 grid cell is prohibitively expensive (decoding time ~200 ms per photo vs. 0.1 ms per thumbnail). Hardware JPEG encoders on modern SoCs can embed thumbnails in hardware at zero CPU cost, but the encoder's thumbnail scaler only supports a small set of fixed sizes — typically powers of 2 or 3GPP MMS standard sizes.
+Les applications de galerie et les gestionnaires de fichiers d'images utilisent les vignettes EXIF pour rendre des vues en grille de milliers de photos sans avoir à décoder les 12 à 48 Mo du JPEG en taille réelle. Décoder des JPEG de 5000×5000 pour une cellule de grille de 48×48 est prohibitif en termes de coût (temps de décodage ~200 ms par photo contre 0,1 ms par vignette). Les encodeurs JPEG matériels sur les SoC modernes peuvent intégrer des vignettes matériellement sans coût CPU, mais le redimensionneur de vignettes de l'encodeur ne supporte qu'un petit ensemble de tailles fixes — typiquement des puissances de 2 ou des tailles standard MMS 3GPP.
 
-**3. Which devices support it?**
+**3. Quels appareils le supportent ?**
 
-All devices that support the JPEG format (effectively every camera ID in existence). The array always contains at least two elements: the `0×0` sentinel plus at least one real thumbnail size. FULL-level devices guarantee every size in the list actually works. LEGACY wrappers sometimes list sizes that the encoder silently rejects — verifying with one test capture on LEGACY devices is recommended.
+Tous les appareils supportant le format JPEG (soit pratiquement tous les ID de caméra existants). Le tableau contient toujours au moins deux éléments : la sentinelle `0×0` plus au moins une taille de vignette réelle. Les appareils de niveau FULL garantissent que chaque taille de la liste fonctionne réellement. Les wrappers LEGACY listent parfois des tailles que l'encodeur rejette silencieusement — il est recommandé de vérifier avec une capture de test sur les appareils LEGACY.
 
-**4. How do I query it?**
+**4. Comment l'interroger ?**
 
 ```kotlin
 val thumbnailSizes: Array<Size>? = characteristics.get(
@@ -1924,10 +1924,10 @@ val thumbnailSizes: Array<Size>? = characteristics.get(
 )
 
 thumbnailSizes?.let { sizes ->
-    Log.d(TAG, "JPEG_AVAILABLE_THUMBNAIL_SIZES (${sizes.size} options):")
+    Log.d(TAG, "JPEG_AVAILABLE_THUMBNAIL_SIZES (${sizes.size} options) :")
     
     val noThumbnail = sizes.firstOrNull { it.width == 0 && it.height == 0 } != null
-    Log.d(TAG, "  Disable thumbnail (0×0) supported? $noThumbnail")
+    Log.d(TAG, "  Désactivation de la vignette (0×0) supportée ? $noThumbnail")
     
     val realSizes = sizes.filter { it.width > 0 && it.height > 0 }
         .sortedByDescending { it.width * it.height }
@@ -1941,10 +1941,10 @@ thumbnailSizes?.let { sizes ->
             abs(ar - 1.0) < 0.05 -> "1:1"
             else -> "%.2f".format(ar)
         }
-        Log.d(TAG, "    ${size.width}×${size.height}px ($mp KB estimate, $arLabel)")
+        Log.d(TAG, "    ${size.width}×${size.height}px (estim. $mp Ko, $arLabel)")
     }
     
-    Log.d(TAG, "  Selection strategy:")
+    Log.d(TAG, "  Stratégie de sélection :")
     val recommended = when {
         realSizes.isEmpty() -> Size(0, 0)
         else -> {
@@ -1953,43 +1953,43 @@ thumbnailSizes?.let { sizes ->
             realSizes.firstOrNull { it.width <= wLimit } ?: largest
         }
     }
-    Log.d(TAG, "  Recommended: ${recommended} (best balance of clarity vs. storage)")
+    Log.d(TAG, "  Recommandé : ${recommended} (meilleur équilibre clarté/stockage)")
     
     if (noThumbnail) {
-        Log.d(TAG, "  Alternative: 0×0 if gallery thumbnails are not required (saves space)")
+        Log.d(TAG, "  Alternative : 0×0 si les vignettes de galerie ne sont pas requises (gain de place)")
     }
 } ?: run {
-    Log.w(TAG, "Thumbnail sizes array unavailable — fallback to 160×120 or omit thumbnail")
+    Log.w(TAG, "Tableau des tailles de vignettes indisponible — repli sur 160×120 ou omission")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Comment l'inspecter avec Android Camera Parameters ?**
 
-Navigate to **JPEG / Thumbnails**. The entire card renders each supported size as a small rectangular preview box scaled to the actual aspect ratio, with the pixel dimensions printed inside. Tapping any size performs a real still capture with that thumbnail size selected, then displays the extracted EXIF thumbnail next to the full-size image so you can visually compare thumbnail quality across sizes. A 0×0 option appears as a disabled-looking "No thumbnail" row at the bottom; tapping it performs a capture and verifies that the EXIF contains no 0x0002-IFD0 thumbnail tag.
+Naviguez vers **JPEG / Thumbnails**. La carte entière affiche chaque taille supportée sous la forme d'une petite boîte de prévisualisation rectangulaire mise à l'échelle selon le ratio d'aspect réel, avec les dimensions en pixels inscrites à l'intérieur. Appuyer sur n'importe quelle taille effectue une capture fixe réelle avec cette taille de vignette sélectionnée, puis affiche la vignette EXIF extraite à côté de l'image en taille réelle afin que vous puissiez comparer visuellement la qualité des vignettes entre les tailles. Une option 0×0 apparaît comme une ligne "Pas de vignette" grisée en bas ; appuyer dessus effectue une capture et vérifie que l'EXIF ne contient aucune balise de vignette 0x0002-IFD0.
 
-**6. Common pitfalls**
+**6. Pièges courants**
 
-Setting a thumbnail size that is not in the available list. Developers naively request a 256×256 square thumbnail because it fits their gallery grid nicely. On a LEGACY device the encoder silently drops the thumbnail (no error, EXIF thumbnail tag empty). On certain Snapdragon 845/855 HALs setting a non-list size for thumbnail causes the *full JPEG* output to be corrupted: the image has a 16-pixel black stripe down the left edge or the bottom 10% of the scan lines are pure black. The fix is simple: always pick a Size from the `JPEG_AVAILABLE_THUMBNAIL_SIZES` array. If you really need a 256×256 thumbnail for your server upload, set `JPEG_THUMBNAIL_SIZE` to the closest supported size (say, `0×0` for no embedded thumbnail) then post-process the saved JPEG bytes with `ExifInterface` to write your custom thumbnail via `setThumbnail()` before file close.
+Définir une taille de vignette qui n'est pas dans la liste disponible. Les développeurs demandent naïvement une vignette carrée de 256×256 car elle s'intègre bien dans leur grille de galerie. Sur un appareil LEGACY, l'encodeur abandonne silencieusement la vignette (aucune erreur, balise de vignette EXIF vide). Sur certains HAL Snapdragon 845/855, la définition d'une taille hors liste pour la vignette corrompt la **sortie JPEG complète** : l'image présente une bande noire de 16 pixels sur le bord gauche ou les 10 % inférieurs des lignes de balayage sont d'un noir pur. Le correctif est simple : choisissez toujours un `Size` dans le tableau `JPEG_AVAILABLE_THUMBNAIL_SIZES`. Si vous avez vraiment besoin d'une vignette 256×256 pour l'envoi vers votre serveur, réglez `JPEG_THUMBNAIL_SIZE` sur la taille supportée la plus proche (ex : `0×0` pour aucune vignette intégrée) puis post-traitez les octets JPEG enregistrés avec `ExifInterface` pour écrire votre vignette personnalisée via `setThumbnail()` avant la fermeture du fichier.
 
-Second pitfall: aspect ratio mismatch. The thumbnail size must match the main image aspect ratio closely, or the hardware scaler letterboxes the thumbnail with black borders. If your main image is 4:3 (4000×3000) and your thumbnail is 16:9 (256×144), the result is a 256×144 thumbnail with 24-pixel black top/bottom bars and the actual image data squashed into the middle 96 pixels. Users report "thumbnails look squashed in my gallery." The fix is to select the thumbnail size whose aspect ratio most closely matches the main JPEG resolution's aspect ratio *for each capture*, not a one-time app default.
+Deuxième piège : incohérence du ratio d'aspect. La taille de la vignette doit correspondre étroitement au ratio d'aspect de l'image principale, sinon le redimensionneur matériel applique des bandes noires (letterboxing) à la vignette. Si votre image principale est en 4:3 (4000×3000) et votre vignette en 16:9 (256×144), le résultat est une vignette 256×144 avec des bandes noires de 24 pixels en haut et en bas et les données d'image réelles écrasées dans les 96 pixels centraux. Les utilisateurs signalent que "les vignettes ont l'air écrasées dans ma galerie". Le correctif consiste à sélectionner la taille de vignette dont le ratio d'aspect correspond le mieux au ratio d'aspect de la résolution JPEG principale **pour chaque capture**, et non une valeur par défaut unique pour l'application.
 
 ---
 
 ### JPEG_MAX_SIZE
 
-**1. What is it?**
+**1. Qu'est-ce que c'est ?**
 
-`JPEG_MAX_SIZE` is a single `Int` representing the maximum number of *bytes* that a single JPEG output buffer from this camera will ever occupy. Typical values for 2024 flagships: ~30–50 MB for 50–208 MP Bayer sensors. 12 MP mid-range sensors typically report ~12–16 MB. RAW-SENSOR output does not use this key; RAW buffer size is computed from `pixelArray × bytesPerPixel` directly. The JPEG encoder guarantees that the maximum-complexity image (grainy, high-detail, worst-case entropy) encoded at `JPEG_QUALITY = 100` produces no more bytes than `JPEG_MAX_SIZE`.
+`JPEG_MAX_SIZE` est un simple `Int` représentant le nombre maximum d'**octets** qu'un seul tampon de sortie JPEG de cette caméra occupera jamais. Valeurs typiques pour les fleurons de 2024 : ~30 à 50 Mo pour des capteurs Bayer de 50 à 208 MP. Les capteurs de milieu de gamme de 12 MP rapportent typiquement ~12 à 16 Mo. La sortie RAW-SENSOR n'utilise pas cette clé ; la taille du tampon RAW est calculée directement à partir de `pixelArray × octetsParPixel`. L'encodeur JPEG garantit que l'image de complexité maximale (grain, détails élevés, pire cas d'entropie) encodée à `JPEG_QUALITY = 100` ne produit pas plus d'octets que `JPEG_MAX_SIZE`.
 
-**2. Why does it exist?**
+**2. Pourquoi cela existe-t-il ?**
 
-Direct `ByteBuffer` allocation for JPEG capture: some advanced applications pre-allocate a pool of ByteBuffers and hand them to the camera via `ImageReader.attachBuffer()` rather than having the framework allocate per-capture. This eliminates GC pauses during burst capture. Without knowing the maximum buffer size, the developer would have to guess and either waste memory (allocate 128 MB per buffer) or corrupt data (allocate 8 MB and get a 14 MB high-quality JPEG that overruns the buffer).
+Allocation directe de `ByteBuffer` pour la capture JPEG : certaines applications avancées pré-allouent un pool de ByteBuffers et les transmettent à la caméra via `ImageReader.attachBuffer()` plutôt que de laisser le framework allouer par capture. Cela élimine les pauses du ramasse-miettes (GC) pendant la capture en rafale. Sans connaître la taille maximale du tampon, le développeur devrait deviner et soit gaspiller de la mémoire (allouer 128 Mo par tampon), soit corrompre les données (allouer 8 Mo et obtenir un JPEG haute qualité de 14 Mo qui dépasse le tampon).
 
-**3. Which devices support it?**
+**3. Quels appareils le supportent ?**
 
-All hardware levels. FULL-level CDD requires the value to be within 10% of the actual worst-case max. LEGACY devices sometimes under-report `JPEG_MAX_SIZE` (reporting 8 MB when a 100%-quality 12 MP JPEG reaches 10 MB); buffer pools on LEGACY should use 125% of the reported value with a 2 MB safety margin.
+Tous les niveaux matériels. Le CDD de niveau FULL exige que la valeur soit à moins de 10 % du maximum réel du pire cas. Les appareils LEGACY rapportent parfois une valeur `JPEG_MAX_SIZE` inférieure à la réalité (rapportant 8 Mo quand un JPEG de 12 MP à 100 % de qualité atteint 10 Mo) ; les pools de tampons sur LEGACY devraient utiliser 125 % de la valeur rapportée avec une marge de sécurité de 2 Mo.
 
-**4. How do I query it?**
+**4. Comment l'interroger ?**
 
 ```kotlin
 val jpegMaxBytes: Int? = characteristics.get(
@@ -1998,7 +1998,7 @@ val jpegMaxBytes: Int? = characteristics.get(
 
 jpegMaxBytes?.let { maxBytes ->
     val maxMB = maxBytes / (1024.0 * 1024.0)
-    Log.d(TAG, "JPEG_MAX_SIZE = $maxBytes bytes (${"%.1f".format(maxMB)} MB)")
+    Log.d(TAG, "JPEG_MAX_SIZE = $maxBytes octets (${"%.1f".format(maxMB)} Mo)")
     
     val largestJpegSize = characteristics.get(
         CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP
@@ -2007,79 +2007,79 @@ jpegMaxBytes?.let { maxBytes ->
     largestJpegSize?.let { size ->
         val pixels = size.width * size.height
         val bppMax = maxBytes.toDouble() / pixels.toDouble()
-        Log.d(TAG, "  Largest JPEG size: ${size.width}×${size.height} = $pixels pixels")
-        Log.d(TAG, "  Worst-case bytes per pixel: ${"%.3f".format(bppMax)} Bpp")
-        Log.d(TAG, "  Rule of thumb: JPEG at quality 100 = ~1.5–3 Bpp, " +
-                   "so max ${pixels * 2 / 1_000_000}–${pixels * 3 / 1_000_000} MB expected")
+        Log.d(TAG, "  Plus grande taille JPEG : ${size.width}×${size.height} = $pixels pixels")
+        Log.d(TAG, "  Octets par pixel (pire cas) : ${"%.3f".format(bppMax)} Bpp")
+        Log.d(TAG, "  Règle de base : JPEG à qualité 100 = ~1,5–3 Bpp, " +
+                   "donc max ${pixels * 2 / 1_000_000}–${pixels * 3 / 1_000_000} Mo attendus")
         
         when {
             bppMax < 1.0 -> {
-                Log.w(TAG, "  WARNING: JPEG_MAX_SIZE < 1 Bpp. Encoder enforces " +
-                           "low quality ceiling OR metadata is under-reported.")
+                Log.w(TAG, "  ATTENTION : JPEG_MAX_SIZE < 1 Bpp. L'encodeur impose " +
+                           "un plafond de qualité basse OU les métadonnées sont sous-rapportées.")
             }
             bppMax > 5.0 -> {
-                Log.w(TAG, "  WARNING: JPEG_MAX_SIZE > 5 Bpp. Buffer pool will " +
-                           "over-allocate (HAL is being conservative).")
+                Log.w(TAG, "  ATTENTION : JPEG_MAX_SIZE > 5 Bpp. Le pool de tampons va " +
+                           "sur-allouer (le HAL est conservateur).")
             }
         }
     }
     
-    Log.d(TAG, "  Buffer pool sizing recommendation:")
+    Log.d(TAG, "  Recommandation pour le dimensionnement du pool de tampons :")
     val burstCapacity = 20
-    val poolBytesPerBuffer = (maxBytes * 1.10).toLong()  // 10% safety margin
-    Log.d(TAG, "    Per buffer: $poolBytesPerBuffer bytes")
-    Log.d(TAG, "    $burstCapacity-buffer burst pool total: " +
-               "${poolBytesPerBuffer * burstCapacity / (1024.0 * 1024.0)} MB")
+    val poolBytesPerBuffer = (maxBytes * 1.10).toLong()  // marge de sécurité de 10 %
+    Log.d(TAG, "    Par tampon : $poolBytesPerBuffer octets")
+    Log.d(TAG, "    Pool rafale de $burstCapacity tampons total : " +
+               "${poolBytesPerBuffer * burstCapacity / (1024.0 * 1024.0)} Mo")
     
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
-        Log.w(TAG, "  Legacy Android < 9: manual ByteBuffer pool via attachBuffer() " +
-                   "is the only way to avoid GC during burst.")
+        Log.w(TAG, "  Ancien Android < 9 : le pool manuel de ByteBuffer via attachBuffer() " +
+                   "est le seul moyen d'éviter le GC pendant une rafale.")
     } else {
-        Log.d(TAG, "  Android 9+: ImageReader allocates internally; use max size " +
-                   "to calculate in-memory footprint.")
+        Log.d(TAG, "  Android 9+ : ImageReader alloue en interne ; utilisez la taille max " +
+                   "pour calculer l'empreinte mémoire.")
     }
 } ?: run {
-    Log.w(TAG, "JPEG_MAX_SIZE not available. Default to 32 MB safety.")
+    Log.w(TAG, "JPEG_MAX_SIZE indisponible. Valeur par défaut de 32 Mo par sécurité.")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Comment l'inspecter avec Android Camera Parameters ?**
 
-Navigate to **JPEG / Encoder**. The maximum size is displayed as "Max JPEG size" both in bytes and megabytes. The companion app performs a live benchmark: captures 3 JPEGs at quality = 100, captures 3 at quality = 50, captures 3 at quality = 25, and renders a bar chart with each JPEG's actual byte count, plus a red dashed line at `JPEG_MAX_SIZE`. This lets you visually verify that all captured sizes are below the HAL-reported ceiling, and gives you a rough estimate of actual average JPEG size (typically 40–60% of max for most real-world scenes).
+Naviguez vers **JPEG / Encoder**. La taille maximale est affichée sous le nom "Max JPEG size" à la fois en octets et en mégaoctets. L'application compagnon effectue un benchmark en direct : capture 3 JPEG à qualité = 100, capture 3 à qualité = 50, capture 3 à qualité = 25, et rend un graphique à barres avec le nombre réel d'octets de chaque JPEG, plus une ligne pointillée rouge à `JPEG_MAX_SIZE`. Cela vous permet de vérifier visuellement que toutes les tailles capturées sont inférieures au plafond rapporté par le HAL, et vous donne une estimation approximative de la taille JPEG moyenne réelle (typiquement 40 à 60 % du max pour la plupart des scènes réelles).
 
-**6. Common pitfalls**
+**6. Pièges courants**
 
-Using `JPEG_MAX_SIZE` as the default `ImageReader` max size parameter. The `ImageReader.newInstance(width, height, format, maxImages)` constructor takes the number of images, not the buffer byte size. Developers read `JPEG_MAX_SIZE = 16_000_000` and mistakenly call `ImageReader.newInstance(w, h, JPEG, 16_000_000)` — requesting 16 million JPEG buffers. The result is either OOM on `newInstance` or a framework-side limit clamp. Correct: `ImageReader.newInstance(w, h, ImageFormat.JPEG, 5)` reserves 5 image slots. `JPEG_MAX_SIZE` is used for pre-calculating total expected memory *if* you pre-allocate `ByteBuffer` objects yourself.
+Utiliser `JPEG_MAX_SIZE` comme paramètre de taille max de l'ImageReader par défaut. Le constructeur `ImageReader.newInstance(width, height, format, maxImages)` prend le nombre d'images, pas la taille du tampon en octets. Les développeurs lisent `JPEG_MAX_SIZE = 16_000_000` et appellent par erreur `ImageReader.newInstance(w, h, JPEG, 16_000_000)` — demandant ainsi 16 millions de tampons JPEG. Le résultat est soit un OOM sur `newInstance`, soit un bridage par le framework. Correct : `ImageReader.newInstance(w, h, ImageFormat.JPEG, 5)` réserve 5 emplacements d'image. `JPEG_MAX_SIZE` est utilisé pour précalculer la mémoire totale attendue **si** vous pré-allouez vous-même des objets `ByteBuffer`.
 
-Second pitfall: HEIC format uses a different key. On Android 10+ devices with `ImageFormat.HEIC` support (Pixel 4+, Samsung One UI 2.0+), HEIC output is often 20–40% the size of JPEG for the same quality. `JPEG_MAX_SIZE` describes JPEG only; for HEIC you must allocate a `JPEG_R` or `HEIC` ImageReader and use the `SCALER_STREAM_CONFIGURATION_MAP.getOutputSizes(ImageFormat.HEIC)` sizes combined with a HEIC-specific worst-case Bpp estimate (~1.0 bytes per pixel). No metadata key currently reports HEIC maximum byte size per frame — measure with a complex test scene manually.
+Deuxième piège : le format HEIC utilise une clé différente. Sur les appareils Android 10+ avec support de `ImageFormat.HEIC` (Pixel 4+, Samsung One UI 2.0+), la sortie HEIC est souvent 20 à 40 % plus petite que le JPEG pour la même qualité. `JPEG_MAX_SIZE` ne décrit que le JPEG ; pour le HEIC, vous devez allouer un ImageReader `JPEG_R` ou `HEIC` et utiliser les tailles de `SCALER_STREAM_CONFIGURATION_MAP.getOutputSizes(ImageFormat.HEIC)` combinées à une estimation Bpp du pire cas spécifique au HEIC (~1,0 octet par pixel). Aucune clé de métadonnées ne rapporte actuellement la taille maximale en octets par image pour le HEIC — mesurez manuellement avec une scène de test complexe.
 
 ---
 
-## Info Category
+## Catégorie Info (Informations)
 
 ### INFO_SUPPORTED_HARDWARE_LEVEL
 
-**1. What is it?**
+**1. Qu'est-ce que c'est ?**
 
-`INFO_SUPPORTED_HARDWARE_LEVEL` is the coarse-tier bucketing enum. Five standard values:
+`INFO_SUPPORTED_HARDWARE_LEVEL` est l'enum de regroupement par niveaux grossiers. Cinq valeurs standard :
 
-- `INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY` (2) — Camera2 API is a *wrapper* around the old Camera1 HAL. No per-frame control, limited to Camera1-era functionality. ~5% of 2020+ active devices, most pre-2017 phones.
-- `INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED` (0) — Native Camera2 HAL implementing the base feature set plus *some* advanced features (e.g., MANUAL_SENSOR without MANUAL_POST_PROCESSING). Most mid-range phones 2017–present.
-- `INFO_SUPPORTED_HARDWARE_LEVEL_FULL` (1) — Supports all mandatory standard Camera2 features: MANUAL_SENSOR, MANUAL_POST_PROCESSING, RAW output, BURST_CAPTURE ≥ 20 fps. Flagship devices typically.
-- `INFO_SUPPORTED_HARDWARE_LEVEL_3` (3) — Adds reprocessing input streams (YUV/PRIVATE → → ISP → output), depth-focused enhancements, custom tonemap curves ≥ 64 control points. Cinema-grade / Pixel Visual Core devices.
-- `INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL` (4) — External USB / HDMI camera. Feature set is variable and negotiated dynamically; some keys change when the camera is hot-plugged.
+- `INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY` (2) — L'API Camera2 est une **enveloppe (wrapper)** autour de l'ancien HAL Camera1. Pas de contrôle par image, limité aux fonctionnalités de l'ère Camera1. ~5 % des appareils actifs post-2020, la plupart des téléphones pré-2017.
+- `INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED` (0) — HAL Camera2 natif implémentant l'ensemble des fonctionnalités de base plus **certaines** fonctionnalités avancées (ex : MANUAL_SENSOR sans MANUAL_POST_PROCESSING). La plupart des téléphones de milieu de gamme de 2017 à aujourd'hui.
+- `INFO_SUPPORTED_HARDWARE_LEVEL_FULL` (1) — Supporte toutes les fonctionnalités standard obligatoires de Camera2 : MANUAL_SENSOR, MANUAL_POST_PROCESSING, sortie RAW, BURST_CAPTURE ≥ 20 fps. Typiquement les appareils phares (flagships).
+- `INFO_SUPPORTED_HARDWARE_LEVEL_3` (3) — Ajoute des flux d'entrée de retraitement (YUV/PRIVATE → ISP → sortie), des améliorations axées sur la profondeur, des courbes de mappage tonal personnalisées ≥ 64 points de contrôle. Appareils de qualité cinéma / Pixel Visual Core.
+- `INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL` (4) — Caméra externe USB / HDMI. L'ensemble des fonctionnalités est variable et négocié dynamiquement ; certaines clés changent lorsque la caméra est branchée à chaud.
 
-The tier is *cumulative*: LEVEL_3 ⊇ FULL ⊇ LIMITED ⊇ LEGACY in features.
+Le niveau est **cumulatif** : LEVEL_3 ⊇ FULL ⊇ LIMITED ⊇ LEGACY en termes de fonctionnalités.
 
-**2. Why does it exist?**
+**2. Pourquoi cela existe-t-il ?**
 
-Before `INFO_SUPPORTED_HARDWARE_LEVEL` was finalized in Lollipop MR1, developers had to check 10+ individual capabilities to get a rough tier for device analytics. The hardware level provides a one-number bucket that app analytics dashboards can use ("X% of our DAUs are LIMITED"). Note the earlier caution: *feature gating must still check individual capabilities*, not just this bucket.
+Avant la finalisation de `INFO_SUPPORTED_HARDWARE_LEVEL` dans Lollipop MR1, les développeurs devaient vérifier plus de 10 capacités individuelles pour obtenir un niveau approximatif pour l'analyse des appareils. Le niveau matériel fournit un panier à numéro unique que les tableaux de bord d'analyse d'applications peuvent utiliser ("X % de nos DAU sont LIMITED"). Notez l'avertissement précédent : **la restriction de fonctionnalités doit toujours vérifier les capacités individuelles**, pas seulement ce panier.
 
-**3. Which devices support it?**
+**3. Quels appareils le supportent ?**
 
-Every camera ID. LEGACY is never returned for post-2019 devices. LIMITED is the median hardware level for 2020–2024 phones (roughly 65% of active devices). FULL accounts for ~25%, LEVEL_3 ~5%, EXTERNAL ~5%.
+Chaque ID de caméra. LEGACY n'est jamais renvoyé pour les appareils post-2019. LIMITED est le niveau matériel médian pour les téléphones 2020-2024 (environ 65 % des appareils actifs). FULL représente environ 25 %, LEVEL_3 ~5 %, EXTERNAL ~5 %.
 
-**4. How do I query it?**
+**4. Comment l'interroger ?**
 
 ```kotlin
 val hwLevel: Int? = characteristics.get(
@@ -2093,7 +2093,7 @@ hwLevel?.let { level ->
         CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL -> "FULL"
         CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_3 -> "LEVEL_3"
         CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL -> "EXTERNAL"
-        else -> "UNKNOWN($level)"
+        else -> "INCONNU($level)"
     }
     Log.d(TAG, "INFO_SUPPORTED_HARDWARE_LEVEL = $name")
     
@@ -2102,66 +2102,66 @@ hwLevel?.let { level ->
     ) ?: intArrayOf()
     fun has(c: Int) = caps.contains(c)
     
-    Log.d(TAG, "  Feature tier summary:")
+    Log.d(TAG, "  Résumé du niveau de fonctionnalités :")
     when (level) {
         CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY -> {
-            Log.w(TAG, "    LEGACY: Camera1 wrapper. Avoid per-frame requests.")
-            Log.w(TAG, "    Repeating requests may be batched. No manual controls.")
+            Log.w(TAG, "    LEGACY : Enveloppe Camera1. Évitez les requêtes par image.")
+            Log.w(TAG, "    Les requêtes répétées peuvent être regroupées. Pas de contrôles manuels.")
         }
         CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED -> {
-            Log.d(TAG, "    LIMITED: Native HAL. Check per-feature capabilities:")
-            Log.d(TAG, "      MANUAL_SENSOR:        ${has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR)}")
-            Log.d(TAG, "      MANUAL_POST_PROC:     ${has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_POST_PROCESSING)}")
-            Log.d(TAG, "      RAW:                  ${has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW)}")
-            Log.d(TAG, "      BURST:                ${has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_BURST_CAPTURE)}")
+            Log.d(TAG, "    LIMITED : HAL natif. Vérifiez les capacités par fonctionnalité :")
+            Log.d(TAG, "      MANUAL_SENSOR :       ${has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR)}")
+            Log.d(TAG, "      MANUAL_POST_PROC :    ${has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_POST_PROCESSING)}")
+            Log.d(TAG, "      RAW :                 ${has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW)}")
+            Log.d(TAG, "      BURST :               ${has(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_BURST_CAPTURE)}")
         }
         CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL -> {
-            Log.i(TAG, "    FULL: All standard features guaranteed.")
-            Log.i(TAG, "      Manual sensor + post-processing + RAW + burst all REQUIRED.")
+            Log.i(TAG, "    FULL : Toutes les fonctionnalités standard garanties.")
+            Log.i(TAG, "      Sensor manuel + post-traitement + RAW + rafale tous REQUIS.")
         }
         CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_3 -> {
-            Log.i(TAG, "    LEVEL_3: FULL + YUV/PRIVATE reprocessing + depth + advanced tonemap.")
-            Log.i(TAG, "      Zero-shutter-lag via reprocessing possible.")
+            Log.i(TAG, "    LEVEL_3 : FULL + retraitement YUV/PRIVATE + profondeur + tonemap avancé.")
+            Log.i(TAG, "      Délai d'obturation nul via retraitement possible.")
         }
         CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL -> {
-            Log.w(TAG, "    EXTERNAL: USB/HDMI camera. Feature set is DYNAMIC.")
-            Log.w(TAG, "      Re-query on hotplug. Some keys may change between connections.")
+            Log.w(TAG, "    EXTERNAL : Caméra USB/HDMI. L'ensemble des fonctionnalités est DYNAMIQUE.")
+            Log.w(TAG, "      Ré-interrogez lors du branchement. Certaines clés peuvent changer entre les connexions.")
         }
     }
 } ?: run {
-    Log.e(TAG, "Hardware level missing — impossible on valid Camera2 device")
+    Log.e(TAG, "Niveau matériel manquant — impossible sur un appareil Camera2 valide")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Comment l'inspecter avec Android Camera Parameters ?**
 
-Navigate to **Overview / Hardware Level**. The hardware level is rendered as a large tier badge at the top with a color code: LEGACY = gray, LIMITED = amber, FULL = green, LEVEL_3 = blue, EXTERNAL = purple. Below the badge is a tier-capability checklist that compares which capabilities are *required* by CDD for that tier vs. which capabilities are *actually present* on the device, highlighting any discrepancies (e.g., a LIMITED device that happens to have RAW capability is marked as "LIMITED+").
+Naviguez vers **Overview / Hardware Level**. Le niveau matériel est rendu sous la forme d'un grand badge de niveau en haut avec un code couleur : LEGACY = gris, LIMITED = orange, FULL = vert, LEVEL_3 = bleu, EXTERNAL = violet. Sous le badge se trouve une liste de contrôle niveau-capacité qui compare les capacités **requises** par le CDD pour ce niveau par rapport aux capacités **réellement présentes** sur l'appareil, mettant en évidence d'éventuelles divergences (ex : un appareil LIMITED qui possède la capacité RAW est marqué comme "LIMITED+").
 
-**6. Common pitfalls**
+**6. Pièges courants**
 
-Writing code that requires FULL hardware level to function. This excludes ~70% of active mid-range LIMITED devices that have MANUAL_SENSOR and RAW capability but no BURST_CAPTURE or full tonemap control. The correct architecture is: each feature (manual ISO, RAW, manual WB) has its own individual capability check in the capability array. The hardware level is for analytics only: log it, display it, but never `if (hwLevel != FULL) return`.
+Écrire du code qui nécessite le niveau matériel FULL pour fonctionner. Cela exclut environ 70 % des appareils LIMITED de milieu de gamme actifs qui possèdent les capacités MANUAL_SENSOR et RAW mais pas de BURST_CAPTURE ou de contrôle complet du mappage tonal. La bonne architecture est la suivante : chaque fonctionnalité (ISO manuel, RAW, WB manuelle) possède sa propre vérification de capacité individuelle dans le tableau des capacités. Le niveau matériel est destiné uniquement à l'analyse : enregistrez-le, affichez-le, mais ne faites jamais de `if (hwLevel != FULL) return`.
 
-LEGACY devices are the second pitfall. On LEGACY the entire Camera2 API is an emulation wrapper around Camera1. Per-frame CaptureRequests are batched 3–10 at a time; setting a different AE compensation value for each frame in a burst applies them all in a batch, not per frame. Any burst or per-frame animation (smooth focus-pull) must have a LEGACY fallback path: post-process the frames instead of relying on per-frame CaptureRequest values.
+Les appareils LEGACY sont le deuxième piège. Sur LEGACY, l'intégralité de l'API Camera2 est une enveloppe d'émulation autour de Camera1. Les CaptureRequests par image sont regroupées par lots de 3 à 10 à la fois ; définir une valeur de compensation AE différente pour chaque image d'une rafale les applique toutes par lot, et non par image. Toute animation en rafale ou par image (changement de mise au point fluide) doit avoir un chemin de repli LEGACY : post-traitez les images au lieu de compter sur les valeurs de CaptureRequest par image.
 
 ---
 
 ### INFO_DEVICE_STATE_ORIENTATIONS
 
-**1. What is it?**
+**1. Qu'est-ce que c'est ?**
 
-`INFO_DEVICE_STATE_ORIENTATIONS` is an `IntArray` (introduced in Android 12, API level 31) listing all the *sensor orientation values* this camera ID can report when the device is folded, unfolded, or otherwise reconfigured. Standard values are `0`, `90`, `180`, `270` — the same degrees used in `SENSOR_ORIENTATION`. For a typical non-foldable phone, the array contains exactly one element `[90]` for back cameras and `[270]` for front cameras (fixed orientation). For a foldable like the Pixel Fold or Galaxy Z Fold, the array is `[90, 270]` for the rear-display selfie mode: when the user closes the fold and uses the rear screen as a viewfinder, the camera's effective sensor orientation *flips* to match the new viewing direction.
+`INFO_DEVICE_STATE_ORIENTATIONS` est un `IntArray` (introduit sous Android 12, niveau d'API 31) listant toutes les **valeurs d'orientation du capteur** que cet ID de caméra peut rapporter lorsque l'appareil est plié, déplié ou reconfiguré autrement. Les valeurs standard sont `0`, `90`, `180`, `270` — les mêmes degrés que ceux utilisés dans `SENSOR_ORIENTATION`. Pour un téléphone non pliable typique, le tableau contient exactement un élément `[90]` pour les caméras arrière et `[270]` pour les caméras avant (orientation fixe). Pour un pliable comme le Pixel Fold ou le Galaxy Z Fold, le tableau est `[90, 270]` pour le mode selfie avec écran arrière : lorsque l'utilisateur ferme le pli et utilise l'écran arrière comme viseur, l'orientation effective du capteur de la caméra **s'inverse** pour correspondre à la nouvelle direction de visualisation.
 
-The companion `SENSOR_ORIENTATION` key still reports the current orientation for the current device fold state. This key advertises the *full set* of possible values across all device states so you can pre-allocate UI rotation code paths.
+La clé `SENSOR_ORIENTATION` associée rapporte toujours l'orientation actuelle pour l'état de pliage actuel de l'appareil. Cette clé annonce l'**ensemble complet** des valeurs possibles à travers tous les états de l'appareil afin que vous puissiez pré-allouer les chemins de code de rotation de l'UI.
 
-**2. Why does it exist?**
+**2. Pourquoi cela existe-t-il ?**
 
-Before foldables, `SENSOR_ORIENTATION` was guaranteed to be a static constant for the device lifetime. You queried it once in `onCreate()` and cached the value. On foldables the same physical camera sensor can face two different logical directions (rear = away from the big inner screen, front-facing when the user activates "rear screen selfies"), so `SENSOR_ORIENTATION` changes dynamically between 90° and 270°. If your app caches the old rotation value and never re-queries, the preview is rotated 180° when the user folds the device. The `INFO_DEVICE_STATE_ORIENTATIONS` key gives you advance warning: "this camera's orientation can change, here are the possible values."
+Avant les pliables, `SENSOR_ORIENTATION` était garanti comme étant une constante statique pour la durée de vie de l'appareil. Vous l'interrogiez une fois dans `onCreate()` et mettiez la valeur en cache. Sur les pliables, le même capteur de caméra physique peut faire face à deux directions logiques différentes (arrière = à l'opposé du grand écran interne, avant = quand l'utilisateur active les "selfies sur écran arrière"), de sorte que `SENSOR_ORIENTATION` change dynamiquement entre 90° et 270°. Si votre application met en cache l'ancienne valeur de rotation et ne ré-interroge jamais, l'aperçu est tourné de 180° quand l'utilisateur plie l'appareil. La clé `INFO_DEVICE_STATE_ORIENTATIONS` vous donne un avertissement préalable : "l'orientation de cette caméra peut changer, voici les valeurs possibles."
 
-**3. Which devices support it?**
+**3. Quels appareils le supportent ?**
 
-All foldable/flip devices running Android 12 and later. Non-foldable devices running Android 12+ still report this key, but with a single-element array (the same value as `SENSOR_ORIENTATION`). On pre-Android 12 devices the key is absent (null), indicating only one static orientation ever. No capability flag prerequisite.
+Tous les appareils pliables/flip fonctionnant sous Android 12 et versions ultérieures. Les appareils non pliables sous Android 12+ rapportent toujours cette clé, mais avec un tableau à un seul élément (la même valeur que `SENSOR_ORIENTATION`). Sur les appareils antérieurs à Android 12, la clé est absente (null), indiquant une seule orientation statique à jamais. Aucun indicateur de capacité prérequis.
 
-**4. How do I query it?**
+**4. Comment l'interroger ?**
 
 ```kotlin
 val currentOrientation: Int = characteristics.get(
@@ -2173,21 +2173,21 @@ val possibleOrientations: IntArray? = if (Build.VERSION.SDK_INT >= 31) {
         CameraCharacteristics.INFO_DEVICE_STATE_ORIENTATIONS
     )
 } else {
-    Log.d(TAG, "Android < 12. Static orientation only.")
+    Log.d(TAG, "Android < 12. Orientation statique uniquement.")
     intArrayOf(currentOrientation)
 }
 
-Log.d(TAG, "Current SENSOR_ORIENTATION = ${currentOrientation}°")
+Log.d(TAG, "SENSOR_ORIENTATION actuel = ${currentOrientation}°")
 possibleOrientations?.let { orients ->
     Log.d(TAG, "INFO_DEVICE_STATE_ORIENTATIONS = [${orients.joinToString("°, ")}°]")
     
     val isFoldableCamera = orients.size > 1
-    Log.d(TAG, "  Dynamic orientation (foldable/reconfigurable)? $isFoldableCamera")
+    Log.d(TAG, "  Orientation dynamique (pliable/reconfigurable) ? $isFoldableCamera")
     
     if (isFoldableCamera) {
-        Log.w(TAG, "  WARNING: SENSOR_ORIENTATION is NOT STATIC.")
-        Log.w(TAG, "  Register DeviceStateManager callback to re-query on fold.")
-        Log.w(TAG, "  Never cache SENSOR_ORIENTATION as a val/const.")
+        Log.w(TAG, "  ATTENTION : SENSOR_ORIENTATION n'est PAS STATIQUE.")
+        Log.w(TAG, "  Enregistrez un rappel DeviceStateManager pour ré-interroger lors du pliage.")
+        Log.w(TAG, "  Ne mettez jamais SENSOR_ORIENTATION en cache comme une val/const.")
     }
     
     orients.forEach { deg ->
@@ -2196,47 +2196,47 @@ possibleOrientations?.let { orients ->
                 (360 - ((deg + displayRotation) % 360)) % 360
             else -> (deg + displayRotation) % 360
         }
-        Log.d(TAG, "    If sensor= ${deg}° → display rotation= ${displayRot}°")
+        Log.d(TAG, "    Si capteur = ${deg}° → rotation d'affichage = ${displayRot}°")
     }
 } ?: run {
-    Log.d(TAG, "  Static orientation. Never changes. Cache value: ${currentOrientation}°")
+    Log.d(TAG, "  Orientation statique. Ne change jamais. Valeur mise en cache : ${currentOrientation}°")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Comment l'inspecter avec Android Camera Parameters ?**
 
-Open **Info / Device State**. The card "Supported Orientations" shows the array as multiple orientation compass graphics (each showing a small phone silhouette rotated to match the degree value). On a foldable device, physically folding the device while the app is open causes the `SENSOR_ORIENTATION` value on the **Overview / Cameras** card to flip, and the Info card highlights which possible orientation is currently active with a green border. A small "fold state" indicator at the top-right of the screen also updates in real time (FOLDED / UNFOLDED / HALF-FOLDED / TENT).
+Ouvrez **Info / Device State**. La carte "Supported Orientations" affiche le tableau sous la forme de plusieurs graphiques de boussole d'orientation (chacun montrant une petite silhouette de téléphone tournée pour correspondre à la valeur en degrés). Sur un appareil pliable, plier physiquement l'appareil pendant que l'application est ouverte fait basculer la valeur `SENSOR_ORIENTATION` sur la carte **Overview / Cameras**, et la carte Info met en évidence quelle orientation possible est actuellement active avec une bordure verte. Un petit indicateur d'état de pliage en haut à droite de l'écran se met également à jour en temps réel (PLIÉ / DÉPLIÉ / SEMI-PLIÉ / TENTE).
 
-**6. Common pitfalls**
+**6. Pièges courants**
 
-Caching `SENSOR_ORIENTATION` as a top-level `val`. Classic code pattern:
+Mettre en cache `SENSOR_ORIENTATION` comme une `val` de haut niveau. Modèle de code classique :
 ```kotlin
 private val sensorRotation = cameraManager
     .getCameraCharacteristics(camId)[SENSOR_ORIENTATION] ?: 90
 ```
-This works on non-foldables and breaks on foldables. After unfolding a Pixel Fold the rotation flips but your `val` holds the stale 90° value. The preview is then upside down until the process is killed. The fix: use a `var` that gets updated in a `DeviceStateManager.DeviceStateCallback` (added in Android 12) or simply re-query `characteristics[SENSOR_ORIENTATION]` inside every `onSurfaceTextureChanged()` callback.
+Cela fonctionne sur les non-pliables et échoue sur les pliables. Après avoir déplié un Pixel Fold, la rotation bascule mais votre `val` conserve la valeur obsolète de 90°. L'aperçu est alors à l'envers jusqu'à ce que le processus soit tué. Le correctif : utilisez une `var` qui est mise à jour dans un `DeviceStateManager.DeviceStateCallback` (ajouté sous Android 12) ou ré-interrogez simplement `characteristics[SENSOR_ORIENTATION]` à l'intérieur de chaque rappel `onSurfaceTextureChanged()`.
 
-A second pitfall: saving JPEGs with a stale EXIF orientation tag. The EXIF orientation tag must match the current orientation at capture time. If you compute the EXIF tag once at session-open time and fold the device mid-session, the next JPEG has the wrong EXIF orientation and displays rotated. Re-compute the EXIF tag from `SENSOR_ORIENTATION` + `display.rotation` for every single capture, not once per session.
+Un deuxième piège : enregistrer des JPEG avec une balise d'orientation EXIF obsolète. La balise d'orientation EXIF doit correspondre à l'orientation actuelle au moment de la capture. Si vous calculez la balise EXIF une seule fois à l'ouverture de la session et que vous pliez l'appareil en cours de session, le JPEG suivant aura la mauvaise orientation EXIF et s'affichera tourné. Recalculez la balise EXIF à partir de `SENSOR_ORIENTATION` + `display.rotation` pour chaque capture, pas une seule fois par session.
 
 ---
 
 ### INFO_VERSION
 
-**1. What is it?**
+**1. Qu'est-ce que c'est ?**
 
-`INFO_VERSION` is an `IntArray` with exactly 2 elements reporting the Camera HAL implementation version as `[MAJOR, MINOR]`. Values like `[3, 2]` mean HAL 3.2. `[3, 5]` means HAL 3.5. The Camera HAL specification versions roughly correlate with Android releases: HAL 3.2 appeared with Android 9, HAL 3.4 with Android 11, HAL 3.5 with Android 12, HAL 3.6 with Android 13, and HAL 3.8+ with Android 14.
+`INFO_VERSION` est un `IntArray` avec exactement 2 éléments rapportant la version de l'implémentation du HAL de la caméra sous la forme `[MAJOR, MINOR]`. Des valeurs comme `[3, 2]` signifient HAL 3.2. `[3, 5]` signifie HAL 3.5. Les versions de spécification du HAL de la caméra sont grossièrement corrélées aux versions d'Android : le HAL 3.2 est apparu avec Android 9, le HAL 3.4 avec Android 11, le HAL 3.5 avec Android 12, le HAL 3.6 avec Android 13 et le HAL 3.8+ avec Android 14.
 
-Each subsequent HAL 3.x revision adds additional mandatory metadata keys and tightens behavior guarantees. For example, HAL 3.2 requires correct `SCALER_CROP_REGION` with aspect-ratio preservation behavior that was previously optional. HAL 3.5 requires accurate `SENSOR_DYNAMIC_WHITE_LEVEL` for staggered-HDR sensors, and HAL 3.8 adds mandatory UHRS (Ultra-High Resolution Sensor) bayer-pattern exposure controls.
+Chaque révision ultérieure du HAL 3.x ajoute des clés de métadonnées obligatoires supplémentaires et durcit les garanties de comportement. Par exemple, le HAL 3.2 exige un `SCALER_CROP_REGION` correct avec un comportement de préservation du ratio d'aspect qui était auparavant facultatif. Le HAL 3.5 exige un `SENSOR_DYNAMIC_WHITE_LEVEL` précis pour les capteurs HDR décalés, et le HAL 3.8 ajoute des contrôles d'exposition obligatoires pour le motif Bayer UHRS (Ultra-High Resolution Sensor).
 
-**2. Why does it exist?**
+**2. Pourquoi cela existe-t-il ?**
 
-Workaround routing for known HAL bugs. For example: all devices running HAL 3.1 shipped with a specific bug where submitting more than one JPEG surface in a session caused `onConfigFailed` regardless of `REQUEST_MAX_NUM_OUTPUT_STREAMS`. Rather than shipping a giant `Build.MODEL` blocklist of affected phones, you check `INFO_VERSION < [3, 2]` and apply the workaround globally.
+Acheminement des contournements (workarounds) pour les bugs connus du HAL. Par exemple : tous les appareils fonctionnant sous HAL 3.1 ont été livrés avec un bug spécifique où la soumission de plus d'une surface JPEG dans une session provoquait `onConfigFailed` quel que soit `REQUEST_MAX_NUM_OUTPUT_STREAMS`. Plutôt que de livrer une liste de blocage géante `Build.MODEL` de téléphones affectés, vous vérifiez `INFO_VERSION < [3, 2]` et appliquez le contournement globalement.
 
-**3. Which devices support it?**
+**3. Quels appareils le supportent ?**
 
-All Camera2 devices running HAL 3.0 and later (i.e., every LEGACY/LIMITED/FULL/LEVEL_3 device from Android 5.0 forward). External USB cameras sometimes report `[1, 0]` for UVC 1.0, `[1, 5]` for UVC 1.5.
+Tous les appareils Camera2 fonctionnant sous HAL 3.0 et versions ultérieures (c'est-à-dire chaque appareil LEGACY/LIMITED/FULL/LEVEL_3 à partir d'Android 5.0). Les caméras USB externes rapportent parfois `[1, 0]` pour UVC 1.0, `[1, 5]` pour UVC 1.5.
 
-**4. How do I query it?**
+**4. Comment l'interroger ?**
 
 ```kotlin
 val version: IntArray? = characteristics.get(
@@ -2244,81 +2244,81 @@ val version: IntArray? = characteristics.get(
 )
 
 version?.let { v ->
-    check(v.size == 2) { "Malformed INFO_VERSION array size=${v.size}" }
+    check(v.size == 2) { "Taille de tableau INFO_VERSION mal formée size=${v.size}" }
     val (major, minor) = v[0] to v[1]
     Log.d(TAG, "INFO_VERSION = HAL $major.$minor")
     
     val androidEquivalent = when {
-        major == 3 && minor >= 8 -> "Android 14+ behavior"
-        major == 3 && minor >= 6 -> "Android 13+ behavior"
-        major == 3 && minor >= 5 -> "Android 12+ behavior"
-        major == 3 && minor >= 4 -> "Android 11+ behavior"
-        major == 3 && minor >= 2 -> "Android 9+ behavior"
-        major == 3 && minor >= 0 -> "Android 5.0–8 behavior"
-        else -> "UVC/other HAL spec"
+        major == 3 && minor >= 8 -> "comportement Android 14+"
+        major == 3 && minor >= 6 -> "comportement Android 13+"
+        major == 3 && minor >= 5 -> "comportement Android 12+"
+        major == 3 && minor >= 4 -> "comportement Android 11+"
+        major == 3 && minor >= 2 -> "comportement Android 9+"
+        major == 3 && minor >= 0 -> "comportement Android 5.0–8"
+        else -> "spécif. UVC/autre HAL"
     }
-    Log.d(TAG, "  Corresponding Android guarantees: ~$androidEquivalent")
+    Log.d(TAG, "  Garanties Android correspondantes : ~$androidEquivalent")
     
     data class Workaround(val halMin: Pair<Int, Int>, val label: String, val action: () -> Unit)
     
     val workarounds = listOfNotNull(
         if (major == 3 && minor < 2)
-            Workaround(3 to 2, "HAL 3.1: multi-output JPEG bug") {
-                Log.w(TAG, "  ENABLE workaround: single JPEG surface only")
+            Workaround(3 to 2, "HAL 3.1 : bug multi-sortie JPEG") {
+                Log.w(TAG, "  ACTIVER le contournement : une seule surface JPEG autorisée")
             }
         else null,
         if (major == 3 && minor < 4)
-            Workaround(3 to 4, "HAL 3.3: partial results not populated reliably") {
-                Log.w(TAG, "  ENABLE workaround: ignore partials, use TotalCaptureResult only")
+            Workaround(3 to 4, "HAL 3.3 : résultats partiels non renseignés de manière fiable") {
+                Log.w(TAG, "  ACTIVER le contournement : ignorer les partiels, utiliser TotalCaptureResult uniquement")
             }
         else null,
         if (major == 3 && minor < 5)
-            Workaround(3 to 5, "HAL 3.4: dynamic white-level missing on HDR sensors") {
-                Log.w(TAG, "  ENABLE workaround: use static SENSOR_WHITE_LEVEL always")
+            Workaround(3 to 5, "HAL 3.4 : niveau de blanc dynamique manquant sur les capteurs HDR") {
+                Log.w(TAG, "  ACTIVER le contournement : utiliser toujours SENSOR_WHITE_LEVEL statique")
             }
         else null
     )
     
     if (workarounds.isNotEmpty()) {
-        Log.w(TAG, "  Applying HAL workarounds (${workarounds.size} total):")
+        Log.w(TAG, "  Application des contournements HAL (${workarounds.size} au total) :")
         workarounds.forEach { wa ->
-            Log.w(TAG, "    ✓ < HAL ${wa.halMin.first}.${wa.halMin.second}: ${wa.label}")
+            Log.w(TAG, "    ✓ < HAL ${wa.halMin.first}.${wa.halMin.second} : ${wa.label}")
             wa.action()
         }
     } else {
-        Log.d(TAG, "  No HAL-version-specific workarounds needed.")
+        Log.d(TAG, "  Aucun contournement spécifique à la version du HAL requis.")
     }
 } ?: run {
-    Log.w(TAG, "INFO_VERSION not reported. Assume HAL 3.0 (oldest) — enable all workarounds.")
+    Log.w(TAG, "INFO_VERSION non rapportée. Assumez HAL 3.0 (le plus ancien) — activez tous les contournements.")
 }
 ```
 
-**5. How can I inspect it with Android Camera Parameters?**
+**5. Comment l'inspecter avec Android Camera Parameters ?**
 
-Navigate to **Info / Version**. The HAL version appears as a large "HAL 3.5" pill at the top. Below the version is a "Android Release Compatibility" card showing which Android version's guarantees roughly match the HAL version. Further below is a table of all known HAL workarounds with their HAL minimum version, a description of the bug, and a toggle switch showing whether the workaround is currently enabled. Tapping a HAL row shows the CDD change summary for that minor revision (e.g., HAL 3.4 changelog: "Added mandatory LOGICAL_MULTI_CAMERA fused focal-length reporting").
+Naviguez vers **Info / Version**. La version du HAL apparaît sous la forme d'une grande pilule "HAL 3.5" en haut. Sous la version se trouve une carte "Compatibilité de sortie Android" montrant quelles garanties de version d'Android correspondent approximativement à la version du HAL. Plus bas se trouve un tableau de tous les contournements HAL connus avec leur version minimale du HAL, une description du bug et un commutateur indiquant si le contournement est actuellement activé. Appuyer sur une ligne HAL affiche le résumé des modifications du CDD pour cette révision mineure (ex : changelog HAL 3.4 : "Ajout du rapport de distance focale fusionnée obligatoire pour LOGICAL_MULTI_CAMERA").
 
-**6. Common pitfalls**
+**6. Pièges courants**
 
-Equating HAL version with Android SDK version. A Samsung A54 launched on Android 13 *can* ship with HAL 3.4 (Android 11-era guarantees) because the CDD does not force new HAL versions on all devices that launch on newer Android. Conversely, a Pixel 4a originally launched on Android 10 (HAL 3.5) and was updated through Android 14; after the update the HAL version remains 3.5 even though the SDK version is 34. Always check the HAL key, never `Build.VERSION.SDK_INT`, for HAL-specific behavior.
+Assimiler la version du HAL à la version du SDK Android. Un Samsung A54 lancé sous Android 13 **peut** être livré avec un HAL 3.4 (garanties de l'ère Android 11) car le CDD ne force pas les nouvelles versions de HAL sur tous les appareils lancés sous un Android plus récent. Inversement, un Pixel 4a lancé initialement sous Android 10 (HAL 3.5) a été mis à jour jusqu'à Android 14 ; après la mise à jour, la version du HAL reste 3.5 même si la version du SDK est 34. Vérifiez toujours la clé HAL, jamais `Build.VERSION.SDK_INT`, pour les comportements spécifiques au HAL.
 
-Second pitfall: assuming the same major.minor value means identical behavior across vendors. HAL 3.4 on Snapdragon means slightly different guarantee compliance than HAL 3.4 on Exynos — the CDD has "SHOULD" items in addition to "MUST" items, and vendors pick and choose which "SHOULD" items to implement. When debugging a per-vendor issue, combine HAL version + `Build.BRAND` + hardware level + capabilities to narrow down the workaround activation.
+Deuxième piège : supposer que la même valeur major.minor signifie un comportement identique chez tous les constructeurs. Le HAL 3.4 sur Snapdragon signifie une conformité aux garanties légèrement différente du HAL 3.4 sur Exynos — le CDD contient des éléments "SHOULD" (devrait) en plus des éléments "MUST" (doit), et les constructeurs choisissent les éléments "SHOULD" qu'ils implémentent. Lors du débogage d'un problème par constructeur, combinez la version du HAL + `Build.BRAND` + le niveau matériel + les capacités pour affiner l'activation du contournement.
 
 ---
 
-## Extending This Reference
+## Étendre cette référence
 
-This encyclopedia covers the ~30 most essential metadata keys for everyday Camera2 application development. The complete `CameraCharacteristics` class contains over 120 keys in the `Characteristics.*` family alone, plus another 200+ in CaptureRequest and CaptureResult. If you would like to add entries to this encyclopedia, follow these steps:
+Cette encyclopédie couvre les ~30 clés de métadonnées les plus essentielles pour le développement quotidien d'applications Camera2. La classe `CameraCharacteristics` complète contient plus de 120 clés dans la seule famille `Characteristics.*`, plus 200 autres dans CaptureRequest et CaptureResult. Si vous souhaitez ajouter des entrées à cette encyclopédie, suivez ces étapes :
 
-1. **Pick a key from a missing category.** Popular candidates for future expansion include:
-   - **Statistics category:** `STATISTICS_INFO_AVAILABLE_FACE_DETECT_MODES`, `STATISTICS_INFO_MAX_FACE_COUNT`, `STATISTICS_INFO_HISTOGRAM_BUCKET_COUNT`, `STATISTICS_INFO_MAX_LENS_SHADING_MAP_SIZE`.
-   - **Sync category:** `SYNC_MAX_LATENCY` (per-frame vs. multi-frame sync for multi-camera), `SYNC_INFO_TYPE` (APPROXIMATE vs. CALIBRATED).
-   - **Depth category:** `DEPTH_DEPTH_IS_EXCLUSIVE`, `DEPTH_AVAILABLE_DEPTH_STREAM_CONFIGURATIONS`, `DEPTH_AVAILABLE_DEPTH_MIN_FRAME_DURATIONS`.
-   - **Disting category (Android 14+):** `DISTORTION_CORRECTION_AVAILABLE_MODES` (for geometric calibration on ultrawide lenses).
+1. **Choisissez une clé d'une catégorie manquante.** Les candidats populaires pour une extension future incluent :
+   - **Catégorie Statistics :** `STATISTICS_INFO_AVAILABLE_FACE_DETECT_MODES`, `STATISTICS_INFO_MAX_FACE_COUNT`, `STATISTICS_INFO_HISTOGRAM_BUCKET_COUNT`, `STATISTICS_INFO_MAX_LENS_SHADING_MAP_SIZE`.
+   - **Catégorie Sync :** `SYNC_MAX_LATENCY` (synchronisation par image vs multi-images pour multi-caméras), `SYNC_INFO_TYPE` (APPROXIMATE vs CALIBRATED).
+   - **Catégorie Depth :** `DEPTH_DEPTH_IS_EXCLUSIVE`, `DEPTH_AVAILABLE_DEPTH_STREAM_CONFIGURATIONS`, `DEPTH_AVAILABLE_DEPTH_MIN_FRAME_DURATIONS`.
+   - **Catégorie Distortion (Android 14+) :** `DISTORTION_CORRECTION_AVAILABLE_MODES` (pour l'étalonnage géométrique sur les objectifs ultra-grand-angle).
 
-2. **Follow the 6-point structure exactly.** Even if sections seem redundant (e.g., "Which devices support it" for a key that requires a capability flag), keep all six sections so every entry has the same lookup cadence.
+2. **Suivez exactement la structure en 6 points.** Même si les sections semblent redondantes (ex : "Quels appareils le supportent" pour une clé qui nécessite un drapeau de capacité), conservez les six sections afin que chaque entrée ait la même cadence de consultation.
 
-3. **Submit a PR to the Android Camera Parameters repository.** The companion app at [github.com/zoozooll/AndroidCameraParameters](https://github.com/zoozooll/AndroidCameraParameters) implements an inspector for every key added to this encyclopedia. Each new metadata entry must include a matching app-inspection tab (or update to an existing tab) so that the "How can I inspect it" section remains accurate for all users.
+3. **Soumettez une PR au dépôt Android Camera Parameters.** L'application compagnon sur [github.com/zoozooll/AndroidCameraParameters](https://github.com/zoozooll/AndroidCameraParameters) implémente un inspecteur pour chaque clé ajoutée à cette encyclopédie. Chaque nouvelle entrée de métadonnées doit inclure un onglet d'inspection d'application correspondant (ou une mise à jour d'un onglet existant) afin que la section "Comment l'inspecter" reste exacte pour tous les utilisateurs.
 
-4. **Include device-tested pitfall data.** The "Common pitfalls" section is the highest value part of each entry. Capture screenshots from at least two different OEMs (e.g. Pixel + Samsung, Samsung + Xiaomi) demonstrating the pitfall, then describe the behavior difference. Pitfalls based purely on CDD reading (without actual device failure reports) are of limited use.
+4. **Incluez des données de pièges testés sur appareils.** La section "Pièges courants" est la partie la plus précieuse de chaque entrée. Capturez des captures d'écran d'au moins deux OEM différents (ex : Pixel + Samsung, Samsung + Xiaomi) démontrant le piège, puis décrivez la différence de comportement. Les pièges basés purement sur la lecture du CDD (sans rapports réels de défaillance d'appareil) sont d'une utilité limitée.
 
-5. **Keep Kotlin snippets null-safe.** Every `characteristics.get()` call must be followed by either a `?.let { ... } ?: run { ... }` block or an explicit fallback. Snippets must compile against `compileSdk = 34` and target a minSdk of 21. Snippets using newer keys (Android 12+) require a surrounding `Build.VERSION.SDK_INT` guard block.
+5. **Gardez les extraits Kotlin sécurisés contre les nulls.** Chaque appel à `characteristics.get()` doit être suivi soit d'un bloc `?.let { ... } ?: run { ... }`, soit d'un repli explicite. Les extraits doivent compiler avec `compileSdk = 34` et cibler un minSdk de 21. Les extraits utilisant des clés plus récentes (Android 12+) nécessitent un bloc de garde `Build.VERSION.SDK_INT` environnant.

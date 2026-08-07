@@ -1,59 +1,59 @@
 ---
 sidebar_position: 1
-title: "Chapter 1: Welcome to Android Camera2"
-description: Learn why Android Camera2 matters, how it compares to Camera1 and CameraX, what it enables, and what you'll build in this series.
-keywords: [Android Camera2, Camera1 vs Camera2, CameraX, why learn Camera2, Android camera development]
+title: "Capítulo 1: Bem-vindo ao Android Camera2"
+description: Saiba por que o Android Camera2 é importante, como ele se compara ao Camera1 e CameraX, o que ele permite e o que você construirá nesta série.
+keywords: [Android Camera2, Camera1 vs Camera2, CameraX, por que aprender Camera2, desenvolvimento de câmera Android]
 ---
 
-# Chapter 1: Welcome to Android Camera2
+# Capítulo 1: Bem-vindo ao Android Camera2
 
-> **Chapter Overview:** In this opening chapter, we step back and look at the big picture. Why does Camera2 exist? What problems does it solve compared to the older Camera API and the newer CameraX library? Who should invest time in learning Camera2? And, most importantly, what will you actually build by the end of this series? No deep architecture, no HAL layers, and no pipeline diagrams yet — just clear answers to the questions every developer asks before diving in.
+> **Visão Geral do Capítulo:** Neste capítulo de abertura, damos um passo atrás e olhamos para o quadro geral. Por que o Camera2 existe? Quais problemas ele resolve em comparação com a antiga API Camera e a biblioteca CameraX mais recente? Quem deve investir tempo aprendendo o Camera2? E, o mais importante, o que você realmente construirá ao final desta série? Sem arquitetura profunda, sem camadas HAL e sem diagramas de pipeline ainda — apenas respostas claras às perguntas que todo desenvolvedor faz antes de mergulhar.
 
 ***
 
-## 1.1 Why Camera2?
+## 1.1 Por que Camera2?
 
-Take out your smartphone.
+Pegue seu smartphone.
 
-Look at the back. You probably see two, three, or even more camera lenses. That little rectangular bump houses more optical and silicon power than a professional DSLR from the mid-2000s.
+Olhe para a parte de trás. Você provavelmente vê duas, três ou até mais lentes de câmera. Esse pequeno calombo retangular abriga mais poder óptico e de silício do que uma DSLR profissional de meados dos anos 2000.
 
-Now open the default camera app.
+Agora abra o aplicativo de câmera padrão.
 
-Tap the shutter. Instantly, a high-resolution photo is stored in your gallery. The picture likely looks great — vibrant colors, sharp subjects, smooth background blur, and bright shadows even in indoor light.
+Toque no obturador. Instantaneamente, uma foto de alta resolução é armazenada na sua galeria. A imagem provavelmente parece ótima — cores vibrantes, temas nítidos, desfoque de fundo suave e sombras brilhantes mesmo em luz interna.
 
-But the camera app you're using only scratches the surface of what the hardware can do. Hidden beneath that friendly shutter button is an incredibly sophisticated imaging pipeline: one that can shoot RAW photos, record 240 fps slow-motion video, fuse 10 frames for a single night shot, or independently control every micron of lens movement.
+Mas o aplicativo de câmera que você está usando apenas arranha a superfície do que o hardware pode fazer. Escondido sob esse botão de obturador amigável está um pipeline de imagem incrivelmente sofisticado: um que pode tirar fotos RAW, gravar vídeo em câmera lenta de 240 fps, fundir 10 quadros para uma única foto noturna ou controlar independentemente cada mícron de movimento da lente.
 
-Most third-party Android apps never access this power. Why? Because **the old Android camera API (retroactively called Camera1) was extremely limited**. Camera1 was designed for a world of single-camera phones with basic photo and video capture. It couldn't:
+A maioria dos aplicativos Android de terceiros nunca acessa esse poder. Por quê? Porque **a antiga API de câmera do Android (retroativamente chamada de Camera1) era extremamente limitada**. O Camera1 foi projetado para um mundo de telefones com câmera única com captura básica de foto e vídeo. Ele não conseguia:
 
-- Control exposure time or ISO manually
-- Capture RAW sensor data
-- Record slow-motion at high frame rates
-- Use multiple cameras simultaneously
-- Access per-frame metadata mid-capture
-- Shoot burst photography reliably
+- Controlar o tempo de exposição ou o ISO manualmente
+- Capturar dados brutos do sensor (RAW)
+- Gravar em câmera lenta com altas taxas de quadros
+- Usar várias câmeras simultaneamente
+- Acessar metadados por quadro durante a captura
+- Tirar fotos em sequência (burst) de forma confiável
 
-Starting in **Android 5.0 (API level 21)**, Google introduced **Camera2 (android.hardware.camera2)** to tear down these walls. Camera2 is not an incremental update — it is a **full redesign**, built from scratch to expose the raw capabilities of modern camera silicon to every Android developer.
+A partir do **Android 5.0 (nível de API 21)**, o Google introduziu o **Camera2 (android.hardware.camera2)** para derrubar essas barreiras. O Camera2 não é uma atualização incremental — é um **redesenho completo**, construído do zero para expor as capacidades brutas do silício de câmera moderno a todos os desenvolvedores Android.
 
-In short: **Camera2 exists because smartphone cameras became professional-grade, and the old API couldn't keep up.**
+Em resumo: **O Camera2 existe porque as câmeras de smartphones tornaram-se de nível profissional, e a API antiga não conseguia acompanhar.**
 
 ***
 
 ## 1.2 Camera1 vs Camera2 vs CameraX
 
-Over a decade of Android camera development has produced **three generations** of camera APIs. Before you write a single line of code, it's essential to understand which API solves which problem.
+Mais de uma década de desenvolvimento de câmera Android produziu **três gerações** de APIs de câmera. Antes de escrever uma única linha de código, é essencial entender qual API resolve qual problema.
 
-### Three Generations, Three Philosophies
+### Três Gerações, Três Filosofias
 
 ```mermaid
 flowchart LR
-    subgraph YEAR ["Release Timeline"]
+    subgraph YEAR ["Linha do Tempo de Lançamento"]
         direction LR
         C1["Camera1<br/>2008"] --> C2["Camera2<br/>2014"] --> CX["CameraX<br/>2019"]
     end
     
-    subgraph LEVEL ["Abstraction Level"]
+    subgraph LEVEL ["Nível de Abstração"]
         direction TB
-        L1["Low / Deprecated"] --> L2["Low / Powerful"] --> L3["High / Convenient"]
+        L1["Baixo / Obsoleto"] --> L2["Baixo / Poderoso"] --> L3["Alto / Conveniente"]
     end
     
     YEAR ~~~ LEVEL
@@ -65,136 +65,136 @@ flowchart LR
 
 ### Camera1 — `android.hardware.Camera`
 
-The original camera API, introduced with Android 1.0 and **deprecated in Android 5.0**.
+A API de câmera original, introduzida com o Android 1.0 e **descontinuada no Android 5.0**.
 
-- **Model:** Procedural commands. You call methods like `startPreview()`, `takePicture()`, `setFlashMode()`.
-- **Design philosophy:** "The camera is a state machine you command."
-- **Best for:** Legacy apps targeting very old devices (pre-Lollipop). That's it.
-- **Why avoid it:** Google no longer updates it. New hardware features (multi-camera, RAW, HDR) are never back-ported to Camera1. The API surface is tiny. On modern devices, Camera1 is actually **emulated by a Camera2 wrapper** internally, so you pay Camera2 complexity without Camera2 benefits.
+- **Modelo:** Comandos procedurais. Você chama métodos como `startPreview()`, `takePicture()`, `setFlashMode()`.
+- **Filosofia de design:** "A câmera é uma máquina de estados que você comanda."
+- **Melhor para:** Aplicativos legados destinados a dispositivos muito antigos (pré-Lollipop). Apenas isso.
+- **Por que evitá-la:** O Google não a atualiza mais. Novos recursos de hardware (multicâmera, RAW, HDR) nunca são portados para o Camera1. A superfície da API é minúscula. Em dispositivos modernos, o Camera1 é, na verdade, **emulado por um wrapper do Camera2** internamente, então você paga a complexidade do Camera2 sem os benefícios do Camera2.
 
 ### Camera2 — `android.hardware.camera2.*`
 
-The modern low-level framework, introduced in Android 5.0 and continuously expanded through every Android version since.
+O framework moderno de baixo nível, introduzido no Android 5.0 e expandido continuamente em cada versão do Android desde então.
 
-- **Model:** A request/response pipeline. You build immutable `CaptureRequest` objects, submit them to a `CameraCaptureSession`, and receive `CaptureResult` metadata + image buffers asynchronously.
-- **Design philosophy:** "The camera is a programmable pipeline. You control every parameter of every frame."
-- **Best for:** Advanced camera apps, manual photography tools, computer vision pipelines, RAW capture, multi-camera research, high-speed video, and any use case where you need hardware-proximate control.
-- **Why use it:** Full access to every capability the OEM HAL exposes. Direct frame control. The only API path for professional features. Camera2 is what CameraX calls internally.
+- **Modelo:** Um pipeline de solicitação/resposta. Você constrói objetos `CaptureRequest` imutáveis, submete-os a uma `CameraCaptureSession` e recebe metadados `CaptureResult` + buffers de imagem de forma assíncrona.
+- **Filosofia de design:** "A câmera é um pipeline programável. Você controla cada parâmetro de cada quadro."
+- **Melhor para:** Aplicativos de câmera avançados, ferramentas de fotografia manual, pipelines de visão computacional, captura RAW, pesquisa multicâmera, vídeo de alta velocidade e qualquer caso de uso onde você precise de controle próximo ao hardware.
+- **Por que usá-la:** Acesso total a cada capacidade que o HAL do OEM expõe. Controle direto de quadros. O único caminho de API para recursos profissionais. O Camera2 é o que o CameraX chama internamente.
 
 ### CameraX — `androidx.camera.*`
 
-A **Jetpack library** (not a platform API) introduced in beta in 2019 and stabilized around Android 11.
+Uma **biblioteca Jetpack** (não uma API de plataforma) introduzida em beta em 2019 e estabilizada por volta do Android 11.
 
-- **Model:** Declarative use cases. You `bindToLifecycle()` a set of `Preview`, `ImageCapture`, `ImageAnalysis`, or `VideoCapture` use cases and the library does the rest.
-- **Design philosophy:** "We've solved the 10,000 edge cases for you. Just tell us what output you need."
-- **Best for:** Most applications that need a camera. QR/barcode scanners, photo uploads, document scanning, simple video recording — any scenario where convenience and reliability beat raw control.
-- **Why use it:** Lifecycle-aware (no resource leaks), resolution selection is automatic, OEM quirks have built-in workarounds, the exact same code runs on thousands of device models with zero `if` statements.
+- **Modelo:** Casos de uso declarativos. Você vincula ao ciclo de vida (`bindToLifecycle()`) um conjunto de casos de uso `Preview`, `ImageCapture`, `ImageAnalysis` ou `VideoCapture` e a biblioteca faz o resto.
+- **Filosofia de design:** "Nós resolvemos os 10.000 casos extremos para você. Apenas nos diga qual saída você precisa."
+- **Melhor para:** A maioria das aplicações que precisam de uma câmera. Scanners de QR/código de barras, uploads de fotos, digitalização de documentos, gravação de vídeo simples — qualquer cenário onde a conveniência e a confiabilidade superam o controle bruto.
+- **Por que usá-la:** Ciente do ciclo de vida (sem vazamentos de recursos), a seleção de resolução é automática, as peculiaridades do OEM possuem soluções integradas, o exato mesmo código roda em milhares de modelos de dispositivos com zero declarações `if`.
 
-### Side-by-Side Comparison
+### Comparação Lado a Lado
 
-| Dimension | Camera1 | Camera2 | CameraX |
+| Dimensão | Camera1 | Camera2 | CameraX |
 |:---|:---|:---|:---|
-| **Introduced** | Android 1.0 (2008) | Android 5.0 (2014) | Android 10 (Jetpack) |
-| **Status** | Deprecated | Active, maintained | Recommended (Jetpack) |
-| **Abstraction** | Low (legacy) | Low | High |
-| **Learning curve** | Easy | Very steep | Very gentle |
-| **Manual exposure / ISO / focus** | Limited | Full control | Limited via Interop |
-| **RAW capture** | No | Yes | With Interop workarounds |
-| **Multi-camera (physical streams)** | No | Yes | No |
-| **High-speed video (120+ fps)** | No | Yes | Limited |
-| **Burst / bracketing** | No | Full control | No |
-| **Per-frame metadata** | No | Yes, full + partial results | Exposed via Interop callbacks |
-| **Lifecycle safety** | Manual, error-prone | Manual, error-prone | Automatic, lifecycle-bound |
-| **OEM quirk handling** | None | None | Built-in (1000+ devices tested) |
-| **Code volume for a working app** | Medium | Very high (verbose) | Very low |
-| **Performance** | OK (indirect wrapper) | Maximum possible | Near-maximum (thin overhead) |
+| **Introduzido** | Android 1.0 (2008) | Android 5.0 (2014) | Android 10 (Jetpack) |
+| **Status** | Obsoleto | Ativo, mantido | Recomendado (Jetpack) |
+| **Abstração** | Baixa (legado) | Baixa | Alta |
+| **Curva de aprendizado** | Fácil | Muito íngreme | Muito suave |
+| **Exposição manual / ISO / foco** | Limitado | Controle total | Limitado via Interoperabilidade |
+| **Captura RAW** | Não | Sim | Com soluções de Interoperabilidade |
+| **Multicâmera (fluxos físicos)** | Não | Sim | Não |
+| **Vídeo de alta velocidade (120+ fps)** | Não | Sim | Limitado |
+| **Burst / Bracketing** | Não | Controle total | Não |
+| **Metadados por quadro** | Não | Sim, resultados totais + parciais | Exposto via callbacks de Interop |
+| **Segurança de ciclo de vida** | Manual, propenso a erros | Manual, propenso a erros | Automático, vinculado ao ciclo de vida |
+| **Tratamento de peculiaridades OEM** | Nenhum | Nenhum | Integrado (mais de 1000 dispositivos testados) |
+| **Volume de código para um app funcional**| Médio | Muito alto (verboso) | Muito baixo |
+| **Desempenho** | OK (wrapper indireto) | Máximo possível | Próximo do máximo (sobrecarga mínima) |
 
 ***
 
-## 1.3 What Can Camera2 Do?
+## 1.3 O que o Camera2 pode fazer?
 
-To concretely understand Camera2's power, imagine features you've seen on flagship phones. Camera2 makes **all of these programmatically accessible**:
+Para entender concretamente o poder do Camera2, imagine recursos que você viu em telefones topo de linha. O Camera2 torna **todos eles acessíveis programaticamente**:
 
-### Professional-Grade Capture
+### Captura de Nível Profissional
 
-- **Full Manual Exposure:** Dial in shutter speed from 1/8000 s to 30 s, and ISO from 50 to 102,400. Build a real Pro mode UI.
-- **RAW Photography:** Extract 10-bit, 12-bit, 14-bit, or 16-bit **unprocessed Bayer data** directly from the sensor (no demosaic, no noise reduction, no color correction). Write Adobe DNG files using the bundled `DngCreator` for Lightroom editing.
-- **Exposure Bracketing:** Shoot 3, 5, 7, or 9 frames at precisely stepped EV values. Feed them into an HDR fusion algorithm.
-- **Timelapse Locking:** Freeze exposure, focus, and white balance across **thousands of frames** — no flicker as the sun moves or clouds pass.
+- **Exposição Manual Total:** Ajuste a velocidade do obturador de 1/8000 s a 30 s, e o ISO de 50 a 102.400. Construa uma interface de modo Pro real.
+- **Fotografia RAW:** Extraia dados **Bayer não processados** de 10 bits, 12 bits, 14 bits ou 16 bits diretamente do sensor (sem demosaicing, sem redução de ruído, sem correção de cor). Escreva arquivos Adobe DNG usando o `DngCreator` integrado para edição no Lightroom.
+- **Bracketing de Exposição:** Tire 3, 5, 7 ou 9 quadros em valores de EV precisamente escalonados. Alimente-os em um algoritmo de fusão HDR.
+- **Bloqueio de Timelapse:** Congele a exposição, o foco e o balanço de branco em **milhares de quadros** — sem oscilação enquanto o sol se move ou as nuvens passam.
 
-### Computational Photography Hardware Access
+### Acesso ao Hardware de Fotografia Computacional
 
-- **High-Speed Video:** Configure `CameraConstrainedHighSpeedCaptureSession` for 120 fps, 240 fps, or even 960 fps capture. Build slow-motion editors.
-- **Logical Multi-Camera:** Access **both** physical cameras under a logical multi-camera ID **simultaneously**. Grab synchronized YUV frames from a wide and a telephoto lens to compute depth maps on-device.
-- **YUV / PRIVATE Reprocessing (LEVEL_3 devices):** Maintain a full-resolution **circular buffer in the ISP**, then on shutter tap, grab a frame from the past and re-run heavy noise reduction and sharpening. This is how OEMs implement **Zero Shutter Lag (ZSL)**.
-- **Ultra HDR / JPEG_R (Android 14+):** Request and write `ImageFormat.JPEG_R` files that store an 8-bit SDR JPEG **plus** a secondary HDR gain map. Legacy viewers see a normal photo; HDR panels render 1,000+ nit highlights.
-- **Camera Extensions (Android 12+):** Delegate Night, Bokeh (portrait), HDR, and Face Retouch modes **to the OEM HAL** — using the exact same multi-frame AI pipeline the stock camera uses.
+- **Vídeo de Alta Velocidade:** Configure `CameraConstrainedHighSpeedCaptureSession` para captura de 120 fps, 240 fps ou até 960 fps. Construa editores de câmera lenta.
+- **Multicâmera Lógica:** Acesse **ambas** as câmeras físicas sob um ID de multicâmera lógica **simultaneamente**. Capture quadros YUV sincronizados de uma lente grande angular e uma teleobjetiva para computar mapas de profundidade no dispositivo.
+- **Reprocessamento YUV / PRIVATE (dispositivos LEVEL_3):** Mantenha um **buffer circular em resolução total no ISP** e, ao tocar no obturador, pegue um quadro do passado e execute novamente a redução de ruído pesada e o nitidez. É assim que os OEMs implementam o **Zero Shutter Lag (ZSL)**.
+- **Ultra HDR / JPEG_R (Android 14+):** Solicite e escreva arquivos `ImageFormat.JPEG_R` que armazenam um JPEG SDR de 8 bits **mais** um mapa de ganho HDR secundário. Visualizadores legados veem uma foto normal; painéis HDR renderizam destaques de mais de 1.000 nits.
+- **Extensões de Câmera (Android 12+):** Delegue os modos Noturno, Bokeh (retrato), HDR e Retoque Facial **para o HAL do OEM** — usando exatamente o mesmo pipeline de IA de vários quadros que a câmera padrão usa.
 
-### Advanced Video and Vision Pipelines
+### Pipelines de Vídeo e Visão Avançados
 
-- **Multi-Stream Concurrent Output:** Drive a **preview** Surface, a **YUV analysis** Surface (for ML object detection running at 30 fps), and a **JPEG still** Surface from a single capture request — all without copying memory.
-- **Flash Timing Precision:** Explicitly coordinate pre-flash metering, main-flash firing, and rolling-shutter readout on a per-frame basis.
-- **Partial Capture Results:** Receive AE state and focus distance metadata **milliseconds before** the final image buffer is ready — enabling "tap anywhere and the UI updates instantly" responsiveness.
-- **Offline Sessions (API 30+):** If the user backgrounds your app mid-Night-Mode, hand the inflight multi-frame merge to an isolated `CameraOfflineSession` and the HAL finishes processing asynchronously; your app wakes up to the final picture.
+- **Saída Simultânea de Múltiplos Fluxos:** Alimente uma Surface de **visualização**, uma Surface de **análise YUV** (para detecção de objetos por ML rodando a 30 fps) e uma Surface de **foto JPEG** a partir de uma única solicitação de captura — tudo sem copiar memória.
+- **Precisão de Tempo do Flash:** Coordene explicitamente a medição pré-flash, o disparo do flash principal e a leitura do obturador eletrônico quadro a quadro.
+- **Resultados de Captura Parciais:** Receba metadados de estado de AE e distância de foco **milissegundos antes** do buffer da imagem final estar pronto — permitindo a resposta "toque em qualquer lugar e a UI atualiza instantaneamente".
+- **Sessões Offline (API 30+):** Se o usuário colocar seu aplicativo em segundo plano no meio de um Modo Noturno, entregue a mesclagem de vários quadros em andamento a uma `CameraOfflineSession` isolada e o HAL terminará o processamento de forma assíncrona; seu aplicativo acorda com a imagem final.
 
-### And That Is Just the Start
+### E Isso é Apenas o Começo
 
-Every new Android version expands Camera2. Android 15 (API 35) added `CameraDeviceSetup` so you can probe session configurations **without powering on the sensor at all**, cutting capability-check latency by 10×. The API is alive, evolving, and always one step ahead of the latest camera hardware.
-
-***
-
-## 1.4 Who Should Learn Camera2?
-
-Learning Camera2 properly takes time. The API surface is enormous — 300+ metadata keys, dozens of callbacks, multiple session types, and hundreds of OEM corner cases. You should invest that time if any of these describe you or your project:
-
-### You Are Building an Advanced Camera Application
-
-Your app offers **Pro mode** with manual ISO/shutter/focus/WB dials. Or it captures **RAW photos** and lets users export them for desktop editing. Or it records **slow-motion video**. None of these are possible (or are severely crippled) with CameraX.
-
-### You Are Building a Computer Vision or Research Application
-
-You need **zero-copy, lowest-latency YUV frames** to feed an on-device ML pipeline. Or you require **frame-locked sensor data** (the gyro timestamp in `SENSOR_TIMESTAMP` must match the image within ±1 ms for accurate SLAM / visual-inertial odometry). Or you must control **exact shutter duration per frame** for structured light / depth sensing.
-
-### You Are Building a Camera Capability Diagnostic Tool
-
-Like the companion app to this series — **Android Camera Parameters** ([GitHub](https://github.com/zoozooll/AndroidCameraParameters), [Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)) — you need to exhaustively dump every `CameraCharacteristics` key to visualize what each device supports. CameraX intentionally hides most of this detail.
-
-### You Are Debugging a CameraX or OEM Camera Issue
-
-CameraX does break sometimes on obscure devices. When your CameraX preview is stretched, or a specific Galaxy model returns green frames on night mode, or the Pixel 9 crashes on `VideoCapture`, you **must** drop to Camera2 to reproduce and isolate the bug.
-
-### You Work in Mobile Imaging, OEM Camera Stacks, or Automotive Camera Pipelines
-
-If you touch vendor HAL code, `frameworks/av/camera`, the Camera NDK, or automotive EVS→Camera2 migration — Camera2 fluency is table stakes.
-
-### Who Does **Not** Need to Learn Camera2?
-
-If your requirements are: *"I need to let users take a profile photo or scan a QR code"* — **use CameraX**. Seriously. CameraX is a masterpiece of engineering. It will save you months of work on device compatibility. Camera2 is a power tool; reach for it when you specifically need that power.
+Cada nova versão do Android expande o Camera2. O Android 15 (API 35) adicionou o `CameraDeviceSetup` para que você possa sondar as configurações da sessão **sem sequer ligar o sensor**, reduzindo a latência da verificação de capacidade em 10 vezes. A API está viva, evoluindo e sempre um passo à frente do hardware de câmera mais recente.
 
 ***
 
-## 1.5 What You'll Build Throughout This Book
+## 1.4 Quem deve aprender o Camera2?
 
-Theory without code is abstract. Code without progression is confusing.
+Aprender o Camera2 adequadamente leva tempo. A superfície da API é enorme — mais de 300 chaves de metadados, dezenas de callbacks, múltiplos tipos de sessão e centenas de casos extremos de OEMs. Você deve investir esse tempo se alguma destas situações descrever você ou seu projeto:
 
-Throughout this book you will **progressively build a real, fully functional Camera2 application**. Every chapter adds a feature, and every feature compiles and runs on a real phone. By the final chapter, you will have assembled this complete app:
+### Você está construindo um aplicativo de câmera avançado
+
+Seu aplicativo oferece um **modo Pro** com seletores manuais de ISO/obturador/foco/WB. Ou ele captura **fotos RAW** e permite que os usuários as exportem para edição no desktop. Ou ele grava **vídeo em câmera lenta**. Nada disso é possível (or é severamente prejudicado) com o CameraX.
+
+### Você está construindo uma aplicação de Visão Computacional ou Pesquisa
+
+Você precisa de **quadros YUV de latência mínima e cópia zero** para alimentar um pipeline de ML no dispositivo. Ou você requer **dados do sensor com bloqueio de quadro** (o timestamp do giroscópio em `SENSOR_TIMESTAMP` deve corresponder à imagem dentro de ±1 ms para SLAM / odometria visual-inercial precisa). Ou você deve controlar a **duração exata do obturador por quadro** para luz estruturada / detecção de profundidade.
+
+### Você está construindo uma ferramenta de diagnóstico de capacidade de câmera
+
+Como o aplicativo complementar a esta série — **Android Camera Parameters** ([GitHub](https://github.com/zoozooll/AndroidCameraParameters), [Google Play](https://play.google.com/store/apps/details?id=com.minininja.cameraparams)) — você precisa despejar exaustivamente cada chave de `CameraCharacteristics` para visualizar o que cada dispositivo suporta. O CameraX esconde intencionalmente a maior parte desse detalhe.
+
+### Você está depurando um problema do CameraX ou da câmera do OEM
+
+O CameraX falha às vezes em dispositivos obscuros. Quando sua visualização do CameraX está esticada, ou um modelo Galaxy específico retorna quadros verdes no modo noturno, ou o Pixel 9 trava no `VideoCapture`, você **deve** descer para o Camera2 para reproduzir e isolar o bug.
+
+### Você trabalha com imagens móveis, stacks de câmera OEM ou pipelines de câmera automotiva
+
+Se você toca no código do HAL do fornecedor, `frameworks/av/camera`, no NDK de Câmera ou na migração de EVS→Camera2 automotiva — a fluência no Camera2 é indispensável.
+
+### Quem **não** precisa aprender o Camera2?
+
+Se seus requisitos forem: *"Eu preciso permitir que os usuários tirem uma foto de perfil ou escaneiem um código QR"* — **use o CameraX**. Sério. O CameraX é uma obra-prima da engenharia. Ele economizará meses de trabalho em compatibilidade de dispositivos. O Camera2 é uma ferramenta poderosa; use-a quando precisar especificamente desse poder.
+
+***
+
+## 1.5 O que você construirá ao longo deste livro
+
+Teoria sem código é abstrata. Código sem progressão é confuso.
+
+Ao longo deste livro, você **construirá progressivamente um aplicativo Camera2 real e totalmente funcional**. Cada capítulo adiciona um recurso, e cada recurso compila e roda em um telefone real. Ao capítulo final, você terá montado este aplicativo completo:
 
 ```mermaid
 flowchart TB
-    subgraph LAYERED ["Full Application Architecture"]
+    subgraph LAYERED ["Arquitetura Completa do Aplicativo"]
         direction TB
-        UI["Jetpack Compose UI\nHome / Preview / Settings"] --> VM["ViewModel\n3A State Machine"]
-        VM --> CAM["Camera2 Engine\nSession + Repeating Request"]
-        CAM --> HW["Physical Camera\nSensor + Lens + ISP"]
-        CAM --> OUT["Output Streams\nPreview (TextureView)\nJPEG (ImageReader)\nRAW_SENSOR (ImageReader)\nYUV (ImageAnalysis)"]
+        UI["Interface Jetpack Compose<br/>Home / Visualização / Configurações"] --> VM["ViewModel<br/>Máquina de Estados 3A"]
+        VM --> CAM["Mecanismo Camera2<br/>Sessão + Solicitação Repetida"]
+        CAM --> HW["Câmera Física<br/>Sensor + Lente + ISP"]
+        CAM --> OUT["Fluxos de Saída<br/>Visualização (TextureView)<br/>JPEG (ImageReader)<br/>RAW_SENSOR (ImageReader)<br/>YUV (ImageAnalysis)"]
     end
     
-    subgraph FEATURES ["Features Implemented Per Chapter Group"]
+    subgraph FEATURES ["Recursos Implementados por Grupo de Capítulos"]
         direction LR
-        P2["Ch 5-9\nCore App:\nPermissions\nCameraManager\nCamera Open\nLive Preview\nPhoto Capture"]
-        P4["Ch 13-17\nManual Modes:\nExposure Dial\nISO Slider\nAF + MF Slider\nWB Presets\nFull 3A Orchestration"]
-        P5["Ch 18-23\nPro Features:\nRAW + DNG\n120/240fps Video\nMulti-Camera Sync\nJPEG_R Ultra HDR\nCamera Extensions\nZero Shutter Lag"]
-        P6["Ch 24-28\nModern Hardening:\nCameraX Interop\nNDK Zero-Copy\nCoroutine + Flow\nCTS / ITS Testing\nFull HAL Arch"]
+        P2["Cap 5-9<br/>App Base:<br/>Permissões<br/>CameraManager<br/>Abrir Câmera<br/>Visualização ao Vivo<br/>Captura de Foto"]
+        P4["Cap 13-17<br/>Modos Manuais:<br/>Seletor de Exposição<br/>Slider de ISO<br/>AF + Slider de MF<br/>Presets de WB<br/>Orquestração 3A Completa"]
+        P5["Cap 18-23<br/>Recursos Pro:<br/>RAW + DNG<br/>Vídeo 120/240fps<br/>Sincronização Multicâmera<br/>JPEG_R Ultra HDR<br/>Extensões de Câmera<br/>Zero Shutter Lag"]
+        P6["Cap 24-28<br/>Endurecimento Moderno:<br/>Interop CameraX<br/>NDK Zero-Copy<br/>Coroutine + Flow<br/>Testes CTS / ITS<br/>Arquitetura HAL Completa"]
     end
     
     LAYERED ~~~ FEATURES
@@ -205,30 +205,30 @@ flowchart TB
     style P6 fill:#BBDEFB
 ```
 
-### The Milestones
+### Os Marcos
 
-| Chapter Range | What You Can Do After |
+| Faixa de Capítulos | O que você poderá fazer depois |
 |:---|:---|
-| **Ch 1–4** | You understand the hardware. You know how a lens, a sensor, and an ISP interact. You can read the spec sheet of any phone and tell which Camera2 features it supports. You've installed the Android Camera Parameters companion app and explored your own device. |
-| **Ch 5–9** | You have a **working camera app**. It opens the back camera, shows a live preview on screen, and saves a JPEG photo when you tap the shutter button. Full aspect-ratio correction, correct portrait rotation, and proper lifecycle cleanup all work. |
-| **Ch 10–12** | You understand **why** the code works the way it does. You can trace a CaptureRequest through the pending queue, in-flight queue, HAL, and back out as a CaptureResult. You know how to gate features on the actual hardware level and capabilities reported. |
-| **Ch 13–17** | Your app has a **full Pro Mode**. Manual ISO, shutter, focus distance, and WB color temperature dials. Live histogram / EV readback. Full one-shot-AF → precapture-AE → capture sequence that exactly mimics how OEM stock cameras get perfect results. |
-| **Ch 18–23** | Your app is now **flagship-grade**: saves RAW+JPEG simultaneously, records 120 fps slow-motion video, can capture dual physical YUV streams for portrait depth, writes Ultra HDR JPEG_R files, delegates Bokeh and Night mode to Camera Extensions, and implements Zero-Shutter-Lag reprocessing on LEVEL_3 devices. |
-| **Ch 24–28** | You are a **senior Android Camera engineer**. You can drop-in CameraX via Interop for 90% of apps while using Camera2 for the 10% that need it. You can author NDK native camera pipelines with zero-copy. You wrap all the callbacks in Kotlin Coroutines and Flow for clean, testable code. You understand how to write camera tests that pass CTS ITS. And you can whiteboard the full App→Framework→Binder→Native→HAL→Kernel→Hardware stack on a whiteboard. |
-| **Ch 29 (Encyclopedia)** | You have a **desk reference** of 29 of the most important `CameraCharacteristics` keys, each explained with rationale, a Kotlin query, an Android Camera Parameters pointer, and the OEM pitfalls. This chapter stays open as you ship production code. |
+| **Cap 1–4** | Você entende o hardware. Sabe como uma lente, um sensor e um ISP interagem. Pode ler a folha de especificações de qualquer telefone e dizer quais recursos do Camera2 ele suporta. Instalou o aplicativo complementar Android Camera Parameters e explorou seu próprio dispositivo. |
+| **Cap 5–9** | Você tem um **aplicativo de câmera funcional**. Ele abre a câmera traseira, mostra uma visualização ao vivo na tela e salva uma foto JPEG quando você toca no botão do obturador. Correção total da proporção, rotação correta do retrato e limpeza adequada do ciclo de vida, tudo funcionando. |
+| **Cap 10–12** | Você entende **por que** o código funciona da maneira que funciona. Pode rastrear uma CaptureRequest pela fila pendente, fila em voo, HAL e de volta como um CaptureResult. Sabe como restringir recursos com base no nível de hardware real e nas capacidades relatadas. |
+| **Cap 13–17** | Seu aplicativo tem um **Modo Pro completo**. ISO manual, obturador, distância de foco e seletores de temperatura de cor WB. Histograma ao vivo / leitura de EV. Sequência completa de AF de disparo único → AE de pré-captura → captura que imita exatamente como as câmeras padrão dos OEMs obtêm resultados perfeitos. |
+| **Cap 18–23** | Seu aplicativo agora é de **nível flagship**: salva RAW+JPEG simultaneamente, grava vídeo em câmera lenta de 120 fps, pode capturar fluxos YUV físicos duplos para profundidade de retrato, escreve arquivos Ultra HDR JPEG_R, delega os modos Bokeh e Noturno às Extensões de Câmera e implementa o reprocessamento Zero-Shutter-Lag em dispositivos LEVEL_3. |
+| **Cap 24–28** | Você é um **engenheiro sênior de Câmera Android**. Pode integrar o CameraX via Interop em 90% dos apps enquanto usa o Camera2 nos 10% que precisam. Pode criar pipelines de câmera nativa NDK com cópia zero. Envolve todos os callbacks em Kotlin Coroutines e Flow para um código limpo e testável. Entende como escrever testes de câmera que passam no CTS ITS. E pode desenhar toda a stack App→Framework→Binder→Native→HAL→Kernel→Hardware em um quadro branco. |
+| **Cap 29 (Enciclopédia)** | Você tem uma **referência de mesa** das 29 chaves de `CameraCharacteristics` mais importantes, cada uma explicada com racional, uma consulta Kotlin, um ponteiro do Android Camera Parameters e as armadilhas dos OEMs. Este capítulo permanece aberto enquanto você entrega código de produção. |
 
-That is a genuinely rare skill set. Let's start the journey.
+Esse é um conjunto de habilidades genuinamente raro. Vamos começar a jornada.
 
 ***
 
-## 1.6 Summary
+## 1.6 Resumo
 
-- **Camera2** is the modern low-level Android camera framework, introduced in Android 5.0 to expose the full capability of today's multi-camera, ISP-rich smartphones.
-- **Camera1** is deprecated; **CameraX** is convenient for most use cases but hides power that only Camera2 exposes. You choose based on requirements.
-- Camera2 unlocks **manual controls, RAW photography, high-speed video, logical multi-camera, YUV reprocessing/ZSL, Ultra HDR, OEM Extensions**, and **Offline Sessions**.
-- Invest in Camera2 when you are building Pro-photo tools, vision/research pipelines, diagnostic apps, or debugging deeper layers.
-- Throughout this book you will **incrementally build a full-featured Camera2 application** — from a one-button camera in Chapter 9 to a flagship-grade imaging tool by Chapter 23, hardened by modern Android patterns by Chapter 28.
+- **Camera2** é o framework moderno de câmera de baixo nível do Android, introduzido no Android 5.0 para expor a capacidade total dos smartphones atuais com várias câmeras e ricos em ISP.
+- O **Camera1** está obsoleto; o **CameraX** é conveniente para a maioria dos casos de uso, mas esconde o poder que apenas o Camera2 expõe. Você escolhe com base nos requisitos.
+- O Camera2 desbloqueia **controles manuais, fotografia RAW, vídeo de alta velocidade, multicâmera lógica, reprocessamento YUV/ZSL, Ultra HDR, Extensões OEM** e **Sessões Offline**.
+- Invista no Camera2 quando estiver construindo ferramentas de foto Pro, pipelines de visão/pesquisa, aplicativos de diagnóstico ou depurando camadas mais profundas.
+- Ao longo deste livro, você **construirá incrementalmente um aplicativo Camera2 completo** — de uma câmera de um botão no Capítulo 9 a uma ferramenta de imagem de nível flagship no Capítulo 23, endurecida por padrões modernos do Android no Capítulo 28.
 
-## 1.7 What's Next
+## 1.7 O que vem a seguir
 
-Before writing a single line of Camera2 code, we need to understand the hardware we're commanding. In **Chapter 2: Understanding Smartphone Cameras**, you will learn what each part of a phone camera module actually does: the lens, the image sensor, the ISP, and how raw light becomes a compressed JPEG. By the end, you will see why a "48 MP" label on the box tells you almost nothing about real image quality.
+Antes de escrever uma única linha de código do Camera2, precisamos entender o hardware que estamos comandando. No **Capítulo 2: Entendendo as Câmeras de Smartphones**, você aprenderá o que cada parte de um módulo de câmera de telefone realmente faz: a lente, o sensor de imagem, o ISP e como a luz bruta se torna um JPEG compactado. Ao final, você verá por que um rótulo de "48 MP" na caixa não diz quase nada sobre a qualidade real da imagem.

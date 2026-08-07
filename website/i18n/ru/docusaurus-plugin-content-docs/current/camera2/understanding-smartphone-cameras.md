@@ -1,262 +1,262 @@
 ---
 sidebar_position: 2
-title: "Chapter 2: Understanding Smartphone Cameras"
-description: "Explore the camera module hardware inside every smartphone: the lens, image sensor, ISP processor, the difference between RAW and JPEG, multi-camera designs, and the complete journey from photons to a stored photo."
-keywords: [smartphone camera, camera module, camera lens, image sensor, ISP, RAW vs JPEG, multi-camera]
+title: "Глава 2: Устройство камер смартфонов"
+description: "Изучите аппаратное обеспечение модуля камеры внутри каждого смартфона: объектив, датчик изображения, процессор ISP, разницу между RAW и JPEG, конструкции мультикамер и полный путь от фотонов до сохраненного снимка."
+keywords: [камера смартфона, модуль камеры, объектив камеры, датчик изображения, ISP, RAW против JPEG, мультикамера]
 ---
 
-# Chapter 2: Understanding Smartphone Cameras
+# Глава 2: Устройство камер смартфонов
 
-Before writing a single line of Camera2 API code, you must understand the physical hardware that your code will be commanding. A smartphone camera is not just "a lens pointed at a sensor." It is a tightly integrated, sealed, precision-engineered assembly containing optics, actuators, filters, semiconductors, and high-speed data buses. This chapter explains every component from the glass that first catches light to the flash memory chip where your final photo is stored.
+Прежде чем писать первую строку кода API Camera2, вы должны понять физическое оборудование, которым будет управлять ваш код. Камера смартфона — это не просто «объектив, направленный на датчик». Это плотно интегрированная, герметичная, прецизионная сборка, содержащая оптику, приводы, фильтры, полупроводники и высокоскоростные шины данных. В этой главе объясняется каждый компонент — от стекла, которое первым ловит свет, до чипа флэш-памяти, где хранится ваша итоговая фотография.
 
-The goal of this chapter is to build a mental model of the camera pipeline as a physical system. When later chapters ask you to configure a capture request with `CONTROL_AE_TARGET_FPS_RANGE` or `SENSOR_SENSITIVITY`, you will understand exactly which piece of hardware those parameters affect and why the values matter.
+Цель этой главы — построить ментальную модель конвейера камеры как физической системы. Когда в следующих главах вам потребуется настроить запрос на захват с помощью `CONTROL_AE_TARGET_FPS_RANGE` или `SENSOR_SENSITIVITY`, вы будете точно понимать, на какую часть оборудования влияют эти параметры и почему их значения важны.
 
-## The Camera Module: A Sealed Optical Assembly
+## Модуль камеры: Герметичная оптическая сборка
 
-When you look at the back of a modern flagship phone — imagine a Pixel 10 or Galaxy S26 Ultra — you see a raised rectangular island protruding 2 to 4 millimeters from the rear glass. That island is not a single camera. One rectangular island houses three separate circular modules: the largest at the bottom is the primary wide, a smaller one above it is the 3× periscope telephoto, and the medium-sized one to the left is the 0.5× ultra-wide. Each circular "bump" within that island is a complete, independent camera module.
+Когда вы смотрите на заднюю панель современного флагманского телефона — представьте себе Pixel 10 или Galaxy S26 Ultra — вы видите выступающий прямоугольный остров, возвышающийся над задним стеклом на 2–4 миллиметра. Этот остров — не одна камера. В одном прямоугольном острове размещаются три отдельных круглых модуля: самый большой внизу — основной широкоугольный, чуть поменьше над ним — 3-кратный перископический телеобъектив, а средний слева — сверхширокоугольный 0,5×. Каждый круглый выступ внутри этого острова является полноценным, независимым модулем камеры.
 
-A camera module is a hermetically sealed unit manufactured in a dust-free clean room. It contains, stacked in order from the outside world inward:
+Модуль камеры — это герметично закрытый блок, изготовленный в стерильном помещении. Он содержит следующие элементы, расположенные по порядку от внешнего мира внутрь:
 
-1. **Protective cover glass**: A scratch-resistant sapphire or Gorilla Glass window that seals the module and keeps dust out.
-2. **Lens barrel**: A cylindrical stack of 4 to 6 individual glass (or sometimes plastic aspheric) lens elements, held in precise alignment by thin plastic spacers.
-3. **Voice Coil Motor (VCM)**: An electromagnetic actuator that moves the entire lens barrel forward or backward along the optical axis by fractions of a millimeter to achieve autofocus. Some premium VCMs can also shift the lens perpendicular to the axis for optical image stabilization (OIS).
-4. **Infrared (IR) cut filter**: A thin, coated glass wafer placed directly in front of the sensor. It blocks infrared light (which the silicon sensor is sensitive to but the human eye is not) so that recorded colors match what humans perceive.
-5. **Sensor die**: The silicon CMOS image sensor chip itself, wire-bonded to a substrate. The active pixel array faces upward toward the lens.
-6. **Flexible Printed Circuit (FPC)**: A thin, bendable ribbon cable that carries power, ground, control signals (I2C), and high-speed image data (MIPI CSI-2) from the module to the phone's mainboard.
-7. **Board-to-board connector**: A tiny, high-density plug at the end of the FPC that snaps into a mating receptacle on the phone's main PCB.
+1. **Защитное стекло**: Устойчивое к царапинам сапфировое стекло или окно Gorilla Glass, которое герметизирует модуль и защищает его от пыли.
+2. **Объектив (Lens barrel)**: Цилиндрический стек из 4–6 отдельных стеклянных (или иногда пластиковых асферических) линз, удерживаемых в точном положении тонкими пластиковыми проставками.
+3. **Звуковая катушка (Voice Coil Motor, VCM)**: Электромагнитный привод, который перемещает весь объектив вперед или назад вдоль оптической оси на доли миллиметра для достижения автофокусировки. Некоторые премиальные VCM также могут сдвигать линзу перпендикулярно оси для оптической стабилизации изображения (OIS).
+4. **ИК-фильтр**: Тонкая пластина из стекла с покрытием, расположенная непосредственно перед сенсором. Она блокирует инфракрасный свет (к которому чувствителен кремниевый сенсор, но который не виден человеческому глазу), чтобы записанные цвета соответствовали человеческому восприятию.
+5. **Кристалл сенсора**: Сам чип CMOS-матрицы, приваренный к подложке. Активная область пикселей направлена вверх, к объективу.
+6. **Гибкий шлейф (FPC)**: Тонкий гибкий кабель, по которому передается питание, земля, сигналы управления (I2C) и высокоскоростные данные изображения (MIPI CSI-2) от модуля к материнской плате телефона.
+7. **Разъем (Board-to-board connector)**: Крошечный разъем высокой плотности на конце шлейфа, который вставляется в ответную часть на основной плате телефона.
 
-The entire assembly — from cover glass to connector — is typically 5 to 8 millimeters thick for a conventional rear camera, and 10 to 14 millimeters long (inside the phone, oriented horizontally) for a periscope telephoto. The modules are calibrated individually at the factory: lens alignment, sensor tilt, color shading, and autofocus infinity position are all measured and stored in one-time-programmable (OTP) memory on the module itself. The Camera2 API reads this calibration data at device boot so your app does not have to account for unit-to-unit manufacturing variation.
+Вся сборка — от защитного стекла до разъема — обычно имеет толщину от 5 до 8 миллиметров для обычной задней камеры и от 10 до 14 миллиметров в длину (внутри телефона, ориентирована горизонтально) для перископического телеобъектива. Модули калибруются индивидуально на заводе: юстировка линз, наклон сенсора, цветовое затенение и положение бесконечности для автофокуса измеряются и записываются в однократно программируемую память (OTP) на самом модуле. API Camera2 считывает эти данные калибровки при загрузке устройства, поэтому вашему приложению не нужно учитывать производственные отклонения от устройства к устройству.
 
-## The Lens: Focal Length, Aperture, and Stabilization
+## Объектив: Фокусное расстояние, диафрагма и стабилизация
 
-The lens is the first component that light encounters. Its job is to bend incoming light rays so they converge into a sharp image exactly on the plane of the image sensor.
+Объектив — это первый компонент, с которым сталкивается свет. Его задача — преломлять входящие лучи света так, чтобы они сходились в резкое изображение точно на плоскости датчика изображения.
 
-### Focal Length and Full-Frame Equivalence
+### Фокусное расстояние и полнокадровый эквивалент
 
-Focal length determines the field of view (how much of the scene fits in the frame) and magnification (how large distant subjects appear). Smartphone camera specs always advertise **full-frame equivalent focal lengths**. This is a convention that normalizes across different sensor sizes so consumers can compare apples to apples. A full-frame sensor is the 36mm × 24mm size historically used in 35mm film SLR cameras.
+Фокусное расстояние определяет угол обзора (какая часть сцены помещается в кадр) и увеличение (насколько большими кажутся удаленные объекты). В характеристиках камер смартфонов всегда указываются **фокусные расстояния в полнокадровом эквиваленте**. Это соглашение, которое нормализует параметры для разных размеров сенсоров, чтобы потребители могли сравнивать их. Полнокадровый сенсор — это размер 36 мм × 24 мм, который исторически использовался в 35-мм пленочных камерах.
 
-Common full-frame equivalent focal lengths on smartphones:
+Распространенные эквивалентные фокусные расстояния в смартфонах:
 
-- **10–18mm (Ultra-wide)**: 100° to 130° diagonal field of view. Used for landscapes, architecture, group selfies, and close-up macro shots.
-- **22–28mm (Wide / Primary)**: The default "normal" camera on every phone. ~75° field of view, similar to human peripheral vision but flatter.
-- **45–80mm (Telephoto, 2× to 3×)**: Narrow 30° to 50° field of view. Used for portraits (natural-looking face proportions, less perspective distortion) and general zoom.
-- **100–240mm (Periscope telephoto, 5× to 10×)**: 10° to 25° field of view. The prism-bent periscope design allows long focal lengths without making the phone 2 centimeters thick.
+- **10–18 мм (Сверхширокоугольный)**: Диагональный угол обзора от 100° до 130°. Используется для пейзажей, архитектуры, групповых селфи и макросъемки крупным планом.
+- **22–28 мм (Широкоугольный / Основной)**: Стандартная камера в любом телефоне. Угол обзора около 75°, похож на периферийное зрение человека, но более плоский.
+- **45–80 мм (Телеобъектив, 2×–3×)**: Узкий угол обзора от 30° до 50°. Используется для портретов (естественные пропорции лица, меньше искажений перспективы) и общего приближения.
+- **100–240 мм (Перископический телеобъектив, 5×–10×)**: Угол обзора от 10° до 25°. Конструкция перископа с изломом луча позволяет получить большие фокусные расстояния, не делая телефон толщиной в 2 сантиметра.
 
-Here is how light travels through a typical 5-element wide-angle lens assembly:
+Вот как свет проходит через типичный 5-линзовый широкоугольный объектив:
 
 ```mermaid
 graph LR
-    A[Incoming Light Rays] --> B[Element 1\nAspherical\nConvex]
-    B --> C[Element 2\nConcave\nChromatic Correction]
-    C --> D[Element 3\nConvex]
-    D --> E[Element 4\nConcave\nDistortion Control]
-    E --> F[Element 5\nPlanoconvex]
-    F --> G[Focal Plane\nImage Sensor]
+    A["Входящие лучи света"] --> B["Элемент 1<br/>Асферический<br/>Выпуклый"]
+    B --> C[Элемент 2<br/>Вогнутый<br/>Хроматич. коррекция]
+    C --> D[Элемент 3<br/>Выпуклый]
+    D --> E[Элемент 4<br/>Вогнутый<br/>Контроль искажений]
+    E --> F[Элемент 5<br/>Плосковыпуклый]
+    F --> G[Фокальная плоскость<br/>Датчик изображения]
 ```
 
-### Aperture
+### Диафрагма (Aperture)
 
-The aperture is the size of the opening through which light passes inside the lens. It is described as an **f-number** (or f-stop): the focal length divided by the diameter of the aperture. A **smaller f-number means a wider hole, which means more light** reaches the sensor.
+Диафрагма — это размер отверстия, через которое проходит свет внутри объектива. Она описывается как **f-число** (или f-stop): фокусное расстояние, деленное на диаметр отверстия. **Меньшее f-число означает более широкое отверстие, что означает, что больше света** достигает сенсора.
 
-- f/1.4 to f/1.8: Very wide aperture. Typical flagship primary cameras. Excellent in low light.
-- f/2.0 to f/2.4: Moderate aperture. Typical ultra-wide and telephoto cameras on most phones.
-- f/2.8 to f/4.0: Narrow aperture. Found on lower-cost front cameras and some periscope modules.
+- f/1.4–f/1.8: Очень широкая диафрагма. Типично для основных камер флагманов. Отлично подходит для условий низкой освещенности.
+- f/2.0–f/2.4: Умеренная диафрагма. Типично для сверхширокоугольных и телеобъективов на большинстве телефонов.
+- f/2.8–f/4.0: Узкая диафрагма. Встречается в недорогих фронтальных камерах и некоторых перископических модулях.
 
-The aperture is usually fixed in smartphone cameras. A few 2020-era Samsung flagships featured a **variable aperture mechanism** with a dual-diaphragm that could mechanically switch between f/1.5 and f/2.4. This is extremely rare today because VCM-based focus and multi-frame computational HDR have made variable aperture unnecessary for most use cases.
+В камерах смартфонов диафрагма обычно фиксированная. Несколько флагманов Samsung 2020-х годов имели **механизм переменной диафрагмы** с двойной шторкой, которая могла механически переключаться между f/1.5 и f/2.4. Сегодня это встречается крайне редко, так как фокусировка на базе VCM и многокадровый вычислительный HDR сделали переменную диафрагму ненужной для большинства случаев.
 
-### Optical Image Stabilization (OIS)
+### Оптическая стабилизация изображения (OIS)
 
-When you hold a phone, your hands naturally shake by tiny angular amounts — on the order of 0.1° to 0.5° at 1/30th of a second. Over a long enough exposure, this shake causes the entire image to blur. **Optical Image Stabilization (OIS)** solves this problem by physically moving either the lens barrel (lens-shift OIS) or the sensor die itself (sensor-shift OIS) to counteract the detected motion. A tiny gyroscope inside the camera module (or shared from the phone's main IMU) measures angular velocity 1,000 to 8,000 times per second, and the OIS actuator moves the optics accordingly. OIS can typically compensate for 3 to 5 stops of handshake, meaning an exposure that would have required 1/60s to stay sharp can now be shot at 1/8s or 1/4s with equal sharpness.
+Когда вы держите телефон, ваши руки естественным образом совершают микродрожания — порядка 0,1°–0,5° при выдержке 1/30 секунды. При достаточно долгой экспозиции это дрожание вызывает размытие всего изображения. **Оптическая стабилизация изображения (OIS)** решает эту проблему путем физического перемещения либо блока линз (lens-shift OIS), либо самого кристалла сенсора (sensor-shift OIS) для противодействия обнаруженному движению. Крошечный гироскоп внутри модуля камеры (или данные с основного гироскопа телефона) измеряет угловую скорость от 1 000 до 8 000 раз в секунду, и привод OIS соответствующим образом перемещает оптику. OIS обычно может компенсировать от 3 до 5 ступеней дрожания рук, что означает, что экспозиция, для которой потребовалась бы выдержка 1/60 с для сохранения резкости, теперь может быть снята на 1/8 с или 1/4 с с такой же резкостью.
 
-## The Image Sensor: Where Light Becomes Electricity
+## Датчик изображения: Где свет становится электричеством
 
-The image sensor is a silicon chip containing millions of individual light detectors called **photodiodes**, arranged in a precise rectangular grid. Every smartphone sensor today is a **CMOS (Complementary Metal-Oxide-Semiconductor)** type.
+Датчик изображения — это кремниевый чип, содержащий миллионы отдельных детекторов света, называемых **фотодиодами**, расположенных в виде точной прямоугольной сетки. Сегодня в каждом смартфоне используется датчик типа **CMOS (Complementary Metal-Oxide-Semiconductor)**.
 
-### Pixel Size and Megapixels
+### Размер пикселя и мегапиксели
 
-Each individual photodiode + readout circuit is called a **pixel**. The physical size of each pixel (measured in micrometers, μm) is arguably more important than the total megapixel count. A larger pixel captures more photons per unit time, which means less shot noise and better low-light performance.
+Каждый отдельный фотодиод со схемой считывания называется **пикселем**. Физический размер каждого пикселя (измеряется в микрометрах, мкм) зачастую важнее общего количества мегапикселей. Пиксель большего размера улавливает больше фотонов в единицу времени, что означает меньше дробового шума и лучшую работу при слабом освещении.
 
-Common pixel sizes in 2026 smartphones:
+Распространенные размеры пикселей в смартфонах 2026 года:
 
-- **0.6μm to 0.8μm**: Very small pixels. Used in 108MP to 200MP high-resolution sensors. These rely entirely on pixel binning for acceptable noise.
-- **1.0μm to 1.2μm**: Mid-size. Used in 48MP to 64MP sensors with default 4:1 binning to 12MP–16MP output.
-- **2.0μm to 2.4μm**: Large "flagship" pixels. Used in dedicated 12MP–16MP sensors (Google Pixel, iPhone Pro) or as the binned output of 48MP sensors in "high quality" mode.
+- **0,6 мкм – 0,8 мкм**: Очень маленькие пиксели. Используются в сенсорах высокого разрешения от 108 Мп до 200 Мп. Они полностью полагаются на объединение пикселей (pixel binning) для получения приемлемого уровня шума.
+- **1,0 мкм – 1,2 мкм**: Средний размер. Используются в сенсорах от 48 Мп до 64 Мп со стандартным объединением 4:1 для получения на выходе 12–16 Мп.
+- **2,0 мкм – 2,4 мкм**: Крупные «флагманские» пиксели. Используются в специализированных сенсорах на 12–16 Мп (Google Pixel, iPhone Pro) или как результат объединения пикселей в сенсорах на 48 Мп в режиме «высокого качества».
 
-Pixel binning is the technique of combining the charge from adjacent 2×2 (or 3×3, or 4×4) pixels into a single "super pixel" during readout. A 48MP sensor with 0.8μm individual pixels, when binned 4-to-1, behaves like a 12MP sensor with 1.6μm effective pixels — dramatically improving signal-to-noise ratio. The Camera2 API exposes both the full-resolution raw mode and the default binned mode as separate stream configurations.
+Объединение пикселей (Pixel binning) — это метод объединения заряда соседних пикселей 2×2 (или 3×3, или 4×4) в один «суперпиксель» во время считывания. Сенсор 48 Мп с отдельными пикселями 0,8 мкм при объединении 4-в-1 ведет себя как сенсор 12 Мп с эффективным размером пикселя 1,6 мкм, что значительно улучшает отношение сигнал/шум. API Camera2 предоставляет как режим полного разрешения, так и стандартный режим с объединением пикселей в виде отдельных конфигураций потоков.
 
-The megapixel count math is straightforward: a 48MP sensor has an active array of approximately 8,000 × 6,000 photodiodes = 48,000,000 individual light sensors.
+Математика количества мегапикселей проста: сенсор на 48 Мп имеет активную матрицу из примерно 8 000 × 6 000 фотодиодов = 48 000 000 отдельных датчиков света.
 
-### Sensor Size Classifications
+### Классификация размеров сенсоров
 
-Sensor size follows a legacy inch-based notation dating back to 1950s Vidicon television tubes. The format is "1/X inch" where X is the divisor; smaller X means a larger sensor:
+Размеры сенсоров следуют устаревшей системе обозначений в дюймах, восходящей к телевизионным трубкам Vidicon 1950-х годов. Формат записи «1/X дюйма», где X — делитель; чем меньше X, тем больше сенсор:
 
-- 1/3.06" to 1/2.55": Small sensors, typical for front cameras and budget ultra-wides (~5MP to 13MP).
-- 1/1.7" to 1/1.3": Large mobile sensors, flagships primary cameras (48MP, 50MP, 108MP).
-- 1-inch (Type 1): Very large for a phone. Found in the Xiaomi 13 Ultra, Sharp Aquos R series, and Sony Xperia Pro-I. Approximately 13.2mm × 8.8mm active area — approaching the size of some Micro Four Thirds cameras.
+- От 1/3,06" до 1/2,55": Маленькие сенсоры, типичные для фронтальных камер и бюджетных сверхширокоугольных модулей (~5–13 Мп).
+- От 1/1,7" до 1/1,3": Крупные мобильные сенсоры, основные камеры флагманов (48 Мп, 50 Мп, 108 Мп).
+- 1 дюйм (Тип 1): Очень большой для телефона размер. Встречается в Xiaomi 13 Ultra, серии Sharp Aquos R и Sony Xperia Pro-I. Активная область примерно 13,2 мм × 8,8 мм — по размеру приближается к некоторым камерам системы Micro Four Thirds.
 
-A larger sensor, given equal megapixel count, always has larger individual pixels. That is why the "one-inch sensor" phones produce noticeably better low-light photos.
+При одинаковом количестве мегапикселей сенсор большего физического размера всегда имеет более крупные отдельные пиксели. Вот почему телефоны с «дюймовым сенсором» делают заметно лучшие снимки при слабом освещении.
 
-### The Bayer Color Filter Array (CFA)
+### Цветовой фильтр Байера (CFA)
 
-A raw silicon photodiode is colorblind — it only measures total photon intensity, not wavelength. To record color, manufacturers deposit a tiny **color filter** on top of each individual pixel. The almost-universal pattern is the **Bayer RGGB filter array**: 50% green pixels, 25% red, and 25% blue, arranged in a repeating 2×2 tile. The human eye is more sensitive to green light, so doubling the green sampling improves perceived luminance resolution and noise performance.
+Сырой кремниевый фотодиод не различает цвета — он измеряет только общую интенсивность фотонов, а не длину волны. Чтобы записывать цвет, производители наносят крошечный **цветовой фильтр** поверх каждого отдельного пикселя. Почти универсальным является **фильтр Байера RGGB**: 50% зеленых пикселей, 25% красных и 25% синих, расположенных в виде повторяющегося тайла 2×2. Человеческий глаз более чувствителен к зеленому свету, поэтому удвоение выборки зеленого цвета улучшает воспринимаемое разрешение яркости и шумовые характеристики.
 
 ```mermaid
 graph LR
-    subgraph "4x4 Bayer Pattern (RGGB)"
+    subgraph "Паттерн Байера 4x4 (RGGB)"
         direction TB
         A1[R] --- A2[G] --- A3[R] --- A4[G]
         B1[G] --- B2[B] --- B3[G] --- B4[B]
         C1[R] --- C2[G] --- C3[R] --- C4[G]
         D1[G] --- D2[B] --- D3[G] --- D4[B]
     end
-    E[IR Cut Filter\nBlocks Infrared] --> F[Color Filter Array\nBayer RGGB Deposited on Glass]
-    F --> G[Silicon Photodiodes\nConvert Photons→Electrons]
+    E["ИК-фильтр<br/>Блокирует инфракрасный свет"] --> F["Массив цветовых фильтров<br/>Байер RGGB на стекле"]
+    F --> G[Кремниевые фотодиоды<br/>Превращают фотоны в электроны]
 ```
 
-After readout, the sensor data is a mosaic of separate red, green, and blue values — not a full-color image yet. The step that fills in the missing color information for each pixel is called **demosaicing** (or debayering) and it is the first major computational step performed in the ISP.
+После считывания данные сенсора представляют собой мозаику из отдельных значений красного, зеленого и синего цветов — это еще не полноцветное изображение. Этап, на котором восполняется недостающая цветовая информация для каждого пикселя, называется **демозаикой** (или дебайеризацией), и это первый крупный вычислительный этап, выполняемый в ISP.
 
-### Rolling Shutter vs Global Shutter
+### Скользящий затвор (Rolling Shutter) против глобального затвора
 
-Nearly every smartphone image sensor uses a **rolling shutter**. The sensor does not expose or read all pixels at once. Instead, it exposes and reads the pixel array row by row, from top to bottom, one horizontal line at a time. A typical 48MP sensor rolling readout takes approximately 15 to 25 milliseconds for a full-frame capture.
+Почти каждый датчик изображения в смартфоне использует **скользящий затвор (rolling shutter)**. Датчик не экспонирует и не считывает все пиксели одновременно. Вместо этого он экспонирует и считывает массив пикселей построчно, сверху вниз, по одной горизонтальной линии за раз. Типичное считывание полнокадрового изображения с 48-мегапиксельного сенсора занимает примерно от 15 до 25 миллисекунд.
 
-Rolling shutter produces characteristic distortions on very fast-moving subjects: a spinning airplane propeller or a ceiling fan appears bent or wavy; the top and bottom of a vertically-panned building lean in opposite directions (the "jello effect" in video). Global shutter sensors, by contrast, expose every pixel simultaneously and read them all at once after the exposure ends. Global shutter is used in machine vision, action cameras, and some specialized front-facing IR face-unlock sensors, but the global shutter pixel design has lower light sensitivity and higher cost, so it is not used in main smartphone cameras.
+Скользящий затвор вызывает характерные искажения на очень быстро движущихся объектах: вращающийся пропеллер самолета или лопасти вентилятора кажутся изогнутыми или волнистыми; верхняя и нижняя части здания при резком панорамировании по вертикали наклоняются в разные стороны («эффект желе» в видео). Датчики с глобальным затвором (global shutter), напротив, экспонируют каждый пиксель одновременно и считывают их все сразу после окончания экспозиции. Глобальный затвор используется в системах машинного зрения, экшн-камерах и некоторых специализированных фронтальных ИК-датчиках для распознавания лиц, но конструкция пикселей с глобальным затвором имеет меньшую светочувствительность и более высокую стоимость, поэтому она не используется в основных камерах смартфонов.
 
-## The ISP: Image Signal Processor
+## ISP: Процессор сигналов изображения
 
-The **ISP (Image Signal Processor)** is a dedicated hardware block (either a separate chip or, more commonly today, an integrated part of the main SoC alongside the CPU and GPU) whose sole job is to transform the raw, mosaic'd, noisy, distorted data streaming off the sensor into a visually pleasing color image.
+**ISP (Image Signal Processor)** — это специализированный аппаратный блок (либо отдельный чип, либо, что чаще сегодня, интегрированная часть основной SoC наряду с CPU и GPU), единственная задача которого — превратить сырые, мозаичные, шумные и искаженные данные, поступающие с сенсора, в приятное глазу цветное изображение.
 
-The ISP runs a fixed, hardwired pipeline of image processing stages at extremely high throughput. A modern 48MP sensor running at 30 frames per second sends 1.44 billion pixels per second to the ISP. The ISP must process every single pixel through all stages in under 33 milliseconds per frame to keep up.
+ISP выполняет фиксированный, жестко запрограммированный конвейер этапов обработки изображений с чрезвычайно высокой пропускной способностью. Современный 48-мегапиксельный сенсор, работающий со скоростью 30 кадров в секунду, отправляет в ISP 1,44 миллиарда пикселей в секунду. ISP должен прогнать каждый пиксель через все этапы менее чем за 33 миллисекунды на кадр, чтобы не отставать.
 
-The canonical ISP pipeline stages, in order, are:
+Канонические этапы конвейера ISP по порядку:
 
-1. **Hot Pixel Correction**: Factory-calibrated "stuck" pixels (always bright or always dark) are replaced with interpolated values from neighbors.
-2. **Demosaic / Debayer**: The Bayer RGGB mosaic is converted into a full RGB image by estimating the missing two color channels at each pixel location from surrounding pixels using edge-aware interpolation algorithms.
-3. **Noise Reduction (Temporal + Spatial)**: Random shot noise and sensor read noise are suppressed. Spatial NR blurs flat regions while preserving edges. Temporal NR merges information from previous video frames (if available) for even cleaner results.
-4. **Lens Shading Correction (Vignetting Correction)**: The corners of the image are naturally darker because light must pass through the lens at a steeper angle. The ISP applies a per-pixel digital gain ramp, brighter at the corners, to flatten the illumination. Calibration data for this ramp is stored in the module's OTP.
-5. **Geometric Distortion Correction**: Ultra-wide and fisheye lenses produce barrel distortion (straight lines bow outward). The ISP remaps pixel coordinates using a stored polynomial lens model to produce a rectilinear image where straight lines actually appear straight. This step inherently crops 5–10% of the outer pixel ring.
-6. **Color Correction Matrix (CCM)**: The raw sensor RGB spectral response does not match the human eye's trichromatic response. A 3×3 matrix multiplication converts sensor-native RGB into standard sRGB or DCI-P3 color space. The CCM coefficients are tuned per-module per-illuminant (daylight, tungsten, fluorescent).
-7. **Tone Curve Adjustment**: A non-linear S-shaped tone mapping curve is applied to the linear RGB data to compress the high-dynamic-range sensor signal into the low-dynamic-range output (typically 8-bit sRGB gamma-encoded). This step is what makes the image "pop" — contrast increases in the midtones, highlights are rolled off, shadows are lifted.
-8. **Edge Enhancement / Sharpening**: A subtle unsharp mask is applied to recover high-frequency detail softened by the noise reduction and optical low-pass filter. The sharpening amount is carefully controlled to avoid introducing halos.
+1. **Коррекция «горячих» пикселей**: Заводские калиброванные «застрявшие» пиксели (всегда яркие или всегда темные) заменяются интерполированными значениями соседних пикселей.
+2. **Демозаика / Дебайеризация**: Мозаика Байера RGGB преобразуется в полноценное RGB-изображение путем оценки недостающих двух цветовых каналов в каждой позиции пикселя на основе окружающих пикселей с использованием алгоритмов интерполяции с учетом краев.
+3. **Шумоподавление (временное + пространственное)**: Подавляется случайный дробовой шум и шум считывания сенсора. Пространственное шумоподавление размывает плоские области, сохраняя края. Временное шумоподавление объединяет информацию из предыдущих видеокадров (если они доступны) для еще более чистого результата.
+4. **Коррекция виньетирования (Lens Shading Correction)**: Углы изображения естественным образом темнее, так как свет должен проходить через объектив под более острым углом. ISP применяет цифровое усиление для каждого пикселя, более сильное по краям, чтобы выровнять освещенность. Данные калибровки для этого усиления хранятся в OTP модуля.
+5. **Коррекция геометрических искажений**: Сверхширокоугольные объективы и объективы типа «фишай» создают бочкообразную дисторсию (прямые линии выгибаются наружу). ISP пересчитывает координаты пикселей, используя заложенную полиномиальную модель объектива, чтобы получить прямолинейное изображение, где прямые линии действительно кажутся прямыми. Этот этап неизбежно приводит к обрезке 5–10% внешнего кольца пикселей.
+6. **Матрица цветокоррекции (CCM)**: Спектральная характеристика RGB «сырого» сенсора не совпадает с трихроматической характеристикой человеческого глаза. Умножение на матрицу 3×3 преобразует нативный RGB сенсора в стандартное цветовое пространство sRGB или DCI-P3. Коэффициенты CCM настраиваются для каждого модуля под разные источники света (дневной свет, лампы накаливания, люминесцентные лампы).
+7. **Настройка тональной кривой**: К линейным данным RGB применяется нелинейная S-образная кривая тонального отображения, чтобы сжать сигнал сенсора с высоким динамическим диапазоном в выходной сигнал с низким динамическим диапазоном (обычно 8-битный sRGB с гамма-кодированием). Этот этап делает изображение контрастным — контраст увеличивается в средних тонах, света сглаживаются, тени приподнимаются.
+8. **Повышение контурной резкости (Sharpening)**: Применяется тонкая нерезкая маска для восстановления высокочастотных деталей, смягченных шумоподавлением и оптическим низкочастотным фильтром. Степень резкости тщательно контролируется, чтобы избежать появления ореолов.
 
 ```mermaid
 flowchart TD
-    A[Raw Bayer Data\nfrom Sensor] --> B[Hot Pixel Correction]
-    B --> C[Demosaic / Debayer\nBayer → Full RGB]
-    C --> D[Noise Reduction\nSpatial + Temporal]
-    D --> E[Lens Shading Correction\nFix Vignetting]
-    E --> F[Geometric Distortion\nCorrect Fisheye / Barrel]
-    F --> G[Color Correction Matrix\nsRGB / P3 Color Space]
-    G --> H[Tone Curve Adjustment\nGamma + S-Curve]
-    H --> I[Edge Enhancement / Sharpening]
-    I --> J[Final Processed Image\n→ JPEG Encoder / Display]
+    A["Сырые данные Байера<br/>с сенсора"] --> B["Коррекция горячих пикселей"]
+    B --> C[Демозаика / Дебайеризация<br/>Байер → Полный RGB]
+    C --> D[Шумоподавление<br/>Пространственное + Временное]
+    D --> E[Коррекция виньетирования<br/>Устранение затемнения углов]
+    E --> F[Геометрическая коррекция<br/>Исправление дисторсии]
+    F --> G[Матрица цветокоррекции<br/>Цветовое пространство sRGB / P3]
+    G --> H[Настройка тональной кривой<br/>Гамма + S-образная кривая]
+    H --> I[Повышение резкости]
+    I --> J[Финальное изображение<br/>→ Кодировщик JPEG / Экран]
 ```
 
-The ISP's processing quality is a major differentiator between phone manufacturers. Google, Samsung, Apple, and Xiaomi each tune their ISP pipelines with different artistic priorities: some favor natural colors, some oversaturated "punchy" output, some aggressive noise reduction vs retained detail. The Camera2 API gives you some control over individual ISP stage strengths (via the Android tonemap and color correction controls), but most of the detailed stage parameters are locked behind vendor proprietary APIs.
+Качество обработки ISP является основным отличием между производителями телефонов. Google, Samsung, Apple и Xiaomi по-разному настраивают свои конвейеры ISP, исходя из художественных приоритетов: кто-то предпочитает естественные цвета, кто-то — перенасыщенный «сочный» результат, кто-то — агрессивное шумоподавление в ущерб деталям. API Camera2 дает вам некоторый контроль над силой отдельных этапов ISP (через элементы управления тональным отображением и цветокоррекцией Android), но большинство детальных параметров этапов заблокированы за проприетарными API производителей.
 
-## RAW vs JPEG: Two Paths from Sensor to Storage
+## RAW против JPEG: два пути от сенсора к памяти
 
-The ISP pipeline above produces a processed image. But the Camera2 API also allows you to bypass the ISP entirely and read the raw sensor data directly. This is the critical distinction between RAW and JPEG output.
+Конвейер ISP, описанный выше, создает обработанное изображение. Но API Camera2 также позволяет обходить ISP и считывать данные непосредственно с сенсора. В этом и заключается критическое различие между выводом в форматах RAW и JPEG.
 
-### RAW Format
+### Формат RAW
 
-A **RAW file** (on Android this means a DNG file, Digital Negative) contains exactly what the sensor measured before any ISP processing runs. It is a 10-bit, 12-bit, or 14-bit per pixel Bayer mosaic — still in the original RGGB pattern, still with vignetting, still with noise, still linear. The RAW file also contains metadata tags specifying the exact color filter array pattern, the sensor's color profile, black level, white level, and the lens model.
+**Файл RAW** (на Android это файл DNG, Digital Negative) содержит именно то, что измерил сенсор до запуска какой-либо обработки в ISP. Это мозаика Байера по 10, 12 или 14 бит на пиксель — всё еще в оригинальном паттерне RGGB, всё еще с виньетированием, всё еще с шумом, всё еще линейная. Файл RAW также содержит теги метаданных, определяющие точный массив цветовых фильтров, цветовой профиль сенсора, уровни черного и белого, а также модель объектива.
 
-- **Bit depth**: RAW10 = 10 bits per channel = 1,024 levels. RAW12 = 4,096 levels. RAW14 = 16,384 levels. Compare this to JPEG's 8 bits = 256 levels.
-- **File size**: 20–40 MB per 48MP photo. Uncompressed or near-lossless compressed.
-- **Use case**: Professional post-production editing. The extra stops of headroom allow an editor to "rescue" overexposed highlights (by 2 to 3 stops of EV) or lift underexposed shadows without banding.
+- **Разрядность**: RAW10 = 10 бит на канал = 1 024 уровня. RAW12 = 4 096 уровней. RAW14 = 16 384 уровня. Сравните это с 8 битами JPEG = 256 уровней.
+- **Размер файла**: 20–40 МБ для фотографии 48 Мп. Без сжатия или со сжатием почти без потерь.
+- **Применение**: Профессиональная постобработка. Дополнительный запас позволяет редактору «спасти» переэкспонированные участки (на 2–3 ступени EV) или поднять недоэкспонированные тени без появления полос (бандинга).
 
-### JPEG Format
+### Формат JPEG
 
-A **JPEG file** is the fully-cooked output of the ISP. Every single one of the 8 ISP stages above has already been applied to the pixel data. Then the image is converted from RGB to YCbCr 4:2:0 chroma-subsampled color space and compressed with a lossy Discrete Cosine Transform algorithm at roughly a 10:1 to 20:1 compression ratio.
+**Файл JPEG** — это полностью «готовый» результат работы ISP. Все 8 этапов ISP, описанных выше, уже применены к данным пикселей. Затем изображение преобразуется из RGB в цветовое пространство YCbCr 4:2:0 с субдискретизацией цветности и сжимается алгоритмом дискретного косинусного преобразования с потерями при коэффициенте сжатия примерно от 10:1 до 20:1.
 
-- **Bit depth**: Always 8 bits per channel = 256 levels per color.
-- **File size**: 2–5 MB for a 12MP–48MP photo, depending on JPEG quality level.
-- **Use case**: Instant sharing, social media, any workflow where the photo is "done" as shot. Adjustments in a mobile editor degrade the image quickly because only 256 levels remain.
+- **Разрядность**: Всегда 8 бит на канал = 256 уровней на цвет.
+- **Размер файла**: 2–5 МБ для фотографии 12–48 Мп, в зависимости от уровня качества JPEG.
+- **Применение**: Мгновенная отправка в соцсети, любой рабочий процесс, где фотография «готова» сразу после съемки. Редактирование в мобильном приложении быстро ухудшает качество, так как остается всего 256 уровней.
 
-### Comparison Table: RAW vs JPEG
+### Таблица сравнения: RAW против JPEG
 
-| Feature | RAW (DNG) | JPEG |
+| Характеристика | RAW (DNG) | JPEG |
 |---------|-----------|------|
-| ISP Processing Applied | None — all stages skipped | All 8 stages applied and irreversible |
-| Color Depth | 10–14 bit (1,024–16,384 levels) | 8 bit (256 levels) |
-| White Balance | Tagged in metadata, fully changeable in post | Baked into pixels — minor edits only |
-| Exposure Latitude | ±2 to 3 stops recoverable | ±1/2 stop at best before banding |
-| File Size (48MP) | 25–40 MB | 3–6 MB |
-| Color Space | Sensor-native linear RGB | sRGB or Display P3 gamma-encoded |
-| Sharpening / Noise Reduction | None — editor's choice | Applied; can't be undone |
-| Typical Workflow | Adobe Lightroom / Capture One workflow | Direct share to Instagram / Messages |
+| Обработка ISP | Нет — все этапы пропущены | Все 8 этапов применены и необратимы |
+| Глубина цвета | 10–14 бит (1 024–16 384 уровня) | 8 бит (256 уровней) |
+| Баланс белого | Помечен в метаданных, полностью меняется при обработке | Вшит в пиксели — возможны лишь небольшие правки |
+| Запас по экспозиции | Можно восстановить ±2–3 ступени | В лучшем случае ±1/2 ступени до появления артефактов |
+| Размер файла (48 Мп) | 25–40 МБ | 3–6 МБ |
+| Цветовое пространство | Линейный RGB сенсора | sRGB или Display P3 с гамма-коррекцией |
+| Резкость / Шумоподавление | Нет — выбор за редактором | Применены; нельзя отменить |
+| Типичный процесс | Adobe Lightroom / Capture One | Прямая публикация в Instagram / мессенджеры |
 
-## Multi-Camera Phones: Why Not One Giant Zoom Lens?
+## Мультикамерные телефоны: Почему не один гигантский зум-объектив?
 
-A traditional point-and-shoot camera uses a single zoom lens with moving internal groups that continuously change focal length from wide to telephoto. Why can't a smartphone do the same? Physics. A 10× zoom lens that covers 24mm–240mm full-frame equivalent with a constant f/2.8 aperture requires an optical path roughly 5 centimeters (2 inches) long. A smartphone is, at most, 0.9 centimeters thick. The math simply does not fit.
+Традиционная компактная камера использует один зум-объектив с подвижными внутренними группами линз, который плавно меняет фокусное расстояние от широкого до телеположения. Почему смартфон не может делать то же самое? Физика. Объектив с 10-кратным зумом, охватывающий диапазон 24–240 мм в полнокадровом эквиваленте с постоянной диафрагмой f/2.8, требует оптического пути длиной около 5 сантиметров. Толщина смартфона в лучшем случае составляет 0,9 сантиметра. Математика просто не сходится.
 
-The smartphone industry solved this not with a zoom lens, but with **multiple fixed-focal-length cameras**, each optimized for a different purpose, and a "smooth zoom" computational system that fades from one camera to the next at specific zoom ratios.
+Индустрия смартфонов решила эту проблему не с помощью зум-объектива, а с помощью **нескольких камер с фиксированным фокусным расстоянием**, каждая из которых оптимизирована для своей цели, и вычислительной системы «плавного зума», которая переключается с одной камеры на другую при определенных коэффициентах приближения.
 
-A typical 2026 flagship rear camera island contains:
+Типичный остров задней камеры флагмана 2026 года содержит:
 
-1. **Ultra-Wide (0.5× zoom, ~13mm eq, ~120° FOV)**: Short focal length, large depth of field. Ideal for landscapes, architecture, group shots, and close-focus macro when repositioned via software.
-2. **Wide / Primary (1× zoom, ~24mm eq, ~75° FOV)**: The default. The largest sensor, the widest aperture, the best OIS. Used for 80% of everyday photos.
-3. **Telephoto / Periscope (3× to 10× optical, ~72mm to ~240mm eq)**: A conventional telephoto lens (3×) sits directly above its sensor. A periscope telephoto (5×, 10×) uses a 45° prism near the phone's edge to reflect light 90°, so the lens barrel runs horizontally inside the phone's body rather than vertically through its thickness.
-4. **ToF / Depth Sensor**: A near-infrared laser dot projector (or, on iPhones, a structured-light LiDAR scanner) that pulses 30,000+ IR dots onto the scene and measures their round-trip time to produce a per-pixel depth map. Used for accurate portrait bokeh, augmented reality occlusion, and fast autofocus in low light.
+1. **Сверхширокоугольная (зум 0,5×, экв. ~13 мм, угол ~120°)**: Короткое фокусное расстояние, большая глубина резкости. Идеально подходит для пейзажей, архитектуры, групповых снимков и макросъемки при программном переключении.
+2. **Широкоугольная / Основная (зум 1×, экв. ~24 мм, угол ~75°)**: По умолчанию. Самый большой сенсор, самая широкая диафрагма, лучшая стабилизация OIS. Используется для 80% повседневных фотографий.
+3. **Телеобъектив / Перископ (оптический зум от 3× до 10×, экв. от ~72 мм до ~240 мм)**: Обычный телеобъектив (3×) расположен прямо над сенсором. Перископический телеобъектив (5×, 10×) использует 45-градусную призму у края телефона для отражения света на 90 градусов, поэтому блок линз проходит горизонтально внутри корпуса телефона, а не вертикально сквозь него.
+4. **ToF / Датчик глубины**: Излучатель ближнего ИК-диапазона (или LiDAR на iPhone), который проецирует сетку из 30 000+ ИК-точек и измеряет время их возврата для построения попиксельной карты глубины. Используется для точного размытия в портретном режиме, дополненной реальности и быстрой фокусировки при слабом освещении.
 
 ```mermaid
 graph TB
-    subgraph "Phone Rear Camera Island"
-        A[Rear Glass Cover]
+    subgraph "Остров камер на задней панели"
+        A["Защитное стекло"]
     end
-    A --> B[Ultra-Wide Camera\n13mm eq / 120° FOV]
-    A --> C[Wide / Primary Camera\n24mm eq / f/1.6 + OIS]
-    A --> D[5× Periscope Telephoto\n120mm eq / Prism-Refracted]
-    A --> E[ToF Depth Sensor\nLaser Dot Projector]
+    A --> B[Сверхширокоугольная камера<br/>13 мм экв. / 120° FOV]
+    A --> C[Широкоугольная / Основная<br/>24 мм экв. / f/1.6 + OIS]
+    A --> D[5× Перископический телеобъектив<br/>120 мм экв. / С призмой]
+    A --> E[ToF Датчик глубины<br/>Лазерный проектор точек]
 ```
 
-When you perform a pinch-zoom gesture in the camera app, the HAL (Hardware Abstraction Layer) smoothly switches the active physical camera at pre-determined thresholds. For example, zooming from 0.5× to 1.0× fades from the ultra-wide to the wide. At 2.9× the app is still digitally cropping the wide camera. At 3.0×, the HAL switches the active source to the periscope telephoto camera. Between those zoom ratios, a sophisticated image-fusing algorithm uses both cameras simultaneously to maintain a seamless transition.
+Когда вы делаете жест масштабирования в приложении камеры, HAL (Hardware Abstraction Layer) плавно переключает активную физическую камеру на определенных порогах. Например, масштабирование от 0,5× до 1,0× — это переход от сверхширокоугольной камеры к основной. При значении 2,9× приложение всё еще делает цифровой кроп с основной камеры. При 3,0× HAL переключает источник на телеобъектив. Между этими значениями сложный алгоритм объединения изображений использует обе камеры одновременно, чтобы переход оставался незаметным для пользователя.
 
-## The Full Journey: From Photon to Saved Photo, Millisecond by Millisecond
+## Путь целиком: От фотона до сохраненной фотографии, миллисекунда за миллисекундой
 
-Here is the complete, numbered timeline of what physically happens inside a smartphone during a single still photo capture, starting from the moment the user's finger lifts off the virtual shutter button. The numbers are representative of a 2026 flagship capturing a 12MP default-mode JPEG in daylight:
+Вот полный хронологический график того, что физически происходит внутри смартфона во время съемки одной фотографии, начиная с момента, когда палец пользователя отрывается от виртуальной кнопки затвора. Эти цифры характерны для флагмана 2026 года при съемке стандартного JPEG 12 Мп при дневном свете:
 
-- **0 ms**: User taps shutter. The Camera2 API framework receives the `CaptureRequest` with `TEMPLATE_STILL_CAPTURE`.
-- **0–2 ms**: The 3A algorithm (Auto-Focus, Auto-Exposure, Auto-White-Balance) converges to its final values.
-- **2–6 ms**: The voice coil motor (VCM) energizes its coil, physically moving the lens barrel by 0.2mm to the exact focus distance the AF algorithm calculated.
-- **6–21 ms (15 ms exposure)**: The global reset releases the sensor pixels' charge. For 15 milliseconds, photodiodes accumulate photon-generated electrons. The rolling shutter reads out row-by-row during and after this window.
-- **18–28 ms**: The sensor outputs the raw Bayer data over the MIPI CSI-2 high-speed serial bus. A typical configuration is 4 data lanes at 2.5 Gbps per lane = 10 Gbps total bandwidth, which comfortably handles a 12MP frame's raw bit depth plus blanking intervals.
-- **28–31 ms**: The ISP's 8-stage pipeline processes the frame through hotpixel correction, demosaic, noise reduction, lens shading, geometric correction, color matrix, tone curve, and sharpening. This happens entirely in hardware — no CPU involvement at the pixel level.
-- **31–33 ms**: The processed YUV image is sent to the hardware JPEG encoder, which applies lossy DCT compression at quality level 90–95 and writes the JFIF file headers (EXIF, thumbnail, GPS coordinates if tagged).
-- **33–40 ms**: The completed JPEG blob is written via the MediaStore content provider into the app's files directory, for example `/data/data/com.yourpackagename/files/DCIM/Camera/IMG_20260806_151042.jpg`. The MediaScanner is notified, and the photo appears in the system gallery.
+- **0 мс**: Пользователь нажимает на затвор. Фреймворк API Camera2 получает запрос `CaptureRequest` с шаблоном `TEMPLATE_STILL_CAPTURE`.
+- **0–2 мс**: Алгоритм 3A (Auto-Focus, Auto-Exposure, Auto-White-Balance) сходится к финальным значениям.
+- **2–6 мс**: На звуковую катушку (VCM) подается ток, физически перемещая блок линз на 0,2 мм в точно рассчитанную точку фокусировки.
+- **6–21 мс (экспозиция 15 мс)**: Сбрасывается заряд пикселей. В течение 15 миллисекунд фотодиоды накапливают электроны, генерируемые фотонами. Скользящий затвор считывает данные построчно во время и после этого окна.
+- **18–28 мс**: Сенсор передает сырые данные Байера по высокоскоростной последовательной шине MIPI CSI-2. Типичная конфигурация — 4 линии по 2,5 Гбит/с = 10 Гбит/с общей пропускной способности, что легко справляется с потоком данных 12-мегапиксельного кадра.
+- **28–31 мс**: 8-этапный конвейер ISP обрабатывает кадр: коррекция горячих пикселей, демозаика, шумоподавление, виньетирование, геометрия, цветокоррекция, тональная кривая и резкость. Это происходит полностью аппаратно — центральный процессор не участвует в обработке пикселей.
+- **31–33 мс**: Обработанное изображение YUV отправляется в аппаратный кодировщик JPEG, который применяет сжатие с потерями и записывает заголовки файла JFIF (EXIF, миниатюра, координаты GPS).
+- **33–40 мс**: Готовый JPEG записывается через контент-провайдер MediaStore в папку приложения, например `/data/data/com.yourpackagename/files/DCIM/Camera/IMG_20260806_151042.jpg`. Система уведомляется о новом файле, и фото появляется в галерее.
 
 ```mermaid
 sequenceDiagram
-    participant User
-    participant UI as App UI
-    participant VCM as VCM / Focus Actuator
-    participant Sensor as Image Sensor
-    participant MIPI as MIPI CSI-2 Bus
-    participant ISP as ISP Pipeline
-    participant JPEG as JPEG Encoder
-    participant Storage as Flash Storage
+    participant User as Пользователь
+    participant UI as Интерфейс приложения
+    participant VCM as VCM / Привод фокуса
+    participant Sensor as Датчик изображения
+    participant MIPI as Шина MIPI CSI-2
+    participant ISP as Конвейер ISP
+    participant JPEG as Кодировщик JPEG
+    participant Storage as Память устройства
 
-    User->>UI: 0ms: Tap Shutter Button
-    UI->>VCM: 2ms: Move lens to AF distance
-    VCM-->>UI: 6ms: Focus locked
-    UI->>Sensor: 6ms: Start exposure
-    Note over Sensor: 6ms–21ms: 15ms exposure rolling readout
-    Sensor->>MIPI: 18ms–28ms: Stream RAW Bayer @ 10Gbps
-    MIPI->>ISP: 28ms: Full frame received
-    Note over ISP: 28ms–31ms: 8-stage pipeline processing
-    ISP->>JPEG: 31ms: Send YUV frame
-    JPEG-->>ISP: 33ms: JPEG compressed
-    ISP->>Storage: 33ms–40ms: Write JPEG + EXIF
-    Storage-->>UI: 40ms: File saved OK
-    UI-->>User: 40ms: Show thumbnail animation
+    User->>UI: 0мс: Нажатие кнопки затвора
+    UI->>VCM: 2мс: Перемещение линзы
+    VCM-->>UI: 6мс: Фокус зафиксирован
+    UI->>Sensor: 6мс: Начало экспозиции
+    Note over Sensor: 6мс–21мс: экспозиция 15мс, считывание
+    Sensor->>MIPI: 18мс–28мс: Поток RAW @ 10Гбит/с
+    MIPI->>ISP: 28мс: Кадр получен целиком
+    Note over ISP: 28мс–31мс: 8 этапов обработки ISP
+    ISP->>JPEG: 31мс: Отправка кадра YUV
+    JPEG-->>ISP: 33мс: JPEG сжат
+    ISP->>Storage: 33мс–40мс: Запись JPEG + EXIF
+    Storage-->>UI: 40мс: Файл сохранен OK
+    UI-->>User: 40мс: Показ миниатюры
 ```
 
-The entire process takes approximately 40 milliseconds end-to-end for a daylight still photo. In low light the exposure time itself lengthens (potentially to several seconds for Night Mode multi-frame capture), and the timeline scales proportionally.
+Весь процесс занимает примерно 40 миллисекунд от начала до конца для фотографии при дневном свете. При слабом освещении время экспозиции увеличивается (потенциально до нескольких секунд для ночного режима), и весь график масштабируется пропорционально.
 
-## Summary
+## Резюме
 
-You now have a complete physical picture of the smartphone camera system. You know that each rear camera bump is a sealed module containing a lens barrel with multiple elements, a VCM autofocus actuator, an IR-cut filter, a CMOS sensor with a Bayer RGGB color filter array, and a flex cable carrying MIPI CSI-2 data. You understand focal length equivalence, aperture, and OIS. You know how the ISP's 8-stage pipeline transforms a raw Bayer mosaic into a finished JPEG, and you can distinguish RAW (sensor-native, 10–14 bit, post-processing headroom) from JPEG (ISP-processed, 8-bit, share-ready). You understand why modern phones use 3+ fixed cameras instead of a zoom lens, and you have walked through the exact millisecond-by-millisecond timeline of a single photo capture.
+Теперь у вас есть полная физическая картина работы системы камеры смартфона. Вы знаете, что каждый выступ камеры на задней панели — это герметичный модуль, содержащий блок линз из нескольких элементов, привод автофокуса VCM, ИК-фильтр, CMOS-сенсор с фильтром Байера RGGB и шлейф для передачи данных MIPI CSI-2. Вы понимаете, что такое эквивалентное фокусное расстояние, диафрагма и OIS. Вы знаете, как 8-этапный конвейер ISP превращает сырую мозаику Байера в готовый JPEG, и можете отличить RAW (нативный формат сенсора, 10–14 бит, запас для обработки) от JPEG (обработанный ISP, 8 бит, готовый к публикации). Вы понимаете, почему в современных телефонах используется более 3 фиксированных камер вместо одного зум-объектива, и проследили точный график съемки одной фотографии по миллисекундам.
 
-## What's Next
+## Что дальше
 
-In Chapter 3, we move from the physical hardware to what that hardware is capable of producing. We will explore the real-world features of modern smartphone photography: HDR multi-frame bracketing, portrait bokeh via stereo / ToF / ML, Night Sight multi-frame long exposures, slow-motion high-speed video capture, ultra-wide distortion correction, and periscope telephoto. You will learn how computational photography — the fusion of optics, sensors, multi-frame signal processing, and on-device machine learning — creates imagery that no single lens/sensor combination could ever produce on its own.
+В главе 3 мы перейдем от физического оборудования к тому, на что это оборудование способно. Мы изучим реальные функции современной мобильной фотографии: HDR с брекетингом, размытие фона (боке) через стереозрение/ToF/ML, ночную съемку с длинными выдержками, скоростное видео, коррекцию искажений сверхширокоугольных линз и перископический зум. Вы узнаете, как вычислительная фотография — слияние оптики, сенсоров, многокадровой обработки сигналов и машинного обучения на устройстве — создает изображения, которые ни одна комбинация линзы и сенсора не смогла бы получить самостоятельно.
