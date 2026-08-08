@@ -1,8 +1,9 @@
 # Android Camera Parameters
 
 <a href='https://play.google.com/store/apps/details?id=com.minininja.cameraparams&pcampaignid=pcampaignidMKT-Other-global-all-screenshots-pipeline'><img alt='Get it on Google Play' src='https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png' width="240"/></a>
+<a href='https://zoozooll.github.io/AndroidCameraParameters/category/mastering-android-camera2-api'><img alt='Tutorials' src='https://img.shields.io/badge/Tutorials-Mastering%20Camera2-blue?style=for-the-badge&logo=gitbook' height="45"/></a>
 
-[English] | [简体中文](docs/translations/README_zh-CN.md) | [繁體中文](docs/translations/README_zh-TW.md) | [日本語](docs/translations/README_ja.md) | [한국어](docs/translations/README_ko.md)
+[English] | [简体中文](docs/translations/README_zh-CN.md) | [繁體中文](docs/translations/README_zh-TW.md) | [Español](docs/translations/README_es.md) | [Português](docs/translations/README_pt-BR.md) | [Français](docs/translations/README_fr.md) | [Deutsch](docs/translations/README_de.md) | [Русский](docs/translations/README_ru.md) | [हिन्दी](docs/translations/README_hi.md) | [Bahasa Indonesia](docs/translations/README_in.md) | [日本語](docs/translations/README_ja.md) | [한국어](docs/translations/README_ko.md)
 
 Android Camera Parameters is a powerful diagnostic tool for developers and enthusiasts to explore the deep technical capabilities of their device's cameras. It leverages the Android Camera2 API to provide detailed insights into every lens on your device.
 
@@ -57,6 +58,7 @@ The app is localized to support a global audience:
 
 Comprehensive documentation is available at [https://zoozooll.github.io/AndroidCameraParameters/](https://zoozooll.github.io/AndroidCameraParameters/).
 
+*   **[Tutorials: Mastering Android Camera2 API](https://zoozooll.github.io/AndroidCameraParameters/category/mastering-android-camera2-api)** 📚
 *   [App Overview](https://zoozooll.github.io/AndroidCameraParameters/)
 *   [Developer Guide](https://zoozooll.github.io/AndroidCameraParameters/development)
 *   [Data Safety](https://zoozooll.github.io/AndroidCameraParameters/data-safety)
