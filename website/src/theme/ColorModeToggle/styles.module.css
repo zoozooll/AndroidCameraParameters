@@ -1,0 +1,53 @@
+.dropdown {
+  display: flex;
+}
+
+.toggleButton {
+  padding: 0.4rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--ifm-global-radius);
+  color: var(--ifm-navbar-link-color);
+}
+
+.toggleButton:hover {
+  background: var(--ifm-hover-overlay);
+  color: var(--ifm-navbar-link-hover-color);
+}
+
+.menuIcon {
+  width: 1.2rem;
+  height: 1.2rem;
+  margin-right: 0.6rem;
+}
+
+.toggleButton .menuIcon {
+  margin-right: 0;
+}
+
+.dropdownMenu {
+  min-width: 120px;
+}
+
+.dropdownItem {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.9rem;
+}
+
+.dropdownItem:hover {
+  background: var(--ifm-dropdown-link-background-color-hover);
+}
+
+.dropdownItem[class*='--active'] {
+  color: var(--ifm-dropdown-link-color-active);
+  background: var(--ifm-dropdown-link-background-color-active);
+}
