@@ -1,6 +1,6 @@
 # Android 相機參數 (Android Camera Parameters)
 
-[English](../../README.md) | [简体中文](README_zh-CN.md) | 繁體中文 | [日本語](README_ja.md) | [한국어](README_ko.md)
+[English](../../README.md) | [简体中文](README_zh-CN.md) | [繁體中文] | [Español](README_es.md) | [Português](README_pt-BR.md) | [Français](README_fr.md) | [Deutsch](README_de.md) | [Русский](README_ru.md) | [हिन्दी](README_hi.md) | [Bahasa Indonesia](README_in.md) | [日本語](README_ja.md) | [한국어](README_ko.md)
 
 Android 相機參數是一款強大的診斷工具，供開發人員和愛好者探索其設備相機的深層技術能力。它利用 Android Camera2 API 提供有關設備上每個鏡頭的詳細洞察。
 

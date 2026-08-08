@@ -1,6 +1,6 @@
 # Androidカメラパラメータ (Android Camera Parameters)
 
-[English](../../README.md) | [简体中文](README_zh-CN.md) | [繁體中文](README_zh-TW.md) | 日本語 | [한국어](README_ko.md)
+[English](../../README.md) | [简体中文](README_zh-CN.md) | [繁體中文](README_zh-TW.md) | [Español](README_es.md) | [Português](README_pt-BR.md) | [Français](README_fr.md) | [Deutsch](README_de.md) | [Русский](README_ru.md) | [हिन्दी](README_hi.md) | [Bahasa Indonesia](README_in.md) | [日本語] | [한국어](README_ko.md)
 
 Androidカメラパラメータは、開発者や愛好家がデバイスのカメラの深い技術的能力を探索するための強力な診断ツールです。Android Camera2 APIを活用して、デバイス上のすべてのレンズに関する詳細な洞察を提供します。
 
