@@ -3,6 +3,7 @@ sidebar_position: 18
 title: "Chapter 18: RA W Photography"
 description: "Master RAW_SENSOR format, DNG file creation with DngCreator, Bayer patterns, and simultaneous RAW+JPEG capture in Android Camera2 API"
 keywords: [Android Camera2, RAW photography, RAW_SENSOR, DngCreator, DNG, Bayer pattern, RGGB, JPEG_R, camera metadata]
+tags: [RAW, DNG, Advanced]
 ---
 
 # Chapter 18: RAW Photography

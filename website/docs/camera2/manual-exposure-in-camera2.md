@@ -3,6 +3,7 @@ sidebar_position: 14
 title: "Chapter 14: Manual Exposure in Camera2"
 description: Take full creative control of exposure with the Android Camera2 API. Learn to disable auto-exposure, set manual ISO via SENSOR_SENSITIVITY, control shutter speed in nanoseconds with SENSOR_EXPOSURE_TIME, and build working Kotlin examples for timelapses, long exposures, and bracketing.
 keywords: [android camera2 manual exposure, SENSOR_SENSITIVITY, SENSOR_EXPOSURE_TIME, CONTROL_MODE_OFF, CONTROL_AE_MODE_OFF, exposure bracketing, long exposure camera2, timelapse camera2]
+tags: [Manual Control, Exposure, Tutorial]
 ---
 
 # Chapter 14: Manual Exposure in Camera2

@@ -3,6 +3,7 @@ sidebar_position: 24
 title: "Chapter 24: CameraX"
 description: "Master CameraX, Jetpack's lifecycle-aware camera library that wraps Camera2. Learn UseCase architecture, Camera2Interop for injecting manual parameters, and a decision framework for choosing CameraX vs Camera2."
 keywords: [camerax, jetpack camera, camerax architecture, usecase model, camera2interop, processcameraprovider, preview usecase, imagecapture, imageanalysis, videocapture, camerax vs camera2]
+tags: [CameraX, Jetpack, Migration]
 ---
 
 # Chapter 24: CameraX

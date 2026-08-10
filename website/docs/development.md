@@ -2,6 +2,7 @@
 sidebar_position: 2
 description: Technical architecture of the Android Camera Parameters app, including MVVM pattern details, Jetpack Compose UI structure, and development guidelines.
 keywords: [android development, mvvm, jetpack compose, camera2 api tutorial]
+tags: [Guide, Setup, Kotlin, Architecture]
 ---
 
 # Developer Documentation

@@ -3,6 +3,7 @@ sidebar_position: 1
 title: "Chapter 1: Welcome to Android Camera2"
 description: Learn why Android Camera2 matters, how it compares to Camera1 and CameraX, what it enables, and what you'll build in this series.
 keywords: [Android Camera2, Camera1 vs Camera2, CameraX, why learn Camera2, Android camera development]
+tags: [Tutorial, Camera2, Basics, Android]
 ---
 
 # Chapter 1: Welcome to Android Camera2

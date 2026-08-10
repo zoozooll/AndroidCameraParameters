@@ -3,6 +3,7 @@ sidebar_position: 21
 title: "Chapter 21: HDR & Ultra HDR"
 description: "Implement HDR10 and HLG video via DynamicRangeProfiles, and Android 14 JPEG_R (Ultra HDR ISO 21496-1) still captures with SDR-primary + gain-map architecture for backward-compatible high dynamic range photos"
 keywords: [Android Camera2, HDR, Ultra HDR, HDR10, HLG, JPEG_R, ST.2084 PQ, Rec.2020, gain map, ISO 21496-1, DynamicRangeProfiles, CDD Performance Class 15]
+tags: [HDR, Ultra HDR, Media]
 ---
 
 # Chapter 21: HDR & Ultra HDR
