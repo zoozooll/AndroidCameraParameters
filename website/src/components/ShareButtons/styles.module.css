@@ -1,0 +1,33 @@
+.shareButtonsContainer {
+  display: flex;
+  align-items: center;
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--ifm-hr-border-color);
+}
+
+.shareText {
+  margin-right: 1rem;
+  font-weight: bold;
+  font-size: 0.9rem;
+  color: var(--ifm-color-emphasis-700);
+}
+
+.buttons {
+  display: flex;
+  gap: 0.8rem;
+}
+
+.shareButton {
+  transition: transform 0.2s ease;
+  cursor: pointer;
+}
+
+.shareButton:hover {
+  transform: scale(1.1);
+}
+
+.shareButton:active {
+  transform: scale(0.95);
+}
