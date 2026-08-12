@@ -33,14 +33,14 @@ The gamma curve used by SDR was engineered to match 1990s CRT electron-gun nonli
 
 ```mermaid
 flowchart TD
-    subgraph SDRpath["SDR 8-bit Capture → Display Pipeline"]
+    subgraph SDRpath["SDR 8-bit Capture -> Display Pipeline"]
         S1["Sensor Linear<br/>14-bit RAW"] --> S2["Gamma 2.2 Curve<br/>(Destroys Shadow Detail)"]
         S2 --> S3["8-bit Quantization<br/>(Only 22 codes for<br/>0–10% luminance)"]
         S3 --> S4["sRGB Gamut Clipping<br/>(25% of colors lost)"]
         S4 --> S5["Peak 100 nits<br/>(Sky/Sun Clip to White)"]
     end
 
-    subgraph HDRpath["HDR10 10-bit Capture → Display Pipeline"]
+    subgraph HDRpath["HDR10 10-bit Capture -> Display Pipeline"]
         H1["Sensor Linear<br/>14-bit RAW"] --> H2["ST.2084 PQ Curve<br/>(Fits JND model)"]
         H2 --> H3["10-bit Quantization<br/>(140 codes for<br/>0–10% luminance)"]
         H3 --> H4["Rec.2020 Gamut<br/>(75% of visible colors)"]
@@ -215,7 +215,7 @@ flowchart LR
 
     subgraph RENDER["At Display Time (HDR-Aware Reader)"]
         R1["Decode Primary JPEG (SDR)"] --> R2["Decode Gain Map JPEG"]
-        R2 --> R3["Display Engine:<br/>Per-Pixel Multiplication<br/>Primary × exp2(gain × headroom)<br/>→ Linear HDR Radiance"]
+        R2 --> R3["Display Engine:<br/>Per-Pixel Multiplication<br/>Primary x exp2(gain x headroom)<br/>-> Linear HDR Radiance"]
         R3 --> R4["HDR Panel Output:<br/>Local Highlights up to<br/>1000 nits peak"]
     end
 

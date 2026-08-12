@@ -30,12 +30,12 @@ graph TB
     subgraph FRAME["Lapisan Framework Java/Kotlin — android.hardware.camera2.*"]
         direction TB
         F1["CameraManager · CameraCharacteristics<br/>CaptureRequest.Builder · CaptureResult<br/>CameraDevice · CameraCaptureSession"]
-        F2["CameraBinderWrapper (AOSP frameworks/base)<br/>Menerjemahkan objek Java → parcel Binder AIDL"]
+        F2["CameraBinderWrapper (AOSP frameworks/base)<br/>Menerjemahkan objek Java -> parcel Binder AIDL"]
     end
     subgraph BIND["Lapisan IPC — Binder / HwBinder"]
         direction TB
-        B1["AIDL ICameraService (AOSP)<br/>Framework ↔ CameraService"]
-        B2["HIDL / AIDL HAL Binder (Treble)<br/>CameraService ↔ Vendor HAL"]
+        B1["AIDL ICameraService (AOSP)<br/>Framework <-> CameraService"]
+        B2["HIDL / AIDL HAL Binder (Treble)<br/>CameraService <-> Vendor HAL"]
     end
     subgraph NS["Lapisan Native Mediaserver (system/bin/cameraserver)"]
         direction TB
@@ -46,7 +46,7 @@ graph TB
     subgraph HAL["Lapisan Vendor HAL (kode OEM / SoC)"]
         direction TB
         H1["Antarmuka HAL3: camera3_device_t<br/>— process_capture_request()<br/>— process_capture_result()<br/>— flush()"]
-        H2["Pembungkus HAL1 (Legacy)<br/>camera2compat::Camera2Compat<br/>Menerjemahkan HAL3 request→HAL1 CameraParameters<br/>untuk < INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED"]
+        H2["Pembungkus HAL1 (Legacy)<br/>camera2compat::Camera2Compat<br/>Menerjemahkan HAL3 request->HAL1 CameraParameters<br/>untuk < INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED"]
         H3["Implementasi Vendor<br/>Qualcomm QCamera2 · MediaTek CamHAL · Samsung Exynos Camera HAL"]
     end
     subgraph K["Lapisan Kernel (Linux)"]
@@ -59,7 +59,7 @@ graph TB
     subgraph HW["Lapisan Perangkat Keras Fisik"]
         direction TB
         HW1["Rakitan Lensa<br/>VCM Voice Coil Motor (I2C)<br/>Menggerakkan grup lensa untuk fokus / OIS"]
-        HW2["Array Piksel Sensor Kamera<br/>Sensor CMOS (Sony IMX / Samsung ISOCELL / OmniVision)<br/>Eksposur → Pembacaan → A/D"]
+        HW2["Array Piksel Sensor Kamera<br/>Sensor CMOS (Sony IMX / Samsung ISOCELL / OmniVision)<br/>Eksposur -> Pembacaan -> A/D"]
         HW3["Bus Fisik MIPI CSI-2<br/>2/4/8 pasangan diferensial pada 1,5 – 2,5 Gbps/jalur"]
         HW4["ISP Image Signal Processor (pada SoC)<br/>Demosaic · Pengurangan Noise · Penajaman · penggabungan HDR · deteksi wajah di perangkat keras"]
         HW5["Pengontrol LED Lampu Kilat (I2C)<br/>Strobo Xenon atau sink arus LED<br/>Disinkronkan ke pin EXRST sensor"]

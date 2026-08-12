@@ -28,12 +28,12 @@ graph TB
     subgraph CTS[Android CTS — Seção de Câmera]
         direction TB
         CTS_API[Testes de API<br/>— Chaves CameraCharacteristics<br/>— isSessionConfigurationSupported<br/>— Todos os casos de uso enumeram corretamente]
-        CTS_FLOW[Testes de Fluxo<br/>— abrir → fechar<br/>— abrir → sessão → captura → fechar<br/>— Estresse de abertura/fechamento rápido]
+        CTS_FLOW[Testes de Fluxo<br/>— abrir -> fechar<br/>— abrir -> sessão -> captura -> fechar<br/>— Estresse de abertura/fechamento rápido]
         CTS_V[CTS Verifier<br/>Testes manuais no dispositivo<br/>— Suavidade da pré-visualização<br/>— Qualidade de captura<br/>— Troca de multicâmera]
     end
     subgraph ITS[Camera ITS — Image Test Suite]
         direction TB
-        ITS_COMBI[test_feature_combination<br/>Permutações de fluxo × FPS × HDR<br/>Milhares de chamadas para<br/>isSessionConfigurationSupported]
+        ITS_COMBI[test_feature_combination<br/>Permutações de fluxo x FPS x HDR<br/>Milhares de chamadas para<br/>isSessionConfigurationSupported]
         ITS_SCENE[Testes de Cena Física<br/>scene0 (cinza uniforme)<br/>scene1_1 (verificador de cor)<br/>Display de tablet automatizado → DUT]
         ITS_FUSION[Teste sensor_fusion<br/>Timestamps do giroscópio devem alinhar com<br/>SENSOR_TIMESTAMP no CaptureResult<br/>Tolerância de ±1ms]
         ITS_3A[Testes de Convergência 3A<br/>AE/AF/AWB devem convergir em<br/>N quadros sob iluminação padrão]
@@ -59,10 +59,10 @@ Um laboratório real de Camera ITS se parece com isto:
 graph LR
     TC["PC Controlador de Teste<br/>Linux + Tradefed CLI<br/>Roda scripts python3 its"]
     TC -->|USB 3.x ADB| DUT[Celular ou Tablet DUT<br/>Dispositivo Sob Teste<br/>Câmera voltada para o display do tablet]
-    TC -->|USB 3.x| TPD[Display do Tablet<br/>Painel 4K calibrado de ~10\"<br/>Roda APK tabletd do ITS]
+    TC -->|USB 3.x| TPD[Display do Tablet<br/>Painel 4K calibrado de ~10''<br/>Roda APK tabletd do ITS]
     TC -->|Relé GPIO / USB| LIGHT[Iluminação Controlada<br/>Painéis LED ajustáveis em CCT<br/>2700K-6500K ±2%]
     TPD -->|projeta scene0 / scene1_1<br/>via HDMI/Display interno| DUT_CAM[Sensor da Câmera Traseira do DUT]
-    DUT_CAM -->|captura quadros via MIPI → HAL| DUT
+    DUT_CAM -->|captura quadros via MIPI -> HAL| DUT
     DUT -->|DNG/JPEG + CaptureResults<br/>obtidos via adb pull| TC
     TC -->|roda análise numpy / scipy<br/>linearidade de luminância, erro de cor, nitidez| RESULT[(Relatório PASS / FAIL + JSON)]
 ```

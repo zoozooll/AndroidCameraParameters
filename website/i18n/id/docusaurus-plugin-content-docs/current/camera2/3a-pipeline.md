@@ -28,42 +28,42 @@ sequenceDiagram
     participant AF as AF Engine
     participant AWB as AWB Engine
 
-    User->>App: Mengetuk tombol "Ambil Foto"
-    App->>HAL: Set AF_MODE = AUTO (atau MACRO)
-    App->>HAL: CONTROL_AF_TRIGGER = START
-    Note over HAL,AF: Pemindaian fokus dimulai
+    User->>App: "Mengetuk tombol 'Ambil Foto'"
+    App->>HAL: "Set AF_MODE = AUTO"
+    App->>HAL: "CONTROL_AF_TRIGGER = START"
+    Note over HAL,AF: "Pemindaian fokus dimulai"
 
-    loop Setiap bingkai pratinjau
-        HAL-->>App: CaptureResult
-        App->>App: Periksa AF_STATE
+    loop "Setiap bingkai pratinjau"
+        HAL-->>App: "CaptureResult"
+        App->>App: "Periksa AF_STATE"
     end
 
-    AF-->>HAL: Penguncian AF tercapai
-    HAL-->>App: AF_STATE = FOCUSED_LOCKED ✓
-    Note over App,AE: Fokus stabil → lanjut ke pra-pengambilan AE
+    AF-->>HAL: "Penguncian AF tercapai"
+    HAL-->>App: "AF_STATE = FOCUSED_LOCKED"
+    Note over App,AE: "Fokus stabil, lanjut ke pra-pengambilan AE"
 
-    App->>HAL: CONTROL_AE_PRECAPTURE_TRIGGER = START
-    Note over HAL,AE: Pemindaian metering pra-pengambilan<br/>(jika mode lampu kilat memerlukan, nyalakan<br/>lampu kilat awal untuk metering)
+    App->>HAL: "CONTROL_AE_PRECAPTURE_TRIGGER = START"
+    Note over HAL,AE: "Pemindaian metering pra-pengambilan"
 
-    loop Setiap bingkai pratinjau
-        HAL-->>App: CaptureResult
-        App->>App: Periksa AE_STATE &amp; FLASH_STATE
+    loop "Setiap bingkai pratinjau"
+        HAL-->>App: "CaptureResult"
+        App->>App: "Periksa AE_STATE dan FLASH_STATE"
     end
 
-    AE-->>HAL: AE memusat; eksposur akhir ditentukan
-    HAL-->>App: AE_STATE = CONVERGED (+ FLASH_STATE = READY jika perlu) ✓
-    AWB-->>HAL: AWB_STATE = CONVERGED (biasanya sudah selesai)
-    Note over App: Semua 3A memusat! AMAN UNTUK DIAMBIL
+    AE-->>HAL: "AE memusat"
+    HAL-->>App: "AE_STATE = CONVERGED"
+    AWB-->>HAL: "AWB_STATE = CONVERGED"
+    Note over App: "Semua 3A memusat! AMAN UNTUK DIAMBIL"
 
-    App->>HAL: Permintaan Foto Diam (TEMPLATE_STILL_CAPTURE)
-    HAL->>HAL: Nyalakan lampu kilat utama jika perlu
-    HAL->>HAL: Ekspos sensor, baca bingkai
-    HAL-->>App: Bingkai JPEG / RAW dikirim via ImageReader
+    App->>HAL: "Permintaan Foto Diam"
+    HAL->>HAL: "Nyalakan lampu kilat utama jika perlu"
+    HAL->>HAL: "Ekspos sensor, baca bingkai"
+    HAL-->>App: "Bingkai JPEG dikirim"
 
-    App->>HAL: CONTROL_AF_TRIGGER = CANCEL
-    App->>HAL: CONTROL_AE_PRECAPTURE_TRIGGER = IDLE
-    App->>HAL: Kembalikan AF_MODE = CONTINUOUS_PICTURE
-    Note over App,HAL: Pembersihan: pratinjau kembali ke otomatis normal
+    App->>HAL: "CONTROL_AF_TRIGGER = CANCEL"
+    App->>HAL: "CONTROL_AE_PRECAPTURE_TRIGGER = IDLE"
+    App->>HAL: "Kembalikan AF_MODE = CONTINUOUS_PICTURE"
+    Note over App,HAL: "Pembersihan: pratinjau kembali otomatis"
 ```
 
 **Setiap langkah bersifat memblokir.** Anda tidak pindah ke langkah N+1 sampai HAL mengonfirmasi status yang diperlukan pada langkah N. Jangan pernah melewati langkah-langkah tersebut — itulah cara Anda merilis aplikasi dengan fokus yang sesekali meleset, eksposur lampu kilat yang buruk, atau foto berwarna kebiruan.
@@ -482,29 +482,29 @@ stateDiagram-v2
     direction LR
 
     state "Status AF" as AF {
-        [*] --> ACTIVE_SCAN: AF_TRIGGER = START
-        ACTIVE_SCAN --> FOCUSED_LOCKED: ✓ Fokus ditemukan
-        ACTIVE_SCAN --> NOT_FOCUSED_LOCKED: ✗ Gagal mengunci
-        FOCUSED_LOCKED --> [*]: Lanjut ke Fase 2
-        NOT_FOCUSED_LOCKED --> [*]: Lanjut (upaya terbaik)
+        [*] --> ACTIVE_SCAN: "AF_TRIGGER = START"
+        ACTIVE_SCAN --> FOCUSED_LOCKED: "Fokus ditemukan"
+        ACTIVE_SCAN --> NOT_FOCUSED_LOCKED: "Gagal mengunci"
+        FOCUSED_LOCKED --> [*]: "Lanjut ke Fase 2"
+        NOT_FOCUSED_LOCKED --> [*]: "Lanjut (upaya terbaik)"
     }
 
     state "Status AE" as AE {
-        [*] --> SEARCHING: Pratinjau berjalan
-        SEARCHING --> CONVERGED: Ambien stabil
-        CONVERGED --> PRECAPTURE: PRECAPTURE_TRIGGER = START
-        PRECAPTURE --> CONVERGED: Eksposur akhir + lampu kilat dihitung
-        CONVERGED --> FLASH_REQUIRED: (mode lampu kilat otomatis saja)
-        CONVERGED --> [*]: Ambil sekarang
-        FLASH_REQUIRED --> [*]: Ambil dengan lampu kilat sekarang
+        [*] --> SEARCHING: "Pratinjau berjalan"
+        SEARCHING --> CONVERGED: "Ambien stabil"
+        CONVERGED --> PRECAPTURE: "PRECAPTURE_TRIGGER = START"
+        PRECAPTURE --> CONVERGED: "Eksposur akhir + lampu kilat dihitung"
+        CONVERGED --> FLASH_REQUIRED: "Hanya mode lampu kilat otomatis"
+        CONVERGED --> [*]: "Ambil sekarang"
+        FLASH_REQUIRED --> [*]: "Ambil dengan lampu kilat sekarang"
     }
 
     state "Status AWB" as AWB {
-        [*] --> SEARCHING: Perubahan adegan besar
-        SEARCHING --> CONVERGED: Iluminan ditemukan
-        CONVERGED --> LOCKED: AWB_LOCK = true
-        CONVERGED --> [*]: Pengambilan OK
-        LOCKED --> [*]: Pengambilan OK
+        [*] --> SEARCHING: "Perubahan adegan besar"
+        SEARCHING --> CONVERGED: "Iluminan ditemukan"
+        CONVERGED --> LOCKED: "AWB_LOCK = true"
+        CONVERGED --> [*]: "Pengambilan OK"
+        LOCKED --> [*]: "Pengambilan OK"
     }
 ```
 

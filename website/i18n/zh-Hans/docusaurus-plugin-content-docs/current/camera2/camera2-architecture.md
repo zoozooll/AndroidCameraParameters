@@ -34,8 +34,8 @@ graph TB
     end
     subgraph BIND["IPC 层 — Binder / HwBinder"]
         direction TB
-        B1["AIDL ICameraService (AOSP)<br/>框架 ↔ CameraService"]
-        B2["HIDL / AIDL HAL Binder (Treble)<br/>CameraService ↔ 供应商 HAL"]
+        B1["AIDL ICameraService (AOSP)<br/>框架 <-> CameraService"]
+        B2["HIDL / AIDL HAL Binder (Treble)<br/>CameraService <-> 供应商 HAL"]
     end
     subgraph NS["原生 Mediaserver 层 (system/bin/cameraserver)"]
         direction TB
@@ -59,7 +59,7 @@ graph TB
     subgraph HW["物理硬件层"]
         direction TB
         HW1["镜头组件<br/>VCM 音圈马达 (I2C)<br/>移动镜组以实现对焦 / OIS"]
-        HW2["相机传感器像素阵列<br/>CMOS 传感器 (索尼 IMX / 三星 ISOCELL / 豪威)<br/>曝光 → 读取 → A/D 转换"]
+        HW2["相机传感器像素阵列<br/>CMOS 传感器 (索尼 IMX / 三星 ISOCELL / 豪威)<br/>曝光 -> 读取 -> A/D 转换"]
         HW3["MIPI CSI-2 物理总线<br/>2/4/8 对差分对，每通道 1.5 – 2.5 Gbps"]
         HW4["ISP 图像信号处理器 (在 SoC 上)<br/>硬件实现去马赛克 · 降噪 · 锐化 · HDR 合并 · 人脸检测"]
         HW5["闪光灯 LED 控制器 (I2C)<br/>氙气闪光灯或 LED 电流沉<br/>同步至传感器 EXRST 引脚"]
@@ -275,18 +275,18 @@ val supported: Boolean = setup.isSessionConfigurationSupported(sessionConfig)
 
 ```mermaid
 flowchart TB
-    subgraph Journey["你在这本书中的旅程 (章节 → 层级)"]
+    subgraph Journey["你在这本书中的旅程 (章节 -> 层级)"]
         direction LR
-        C1["第 1–4 章<br/>基础知识<br/>硬件层概念"] ~~~ H_L1["↔ HW 层"]
-        C2["第 5–9 章<br/>首个 Camera2 应用<br/>CameraManager · 会话 · ImageReader"] ~~~ H_L2["↔ 应用 + 框架层"]
-        C3["第 10–12 章<br/>管线 · 捕获类型<br/>特性深度挖掘"] ~~~ H_L3["↔ Parcel 元数据 + HAL3 契约"]
-        C4["第 13–17 章<br/>手动 3A · 曝光 · 对焦 · 白平衡"] ~~~ H_L4["↔ 元数据键 → HAL3 → I²C 传感器驱动"]
-        C5["第 18–23 章<br/>RAW · HDR · 多摄 · ZSL · 扩展"] ~~~ H_L5["↔ HAL3 请求模型 · ISP m2m 重处理"]
-        C6["第 24 章 CameraX<br/>UseCase 门面 + 互操作"] ~~~ H_L6["↔ 应用侧对框架层的抽象"]
-        C7["第 25 章 原生 NDK<br/>ACamera + AHB → Vulkan"] ~~~ H_L7["↔ Camera3Device 之上的 NDK 垫片"]
-        C8["第 26 章 协程/Flow<br/>回调的异步包装"] ~~~ H_L8["↔ 围绕 Binder 边界的应用层异步化"]
-        C9["第 27 章 测试 ITS/CTS<br/>Mock 对比 真实硬件"] ~~~ H_L9["↔ 通过测试套件验证每一层"]
-        C10["第 28 章 本章内容<br/>全栈架构"] ~~~ H_L10["↔ 从头到尾的所有层级"]
+        C1["第 1–4 章<br/>基础知识<br/>硬件层概念"] ~~~ H_L1["<-> HW 层"]
+        C2["第 5–9 章<br/>首个 Camera2 应用<br/>CameraManager · 会话 · ImageReader"] ~~~ H_L2["<-> 应用 + 框架层"]
+        C3["第 10–12 章<br/>管线 · 捕获类型<br/>特性深度挖掘"] ~~~ H_L3["<-> Parcel 元数据 + HAL3 契约"]
+        C4["第 13–17 章<br/>手动 3A · 曝光 · 对焦 · 白平衡"] ~~~ H_L4["<-> 元数据键 -> HAL3 -> I²C 传感器驱动"]
+        C5["第 18–23 章<br/>RAW · HDR · 多摄 · ZSL · 扩展"] ~~~ H_L5["<-> HAL3 请求模型 · ISP m2m 重处理"]
+        C6["第 24 章 CameraX<br/>UseCase 门面 + 互操作"] ~~~ H_L6["<-> 应用侧对框架层的抽象"]
+        C7["第 25 章 原生 NDK<br/>ACamera + AHB -> Vulkan"] ~~~ H_L7["<-> Camera3Device 之上的 NDK 垫片"]
+        C8["第 26 章 协程/Flow<br/>回调的异步包装"] ~~~ H_L8["<-> 围绕 Binder 边界的应用层异步化"]
+        C9["第 27 章 测试 ITS/CTS<br/>Mock 对比 真实硬件"] ~~~ H_L9["<-> 通过测试套件验证每一层"]
+        C10["第 28 章 本章内容<br/>全栈架构"] ~~~ H_L10["<-> 从头到尾的所有层级"]
     end
     H_L1 --> HW
     H_L2 --> FRAME

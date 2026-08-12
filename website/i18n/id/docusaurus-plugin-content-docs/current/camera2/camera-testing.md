@@ -28,12 +28,12 @@ graph TB
     subgraph CTS[Android CTS — Bagian Kamera]
         direction TB
         CTS_API[Pengujian API<br/>— Kunci CameraCharacteristics<br/>— isSessionConfigurationSupported<br/>— Semua kasus penggunaan dihitung dengan benar]
-        CTS_FLOW[Pengujian Alur<br/>— buka → tutup<br/>— buka → sesi → pengambilan → tutup<br/>— Stres buka/tutup cepat]
+        CTS_FLOW[Pengujian Alur<br/>— buka -> tutup<br/>— buka -> sesi -> pengambilan -> tutup<br/>— Stres buka/tutup cepat]
         CTS_V[CTS Verifier<br/>Pengujian manual di perangkat<br/>— Kehalusan pratinjau<br/>— Kualitas pengambilan gambar<br/>— Peralihan multi-kamera]
     end
     subgraph ITS[Camera ITS — Image Test Suite]
         direction TB
-        ITS_COMBI[test_feature_combination<br/>Permutasi aliran × FPS × HDR<br/>Ribuan panggilan ke<br/>isSessionConfigurationSupported]
+        ITS_COMBI[test_feature_combination<br/>Permutasi aliran x FPS x HDR<br/>Ribuan panggilan ke<br/>isSessionConfigurationSupported]
         ITS_SCENE[Pengujian Adegan Fisik<br/>scene0 (abu-abu seragam)<br/>scene1_1 (pemeriksa warna)<br/>Tampilan tablet otomatis → DUT]
         ITS_FUSION[pengujian sensor_fusion<br/>Stempel waktu gyro harus selaras dengan<br/>SENSOR_TIMESTAMP di CaptureResult<br/>toleransi ±1ms]
         ITS_3A[Pengujian pemusatan 3A<br/>AE/AF/AWB harus memusat dalam<br/>N bingkai di bawah pencahayaan standar]
@@ -59,10 +59,10 @@ Laboratorium Camera ITS yang nyata terlihat seperti ini:
 graph LR
     TC["PC Pengontrol Tes<br/>Linux + Tradefed CLI<br/>Menjalankan skrip python3 its"]
     TC -->|USB 3.x ADB| DUT[Ponsel atau Tablet DUT<br/>Device Under Test<br/>Kamera menghadap tampilan tablet]
-    TC -->|USB 3.x| TPD[Tampilan Tablet<br/>panel 4K ~10\" terkalibrasi<br/>Menjalankan APK tabletd ITS]
+    TC -->|USB 3.x| TPD[Tampilan Tablet<br/>panel 4K ~10'' terkalibrasi<br/>Menjalankan APK tabletd ITS]
     TC -->|GPIO / relay USB| LIGHT[Pencahayaan Terkendali<br/>panel LED yang dapat disetel CCT<br/>2700K-6500K ±2%]
     TPD -->|memproyeksikan scene0 / scene1_1<br/>via HDMI/Tampilan internal| DUT_CAM[Sensor Kamera Belakang DUT]
-    DUT_CAM -->|menangkap bingkai via MIPI → HAL| DUT
+    DUT_CAM -->|menangkap bingkai via MIPI -> HAL| DUT
     DUT -->|DNG/JPEG + CaptureResults<br/>ditarik via adb pull| TC
     TC -->|menjalankan analisis numpy / scipy<br/>linearitas luminans, kesalahan warna, ketajaman| RESULT[(Laporan LULUS / GAGAL + JSON)]
 ```

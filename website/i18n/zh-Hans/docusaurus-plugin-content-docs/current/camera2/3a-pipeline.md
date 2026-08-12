@@ -28,42 +28,42 @@ sequenceDiagram
     participant AF as AF 引擎
     participant AWB as AWB 引擎
 
-    User->>App: 点击"拍摄"按钮
-    App->>HAL: 设置 AF_MODE = AUTO (或 MACRO)
-    App->>HAL: CONTROL_AF_TRIGGER = START
-    Note over HAL,AF: 对焦扫描开始
+    User->>App: "点击'拍摄'按钮"
+    App->>HAL: "设置 AF_MODE = AUTO"
+    App->>HAL: "CONTROL_AF_TRIGGER = START"
+    Note over HAL,AF: "对焦扫描开始"
 
-    loop 每一帧预览
-        HAL-->>App: CaptureResult
-        App->>App: 检查 AF_STATE
+    loop "每一帧预览"
+        HAL-->>App: "CaptureResult"
+        App->>App: "检查 AF_STATE"
     end
 
-    AF-->>HAL: 达到对焦锁定
-    HAL-->>App: AF_STATE = FOCUSED_LOCKED ✓
-    Note over App,AE: 对焦稳定 → 进入 AE 预捕获
+    AF-->>HAL: "达到对焦锁定"
+    HAL-->>App: "AF_STATE = FOCUSED_LOCKED"
+    Note over App,AE: "对焦稳定, 进入 AE 预捕获"
 
-    App->>HAL: CONTROL_AE_PRECAPTURE_TRIGGER = START
-    Note over HAL,AE: 预捕获测光扫描<br/>(如果闪光灯模式需要，<br/>会发射预闪进行测光)
+    App->>HAL: "CONTROL_AE_PRECAPTURE_TRIGGER = START"
+    Note over HAL,AE: "预捕获测光扫描"
 
-    loop 每一帧预览
-        HAL-->>App: CaptureResult
-        App->>App: 检查 AE_STATE 和 FLASH_STATE
+    loop "每一帧预览"
+        HAL-->>App: "CaptureResult"
+        App->>App: "检查 AE_STATE 和 FLASH_STATE"
     end
 
-    AE-->>HAL: AE 已收敛；最终曝光已确定
-    HAL-->>App: AE_STATE = CONVERGED (+ 必要时 FLASH_STATE = READY) ✓
-    AWB-->>HAL: AWB_STATE = CONVERGED (通常已完成)
-    Note over App: 所有 3A 已收敛！可以安全拍摄
+    AE-->>HAL: "AE 已收敛"
+    HAL-->>App: "AE_STATE = CONVERGED"
+    AWB-->>HAL: "AWB_STATE = CONVERGED"
+    Note over App: "所有 3A 已收敛! 可以安全拍摄"
 
-    App->>HAL: 静态拍摄请求 (TEMPLATE_STILL_CAPTURE)
-    HAL->>HAL: 必要时发射主闪光灯
-    HAL->>HAL: 传感器曝光，读取画面
-    HAL-->>App: 通过 ImageReader 交付 JPEG / RAW 帧
+    App->>HAL: "静态拍摄请求"
+    HAL->>HAL: "必要时发射主闪光灯"
+    HAL->>HAL: "传感器曝光, 读取画面"
+    HAL-->>App: "交付 JPEG 帧"
 
-    App->>HAL: CONTROL_AF_TRIGGER = CANCEL
-    App->>HAL: CONTROL_AE_PRECAPTURE_TRIGGER = IDLE
-    App->>HAL: 恢复 AF_MODE = CONTINUOUS_PICTURE
-    Note over App,HAL: 清理：预览恢复正常自动模式
+    App->>HAL: "CONTROL_AF_TRIGGER = CANCEL"
+    App->>HAL: "CONTROL_AE_PRECAPTURE_TRIGGER = IDLE"
+    App->>HAL: "恢复 AF_MODE = CONTINUOUS_PICTURE"
+    Note over App,HAL: "清理: 预览恢复正常自动模式"
 ```
 
 **每一步都是阻塞的。** 在 HAL 确认第 N 步所需的状态之前，你不会移动到第 N+1 步。切勿跳过步骤——否则你发布的应用会出现间歇性的对焦不实、错误的闪光曝光或带蓝/绿调的照片。
@@ -482,29 +482,29 @@ stateDiagram-v2
     direction LR
 
     state "AF 状态" as AF {
-        [*] --> ACTIVE_SCAN: AF_TRIGGER = START
-        ACTIVE_SCAN --> FOCUSED_LOCKED: ✓ 找到焦点
-        ACTIVE_SCAN --> NOT_FOCUSED_LOCKED: ✗ 无法锁定
-        FOCUSED_LOCKED --> [*]: 进入第 2 阶段
-        NOT_FOCUSED_LOCKED --> [*]: 继续 (尽力而为)
+        [*] --> ACTIVE_SCAN: "AF_TRIGGER = START"
+        ACTIVE_SCAN --> FOCUSED_LOCKED: "找到焦点"
+        ACTIVE_SCAN --> NOT_FOCUSED_LOCKED: "无法锁定"
+        FOCUSED_LOCKED --> [*]: "进入第 2 阶段"
+        NOT_FOCUSED_LOCKED --> [*]: "继续 (尽力而为)"
     }
 
     state "AE 状态" as AE {
-        [*] --> SEARCHING: 预览运行中
-        SEARCHING --> CONVERGED: 环境光稳定
-        CONVERGED --> PRECAPTURE: PRECAPTURE_TRIGGER = START
-        PRECAPTURE --> CONVERGED: 最终曝光+闪光计算完毕
-        CONVERGED --> FLASH_REQUIRED: (仅限自动闪光模式)
-        CONVERGED --> [*]: 现在拍摄
-        FLASH_REQUIRED --> [*]: 现在配合闪光拍摄
+        [*] --> SEARCHING: "预览运行中"
+        SEARCHING --> CONVERGED: "环境光稳定"
+        CONVERGED --> PRECAPTURE: "PRECAPTURE_TRIGGER = START"
+        PRECAPTURE --> CONVERGED: "最终曝光+闪光计算完毕"
+        CONVERGED --> FLASH_REQUIRED: "仅限自动闪光模式"
+        CONVERGED --> [*]: "现在拍摄"
+        FLASH_REQUIRED --> [*]: "现在配合闪光拍摄"
     }
 
     state "AWB 状态" as AWB {
-        [*] --> SEARCHING: 场景重大变化
-        SEARCHING --> CONVERGED: 找到光源
-        CONVERGED --> LOCKED: AWB_LOCK = true
-        CONVERGED --> [*]: 拍摄 OK
-        LOCKED --> [*]: 拍摄 OK
+        [*] --> SEARCHING: "场景重大变化"
+        SEARCHING --> CONVERGED: "找到光源"
+        CONVERGED --> LOCKED: "AWB_LOCK = true"
+        CONVERGED --> [*]: "拍摄 OK"
+        LOCKED --> [*]: "拍摄 OK"
     }
 ```
 

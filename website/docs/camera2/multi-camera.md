@@ -18,17 +18,17 @@ A logical camera is a virtual HAL device backed by N ≥ 2 physical cameras that
 ```mermaid
 flowchart TB
     subgraph UserSpace["App (Userspace)"]
-        APP["CameraManager.openCamera<br/>cameraId = \"0\" (Logical ID)"]
+        APP["CameraManager.openCamera<br/>cameraId = '0' (Logical ID)"]
     end
 
     subgraph HAL["Camera HAL (Kernel / Vendor Partition)"]
         LOG["Logical Camera Device 0<br/>Virtual Node"]
 
         subgraph PhysicalCams["Physical Cameras (Same-Facing Group)"]
-            UW["Physical ID \"8\"<br/>Ultra-Wide 0.5×<br/>12MP, 13mm eq."]
-            W["Physical ID \"0\"<br/>Wide 1.0×<br/>50MP, 24mm eq."]
-            T["Physical ID \"5\"<br/>Telephoto 3.0×<br/>10MP, 72mm eq."]
-            P["Physical ID \"7\"<br/>Periscope 10×<br/>8MP, 240mm eq."]
+            UW["Physical ID '8'<br/>Ultra-Wide 0.5x<br/>12MP, 13mm eq."]
+            W["Physical ID '0'<br/>Wide 1.0x<br/>50MP, 24mm eq."]
+            T["Physical ID '5'<br/>Telephoto 3.0x<br/>10MP, 72mm eq."]
+            P["Physical ID '7'<br/>Periscope 10x<br/>8MP, 240mm eq."]
         end
 
         LOG <--> UW
@@ -37,11 +37,11 @@ flowchart TB
         LOG <--> P
     end
 
-    subgraph ZoomScale["Zoom Ratios → HAL Lens Switch Points"]
-        Z1["0.5× – 0.9× → ULTRA-WIDE (ID 8)"]
-        Z2["1.0× – 2.9× → WIDE (ID 0)"]
-        Z3["3.0× – 9.9× → TELEPHOTO (ID 5)"]
-        Z4["10.0×+ → PERISCOPE (ID 7)"]
+    subgraph ZoomScale["Zoom Ratios -> HAL Lens Switch Points"]
+        Z1["0.5x - 0.9x -> ULTRA-WIDE (ID 8)"]
+        Z2["1.0x - 2.9x -> WIDE (ID 0)"]
+        Z3["3.0x - 9.9x -> TELEPHOTO (ID 5)"]
+        Z4["10.0x+ -> PERISCOPE (ID 7)"]
     end
 
     APP --> LOG
@@ -68,11 +68,11 @@ The research doc's *Logical Multi-Camera* section found that only **Snapdragon 8
 
 ```mermaid
 flowchart LR
-    subgraph APPROX["APPROXIMATE Sync (±33 ms)"]
+    subgraph APPROX["APPROXIMATE Sync (+/-33 ms)"]
         A1[Wide Sensor Exposure Start<br/>t=0.000 ms] --> A2[ISP Merge<br/>Depth OK, Motion NOT OK]
         A3[Tele Sensor Exposure Start<br/>t=+27 ms] --> A2
     end
-    subgraph CALIB["CALIBRATED Sync (±1 ms)"]
+    subgraph CALIB["CALIBRATED Sync (+/-1 ms)"]
         C1[Wide Sensor Exposure Start<br/>t=0.000 ms] --> C2[ISP / GPU Fusion<br/>Depth + Motion + AR OK]
         C3[Tele Sensor Exposure Start<br/>t=+0.4 ms] --> C2
     end
@@ -300,24 +300,24 @@ The two `Image` objects will have **identical `image.timestamp` values** when `L
 
 ```mermaid
 graph TD
-    subgraph BackLogical["Logical Rear Camera ID \"0\""]
+    subgraph BackLogical["Logical Rear Camera ID '0'"]
         direction TB
-        CAPFLAG["CAPABILITIES:<br/>LOGICAL_MULTI_CAMERA = true<br/>SENSOR_SYNC_TYPE = CALIBRATED<br/>MAX_DIGITAL_ZOOM = 100×"]
+        CAPFLAG["CAPABILITIES:<br/>LOGICAL_MULTI_CAMERA = true<br/>SENSOR_SYNC_TYPE = CALIBRATED<br/>MAX_DIGITAL_ZOOM = 100x"]
     end
 
     subgraph PhysChildren["Physical Children (getPhysicalCameraIds)"]
-        UWPHYS["ID \"8\" → Ultra-Wide<br/>Focal=1.7mm<br/>f/1.8<br/>FOV=120°"]
-        WPHYS["ID \"0\" → Wide<br/>Focal=5.5mm<br/>f/1.6<br/>FOV=84°"]
-        TPHYS["ID \"5\" → Telephoto 3×<br/>Focal=16.5mm<br/>f/2.0<br/>FOV=28°"]
-        PPHYS["ID \"7\" → Periscope 10×<br/>Focal=55mm<br/>f/3.4<br/>FOV=8.5°"]
+        UWPHYS["ID '8' -> Ultra-Wide<br/>Focal=1.7mm<br/>f/1.8<br/>FOV=120 deg"]
+        WPHYS["ID '0' -> Wide<br/>Focal=5.5mm<br/>f/1.6<br/>FOV=84 deg"]
+        TPHYS["ID '5' -> Telephoto 3x<br/>Focal=16.5mm<br/>f/2.0<br/>FOV=28 deg"]
+        PPHYS["ID '7' -> Periscope 10x<br/>Focal=55mm<br/>f/3.4<br/>FOV=8.5 deg"]
     end
 
     subgraph ReplaceRule["Session Outputs (Rule MR-1 Applied)"]
         direction TB
         PREV["1x Logical Preview<br/>SurfaceView 1080p<br/>(No physical ID set)"]
-        PHYS1["1x Physical YUV 12MP<br/>→ OutputConfiguration<br/>.setPhysicalCameraId(ID \"0\")<br/>← Targets WIDE lens"]
-        PHYS2["1x Physical YUV 12MP<br/>→ OutputConfiguration<br/>.setPhysicalCameraId(ID \"5\")<br/>← Targets TELE lens"]
-        NOTE["✓ VALID per MR-1:<br/>Format YUV × Size Match × 2 Replacements"]
+        PHYS1["1x Physical YUV 12MP<br/>-> OutputConfiguration<br/>.setPhysicalCameraId(ID '0')<br/><- Targets WIDE lens"]
+        PHYS2["1x Physical YUV 12MP<br/>-> OutputConfiguration<br/>.setPhysicalCameraId(ID '5')<br/><- Targets TELE lens"]
+        NOTE["VALID per MR-1:<br/>Format YUV x Size Match x 2 Replacements"]
     end
 
     BackLogical --> PhysChildren

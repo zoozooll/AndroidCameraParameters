@@ -28,13 +28,13 @@ graph TB
     subgraph CTS[Android CTS — Camera Section]
         direction TB
         CTS_API[API Tests<br/>— CameraCharacteristics keys<br/>— isSessionConfigurationSupported<br/>— All use cases enumerate correctly]
-        CTS_FLOW[Flow Tests<br/>— open → close<br/>— open → session → capture → close<br/>— Rapid open/close stress]
+        CTS_FLOW[Flow Tests<br/>— open -> close<br/>— open -> session -> capture -> close<br/>— Rapid open/close stress]
         CTS_V[CTS Verifier<br/>Manual on-device tests<br/>— Preview smoothness<br/>— Capture quality<br/>— Multi-camera switch]
     end
     subgraph ITS[Camera ITS — Image Test Suite]
         direction TB
-        ITS_COMBI[test_feature_combination<br/>Stream permutations × FPS × HDR<br/>Thousands of calls to<br/>isSessionConfigurationSupported]
-        ITS_SCENE[Physical Scene Tests<br/>scene0 (uniform gray)<br/>scene1_1 (color checker)<br/>Automated tablet display → DUT]
+        ITS_COMBI[test_feature_combination<br/>Stream permutations x FPS x HDR<br/>Thousands of calls to<br/>isSessionConfigurationSupported]
+        ITS_SCENE[Physical Scene Tests<br/>scene0 (uniform gray)<br/>scene1_1 (color checker)<br/>Automated tablet display -> DUT]
         ITS_FUSION[sensor_fusion test<br/>Gyro timestamps must align with<br/>SENSOR_TIMESTAMP in CaptureResult<br/>±1ms tolerance]
         ITS_3A[3A Convergence tests<br/>AE/AF/AWB must converge within<br/>N frames under standard lighting]
         ITS_HDR[HDR / Ultra HDR tests<br/>JPEG_R gainmap validity<br/>Dynamic range measurement]
@@ -62,7 +62,7 @@ graph LR
     TC -->|USB 3.x| TPD[Tablet Display<br/>~10" calibrated 4K panel<br/>Runs ITS tabletd APK]
     TC -->|GPIO / USB relay| LIGHT[Controlled Lighting<br/>CCT-tunable LED panels<br/>2700K-6500K ±2%]
     TPD -->|projects scene0 / scene1_1<br/>via HDMI/Internal display| DUT_CAM[DUT Rear Camera Sensor]
-    DUT_CAM -->|captures frames over MIPI → HAL| DUT
+    DUT_CAM -->|captures frames over MIPI -> HAL| DUT
     DUT -->|DNG/JPEG + CaptureResults<br/>pulled via adb pull| TC
     TC -->|runs numpy / scipy analysis<br/>luminance linearity, color error, sharpness| RESULT[(PASS / FAIL report + JSON)]
 ```

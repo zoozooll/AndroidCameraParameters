@@ -45,12 +45,12 @@ sequenceDiagram
     Note over App,CB: One-shot high-res capture through ISP
     
     CB-->>IR: onImageAvailable() 🌠
-    IR->>IR: acquireLatestImage() → Image object
+    IR->>IR: acquireLatestImage() -> Image object
     IR->>App: planes[0].buffer (raw JPEG ByteBuffer)
-    App->>MS: MediaStore.createWriteRequest() → OutputStream
+    App->>MS: MediaStore.createWriteRequest() -> OutputStream
     App->>MS: Write ByteBuffer bytes to OutputStream
     App->>IR: image.close() ✅ FREE BUFFER
-    App->>MS: close() OutputStream → photo appears in Gallery
+    App->>MS: close() OutputStream -> photo appears in Gallery
     
     App->>App: unlockFocus() 🔓
     App->>App: setRepeatingRequest() 🔄 Resume preview

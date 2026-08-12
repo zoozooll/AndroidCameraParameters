@@ -32,14 +32,14 @@ Kurva gamma yang digunakan oleh SDR direkayasa agar cocok dengan non-linearitas 
 
 ```mermaid
 flowchart TD
-    subgraph SDRpath["Jalur Pengambilan SDR 8-bit → Pipeline Tampilan"]
+    subgraph SDRpath["Jalur Pengambilan SDR 8-bit -> Pipeline Tampilan"]
         S1["Sensor Linear<br/>RAW 14-bit"] --> S2["Kurva Gamma 2.2<br/>(Menghancurkan Detail Bayangan)"]
         S2 --> S3["Kuantisasi 8-bit<br/>(Hanya 22 kode untuk<br/>luminans 0–10%)"]
         S3 --> S4["Pemotongan Gamut sRGB<br/>(25% warna hilang)"]
         S4 --> S5["Puncak 100 nit<br/>(Langit/Matahari Terpotong Putih)"]
     end
 
-    subgraph HDRpath["Jalur Pengambilan HDR10 10-bit → Pipeline Tampilan"]
+    subgraph HDRpath["Jalur Pengambilan HDR10 10-bit -> Pipeline Tampilan"]
         H1["Sensor Linear<br/>RAW 14-bit"] --> H2["Kurva ST.2084 PQ<br/>(Cocok dengan model JND)"]
         H2 --> H3["Kuantisasi 10-bit<br/>(140 kode untuk<br/>luminans 0–10%)"]
         H3 --> H4["Gamut Rec.2020<br/>(75% warna yang terlihat)"]
@@ -214,7 +214,7 @@ flowchart LR
 
     subgraph RENDER["Saat Waktu Tampilan (Pembaca Sadar HDR)"]
         R1["Dekode JPEG Primer (SDR)"] --> R2["Dekode JPEG Peta Penguatan"]
-        R2 --> R3["Mesin Tampilan:<br/>Perkalian Per-Piksel<br/>Primer × exp2(gain × headroom)<br/>→ Pancaran HDR Linear"]
+        R2 --> R3["Mesin Tampilan:<br/>Perkalian Per-Piksel<br/>Primer x exp2(gain x headroom)<br/>-> Pancaran HDR Linear"]
         R3 --> R4["Output Panel HDR:<br/>Sorotan Lokal hingga<br/>puncak 1000 nit"]
     end
 

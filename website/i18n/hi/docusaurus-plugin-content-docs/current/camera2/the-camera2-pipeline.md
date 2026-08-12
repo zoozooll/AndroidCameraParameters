@@ -207,11 +207,11 @@ HAL3 पाइपलाइन मॉडल के चार परिभाष�
 flowchart LR
     R["Single CaptureRequest<br/>(1 frame config)"]
     HAL["HAL3 ISP Processing (1 pass)"]
-    S1["Preview 1080p<br/>→ TextureView"]
-    S2["JPEG 12MP<br/>→ ImageReader"]
-    S3["RAW 12MP<br/>→ ImageReader"]
-    S4["Video 4K<br/>→ MediaRecorder"]
-    RESULT["CaptureResult<br/>→ CaptureCallback"]
+    S1["Preview 1080p<br/>-> TextureView"]
+    S2["JPEG 12MP<br/>-> ImageReader"]
+    S3["RAW 12MP<br/>-> ImageReader"]
+    S4["Video 4K<br/>-> MediaRecorder"]
+    RESULT["CaptureResult<br/>-> CaptureCallback"]
 
     R --> HAL
     HAL --> S1

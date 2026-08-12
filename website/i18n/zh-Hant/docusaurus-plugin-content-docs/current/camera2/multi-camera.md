@@ -18,17 +18,17 @@ keywords: [Android Camera2, 多相機, 邏輯相機, 物理相機, getPhysicalCa
 ```mermaid
 flowchart TB
     subgraph UserSpace["應用 (用戶空間)"]
-        APP["CameraManager.openCamera<br/>cameraId = \"0\" (邏輯 ID)"]
+        APP["CameraManager.openCamera<br/>cameraId = '0' (邏輯 ID)"]
     end
 
     subgraph HAL["相機 HAL (內核 / 供應商分區)"]
         LOG["邏輯相機設備 0<br/>虛擬節點"]
 
         subgraph PhysicalCams["物理相機 (同朝向組)"]
-            UW["物理 ID \"8\"<br/>超廣角 0.5×<br/>12MP, 13mm 等效"]
-            W["物理 ID \"0\"<br/>廣角 1.0×<br/>50MP, 24mm 等效"]
-            T["物理 ID \"5\"<br/>望遠 3.0×<br/>10MP, 72mm 等效"]
-            P["物理 ID \"7\"<br/>潛望鏡 10×<br/>8MP, 240mm 等效"]
+            UW["物理 ID '8'<br/>超廣角 0.5x<br/>12MP, 13mm 等效"]
+            W["物理 ID '0'<br/>廣角 1.0x<br/>50MP, 24mm 等效"]
+            T["物理 ID '5'<br/>望遠 3.0x<br/>10MP, 72mm 等效"]
+            P["物理 ID '7'<br/>潛望鏡 10x<br/>8MP, 240mm 等效"]
         end
 
         LOG <--> UW
@@ -37,11 +37,11 @@ flowchart TB
         LOG <--> P
     end
 
-    subgraph ZoomScale["變焦倍率 → HAL 鏡頭切換點"]
-        Z1["0.5× – 0.9× → 超廣角 (ID 8)"]
-        Z2["1.0× – 2.9× → 廣角 (ID 0)"]
-        Z3["3.0× – 9.9× → 望遠 (ID 5)"]
-        Z4["10.0×+ → 潛望鏡 (ID 7)"]
+    subgraph ZoomScale["變焦倍率 -> HAL 鏡頭切換點"]
+        Z1["0.5x – 0.9x -> 超廣角 (ID 8)"]
+        Z2["1.0x – 2.9x -> 廣角 (ID 0)"]
+        Z3["3.0x – 9.9x -> 望遠 (ID 5)"]
+        Z4["10.0x+ -> 潛望鏡 (ID 7)"]
     end
 
     APP --> LOG
@@ -300,24 +300,24 @@ fun createDualPhysicalSession(
 
 ```mermaid
 graph TD
-    subgraph BackLogical["後置邏輯相機 ID \"0\""]
+    subgraph BackLogical["後置邏輯相機 ID '0'"]
         direction TB
-        CAPFLAG["性能標誌:<br/>LOGICAL_MULTI_CAMERA = true<br/>SENSOR_SYNC_TYPE = CALIBRATED<br/>MAX_DIGITAL_ZOOM = 100×"]
+        CAPFLAG["性能標誌:<br/>LOGICAL_MULTI_CAMERA = true<br/>SENSOR_SYNC_TYPE = CALIBRATED<br/>MAX_DIGITAL_ZOOM = 100x"]
     end
 
     subgraph PhysChildren["物理子相機 (getPhysicalCameraIds)"]
-        UWPHYS["ID \"8\" → 超廣角<br/>焦距=1.7mm<br/>f/1.8<br/>FOV=120°"]
-        WPHYS["ID \"0\" → 廣角<br/>焦距=5.5mm<br/>f/1.6<br/>FOV=84°"]
-        TPHYS["ID \"5\" → 望遠 3×<br/>焦距=16.5mm<br/>f/2.0<br/>FOV=28°"]
-        PPHYS["ID \"7\" → 潛望鏡 10×<br/>焦距=55mm<br/>f/3.4<br/>FOV=8.5°"]
+        UWPHYS["ID '8' -> 超廣角<br/>焦距=1.7mm<br/>f/1.8<br/>FOV=120°"]
+        WPHYS["ID '0' -> 廣角<br/>焦距=5.5mm<br/>f/1.6<br/>FOV=84°"]
+        TPHYS["ID '5' -> 望遠 3x<br/>焦距=16.5mm<br/>f/2.0<br/>FOV=28°"]
+        PPHYS["ID '7' -> 潛望鏡 10x<br/>焦距=55mm<br/>f/3.4<br/>FOV=8.5°"]
     end
 
     subgraph ReplaceRule["工作階段輸出 (應用規則 MR-1)"]
         direction TB
         PREV["1x 邏輯預覽<br/>SurfaceView 1080p<br/>(未設定物理 ID)"]
-        PHYS1["1x 物理 YUV 12MP<br/>→ OutputConfiguration<br/>.setPhysicalCameraId(ID \"0\")<br/>← 指向廣角鏡頭"]
-        PHYS2["1x 物理 YUV 12MP<br/>→ OutputConfiguration<br/>.setPhysicalCameraId(ID \"5\")<br/>← 指向望遠鏡頭"]
-        NOTE["✓ 根據 MR-1 有效:<br/>YUV 格式 × 尺寸匹配 × 2 個替換"]
+        PHYS1["1x 物理 YUV 12MP<br/>-> OutputConfiguration<br/>.setPhysicalCameraId(ID '0')<br/><- 指向廣角鏡頭"]
+        PHYS2["1x 物理 YUV 12MP<br/>-> OutputConfiguration<br/>.setPhysicalCameraId(ID '5')<br/><- 指向望遠鏡頭"]
+        NOTE["✓ 根據 MR-1 有效:<br/>YUV 格式 x 尺寸匹配 x 2 個替換"]
     end
 
     BackLogical --> PhysChildren

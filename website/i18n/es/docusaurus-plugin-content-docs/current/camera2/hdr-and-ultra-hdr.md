@@ -32,14 +32,14 @@ La curva gamma utilizada por el SDR fue diseñada para coincidir con la no linea
 
 ```mermaid
 flowchart TD
-    subgraph SDRpath["Tubería Captura SDR 8 bits → Pantalla"]
+    subgraph SDRpath["Tubería Captura SDR 8 bits -> Pantalla"]
         S1["Sensor lineal<br/>RAW de 14 bits"] --> S2["Curva Gamma 2.2<br/>(Destruye detalle en sombras)"]
         S2 --> S3["Cuantificación de 8 bits<br/>(Solo 22 códigos para<br/>0–10% luminancia)"]
         S3 --> S4["Recorte gama sRGB<br/>(Se pierde 25% colores)"]
         S4 --> S5["Pico 100 nits<br/>(Cielo/Sol recortan a blanco)"]
     end
 
-    subgraph HDRpath["Tubería Captura HDR10 10 bits → Pantalla"]
+    subgraph HDRpath["Tubería Captura HDR10 10 bits -> Pantalla"]
         H1["Sensor lineal<br/>RAW de 14 bits"] --> H2["Curva PQ ST.2084<br/>(Ajustada a modelo JND)"]
         H2 --> H3["Cuantificación de 10 bits<br/>(140 códigos para<br/>0–10% luminancia)"]
         H3 --> H4["Gama Rec.2020<br/>(75% colores visibles)"]
@@ -214,7 +214,7 @@ flowchart LR
 
     subgraph RENDER["En el momento de visualización (Lector HDR)"]
         R1["Decodificar JPEG primario (SDR)"] --> R2["Decodificar JPEG de mapa de ganancia"]
-        R2 --> R3["Motor de pantalla:<br/>Multiplicación píxel a píxel<br/>Primario × exp2(ganancia × margen)<br/>→ Radiancia HDR lineal"]
+        R2 --> R3["Motor de pantalla:<br/>Multiplicación píxel a píxel<br/>Primario x exp2(ganancia x margen)<br/>-> Radiancia HDR lineal"]
         R3 --> R4["Salida de panel HDR:<br/>Luces locales hasta<br/>pico de 1000 nits"]
     end
 

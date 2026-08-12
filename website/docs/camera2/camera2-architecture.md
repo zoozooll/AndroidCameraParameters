@@ -30,7 +30,7 @@ graph TB
     subgraph FRAME["Java/Kotlin Framework Layer — android.hardware.camera2.*"]
         direction TB
         F1["CameraManager · CameraCharacteristics<br/>CaptureRequest.Builder · CaptureResult<br/>CameraDevice · CameraCaptureSession"]
-        F2["CameraBinderWrapper (AOSP frameworks/base)<br/>Translates Java objects → AIDL Binder parcel"]
+        F2["CameraBinderWrapper (AOSP frameworks/base)<br/>Translates Java objects -> AIDL Binder parcel"]
     end
     subgraph BIND["IPC Layer — Binder / HwBinder"]
         direction TB
@@ -46,7 +46,7 @@ graph TB
     subgraph HAL["Vendor HAL Layer (OEM / SoC code)"]
         direction TB
         H1["HAL3 Interface: camera3_device_t<br/>— process_capture_request()<br/>— process_capture_result()<br/>— flush()"]
-        H2["HAL1 Wrapper (Legacy)<br/>camera2compat::Camera2Compat<br/>Translates HAL3 request→HAL1 CameraParameters<br/>for < INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED"]
+        H2["HAL1 Wrapper (Legacy)<br/>camera2compat::Camera2Compat<br/>Translates HAL3 request->HAL1 CameraParameters<br/>for < INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED"]
         H3["Vendor Implementation<br/>Qualcomm QCamera2 · MediaTek CamHAL · Samsung Exynos Camera HAL"]
     end
     subgraph K["Kernel Layer (Linux)"]
@@ -59,7 +59,7 @@ graph TB
     subgraph HW["Physical Hardware Layer"]
         direction TB
         HW1["Lens Assembly<br/>VCM Voice Coil Motor (I2C)<br/>Moves lens group for focus / OIS"]
-        HW2["Camera Sensor Pixel Array<br/>CMOS sensor (Sony IMX / Samsung ISOCELL / OmniVision)<br/>Expose → Readout → A/D"]
+        HW2["Camera Sensor Pixel Array<br/>CMOS sensor (Sony IMX / Samsung ISOCELL / OmniVision)<br/>Expose -> Readout -> A/D"]
         HW3["MIPI CSI-2 Physical Bus<br/>2/4/8 differential pairs at 1.5 – 2.5 Gbps/lane"]
         HW4["ISP Image Signal Processor (on SoC)<br/>Demosaic · Noise Reduction · Sharpen · HDR merge · Face detect in hardware"]
         HW5["Flash LED Controller (I2C)<br/>Xenon strobe or LED current sink<br/>Synced to sensor EXRST pin"]
@@ -275,18 +275,18 @@ Finally, map your own journey across this book onto the layers. Every chapter co
 
 ```mermaid
 flowchart TB
-    subgraph Journey["Your Journey Across This Book (Chapters → Layers)"]
+    subgraph Journey["Your Journey Across This Book (Chapters -> Layers)"]
         direction LR
-        C1["Ch. 1–4<br/>Foundations<br/>Hardware layer concepts"] ~~~ H_L1["↔ HW Layer"]
-        C2["Ch. 5–9<br/>First Camera2 app<br/>CameraManager · Session · ImageReader"] ~~~ H_L2["↔ App + Framework"]
-        C3["Ch. 10–12<br/>Pipeline · Capture Types<br/>Characteristics Deep Dive"] ~~~ H_L3["↔ Parcel metadata + HAL3 contract"]
-        C4["Ch. 13–17<br/>Manual 3A · Exposure · Focus · WB"] ~~~ H_L4["↔ Metadata keys → HAL3 → I²C sensor driver"]
-        C5["Ch. 18–23<br/>RAW · HDR · Multi-Cam · ZSL · Extensions"] ~~~ H_L5["↔ HAL3 request model · ISP m2m reprocessing"]
-        C6["Ch. 24 CameraX<br/>UseCase facade + Interop"] ~~~ H_L6["↔ App-side abstraction over Framework"]
-        C7["Ch. 25 Native NDK<br/>ACamera + AHB → Vulkan"] ~~~ H_L7["↔ NDK shim directly above Camera3Device"]
-        C8["Ch. 26 Coroutines/Flow<br/>Async wrapping of callbacks"] ~~~ H_L8["↔ App-layer async around Binder boundaries"]
-        C9["Ch. 27 Testing ITS/CTS<br/>Mock vs Real hardware"] ~~~ H_L9["↔ Validate every layer via test harness"]
-        C10["Ch. 28 THIS CHAPTER<br/>Full stack architecture"] ~~~ H_L10["↔ ALL layers, end-to-end"]
+        C1["Ch. 1–4<br/>Foundations<br/>Hardware layer concepts"] ~~~ H_L1["<-> HW Layer"]
+        C2["Ch. 5–9<br/>First Camera2 app<br/>CameraManager · Session · ImageReader"] ~~~ H_L2["<-> App + Framework"]
+        C3["Ch. 10–12<br/>Pipeline · Capture Types<br/>Characteristics Deep Dive"] ~~~ H_L3["<-> Parcel metadata + HAL3 contract"]
+        C4["Ch. 13–17<br/>Manual 3A · Exposure · Focus · WB"] ~~~ H_L4["<-> Metadata keys -> HAL3 -> I²C sensor driver"]
+        C5["Ch. 18–23<br/>RAW · HDR · Multi-Cam · ZSL · Extensions"] ~~~ H_L5["<-> HAL3 request model · ISP m2m reprocessing"]
+        C6["Ch. 24 CameraX<br/>UseCase facade + Interop"] ~~~ H_L6["<-> App-side abstraction over Framework"]
+        C7["Ch. 25 Native NDK<br/>ACamera + AHB -> Vulkan"] ~~~ H_L7["<-> NDK shim directly above Camera3Device"]
+        C8["Ch. 26 Coroutines/Flow<br/>Async wrapping of callbacks"] ~~~ H_L8["<-> App-layer async around Binder boundaries"]
+        C9["Ch. 27 Testing ITS/CTS<br/>Mock vs Real hardware"] ~~~ H_L9["<-> Validate every layer via test harness"]
+        C10["Ch. 28 THIS CHAPTER<br/>Full stack architecture"] ~~~ H_L10["<-> ALL layers, end-to-end"]
     end
     H_L1 --> HW
     H_L2 --> FRAME

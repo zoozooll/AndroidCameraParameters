@@ -18,17 +18,17 @@ Eine logische Kamera ist ein virtuelles HAL-Gerät, das von N ≥ 2 physischen K
 ```mermaid
 flowchart TB
     subgraph UserSpace["App (Userspace)"]
-        APP["CameraManager.openCamera<br/>cameraId = \"0\" (Logische ID)"]
+        APP["CameraManager.openCamera<br/>cameraId = '0' (Logische ID)"]
     end
 
     subgraph HAL["Camera HAL (Kernel / Vendor-Partition)"]
         LOG["Logisches Kameragerät 0<br/>Virtueller Knoten"]
 
         subgraph PhysicalCams["Physische Kameras (Gleich ausgerichtete Gruppe)"]
-            UW["Physische ID \"8\"<br/>Ultraweitwinkel 0,5×<br/>12 MP, 13 mm Äquiv."]
-            W["Physische ID \"0\"<br/>Weitwinkel 1,0×<br/>50 MP, 24 mm Äquiv."]
-            T["Physische ID \"5\"<br/>Tele 3,0×<br/>10 MP, 72 mm Äquiv."]
-            P["Physische ID \"7\"<br/>Periskop 10×<br/>8 MP, 240 mm Äquiv."]
+            UW["Physische ID '8'<br/>Ultraweitwinkel 0,5x<br/>12 MP, 13 mm Äquiv."]
+            W["Physische ID '0'<br/>Weitwinkel 1,0x<br/>50 MP, 24 mm Äquiv."]
+            T["Physische ID '5'<br/>Tele 3,0x<br/>10 MP, 72 mm Äquiv."]
+            P["Physische ID '7'<br/>Periskop 10x<br/>8 MP, 240 mm Äquiv."]
         end
 
         LOG <--> UW
@@ -37,11 +37,11 @@ flowchart TB
         LOG <--> P
     end
 
-    subgraph ZoomScale["Zoom-Faktoren → HAL-Objektivumschaltpunkte"]
-        Z1["0,5× – 0,9× → ULTRAWEITWINKEL (ID 8)"]
-        Z2["1,0× – 2,9× → WEITWINKEL (ID 0)"]
-        Z3["3,0× – 9,9× → TELE (ID 5)"]
-        Z4["10,0×+ → PERISKOP (ID 7)"]
+    subgraph ZoomScale["Zoom-Faktoren -> HAL-Objektivumschaltpunkte"]
+        Z1["0,5x - 0,9x -> ULTRAWEITWINKEL (ID 8)"]
+        Z2["1,0x - 2,9x -> WEITWINKEL (ID 0)"]
+        Z3["3,0x - 9,9x -> TELE (ID 5)"]
+        Z4["10,0x+ -> PERISKOP (ID 7)"]
     end
 
     APP --> LOG
@@ -300,24 +300,24 @@ Die beiden `Image`-Objekte haben **identische `image.timestamp`-Werte**, wenn `L
 
 ```mermaid
 graph TD
-    subgraph BackLogical["Logische Rückkamera ID \"0\""]
+    subgraph BackLogical["Logische Rückkamera ID '0'"]
         direction TB
-        CAPFLAG["FÄHIGKEITEN:<br/>LOGICAL_MULTI_CAMERA = true<br/>SENSOR_SYNC_TYPE = CALIBRATED<br/>MAX_DIGITAL_ZOOM = 100×"]
+        CAPFLAG["FÄHIGKEITEN:<br/>LOGICAL_MULTI_CAMERA = true<br/>SENSOR_SYNC_TYPE = CALIBRATED<br/>MAX_DIGITAL_ZOOM = 100x"]
     end
 
     subgraph PhysChildren["Physische Kinder (getPhysicalCameraIds)"]
-        UWPHYS["ID \"8\" → Ultraweitwinkel<br/>Brennweite=1,7 mm<br/>f/1,8<br/>Sichtfeld=120°"]
-        WPHYS["ID \"0\" → Weitwinkel<br/>Brennweite=5,5 mm<br/>f/1,6<br/>Sichtfeld=84°"]
-        TPHYS["ID \"5\" → Tele 3×<br/>Brennweite=16,5 mm<br/>f/2,0<br/>Sichtfeld=28°"]
-        PPHYS["ID \"7\" → Periskop 10×<br/>Brennweite=55 mm<br/>f/3,4<br/>Sichtfeld=8,5°"]
+        UWPHYS["ID '8' -> Ultraweitwinkel<br/>Brennweite=1,7 mm<br/>f/1,8<br/>Sichtfeld=120°"]
+        WPHYS["ID '0' -> Weitwinkel<br/>Brennweite=5,5 mm<br/>f/1,6<br/>Sichtfeld=84°"]
+        TPHYS["ID '5' -> Tele 3x<br/>Brennweite=16,5 mm<br/>f/2,0<br/>Sichtfeld=28°"]
+        PPHYS["ID '7' -> Periskop 10x<br/>Brennweite=55 mm<br/>f/3,4<br/>Sichtfeld=8,5°"]
     end
 
     subgraph ReplaceRule["Sitzungsausgaben (Regel MR-1 angewendet)"]
         direction TB
         PREV["1x Logische Vorschau<br/>SurfaceView 1080p<br/>(Keine physische ID gesetzt)"]
-        PHYS1["1x Physisches YUV 12 MP<br/>→ OutputConfiguration<br/>.setPhysicalCameraId(ID \"0\")<br/>← Zielt auf WEITWINKEL-Objektiv"]
-        PHYS2["1x Physisches YUV 12 MP<br/>→ OutputConfiguration<br/>.setPhysicalCameraId(ID \"5\")<br/>← Zielt auf TELE-Objektiv"]
-        NOTE["✓ GÜLTIG nach MR-1:<br/>Format YUV × Größengleichheit × 2 Ersetzungen"]
+        PHYS1["1x Physisches YUV 12 MP<br/>-> OutputConfiguration<br/>.setPhysicalCameraId(ID '0')<br/><- Zielt auf WEITWINKEL-Objektiv"]
+        PHYS2["1x Physisches YUV 12 MP<br/>-> OutputConfiguration<br/>.setPhysicalCameraId(ID '5')<br/><- Zielt auf TELE-Objektiv"]
+        NOTE["✓ GÜLTIG nach MR-1:<br/>Format YUV x Größengleichheit x 2 Ersetzungen"]
     end
 
     BackLogical --> PhysChildren

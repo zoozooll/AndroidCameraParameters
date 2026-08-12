@@ -45,7 +45,7 @@ flowchart LR
         C0["T=-2000ms: Circular Buffer<br/>Starts Filling (always running)"]
         C1["T=-66ms: Frame N-2<br/>→ Buffer slot 0"]
         C2["T=-33ms: Frame N-1<br/>→ Buffer slot 1"]
-        C3["T=0ms: Frame N → Buffer slot 2<br/>★★★ USER TAPS SHUTTER NOW ★★★"]
+        C3["T=0ms: Frame N -> Buffer slot 2<br/>★★★ USER TAPS SHUTTER NOW ★★★"]
         C4["T=0ms (INSTANT): Select<br/>Frame N (T=0) from Circular Buffer"]
         C4 --> C5["T=0ms: ImageWriter<br/>Feeds Frame N BACK into HAL"]
         C5 --> C6["T=+30ms: HEAVY ISP<br/>Reprocessing (NR+EDGE)"]
@@ -462,7 +462,7 @@ flowchart TD
     E["★ USER TAPS SHUTTER AT T=0ms ★"] --> F{Walk CB NEWEST → OLDEST<br/>Find min |frame.ts − tap.ts|}
     F -->|"Selected: Slot N"| G[ImageWriter.dequeueInputImage()]
     G --> H[Copy selected frame's<br/>Planes → ImageWriter buffer]
-    H --> I[ImageWriter.queueInputImage()<br/>→ Feeds BACK into HAL Input Port]
+    H --> I[ImageWriter.queueInputImage()<br/>-> Feeds BACK into HAL Input Port]
     
     subgraph REPROC["🔄 Reprocessing Pipeline (HEAVY QUALITY)"]
         direction TB

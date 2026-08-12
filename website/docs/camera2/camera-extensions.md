@@ -35,7 +35,7 @@ The most important conceptual shift: a `CameraExtensionSession` does **not** rou
 flowchart LR
     subgraph STANDARD["Standard CameraCaptureSession (Direct Pipeline)"]
         direction TB
-        S1["Sensor → ISP<br/>(Demosaic, NR, Color)"]
+        S1["Sensor -> ISP<br/>(Demosaic, NR, Color)"]
         S2["Standard Surface Allocator<br/>(GPU / HAL Gralloc)"]
         S3["App Output Surface<br/>(Preview, JPEG, MediaCodec)"]
         S1 --> S2 --> S3
@@ -44,12 +44,12 @@ flowchart LR
 
     subgraph EXTENSION["CameraExtensionSession (EIPP Pipeline)"]
         direction TB
-        E1["Sensor → ISP<br/>(RAW / Low-level YUV only)"]
+        E1["Sensor -> ISP<br/>(RAW / Low-level YUV only)"]
         E2["Frame Accumulation Buffer<br/>(6–20 frames in<br/>Vendor Private Memory)"]
         E3["Extension Intermediate<br/>Processing Pipeline (EIPP)<br/>Runs on DSP / NPU / ISP:<br/>Night: Align + Merge + TNR<br/>Bokeh: Segmentation + Blur<br/>HDR: Align + Merge + Tonemap"]
         E4["Processed Output Surface<br/>(JPEG / YUV)"]
         E1 --> E2 --> E3 --> E4
-        ELAT["Latency: 500–8000 ms<br/>(frame count × base interval)"]
+        ELAT["Latency: 500–8000 ms<br/>(frame count x base interval)"]
     end
 
     style STANDARD fill:#e6f7ff,stroke:#0369a1
@@ -342,7 +342,7 @@ sequenceDiagram
         APP->>CAM: extSession.capture(builder)
         CAM->>HAL: ext_dispatch_capture(request, BOKEH)
         HAL->>ISP: Capture 3 Frames<br/>(Exposure Averaging)
-        ISP-->>HAL: RAW / Low-YUV × 3
+        ISP-->>HAL: RAW / Low-YUV x 3
         HAL->>EIPP: Submit Buffer Batch<br/>Run Segmentation + Blur
         EIPP-->>EIPP: MiDaS Depth Inference<br/>Bilateral Blur (20 passes)
         EIPP-->>HAL: Alpha Matte + Blurred BG<br/>Composited YUV

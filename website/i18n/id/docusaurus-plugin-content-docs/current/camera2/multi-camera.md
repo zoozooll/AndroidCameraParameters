@@ -18,17 +18,17 @@ Kamera logis adalah perangkat HAL virtual yang didukung oleh N ≥ 2 kamera fisi
 ```mermaid
 flowchart TB
     subgraph UserSpace["Aplikasi (Userspace)"]
-        APP["CameraManager.openCamera<br/>cameraId = \"0\" (ID Logis)"]
+        APP["CameraManager.openCamera<br/>cameraId = '0' (ID Logis)"]
     end
 
     subgraph HAL["Camera HAL (Kernel / Partisi Vendor)"]
         LOG["Perangkat Kamera Logis 0<br/>Simpul Virtual"]
 
         subgraph PhysicalCams["Kamera Fisik (Grup Hadap Sama)"]
-            UW["ID Fisik \"8\"<br/>Ultra-Lebar 0,5×<br/>12MP, eq. 13mm"]
-            W["ID Fisik \"0\"<br/>Lebar 1,0×<br/>50MP, eq. 24mm"]
-            T["ID Fisik \"5\"<br/>Telefoto 3,0×<br/>10MP, eq. 72mm"]
-            P["ID Fisik \"7\"<br/>Periskop 10×<br/>8MP, eq. 240mm"]
+            UW["ID Fisik '8'<br/>Ultra-Lebar 0.5x<br/>12MP, eq. 13mm"]
+            W["ID Fisik '0'<br/>Lebar 1.0x<br/>50MP, eq. 24mm"]
+            T["ID Fisik '5'<br/>Telefoto 3.0x<br/>10MP, eq. 72mm"]
+            P["ID Fisik '7'<br/>Periskop 10x<br/>8MP, eq. 240mm"]
         end
 
         LOG <--> UW
@@ -37,11 +37,11 @@ flowchart TB
         LOG <--> P
     end
 
-    subgraph ZoomScale["Rasio Zoom → Titik Pengalihan Lensa HAL"]
-        Z1["0,5× – 0,9× → ULTRA-LEBAR (ID 8)"]
-        Z2["1,0× – 2,9× → LEBAR (ID 0)"]
-        Z3["3,0× – 9,9× → TELEFOTO (ID 5)"]
-        Z4["10,0×+ → PERISKOP (ID 7)"]
+    subgraph ZoomScale["Rasio Zoom -> Titik Pengalihan Lensa HAL"]
+        Z1["0,5x - 0,9x -> ULTRA-LEBAR (ID 8)"]
+        Z2["1,0x - 2,9x -> LEBAR (ID 0)"]
+        Z3["3,0x - 9,9x -> TELEFOTO (ID 5)"]
+        Z4["10,0x+ -> PERISKOP (ID 7)"]
     end
 
     APP --> LOG
@@ -298,24 +298,24 @@ Kedua objek `Image` akan memiliki **nilai `image.timestamp` yang identik** saat 
 
 ```mermaid
 graph TD
-    subgraph BackLogical["ID Kamera Belakang Logis \"0\""]
+    subgraph BackLogical["ID Kamera Belakang Logis '0'"]
         direction TB
-        CAPFLAG["CAPABILITIES:<br/>LOGICAL_MULTI_CAMERA = true<br/>SENSOR_SYNC_TYPE = CALIBRATED<br/>MAX_DIGITAL_ZOOM = 100×"]
+        CAPFLAG["CAPABILITIES:<br/>LOGICAL_MULTI_CAMERA = true<br/>SENSOR_SYNC_TYPE = CALIBRATED<br/>MAX_DIGITAL_ZOOM = 100x"]
     end
 
     subgraph PhysChildren["Anak Fisik (getPhysicalCameraIds)"]
-        UWPHYS["ID \"8\" → Ultra-Lebar<br/>Focal=1,7mm<br/>f/1.8<br/>FOV=120°"]
-        WPHYS["ID \"0\" → Lebar<br/>Focal=5,5mm<br/>f/1.6<br/>FOV=84°"]
-        TPHYS["ID \"5\" → Telefoto 3×<br/>Focal=16,5mm<br/>f/2.0<br/>FOV=28°"]
-        PPHYS["ID \"7\" → Periskop 10×<br/>Focal=55mm<br/>f/3,4<br/>FOV=8,5°"]
+        UWPHYS["ID '8' -> Ultra-Lebar<br/>Focal=1,7mm<br/>f/1.8<br/>FOV=120°"]
+        WPHYS["ID '0' -> Lebar<br/>Focal=5,5mm<br/>f/1.6<br/>FOV=84°"]
+        TPHYS["ID '5' -> Telefoto 3x<br/>Focal=16,5mm<br/>f/2.0<br/>FOV=28°"]
+        PPHYS["ID '7' -> Periskop 10x<br/>Focal=55mm<br/>f/3,4<br/>FOV=8,5°"]
     end
 
     subgraph ReplaceRule["Output Sesi (Aturan MR-1 Diterapkan)"]
         direction TB
         PREV["1x Pratinjau Logis<br/>SurfaceView 1080p<br/>(Tidak ada ID fisik yang disetel)"]
-        PHYS1["1x YUV Fisik 12MP<br/>→ OutputConfiguration<br/>.setPhysicalCameraId(ID \"0\")<br/>← Menargetkan lensa LEBAR"]
-        PHYS2["1x YUV Fisik 12MP<br/>→ OutputConfiguration<br/>.setPhysicalCameraId(ID \"5\")<br/>← Menargetkan lensa TELE"]
-        NOTE["✓ VALID per MR-1:<br/>Format YUV × Ukuran Cocok × 2 Penggantian"]
+        PHYS1["1x YUV Fisik 12MP<br/>-> OutputConfiguration<br/>.setPhysicalCameraId(ID '0')<br/><- Menargetkan lensa LEBAR"]
+        PHYS2["1x YUV Fisik 12MP<br/>-> OutputConfiguration<br/>.setPhysicalCameraId(ID '5')<br/><- Menargetkan lensa TELE"]
+        NOTE["✓ VALID per MR-1:<br/>Format YUV x Ukuran Cocok x 2 Penggantian"]
     end
 
     BackLogical --> PhysChildren

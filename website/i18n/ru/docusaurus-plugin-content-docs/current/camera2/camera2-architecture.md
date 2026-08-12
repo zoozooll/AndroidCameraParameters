@@ -30,12 +30,12 @@ graph TB
     subgraph FRAME["Слой Java/Kotlin Framework — android.hardware.camera2.*"]
         direction TB
         F1["CameraManager · CameraCharacteristics<br/>CaptureRequest.Builder · CaptureResult<br/>CameraDevice · CameraCaptureSession"]
-        F2["CameraBinderWrapper (AOSP frameworks/base)<br/>Транслирует Java объекты → AIDL Binder parcel"]
+        F2["CameraBinderWrapper (AOSP frameworks/base)<br/>Транслирует Java объекты -> AIDL Binder parcel"]
     end
     subgraph BIND["Слой IPC — Binder / HwBinder"]
         direction TB
-        B1["AIDL ICameraService (AOSP)<br/>Framework ↔ CameraService"]
-        B2["HIDL / AIDL HAL Binder (Treble)<br/>CameraService ↔ Vendor HAL"]
+        B1["AIDL ICameraService (AOSP)<br/>Framework <-> CameraService"]
+        B2["HIDL / AIDL HAL Binder (Treble)<br/>CameraService <-> Vendor HAL"]
     end
     subgraph NS["Нативный слой Mediaserver (system/bin/cameraserver)"]
         direction TB
@@ -46,7 +46,7 @@ graph TB
     subgraph HAL["Слой Vendor HAL (код OEM / SoC)"]
         direction TB
         H1["Интерфейс HAL3: camera3_device_t<br/>— process_capture_request()<br/>— process_capture_result()<br/>— flush()"]
-        H2["Обертка HAL1 (Legacy)<br/>camera2compat::Camera2Compat<br/>Транслирует запрос HAL3 → HAL1 CameraParameters<br/>для уровня < LIMITED"]
+        H2["Обертка HAL1 (Legacy)<br/>camera2compat::Camera2Compat<br/>Транслирует запрос HAL3 -> HAL1 CameraParameters<br/>для уровня < LIMITED"]
         H3["Реализация вендора<br/>Qualcomm QCamera2 · MediaTek CamHAL · Samsung Exynos Camera HAL"]
     end
     subgraph K["Слой ядра (Linux)"]
@@ -59,7 +59,7 @@ graph TB
     subgraph HW["Слой физического оборудования"]
         direction TB
         HW1["Блок линз<br/>Мотор звуковой катушки VCM (I2C)<br/>Двигает группу линз для фокуса / OIS"]
-        HW2["Матрица пикселей сенсора камеры<br/>CMOS сенсор (Sony IMX / Samsung ISOCELL / OmniVision)<br/>Экспозиция → Чтение → A/D"]
+        HW2["Матрица пикселей сенсора камеры<br/>CMOS сенсор (Sony IMX / Samsung ISOCELL / OmniVision)<br/>Экспозиция -> Чтение -> A/D"]
         HW3["Физическая шина MIPI CSI-2<br/>2/4/8 дифференциальных пар на 1.5 – 2.5 Гбит/с на линию"]
         HW4["ISP Процессор сигналов изображения (на SoC)<br/>Демозаика · Шумоподавление · Резкость · HDR слияние · Детекция лиц в железе"]
         HW5["Контроллер вспышки LED (I2C)<br/>Ксеноновый стробоскоп или светодиодный драйвер<br/>Синхронизирован с пином сенсора EXRST"]
@@ -275,18 +275,18 @@ val supported: Boolean = setup.isSessionConfigurationSupported(sessionConfig)
 
 ```mermaid
 flowchart TB
-    subgraph Journey["Ваш путь по этой книге (Главы → Слои)"]
+    subgraph Journey["Ваш путь по этой книге (Главы -> Слои)"]
         direction LR
-        C1["Гл. 1–4<br/>Основы<br/>Концепции слоя оборудования"] ~~~ H_L1["↔ Слой HW"]
-        C2["Гл. 5–9<br/>Первое прилож. Camera2<br/>CameraManager · Сеанс · ImageReader"] ~~~ H_L2["↔ Приложение + Framework"]
-        C3["Гл. 10–12<br/>Конвейер · Типы захвата<br/>Глубокое погружение в Characteristics"] ~~~ H_L3["↔ Метаданные parcel + контракт HAL3"]
-        C4["Гл. 13–17<br/>Ручные 3A · Экспоз. · Фокус · WB"] ~~~ H_L4["↔ Ключи метаданных → HAL3 → драйвер I²C"]
-        C5["Гл. 18–23<br/>RAW · HDR · Multi-Cam · ZSL · Расшир."] ~~~ H_L5["↔ Модель запроса HAL3 · переобработка ISP m2m"]
-        C6["Гл. 24 CameraX<br/>Фасад UseCase + Interop"] ~~~ H_L6["↔ Абстракция над Framework на стороне прил."]
-        C7["Гл. 25 Нативный NDK<br/>ACamera + AHB → Vulkan"] ~~~ H_L7["↔ Прослойка NDK прямо над Camera3Device"]
-        C8["Гл. 26 Корутины/Flow<br/>Асинхр. обертка обратных вызовов"] ~~~ H_L8["↔ Асинхр. слой прил. вокруг границ Binder"]
-        C9["Гл. 27 Тестирование ITS/CTS<br/>Моки против реального железа"] ~~~ H_L9["↔ Валидация каждого слоя через тесты"]
-        C10["Гл. 28 ЭТА ГЛАВА<br/>Полный стек архитектуры"] ~~~ H_L10["↔ ВСЕ слои, от конца до конца"]
+        C1["Гл. 1–4<br/>Основы<br/>Концепции слоя оборудования"] ~~~ H_L1["<-> Слой HW"]
+        C2["Гл. 5–9<br/>Первое прилож. Camera2<br/>CameraManager · Сеанс · ImageReader"] ~~~ H_L2["<-> Приложение + Framework"]
+        C3["Гл. 10–12<br/>Конвейер · Типы захвата<br/>Глубокое погружение в Characteristics"] ~~~ H_L3["<-> Метаданные parcel + контракт HAL3"]
+        C4["Гл. 13–17<br/>Ручные 3A · Экспоз. · Фокус · WB"] ~~~ H_L4["<-> Ключи метаданных -> HAL3 -> драйвер I²C"]
+        C5["Гл. 18–23<br/>RAW · HDR · Multi-Cam · ZSL · Расшир."] ~~~ H_L5["<-> Модель запроса HAL3 · переобработка ISP m2m"]
+        C6["Гл. 24 CameraX<br/>Фасад UseCase + Interop"] ~~~ H_L6["<-> Абстракция над Framework на стороне прил."]
+        C7["Гл. 25 Нативный NDK<br/>ACamera + AHB -> Vulkan"] ~~~ H_L7["<-> Прослойка NDK прямо над Camera3Device"]
+        C8["Гл. 26 Корутины/Flow<br/>Асинхр. обертка обратных вызовов"] ~~~ H_L8["<-> Асинхр. слой прил. вокруг границ Binder"]
+        C9["Гл. 27 Тестирование ITS/CTS<br/>Моки против реального железа"] ~~~ H_L9["<-> Валидация каждого слоя через тесты"]
+        C10["Гл. 28 ЭТА ГЛАВА<br/>Полный стек архитектуры"] ~~~ H_L10["<-> ВСЕ слои, от конца до конца"]
     end
     H_L1 --> HW
     H_L2 --> FRAME

@@ -360,11 +360,11 @@ HAL은 단일 센서 판독물을 여러 ISP 브랜치를 통해 라우팅하여
 flowchart LR
     R["단일 CaptureRequest<br/>(1개 프레임 구성)"]
     HAL["HAL3 ISP 처리 (1회 통과)"]
-    S1["미리보기 1080p<br/>→ TextureView"]
-    S2["JPEG 12MP<br/>→ ImageReader"]
-    S3["RAW 12MP<br/>→ ImageReader"]
-    S4["비디오 4K<br/>→ MediaRecorder"]
-    RESULT["CaptureResult<br/>→ CaptureCallback"]
+    S1["미리보기 1080p<br/>-> TextureView"]
+    S2["JPEG 12MP<br/>-> ImageReader"]
+    S3["RAW 12MP<br/>-> ImageReader"]
+    S4["비디오 4K<br/>-> MediaRecorder"]
+    RESULT["CaptureResult<br/>-> CaptureCallback"]
 
     R --> HAL
     HAL --> S1

@@ -35,7 +35,7 @@ flowchart TD
         H1["La App llama a createHighSpeedRequestList()<br/>UNA VEZ: construye lista de ráfagas"] --> H2["La HAL prevalida TODOS los fotogramas<br/>de la lista (tiempos, tamaños, FPS)"]
         H2 --> H3["Lista de ráfagas cargada en el<br/>planificador hardware de la HAL"]
         H3 --> H4["El planificador maneja el sensor + ISP<br/>directamente: SIN binder por fotograma"]
-        H4 --> H5["Salida de 240 fotogramas/seg<br/>→ Codificador de video MediaCodec"]
+        H4 --> H5["Salida de 240 fotogramas/seg<br/>-> Codificador de video MediaCodec"]
     end
 ```
 
@@ -245,7 +245,7 @@ flowchart LR
 
     subgraph HSPipeline["Tubería de alta velocidad restringida a 240 FPS"]
         HP1[Lectura sensor 240 fps<br/>vía modo MIPI D-PHY High-Speed] --> HP2[ISP mínima / rápida:<br/>Binning + Reducción de ruido ligera<br/>(Sin mapeo de tonos intenso)]
-        HP2 --> HP3["Planificador hardware HAL<br/>Lista ráfagas (prevalidada)<br/>← SIN binder por fotograma"]
+        HP2 --> HP3["Planificador hardware HAL<br/>Lista ráfagas (prevalidada)<br/><- SIN binder por fotograma"]
         HP3 --> HP4["Codificador HEVC / H.264 dedicado<br/>(Modo de alto rendimiento)"]
         HP4 --> HP5[MediaRecorder mezcla<br/>audio + contenedor MP4]
     end

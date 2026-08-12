@@ -33,8 +33,8 @@ graph TB
     end
     subgraph ITS[Camera ITS: Image Test Suite]
         direction TB
-        ITS_COMBI[test_feature_combination<br/>Permutaciones de flujos × FPS × HDR<br/>Miles de llamadas a<br/>isSessionConfigurationSupported]
-        ITS_SCENE[Pruebas de escena física<br/>scene0 (gris uniforme)<br/>scene1_1 (tablero de color)<br/>Pantalla de tableta automatizada → DUT]
+        ITS_COMBI[test_feature_combination<br/>Permutaciones de flujos x FPS x HDR<br/>Miles de llamadas a<br/>isSessionConfigurationSupported]
+        ITS_SCENE[Pruebas de escena física<br/>scene0 (gris uniforme)<br/>scene1_1 (tablero de color)<br/>Pantalla de tableta automatizada -> DUT]
         ITS_FUSION[Prueba sensor_fusion<br/>Marcas de tiempo del giro alineadas con<br/>SENSOR_TIMESTAMP en CaptureResult<br/>Tolerancia de ±1 ms]
         ITS_3A[Pruebas de convergencia 3A<br/>AE/AF/AWB deben converger en<br/>N fotogramas bajo iluminación estándar]
         ITS_HDR[Pruebas de HDR / Ultra HDR<br/>Validez del mapa de ganancia JPEG_R<br/>Medición del rango dinámico]
@@ -59,10 +59,10 @@ Un laboratorio real de Camera ITS tiene este aspecto:
 graph LR
     TC["PC controlador de pruebas<br/>CLI de Linux + Tradefed<br/>Ejecuta scripts python3 its"]
     TC -->|USB 3.x ADB| DUT[Teléfono o tableta DUT<br/>Dispositivo bajo prueba<br/>Cámara frente a pantalla tableta]
-    TC -->|USB 3.x| TPD[Pantalla de tableta<br/>Panel 4K calibrado de ~10\"<br/>Ejecuta APK tabletd ITS]
+    TC -->|USB 3.x| TPD[Pantalla de tableta<br/>Panel 4K calibrado de ~10''<br/>Ejecuta APK tabletd ITS]
     TC -->|GPIO / Relé USB| LIGHT[Iluminación controlada<br/>Paneles LED con CCT ajustable<br/>2700K-6500K ±2%]
     TPD -->|proyecta scene0 / scene1_1<br/>vía HDMI / Pantalla interna| DUT_CAM[Sensor cámara trasera DUT]
-    DUT_CAM -->|captura fotogramas sobre MIPI → HAL| DUT
+    DUT_CAM -->|captura fotogramas sobre MIPI -> HAL| DUT
     DUT -->|DNG/JPEG + CaptureResults<br/>obtenidos vía adb pull| TC
     TC -->|ejecuta análisis numpy / scipy<br/>linealidad luminancia, error color, nitidez| RESULT[(Informe PASA / FALLA + JSON)]
 ```

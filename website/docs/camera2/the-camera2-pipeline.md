@@ -175,7 +175,7 @@ flowchart TB
 
     subgraph HAL ["HAL3 Hardware Layer"]
         direction LR
-        S["📷 Sensor<br/>Exposure & Readout"]
+        S["📷 Sensor<br/>Exposure and Readout"]
         I["⚙️ ISP Pipeline<br/>Demosaic, NR, Sharpen, Color"]
         O["💾 Output<br/>To Surfaces"]
         S --> I --> O
@@ -360,11 +360,11 @@ The HAL is responsible for routing the single sensor readout through multiple IS
 flowchart LR
     R["Single CaptureRequest<br/>(1 frame config)"]
     HAL["HAL3 ISP Processing (1 pass)"]
-    S1["Preview 1080p<br/>→ TextureView"]
-    S2["JPEG 12MP<br/>→ ImageReader"]
-    S3["RAW 12MP<br/>→ ImageReader"]
-    S4["Video 4K<br/>→ MediaRecorder"]
-    RESULT["CaptureResult<br/>→ CaptureCallback"]
+    S1["Preview 1080p<br/>-> TextureView"]
+    S2["JPEG 12MP<br/>-> ImageReader"]
+    S3["RAW 12MP<br/>-> ImageReader"]
+    S4["Video 4K<br/>-> MediaRecorder"]
+    RESULT["CaptureResult<br/>-> CaptureCallback"]
 
     R --> HAL
     HAL --> S1
@@ -400,7 +400,7 @@ sequenceDiagram
     Cam-->>CB: onCaptureStarted(timestamp=N)
 
     Sensor->>ISP: Read out raw pixels (row-by-row)
-    ISP->>ISP: Demosaic → NR → Sharpen → Color Correction
+    ISP->>ISP: Demosaic -> NR -> Sharpen -> Color Correction
     ISP-->>Cam: PartialCaptureResult (AE state now known)
     Cam-->>CB: onCaptureProgressed(partial)
     Note over CB: Can update UI with AE_CONVERGED now

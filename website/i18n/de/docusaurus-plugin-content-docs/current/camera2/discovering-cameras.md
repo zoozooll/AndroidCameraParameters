@@ -38,7 +38,7 @@ flowchart TD
     E --> F[Schleife: für jede cameraId in der Liste]
     F --> G[getCameraCharacteristics cameraId]
     G --> H{Wirft CameraAccessException?}
-    H -->|Ja| I[Fehler loggen & diese Kamera überspringen]
+    H -->|Ja| I[Fehler loggen und diese Kamera überspringen]
     H -->|Nein| J[LENS_FACING Merkmal abfragen]
     J --> K[INFO_SUPPORTED_HARDWARE_LEVEL abfragen]
     K --> L[Optional weitere Schlüssel abfragen]

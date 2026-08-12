@@ -38,7 +38,7 @@ flowchart TD
     E --> F[Loop: for each cameraId in list]
     F --> G[getCameraCharacteristics cameraId]
     G --> H{Throws CameraAccessException?}
-    H -->|Yes| I[Log error & skip this camera]
+    H -->|Yes| I[Log error and skip this camera]
     H -->|No| J[Query LENS_FACING characteristic]
     J --> K[Query INFO_SUPPORTED_HARDWARE_LEVEL]
     K --> L[Optionally query additional keys]

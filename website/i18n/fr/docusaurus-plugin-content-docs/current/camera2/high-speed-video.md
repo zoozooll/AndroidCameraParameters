@@ -35,7 +35,7 @@ flowchart TD
         H1["L'app appelle createHighSpeedRequestList()<br/>UNE FOIS — construit la liste de salve"] --> H2["Le HAL pré-valide TOUTES les images<br/>de la liste (timings, tailles, FPS)"]
         H2 --> H3["Liste de salve chargée dans<br/>l'ordonnanceur matériel du HAL"]
         H3 --> H4["L'ordonnanceur pilote le capteur + ISP<br/>directement — pas de Binder par image"]
-        H4 --> H5["Sortie de 240 images/sec<br/>→ Encodeur vidéo MediaCodec"]
+        H4 --> H5["Sortie de 240 images/sec<br/>-> Encodeur vidéo MediaCodec"]
     end
 ```
 
@@ -245,7 +245,7 @@ flowchart LR
 
     subgraph HSPipeline["Pipeline haute vitesse contrainte 240 FPS"]
         HP1[Lecture capteur 240fps<br/>via mode Haute Vitesse MIPI D-PHY] --> HP2[ISP minimal / rapide :<br/>Binning + Réduction bruit légère<br/>(Pas de mappage tonal lourd)]
-        HP2 --> HP3["Ordonnanceur matériel HAL<br/>Liste de salve (pré-validée)<br/>← PAS de binder par image"]
+        HP2 --> HP3["Ordonnanceur matériel HAL<br/>Liste de salve (pré-validée)<br/><- PAS de binder par image"]
         HP3 --> HP4["Encodeur HEVC/H.264 dédié<br/>(Mode haut débit)"]
         HP4 --> HP5[MediaRecorder multiplexe<br/>Audio + Conteneur MP4]
     end

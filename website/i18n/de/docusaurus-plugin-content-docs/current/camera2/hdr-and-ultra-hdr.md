@@ -32,14 +32,14 @@ Die von SDR verwendete Gamma-Kurve wurde so entwickelt, dass sie der Nichtlinear
 
 ```mermaid
 flowchart TD
-    subgraph SDRpath["SDR 8-Bit Erfassung → Display-Pipeline"]
+    subgraph SDRpath["SDR 8-Bit Erfassung -> Display-Pipeline"]
         S1["Sensor Linear<br/>14-Bit RAW"] --> S2["Gamma 2.2 Kurve<br/>(Zerstört Schattendetails)"]
         S2 --> S3["8-Bit Quantisierung<br/>(Nur 22 Codes für<br/>0–10 % Luminanz)"]
         S3 --> S4["sRGB-Farbraum Clipping<br/>(25 % der Farben gehen verloren)"]
         S4 --> S5["Peak 100 Nits<br/>(Himmel/Sonne werden weiß)"]
     end
 
-    subgraph HDRpath["HDR10 10-Bit Erfassung → Display-Pipeline"]
+    subgraph HDRpath["HDR10 10-Bit Erfassung -> Display-Pipeline"]
         H1["Sensor Linear<br/>14-Bit RAW"] --> H2["ST.2084 PQ-Kurve<br/>(Entspricht JND-Modell)"]
         H2 --> H3["10-Bit Quantisierung<br/>(140 Codes für<br/>0–10 % Luminanz)"]
         H3 --> H4["Rec.2020 Farbraum<br/>(75 % der sichtbaren Farben)"]
@@ -214,7 +214,7 @@ flowchart LR
 
     subgraph RENDER["Zum Zeitpunkt der Anzeige (HDR-fähiger Reader)"]
         R1["Primär-JPEG (SDR) dekodieren"] --> R2["Gain-Map-JPEG dekodieren"]
-        R2 --> R3["Anzeige-Engine:<br/>Multiplikation pro Pixel<br/>Primärbild × exp2(Gain × Headroom)<br/>→ Lineare HDR-Strahlungsdichte"]
+        R2 --> R3["Anzeige-Engine:<br/>Multiplikation pro Pixel<br/>Primärbild x exp2(Gain x Headroom)<br/>-> Lineare HDR-Strahlungsdichte"]
         R3 --> R4["HDR-Panel-Ausgabe:<br/>Lokale Lichter bis zu<br/>1.000 Nits Peak"]
     end
 

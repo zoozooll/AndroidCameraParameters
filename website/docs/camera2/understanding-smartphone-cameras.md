@@ -110,7 +110,7 @@ graph LR
         D1[G] --- D2[B] --- D3[G] --- D4[B]
     end
     E["IR Cut Filter<br/>Blocks Infrared"] --> F["Color Filter Array<br/>Bayer RGGB Deposited on Glass"]
-    F --> G[Silicon Photodiodes<br/>Convert Photons→Electrons]
+    F --> G[Silicon Photodiodes<br/>Convert Photons->Electrons]
 ```
 
 After readout, the sensor data is a mosaic of separate red, green, and blue values — not a full-color image yet. The step that fills in the missing color information for each pixel is called **demosaicing** (or debayering) and it is the first major computational step performed in the ISP.

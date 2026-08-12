@@ -18,17 +18,17 @@ Una cámara lógica es un dispositivo virtual de la HAL respaldado por N ≥ 2 c
 ```mermaid
 flowchart TB
     subgraph UserSpace["App (Espacio de usuario)"]
-        APP["CameraManager.openCamera<br/>cameraId = \"0\" (ID Lógico)"]
+        APP["CameraManager.openCamera<br/>cameraId = '0' (ID Lógico)"]
     end
 
     subgraph HAL["HAL de cámara (Kernel / Partición de proveedor)"]
         LOG["Dispositivo de cámara lógica 0<br/>Nodo virtual"]
 
         subgraph PhysicalCams["Cámaras físicas (Grupo con misma orientación)"]
-            UW["ID físico \"8\"<br/>Ultra gran angular 0,5×<br/>12 MP, 13 mm eq."]
-            W["ID físico \"0\"<br/>Gran angular 1,0×<br/>50 MP, 24 mm eq."]
-            T["ID físico \"5\"<br/>Teleobjetivo 3,0×<br/>10 MP, 72 mm eq."]
-            P["ID físico \"7\"<br/>Periscopio 10×<br/>8 MP, 240 mm eq."]
+            UW["ID físico '8'<br/>Ultra gran angular 0,5x<br/>12 MP, 13 mm eq."]
+            W["ID físico '0'<br/>Gran angular 1,0x<br/>50 MP, 24 mm eq."]
+            T["ID físico '5'<br/>Teleobjetivo 3,0x<br/>10 MP, 72 mm eq."]
+            P["ID físico '7'<br/>Periscopio 10x<br/>8 MP, 240 mm eq."]
         end
 
         LOG <--> UW
@@ -37,11 +37,11 @@ flowchart TB
         LOG <--> P
     end
 
-    subgraph ZoomScale["Relaciones de zoom → Puntos de cambio de lente HAL"]
-        Z1["0,5× – 0,9× → ULTRA GRAN ANGULAR (ID 8)"]
-        Z2["1,0× – 2,9× → GRAN ANGULAR (ID 0)"]
-        Z3["3,0× – 9,9× → TELEOBJETIVO (ID 5)"]
-        Z4["10,0×+ → PERISCOPIO (ID 7)"]
+    subgraph ZoomScale["Relaciones de zoom -> Puntos de cambio de lente HAL"]
+        Z1["0.5x - 0.9x -> ULTRA GRAN ANGULAR (ID 8)"]
+        Z2["1,0x - 2,9x -> GRAN ANGULAR (ID 0)"]
+        Z3["3,0x - 9,9x -> TELEOBJETIVO (ID 5)"]
+        Z4["10,0x+ -> PERISCOPIO (ID 7)"]
     end
 
     APP --> LOG
@@ -300,24 +300,24 @@ Los dos objetos `Image` tendrán **valores de `image.timestamp` idénticos** cua
 
 ```mermaid
 graph TD
-    subgraph BackLogical["Cámara trasera lógica ID \"0\""]
+    subgraph BackLogical["Cámara trasera lógica ID '0'"]
         direction TB
         CAPFLAG["CAPABILITIES:<br/>LOGICAL_MULTI_CAMERA = true<br/>SENSOR_SYNC_TYPE = CALIBRATED<br/>MAX_DIGITAL_ZOOM = 100×"]
     end
 
     subgraph PhysChildren["Hijos físicos (getPhysicalCameraIds)"]
-        UWPHYS["ID \"8\" → Ultra gran angular<br/>Focal=1,7 mm<br/>f/1.8<br/>FOV=120°"]
-        WPHYS["ID \"0\" → Gran angular<br/>Focal=5,5 mm<br/>f/1.6<br/>FOV=84°"]
-        TPHYS["ID \"5\" → Teleobjetivo 3×<br/>Focal=16,5 mm<br/>f/2.0<br/>FOV=28°"]
-        PPHYS["ID \"7\" → Periscopio 10×<br/>Focal=55 mm<br/>f/3.4<br/>FOV=8,5°"]
+        UWPHYS["ID '8' -> Ultra gran angular<br/>Focal=1,7 mm<br/>f/1.8<br/>FOV=120°"]
+        WPHYS["ID '0' -> Gran angular<br/>Focal=5,5 mm<br/>f/1.6<br/>FOV=84°"]
+        TPHYS["ID '5' -> Teleobjetivo 3x<br/>Focal=16,5 mm<br/>f/2.0<br/>FOV=28°"]
+        PPHYS["ID '7' -> Periscopio 10x<br/>Focal=55 mm<br/>f/3.4<br/>FOV=8,5°"]
     end
 
     subgraph ReplaceRule["Salidas de sesión (Regla MR-1 aplicada)"]
         direction TB
         PREV["1x Vista previa lógica<br/>SurfaceView 1080p<br/>(Sin ID físico establecido)"]
-        PHYS1["1x YUV físico 12 MP<br/>→ OutputConfiguration<br/>.setPhysicalCameraId(ID \"0\")<br/>← Dirigido a lente ANGULAR"]
-        PHYS2["1x YUV físico 12 MP<br/>→ OutputConfiguration<br/>.setPhysicalCameraId(ID \"5\")<br/>← Dirigido a lente TELE"]
-        NOTE["✓ VÁLIDO según MR-1:<br/>Formato YUV × Tamaño idéntico × 2 sustituciones"]
+        PHYS1["1x YUV físico 12 MP<br/>-> OutputConfiguration<br/>.setPhysicalCameraId(ID '0')<br/><- Dirigido a lente ANGULAR"]
+        PHYS2["1x YUV físico 12 MP<br/>-> OutputConfiguration<br/>.setPhysicalCameraId(ID '5')<br/><- Dirigido a lente TELE"]
+        NOTE["✓ VÁLIDO según MR-1:<br/>Formato YUV x Tamaño idéntico x 2 sustituciones"]
     end
 
     BackLogical --> PhysChildren

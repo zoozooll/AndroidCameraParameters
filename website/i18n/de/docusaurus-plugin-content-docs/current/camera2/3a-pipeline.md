@@ -28,42 +28,42 @@ sequenceDiagram
     participant AF as AF Engine
     participant AWB as AWB Engine
 
-    User->>App: Tippt auf Auslöser
-    App->>HAL: Setzt AF_MODE = AUTO (oder MACRO)
-    App->>HAL: CONTROL_AF_TRIGGER = START
-    Note over HAL,AF: Fokus-Scan startet
+    User->>App: "Tippt auf Auslöser"
+    App->>HAL: "Setzt AF_MODE = AUTO"
+    App->>HAL: "CONTROL_AF_TRIGGER = START"
+    Note over HAL,AF: "Fokus-Scan startet"
 
-    loop Bei jedem Vorschau-Frame
-        HAL-->>App: CaptureResult
-        App->>App: AF_STATE prüfen
+    loop "Bei jedem Vorschau-Frame"
+        HAL-->>App: "CaptureResult"
+        App->>App: "AF_STATE prüfen"
     end
 
-    AF-->>HAL: AF-Lock erreicht
-    HAL-->>App: AF_STATE = FOCUSED_LOCKED ✓
-    Note over App,AE: Fokus stabil → weiter zum AE-Precapture
+    AF-->>HAL: "AF-Lock erreicht"
+    HAL-->>App: "AF_STATE = FOCUSED_LOCKED"
+    Note over App,AE: "Fokus stabil, weiter zum AE-Precapture"
 
-    App->>HAL: CONTROL_AE_PRECAPTURE_TRIGGER = START
-    Note over HAL,AE: Precapture-Messdurchlauf<br/>(falls Blitzmodus erforderlich,<br/>wird ein Vorblitz zur Messung gezündet)
+    App->>HAL: "CONTROL_AE_PRECAPTURE_TRIGGER = START"
+    Note over HAL,AE: "Precapture-Messdurchlauf"
 
-    loop Bei jedem Vorschau-Frame
-        HAL-->>App: CaptureResult
-        App->>App: AE_STATE & FLASH_STATE prüfen
+    loop "Bei jedem Vorschau-Frame"
+        HAL-->>App: "CaptureResult"
+        App->>App: "AE_STATE und FLASH_STATE prüfen"
     end
 
-    AE-->>HAL: AE konvergiert; finale Belichtung festgelegt
-    HAL-->>App: AE_STATE = CONVERGED (+ FLASH_STATE = READY falls nötig) ✓
-    AWB-->>HAL: AWB_STATE = CONVERGED (normalerweise bereits erledigt)
-    Note over App: Alles 3A konvergiert! SICHER ZUM AUFNEHMEN
+    AE-->>HAL: "AE konvergiert"
+    HAL-->>App: "AE_STATE = CONVERGED"
+    AWB-->>HAL: "AWB_STATE = CONVERGED"
+    Note over App: "Alles 3A konvergiert! SICHER ZUM AUFNEHMEN"
 
-    App->>HAL: Still Capture Request (TEMPLATE_STILL_CAPTURE)
-    HAL->>HAL: Hauptblitz zünden, falls nötig
-    HAL->>HAL: Sensor belichten, Frame auslesen
-    HAL-->>App: JPEG / RAW Frame über ImageReader geliefert
+    App->>HAL: "Still Capture Request"
+    HAL->>HAL: "Hauptblitz zünden, falls nötig"
+    HAL->>HAL: "Sensor belichten, Frame auslesen"
+    HAL-->>App: "JPEG-Frame geliefert"
 
-    App->>HAL: CONTROL_AF_TRIGGER = CANCEL
-    App->>HAL: CONTROL_AE_PRECAPTURE_TRIGGER = IDLE
-    App->>HAL: AF_MODE = CONTINUOUS_PICTURE wiederherstellen
-    Note over App,HAL: Bereinigung: Vorschau setzt normales Auto fort
+    App->>HAL: "CONTROL_AF_TRIGGER = CANCEL"
+    App->>HAL: "CONTROL_AE_PRECAPTURE_TRIGGER = IDLE"
+    App->>HAL: "AF_MODE = CONTINUOUS_PICTURE wiederherstellen"
+    Note over App,HAL: "Bereinigung: Vorschau setzt fort"
 ```
 
 **Jeder Schritt ist blockierend.** Sie fahren erst mit Schritt N+1 fort, wenn der HAL den für Schritt N erforderlichen Zustand bestätigt hat. Überspringen Sie niemals Schritte – so vermeiden Sie, eine App auszuliefern, die zeitweise unscharfe Fotos, schlechte Blitzbelichtungen oder blaustichige Bilder liefert.
@@ -482,29 +482,29 @@ stateDiagram-v2
     direction LR
 
     state "AF-Zustände" as AF {
-        [*] --> ACTIVE_SCAN: AF_TRIGGER = START
-        ACTIVE_SCAN --> FOCUSED_LOCKED: ✓ Fokus gefunden
-        ACTIVE_SCAN --> NOT_FOCUSED_LOCKED: ✗ Konnte nicht sperren
-        FOCUSED_LOCKED --> [*]: Weiter zu Phase 2
-        NOT_FOCUSED_LOCKED --> [*]: Weiter (nach bestem Bemühen)
+        [*] --> ACTIVE_SCAN: "AF_TRIGGER = START"
+        ACTIVE_SCAN --> FOCUSED_LOCKED: "Fokus gefunden"
+        ACTIVE_SCAN --> NOT_FOCUSED_LOCKED: "Konnte nicht sperren"
+        FOCUSED_LOCKED --> [*]: "Weiter zu Phase 2"
+        NOT_FOCUSED_LOCKED --> [*]: "Weiter (nach bestem Bemühen)"
     }
 
     state "AE-Zustände" as AE {
-        [*] --> SEARCHING: Vorschau läuft
-        SEARCHING --> CONVERGED: Umgebungslicht stabil
-        CONVERGED --> PRECAPTURE: PRECAPTURE_TRIGGER = START
-        PRECAPTURE --> CONVERGED: Finale Belichtung+Blitz berechnet
-        CONVERGED --> FLASH_REQUIRED: (nur Blitzautomatik-Modus)
-        CONVERGED --> [*]: Jetzt aufnehmen
-        FLASH_REQUIRED --> [*]: Jetzt mit Blitz aufnehmen
+        [*] --> SEARCHING: "Vorschau läuft"
+        SEARCHING --> CONVERGED: "Umgebungslicht stabil"
+        CONVERGED --> PRECAPTURE: "PRECAPTURE_TRIGGER = START"
+        PRECAPTURE --> CONVERGED: "Finale Belichtung berechnet"
+        CONVERGED --> FLASH_REQUIRED: "Nur Blitzautomatik-Modus"
+        CONVERGED --> [*]: "Jetzt aufnehmen"
+        FLASH_REQUIRED --> [*]: "Jetzt mit Blitz aufnehmen"
     }
 
     state "AWB-Zustände" as AWB {
-        [*] --> SEARCHING: Größere Szenenänderung
-        SEARCHING --> CONVERGED: Lichtquelle gefunden
-        CONVERGED --> LOCKED: AWB_LOCK = true
-        CONVERGED --> [*]: Aufnahme OK
-        LOCKED --> [*]: Aufnahme OK
+        [*] --> SEARCHING: "Größere Szenenänderung"
+        SEARCHING --> CONVERGED: "Lichtquelle gefunden"
+        CONVERGED --> LOCKED: "AWB_LOCK = true"
+        CONVERGED --> [*]: "Aufnahme OK"
+        LOCKED --> [*]: "Aufnahme OK"
     }
 ```
 

@@ -31,7 +31,7 @@ stateDiagram-v2
     [*] --> AUTO_MODE: Pratinjau Default Dimulai
     AUTO_MODE --> MANUAL_PREP: Pengguna mengaktifkan Eksposur Manual
     MANUAL_PREP --> VALIDATE_RANGES: Kueri SENSOR_INFO_EXPOSURE_TIME_RANGE
-    VALIDATE_RANGES --> BUILD_REQUEST: Batasi ISO &amp; Rana ke rentang valid
+    VALIDATE_RANGES --> BUILD_REQUEST: Batasi ISO dan Rana ke rentang valid
     BUILD_REQUEST --> SUBMIT_REQUEST: set(CONTROL_MODE, OFF)
     SUBMIT_REQUEST --> APPLY_FRAME_1: CaptureSession.capture()
     APPLY_FRAME_1 --> APPLY_FRAME_N: Nilai baru stabil (~3–5 bingkai)

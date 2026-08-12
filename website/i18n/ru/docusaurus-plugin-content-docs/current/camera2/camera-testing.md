@@ -28,12 +28,12 @@ graph TB
     subgraph CTS[Android CTS — раздел Камера]
         direction TB
         CTS_API[Тесты API<br/>— ключи CameraCharacteristics<br/>— isSessionConfigurationSupported<br/>— корректное перечисление всех сценариев]
-        CTS_FLOW[Тесты потока<br/>— open → close<br/>— open → session → capture → close<br/>— стресс-тест частого открытия/закрытия]
+        CTS_FLOW[Тесты потока<br/>— open -> close<br/>— open -> session -> capture -> close<br/>— стресс-тест частого открытия/закрытия]
         CTS_V[CTS Verifier<br/>Ручные тесты на устройстве<br/>— плавность предпросмотра<br/>— качество захвата<br/>— переключение между камерами]
     end
     subgraph ITS[Camera ITS — Image Test Suite]
         direction TB
-        ITS_COMBI[test_feature_combination<br/>Пермутации потоков × FPS × HDR<br/>Тысячи вызовов<br/>isSessionConfigurationSupported]
+        ITS_COMBI[test_feature_combination<br/>Пермутации потоков x FPS x HDR<br/>Тысячи вызовов<br/>isSessionConfigurationSupported]
         ITS_SCENE[Тесты физических сцен<br/>scene0 (равномерный серый)<br/>scene1_1 (цветовая мишень)<br/>Автомат. планшет → тестируемое устр.]
         ITS_FUSION[Тест sensor_fusion<br/>Метки гироскопа должны совпадать с<br/>SENSOR_TIMESTAMP в CaptureResult<br/>допуск ±1 мс]
         ITS_3A[Тесты схождения 3A<br/>AE/AF/AWB должны сойтись в пределах<br/>N кадров при стандартном освещении]
@@ -59,10 +59,10 @@ graph TB
 graph LR
     TC["ПК контроллер тестов<br/>Linux + Tradefed CLI<br/>Запуск python3 its/scripts"]
     TC -->|USB 3.x ADB| DUT[Смартфон/планшет DUT<br/>Тестируемое устройство<br/>Камера направлена на планшет]
-    TC -->|USB 3.x| TPD[Дисплей-планшет<br/>~10" калибр. 4K панель<br/>Запуск ITS tabletd APK]
+    TC -->|USB 3.x| TPD[Дисплей-планшет<br/>~10'' калибр. 4K панель<br/>Запуск ITS tabletd APK]
     TC -->|GPIO / USB реле| LIGHT[Управляемое освещение<br/>LED панели с рег. CCT<br/>2700K-6500K ±2%]
     TPD -->|проецирует scene0 / scene1_1<br/>через HDMI/внутр. дисплей| DUT_CAM[Сенсор задней камеры DUT]
-    DUT_CAM -->|захват кадров через MIPI → HAL| DUT
+    DUT_CAM -->|захват кадров через MIPI -> HAL| DUT
     DUT -->|DNG/JPEG + CaptureResults<br/>извлекаются через adb pull| TC
     TC -->|запуск numpy / scipy анализа<br/>лин. яркости, ош. цвета, резкость| RESULT[(Отчет PASS / FAIL + JSON)]
 ```

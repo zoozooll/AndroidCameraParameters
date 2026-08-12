@@ -360,11 +360,11 @@ HAL 负责将单次传感器读取路由到多个 ISP 分支，以产生每种�
 flowchart LR
     R["单个 CaptureRequest<br/>(单帧配置)"]
     HAL["HAL3 ISP 处理 (1 次处理)"]
-    S1["1080p 预览<br/>→ TextureView"]
-    S2["12MP JPEG<br/>→ ImageReader"]
-    S3["12MP RAW<br/>→ ImageReader"]
-    S4["4K 视频<br/>→ MediaRecorder"]
-    RESULT["CaptureResult<br/>→ CaptureCallback"]
+    S1["1080p 预览<br/>-> TextureView"]
+    S2["12MP JPEG<br/>-> ImageReader"]
+    S3["12MP RAW<br/>-> ImageReader"]
+    S4["4K 视频<br/>-> MediaRecorder"]
+    RESULT["CaptureResult<br/>-> CaptureCallback"]
 
     R --> HAL
     HAL --> S1

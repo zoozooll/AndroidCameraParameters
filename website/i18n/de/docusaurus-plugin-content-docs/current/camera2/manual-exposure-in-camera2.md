@@ -31,7 +31,7 @@ stateDiagram-v2
     [*] --> AUTO_MODE: Standard-Vorschau startet
     AUTO_MODE --> MANUAL_PREP: Benutzer schaltet manuelle Belichtung ein
     MANUAL_PREP --> VALIDATE_RANGES: SENSOR_INFO_EXPOSURE_TIME_RANGE abfragen
-    VALIDATE_RANGES --> BUILD_REQUEST: ISO & Verschlusszeit auf gültigen Bereich begrenzen
+    VALIDATE_RANGES --> BUILD_REQUEST: ISO und Verschlusszeit auf gültigen Bereich begrenzen
     BUILD_REQUEST --> SUBMIT_REQUEST: set(CONTROL_MODE, OFF)
     SUBMIT_REQUEST --> APPLY_FRAME_1: CaptureSession.capture()
     APPLY_FRAME_1 --> APPLY_FRAME_N: Neue Werte pendeln sich ein (~3–5 Frames)

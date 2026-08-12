@@ -28,12 +28,12 @@ graph TB
     subgraph CTS[Android CTS — 相機部分]
         direction TB
         CTS_API[API 測試<br/>— CameraCharacteristics 鍵值<br/>— isSessionConfigurationSupported<br/>— 所有用例均能正確枚舉]
-        CTS_FLOW[流程測試<br/>— 打開 → 關閉<br/>— 打開 → 工作階段 → 拍攝 → 關閉<br/>— 快速打開/關閉壓力測試]
+        CTS_FLOW[流程測試<br/>— 打開 -> 關閉<br/>— 打開 -> 工作階段 -> 拍攝 -> 關閉<br/>— 快速打開/關閉壓力測試]
         CTS_V[CTS 驗證程序<br/>設備上手動測試<br/>— 預覽流暢度<br/>— 拍攝品質<br/>— 多相機切換]
     end
     subgraph ITS[相機 ITS — 影像測試套件]
         direction TB
-        ITS_COMBI[test_feature_combination<br/>串流排列組合 × FPS × HDR<br/>數千次呼叫<br/>isSessionConfigurationSupported]
+        ITS_COMBI[test_feature_combination<br/>串流排列組合 x FPS x HDR<br/>數千次呼叫<br/>isSessionConfigurationSupported]
         ITS_SCENE[物理場景測試<br/>scene0 (均勻灰色)<br/>scene1_1 (色彩檢查圖)<br/>自動化平板顯示 → 待測設備]
         ITS_FUSION[感光元件融合測試<br/>陀螺儀時間戳必須與<br/>CaptureResult 中的 SENSOR_TIMESTAMP<br/>對齊，誤差 ±1ms]
         ITS_3A[3A 收斂測試<br/>AE/AF/AWB 必須在標準光照下<br/>的 N 幀內收斂]
@@ -62,7 +62,7 @@ graph LR
     TC -->|USB 3.x| TPD[平板顯示器<br/>約 10 英吋校準過的 4K 面板<br/>執行 ITS tabletd APK]
     TC -->|透過 GPIO / USB 繼電器| LIGHT[受控光照<br/>色溫可調的 LED 面板<br/>2700K-6500K ±2%]
     TPD -->|透過 HDMI/內部顯示投影<br/>scene0 / scene1_1| DUT_CAM[待測設備後置相機感光元件]
-    DUT_CAM -->|透過 MIPI 擷取幀 → HAL| DUT
+    DUT_CAM -->|透過 MIPI 擷取幀 -> HAL| DUT
     DUT -->|透過 adb pull 拉取<br/>DNG/JPEG + CaptureResults| TC
     TC -->|執行 numpy / scipy 分析<br/>亮度線性度、色彩誤差、銳度| RESULT[(通過 / 失敗報告 + JSON)]
 ```

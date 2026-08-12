@@ -175,7 +175,7 @@ flowchart TB
 
     subgraph HAL ["HAL3 Hardware-Schicht"]
         direction LR
-        S["📷 Sensor<br/>Belichtung & Auslesen"]
+        S["📷 Sensor<br/>Belichtung und Auslesen"]
         I["⚙️ ISP-Pipeline<br/>Demosaic, NR, Schärfen, Farbe"]
         O["💾 Ausgabe<br/>Zu den Surfaces"]
         S --> I --> O

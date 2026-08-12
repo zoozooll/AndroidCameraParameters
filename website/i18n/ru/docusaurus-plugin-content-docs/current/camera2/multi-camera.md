@@ -18,17 +18,17 @@ keywords: [Android Camera2, мультикамера, логическая ка�
 ```mermaid
 flowchart TB
     subgraph UserSpace["Приложение (Userspace)"]
-        APP["CameraManager.openCamera<br/>cameraId = \"0\" (Logical ID)"]
+        APP["CameraManager.openCamera<br/>cameraId = '0' (Logical ID)"]
     end
 
     subgraph HAL["Camera HAL (Kernel / Vendor Partition)"]
         LOG["Логическое устройство камеры 0<br/>Виртуальный узел"]
 
         subgraph PhysicalCams["Физические камеры (группа одного направления)"]
-            UW["Физический ID \"8\"<br/>Сверхширик 0.5×<br/>12 Мп, 13 мм экв."]
-            W["Физический ID \"0\"<br/>Ширик 1.0×<br/>50 Мп, 24 мм экв."]
-            T["Физический ID \"5\"<br/>Телевик 3.0×<br/>10 Мп, 72 мм экв."]
-            P["Физический ID \"7\"<br/>Перископ 10×<br/>8 Мп, 240 мм экв."]
+            UW["Физический ID '8'<br/>Сверхширик 0.5x<br/>12 Мп, 13 мм экв."]
+            W["Физический ID '0'<br/>Ширик 1.0x<br/>50 Мп, 24 мм экв."]
+            T["Физический ID '5'<br/>Телевик 3.0x<br/>10 Мп, 72 мм экв."]
+            P["Физический ID '7'<br/>Перископ 10x<br/>8 Мп, 240 мм экв."]
         end
 
         LOG <--> UW
@@ -37,11 +37,11 @@ flowchart TB
         LOG <--> P
     end
 
-    subgraph ZoomScale["Коэфф. зума → Точки переключения линз HAL"]
-        Z1["0.5× – 0.9× → СВЕРХШИРИК (ID 8)"]
-        Z2["1.0× – 2.9× → ШИРИК (ID 0)"]
-        Z3["3.0× – 9.9× → ТЕЛЕВИК (ID 5)"]
-        Z4["10.0×+ → ПЕРИСКОП (ID 7)"]
+    subgraph ZoomScale["Коэфф. зума -> Точки переключения линз HAL"]
+        Z1["0.5x – 0.9x -> СВЕРХШИРИК (ID 8)"]
+        Z2["1.0x – 2.9x -> ШИРИК (ID 0)"]
+        Z3["3.0x – 9.9x -> ТЕЛЕВИК (ID 5)"]
+        Z4["10.0x+ -> ПЕРИСКОП (ID 7)"]
     end
 
     APP --> LOG
@@ -300,24 +300,24 @@ fun createDualPhysicalSession(
 
 ```mermaid
 graph TD
-    subgraph BackLogical["Логическая задняя камера ID \"0\""]
+    subgraph BackLogical["Логическая задняя камера ID '0'"]
         direction TB
-        CAPFLAG["ВОЗМОЖНОСТИ:<br/>LOGICAL_MULTI_CAMERA = true<br/>SENSOR_SYNC_TYPE = CALIBRATED<br/>MAX_DIGITAL_ZOOM = 100×"]
+        CAPFLAG["ВОЗМОЖНОСТИ:<br/>LOGICAL_MULTI_CAMERA = true<br/>SENSOR_SYNC_TYPE = CALIBRATED<br/>MAX_DIGITAL_ZOOM = 100x"]
     end
 
     subgraph PhysChildren["Физические потомки (getPhysicalCameraIds)"]
-        UWPHYS["ID \"8\" → Сверхширик<br/>Фокусное=1.7мм<br/>f/1.8<br/>FOV=120°"]
-        WPHYS["ID \"0\" → Ширик<br/>Фокусное=5.5мм<br/>f/1.6<br/>FOV=84°"]
-        TPHYS["ID \"5\" → Телевик 3×<br/>Фокусное=16.5мм<br/>f/2.0<br/>FOV=28°"]
-        PPHYS["ID \"7\" → Перископ 10×<br/>Фокусное=55мм<br/>f/3.4<br/>FOV=8.5°"]
+        UWPHYS["ID '8' -> Сверхширик<br/>Фокусное=1.7мм<br/>f/1.8<br/>FOV=120°"]
+        WPHYS["ID '0' -> Ширик<br/>Фокусное=5.5мм<br/>f/1.6<br/>FOV=84°"]
+        TPHYS["ID '5' -> Телевик 3x<br/>Фокусное=16.5мм<br/>f/2.0<br/>FOV=28°"]
+        PPHYS["ID '7' -> Перископ 10x<br/>Фокусное=55мм<br/>f/3.4<br/>FOV=8.5°"]
     end
 
     subgraph ReplaceRule["Выходы сеанса (применено правило MR-1)"]
         direction TB
         PREV["1x Логический предпросмотр<br/>SurfaceView 1080p<br/>(Физический ID не задан)"]
-        PHYS1["1x Физический YUV 12 Мп<br/>→ OutputConfiguration<br/>.setPhysicalCameraId(ID \"0\")<br/>← Цель: ШИРИК"]
-        PHYS2["1x Физический YUV 12 Мп<br/>→ OutputConfiguration<br/>.setPhysicalCameraId(ID \"5\")<br/>← Цель: ТЕЛЕВИК"]
-        NOTE["✓ ВАЛИДНО по MR-1:<br/>Формат YUV × Совпадение размера × 2 замены"]
+        PHYS1["1x Физический YUV 12 Мп<br/>-> OutputConfiguration<br/>.setPhysicalCameraId(ID '0')<br/><- Цель: ШИРИК"]
+        PHYS2["1x Физический YUV 12 Мп<br/>-> OutputConfiguration<br/>.setPhysicalCameraId(ID '5')<br/><- Цель: ТЕЛЕВИК"]
+        NOTE["✓ ВАЛИДНО по MR-1:<br/>Формат YUV x Совпадение размера x 2 замены"]
     end
 
     BackLogical --> PhysChildren

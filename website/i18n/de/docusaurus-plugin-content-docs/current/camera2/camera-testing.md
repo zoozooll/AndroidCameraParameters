@@ -28,13 +28,13 @@ graph TB
     subgraph CTS[Android CTS — Kamera-Abschnitt]
         direction TB
         CTS_API[API-Tests<br/>— CameraCharacteristics-Schlüssel<br/>— isSessionConfigurationSupported<br/>— Korrekte Aufzählung aller Use-Cases]
-        CTS_FLOW[Ablauf-Tests<br/>— öffnen → schließen<br/>— öffnen → Sitzung → Aufnahme → schließen<br/>— Stresstest für schnelles Öffnen/Schließen]
+        CTS_FLOW[Ablauf-Tests<br/>— öffnen -> schließen<br/>— öffnen -> Sitzung -> Aufnahme -> schließen<br/>— Stresstest für schnelles Öffnen/Schließen]
         CTS_V[CTS Verifier<br/>Manuelle Tests auf dem Gerät<br/>— Flüssigkeit der Vorschau<br/>— Aufnahmequalität<br/>— Wechsel zwischen mehreren Kameras]
     end
     subgraph ITS[Camera ITS — Image Test Suite]
         direction TB
-        ITS_COMBI[test_feature_combination<br/>Stream-Permutationen × FPS × HDR<br/>Tausende Aufrufe von<br/>isSessionConfigurationSupported]
-        ITS_SCENE[Physische Szenentests<br/>scene0 (gleichmäßiges Grau)<br/>scene1_1 (Farbtafel)<br/>Automatisiertes Tablet-Display → DUT]
+        ITS_COMBI[test_feature_combination<br/>Stream-Permutationen x FPS x HDR<br/>Tausende Aufrufe von<br/>isSessionConfigurationSupported]
+        ITS_SCENE[Physische Szenentests<br/>scene0 (gleichmäßiges Grau)<br/>scene1_1 (Farbtafel)<br/>Automatisiertes Tablet-Display -> DUT]
         ITS_FUSION[sensor_fusion Test<br/>Gyro-Zeitstempel müssen mit<br/>SENSOR_TIMESTAMP in CaptureResult<br/>±1 ms Toleranz übereinstimmen]
         ITS_3A[3A-Konvergenztests<br/>AE/AF/AWB müssen innerhalb von<br/>N Frames unter Standardlicht konvergieren]
         ITS_HDR[HDR / Ultra HDR Tests<br/>Gültigkeit der JPEG_R-Gainmap<br/>Messung des Dynamikumfangs]
@@ -62,7 +62,7 @@ graph LR
     TC -->|USB 3.x| TPD[Tablet-Display<br/>~10" kalibriertes 4K-Panel<br/>Führt ITS tabletd APK aus]
     TC -->|GPIO / USB-Relais| LIGHT[Gesteuerte Beleuchtung<br/>CCT-einstellbare LED-Panels<br/>2700 K–6500 K ±2 %]
     TPD -->|projiziert scene0 / scene1_1<br/>über HDMI/internes Display| DUT_CAM[DUT-Rückkamerasensor]
-    DUT_CAM -->|erfasst Frames über MIPI → HAL| DUT
+    DUT_CAM -->|erfasst Frames über MIPI -> HAL| DUT
     DUT -->|DNG/JPEG + CaptureResults<br/>abgerufen über adb pull| TC
     TC -->|führt numpy / scipy Analyse aus<br/>Luminanz-Linearität, Farbfehler, Schärfe| RESULT[(PASS / FAIL Bericht + JSON)]
 ```

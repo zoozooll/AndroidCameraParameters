@@ -35,7 +35,7 @@ Le changement conceptuel le plus important : une `CameraExtensionSession` ne dir
 flowchart LR
     subgraph STANDARD["CameraCaptureSession standard (Pipeline direct)"]
         direction TB
-        S1["Capteur → ISP<br/>(Dématriçage, NR, Couleur)"]
+        S1["Capteur -> ISP<br/>(Dématriçage, NR, Couleur)"]
         S2["Allocateur de surface standard<br/>(GPU / HAL Gralloc)"]
         S3["Surface de sortie de l'app<br/>(Aperçu, JPEG, MediaCodec)"]
         S1 --> S2 --> S3
@@ -44,12 +44,12 @@ flowchart LR
 
     subgraph EXTENSION["CameraExtensionSession (Pipeline EIPP)"]
         direction TB
-        E1["Capteur → ISP<br/>(RAW / YUV bas niveau uniquement)"]
+        E1["Capteur -> ISP<br/>(RAW / YUV bas niveau uniquement)"]
         E2["Tampon d'accumulation d'images<br/>(6 à 20 images dans la<br/>mémoire privée du constructeur)"]
         E3["Pipeline de traitement intermédiaire<br/>d'extension (EIPP)<br/>S'exécute sur DSP / NPU / ISP :<br/>Nuit : Aligner + Fusionner + TNR<br/>Bokeh : Segmentation + Flou<br/>HDR : Aligner + Fusionner + Tonemap"]
         E4["Surface de sortie traitée<br/>(JPEG / YUV)"]
         E1 --> E2 --> E3 --> E4
-        ELAT["Latence : 500–8000 ms<br/>(nombre d'images × intervalle de base)"]
+        ELAT["Latence : 500–8000 ms<br/>(nombre d'images x intervalle de base)"]
     end
 
     style STANDARD fill:#e6f7ff,stroke:#0369a1
@@ -342,7 +342,7 @@ sequenceDiagram
         APP->>CAM: extSession.capture(builder)
         CAM->>HAL: ext_dispatch_capture(request, BOKEH)
         HAL->>ISP: Capturer 3 images<br/>(Moyennage d'exposition)
-        ISP-->>HAL: RAW / YUV bas niveau × 3
+        ISP-->>HAL: RAW / YUV bas niveau x 3
         HAL->>EIPP: Soumettre lot de tampons<br/>Exécuter Segmentation + Flou
         EIPP-->>EIPP: Inférence profondeur MiDaS<br/>Flou bilatéral (20 passes)
         EIPP-->>HAL: Masque Alpha + Arrière-plan flou<br/>YUV composé

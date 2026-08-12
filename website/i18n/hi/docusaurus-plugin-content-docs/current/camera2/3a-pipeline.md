@@ -26,39 +26,41 @@ sequenceDiagram
     participant AF as AF Engine
     participant AWB as AWB Engine
 
-    User->>App: "Capture" बटन टैप करता है
-    App->>HAL: AF_MODE = AUTO सेट करता है
-    App->>HAL: CONTROL_AF_TRIGGER = START
-    Note over HAL,AF: फोकस स्कैन शुरू
+    User->>App: "Capture बटन टैप करता है"
+    App->>HAL: "AF_MODE = AUTO सेट करता है"
+    App->>HAL: "CONTROL_AF_TRIGGER = START"
+    Note over HAL,AF: "फोकस स्कैन शुरू"
 
-    loop हर प्रीव्यू फ्रेम
-        HAL-->>App: CaptureResult
-        App->>App: AF_STATE चेक करें
+    loop "हर प्रीव्यू फ्रेम"
+        HAL-->>App: "CaptureResult"
+        App->>App: "AF_STATE चेक करें"
     end
 
-    AF-->>HAL: AF लॉक प्राप्त हुआ
-    HAL-->>App: AF_STATE = FOCUSED_LOCKED ✓
-    Note over App,AE: फोकस स्थिर → AE प्रीकैप्चर पर आगे बढ़ें
+    AF-->>HAL: "AF लॉक प्राप्त हुआ"
+    HAL-->>App: "AF_STATE = FOCUSED_LOCKED"
+    Note over App,AE: "फोकस स्थिर, AE प्रीकैप्चर पर आगे बढ़ें"
 
-    App->>HAL: CONTROL_AE_PRECAPTURE_TRIGGER = START
-    Note over HAL,AE: प्रीकैप्चर मीटरिंग स्वीप
+    App->>HAL: "CONTROL_AE_PRECAPTURE_TRIGGER = START"
+    Note over HAL,AE: "प्रीकैप्चर मीटरिंग स्वीप"
 
-    loop हर प्रीव्यू फ्रेम
-        HAL-->>App: CaptureResult
-        App->>App: AE_STATE और FLASH_STATE चेक करें
+    loop "हर प्रीव्यू फ्रेम"
+        HAL-->>App: "CaptureResult"
+        App->>App: "AE_STATE और FLASH_STATE चेक करें"
     end
 
-    AE-->>HAL: AE कन्वर्ज हुआ; अंतिम एक्सपोज़र तय
-    HAL-->>App: AE_STATE = CONVERGED ✓
-    Note over App: सभी 3A कन्वर्ज हुए! कैप्चर करना सुरक्षित है
+    AE-->>HAL: "AE कन्वर्ज हुआ"
+    HAL-->>App: "AE_STATE = CONVERGED"
+    AWB-->>HAL: "AWB_STATE = CONVERGED"
+    Note over App: "सभी 3A कन्वर्ज हुए! कैप्चर करना सुरक्षित है"
 
-    App->>HAL: Still Capture रिक्वेस्ट (TEMPLATE_STILL_CAPTURE)
-    HAL->>HAL: ज़रूरत पड़ने पर मेन फ्लैश फायर करें
-    HAL->>HAL: सेंसर एक्सपोज़ करें, फ्रेम पढ़ें
-    HAL-->>App: JPEG / RAW फ्रेम ImageReader के माध्यम से डिलीवर
+    App->>HAL: "Still Capture रिक्वेस्ट"
+    HAL->>HAL: "ज़रूरत पड़ने पर मेन फ्लैश फायर करें"
+    HAL->>HAL: "सेंसर एक्सपोज़ करें, फ्रेम पढ़ें"
+    HAL-->>App: "JPEG फ्रेम डिलीवर"
 
-    App->>HAL: CONTROL_AF_TRIGGER = CANCEL
-    App->>HAL: वापस सामान्य प्रीव्यू मोड पर जाएं
+    App->>HAL: "CONTROL_AF_TRIGGER = CANCEL"
+    App->>HAL: "CONTROL_AE_PRECAPTURE_TRIGGER = IDLE"
+    App->>HAL: "वापस सामान्य प्रीव्यू मोड पर जाएं"
 ```
 
 **हर कदम ब्लॉक करने वाला (blocking) है।** आप अगले चरण पर तब तक नहीं जाते जब तक कि पिछला चरण सफल न हो जाए।

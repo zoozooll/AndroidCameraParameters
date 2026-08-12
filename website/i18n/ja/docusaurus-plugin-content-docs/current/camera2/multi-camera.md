@@ -18,11 +18,11 @@ keywords: [Android Camera2, マルチカメラ, 論理カメラ, 物理カメラ
 ```mermaid
 flowchart TB
     subgraph UserSpace["アプリ (ユーザー空間)"]
-        APP["CameraManager.openCamera<br/>論理 ID \"0\" を開く"]
+        APP["CameraManager.openCamera<br/>論理 ID '0' を開く"]
     end
 
     subgraph HAL["カメラ HAL (ベンダー実装)"]
-        LOG["論理カメラデバイス \"0\""]
+        LOG["論理カメラデバイス '0'"]
 
         subgraph PhysicalCams["物理カメラ群"]
             UW["超広角 (ID 8)"]

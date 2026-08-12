@@ -35,7 +35,7 @@ A mudança conceitual mais importante: uma `CameraExtensionSession` **não** rot
 flowchart LR
     subgraph STANDARD["CameraCaptureSession Padrão (Pipeline Direto)"]
         direction TB
-        S1["Sensor → ISP<br/>(Demosaic, NR, Cor)"]
+        S1["Sensor -> ISP<br/>(Demosaic, NR, Cor)"]
         S2["Alocador de Surface Padrão<br/>(GPU / HAL Gralloc)"]
         S3["Superfície de Saída do App<br/>(Preview, JPEG, MediaCodec)"]
         S1 --> S2 --> S3
@@ -44,12 +44,12 @@ flowchart LR
 
     subgraph EXTENSION["CameraExtensionSession (Pipeline EIPP)"]
         direction TB
-        E1["Sensor → ISP<br/>(Apenas RAW / YUV de baixo nível)"]
+        E1["Sensor -> ISP<br/>(Apenas RAW / YUV de baixo nível)"]
         E2["Buffer de Acúmulo de Quadros<br/>(6–20 quadros em<br/>Memória Privada do Fabricante)"]
         E3["Pipeline de Processamento Intermediário<br/>de Extensão (EIPP)<br/>Roda em DSP / NPU / ISP:<br/>Night: Alinhar + Fundir + TNR<br/>Bokeh: Segmentação + Desfoque<br/>HDR: Alinhar + Fundir + Tonemap"]
         E4["Superfície de Saída Processada<br/>(JPEG / YUV)"]
         E1 --> E2 --> E3 --> E4
-        ELAT["Latência: 500–8000 ms<br/>(contagem de quadros × intervalo base)"]
+        ELAT["Latência: 500–8000 ms<br/>(contagem de quadros x intervalo base)"]
     end
 
     style STANDARD fill:#e6f7ff,stroke:#0369a1
@@ -342,7 +342,7 @@ sequenceDiagram
         APP->>CAM: extSession.capture(builder)
         CAM->>HAL: ext_dispatch_capture(request, BOKEH)
         HAL->>ISP: Capturar 3 Quadros<br/>(Média de Exposição)
-        ISP-->>HAL: RAW / YUV Baixo × 3
+        ISP-->>HAL: RAW / YUV Baixo x 3
         HAL->>EIPP: Enviar Lote de Buffers<br/>Executar Segmentação + Desfoque
         EIPP-->>EIPP: Inferência de Profundidade MiDaS<br/>Desfoque Bilateral (20 passagens)
         EIPP-->>HAL: Máscara Alfa + BG Desfocado<br/>YUV Composto

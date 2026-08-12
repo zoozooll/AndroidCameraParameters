@@ -28,42 +28,42 @@ sequenceDiagram
     participant AF as AF Engine
     participant AWB as AWB Engine
 
-    User->>App: Нажимает кнопку "Захват"
-    App->>HAL: Установить AF_MODE = AUTO (или MACRO)
-    App->>HAL: CONTROL_AF_TRIGGER = START
-    Note over HAL,AF: Запуск сканирования фокуса
+    User->>App: "Нажимает кнопку 'Захват'"
+    App->>HAL: "Установить AF_MODE = AUTO"
+    App->>HAL: "CONTROL_AF_TRIGGER = START"
+    Note over HAL,AF: "Запуск сканирования фокуса"
 
-    loop Каждый кадр предпросмотра
-        HAL-->>App: CaptureResult
-        App->>App: Проверка AF_STATE
+    loop "Каждый кадр предпросмотра"
+        HAL-->>App: "CaptureResult"
+        App->>App: "Проверка AF_STATE"
     end
 
-    AF-->>HAL: Фокус заблокирован
-    HAL-->>App: AF_STATE = FOCUSED_LOCKED ✓
-    Note over App,AE: Фокус стабилен → переход к предварительному захвату AE
+    AF-->>HAL: "Фокус заблокирован"
+    HAL-->>App: "AF_STATE = FOCUSED_LOCKED"
+    Note over App,AE: "Фокус стабилен, переход к предварительному захвату AE"
 
-    App->>HAL: CONTROL_AE_PRECAPTURE_TRIGGER = START
-    Note over HAL,AE: Замер экспозиции перед захватом<br/>(если режим вспышки требует, срабатывает<br/>предварительная вспышка для замера)
+    App->>HAL: "CONTROL_AE_PRECAPTURE_TRIGGER = START"
+    Note over HAL,AE: "Замер экспозиции перед захватом"
 
-    loop Каждый кадр предпросмотра
-        HAL-->>App: CaptureResult
-        App->>App: Проверка AE_STATE и FLASH_STATE
+    loop "Каждый кадр предпросмотра"
+        HAL-->>App: "CaptureResult"
+        App->>App: "Проверка AE_STATE и FLASH_STATE"
     end
 
-    AE-->>HAL: AE сошлась; окончательная экспозиция определена
-    HAL-->>App: AE_STATE = CONVERGED (+ FLASH_STATE = READY, если нужно) ✓
-    AWB-->>HAL: AWB_STATE = CONVERGED (обычно уже выполнено)
-    Note over App: Все 3A сошлись! МОЖНО ДЕЛАТЬ СНИМОК
+    AE-->>HAL: "AE сошлась"
+    HAL-->>App: "AE_STATE = CONVERGED"
+    AWB-->>HAL: "AWB_STATE = CONVERGED"
+    Note over App: "Все 3A сошлись! МОЖНО ДЕЛАТЬ СНИМОК"
 
-    App->>HAL: Запрос на захват фото (TEMPLATE_STILL_CAPTURE)
-    HAL->>HAL: Срабатывание основной вспышки, если нужно
-    HAL->>HAL: Экспонирование сенсора, чтение кадра
-    HAL-->>App: Кадр JPEG / RAW доставлен через ImageReader
+    App->>HAL: "Запрос на захват фото"
+    HAL->>HAL: "Срабатывание основной вспышки, если нужно"
+    HAL->>HAL: "Экспонирование сенсора, чтение кадра"
+    HAL-->>App: "Кадр JPEG доставлен"
 
-    App->>HAL: CONTROL_AF_TRIGGER = CANCEL
-    App->>HAL: CONTROL_AE_PRECAPTURE_TRIGGER = IDLE
-    App->>HAL: Восстановить AF_MODE = CONTINUOUS_PICTURE
-    Note over App,HAL: Очистка: предпросмотр возобновляет обычную автонастройку
+    App->>HAL: "CONTROL_AF_TRIGGER = CANCEL"
+    App->>HAL: "CONTROL_AE_PRECAPTURE_TRIGGER = IDLE"
+    App->>HAL: "Восстановить AF_MODE = CONTINUOUS_PICTURE"
+    Note over App,HAL: "Очистка: предпросмотр возобновляется"
 ```
 
 **Каждый шаг является блокирующим.** Вы не переходите к шагу N+1, пока HAL не подтвердит состояние, требуемое на шаге N. Никогда не пропускайте шаги — именно так выпускаются приложения с периодическим нечетким фокусом, плохой экспозицией со вспышкой или фотографиями с синим оттенком.
@@ -482,29 +482,29 @@ stateDiagram-v2
     direction LR
 
     state "Состояния AF" as AF {
-        [*] --> ACTIVE_SCAN: AF_TRIGGER = START
-        ACTIVE_SCAN --> FOCUSED_LOCKED: ✓ Фокус найден
-        ACTIVE_SCAN --> NOT_FOCUSED_LOCKED: ✗ Не удалось заблокировать
-        FOCUSED_LOCKED --> [*]: Переход к Фазе 2
-        NOT_FOCUSED_LOCKED --> [*]: Продолжение (best effort)
+        [*] --> ACTIVE_SCAN: "AF_TRIGGER = START"
+        ACTIVE_SCAN --> FOCUSED_LOCKED: "Фокус найден"
+        ACTIVE_SCAN --> NOT_FOCUSED_LOCKED: "Не удалось заблокировать"
+        FOCUSED_LOCKED --> [*]: "Переход к Фазе 2"
+        NOT_FOCUSED_LOCKED --> [*]: "Продолжение (best effort)"
     }
 
     state "Состояния AE" as AE {
-        [*] --> SEARCHING: Предпросмотр запущен
-        SEARCHING --> CONVERGED: Освещение стабильно
-        CONVERGED --> PRECAPTURE: PRECAPTURE_TRIGGER = START
-        PRECAPTURE --> CONVERGED: Финальная экспозиция + вспышка рассчитаны
-        CONVERGED --> FLASH_REQUIRED: (только режим автовспышки)
-        CONVERGED --> [*]: Захват сейчас
-        FLASH_REQUIRED --> [*]: Захват со вспышкой сейчас
+        [*] --> SEARCHING: "Предпросмотр запущен"
+        SEARCHING --> CONVERGED: "Освещение стабильно"
+        CONVERGED --> PRECAPTURE: "PRECAPTURE_TRIGGER = START"
+        PRECAPTURE --> CONVERGED: "Финальная экспозиция + вспышка рассчитаны"
+        CONVERGED --> FLASH_REQUIRED: "Только режим автовспышки"
+        CONVERGED --> [*]: "Захват сейчас"
+        FLASH_REQUIRED --> [*]: "Захват со вспышкой сейчас"
     }
 
     state "Состояния AWB" as AWB {
-        [*] --> SEARCHING: Резкая смена сцены
-        SEARCHING --> CONVERGED: Источник света определен
-        CONVERGED --> LOCKED: AWB_LOCK = true
-        CONVERGED --> [*]: Захват OK
-        LOCKED --> [*]: Захват OK
+        [*] --> SEARCHING: "Резкая смена сцены"
+        SEARCHING --> CONVERGED: "Источник света определен"
+        CONVERGED --> LOCKED: "AWB_LOCK = true"
+        CONVERGED --> [*]: "Захват OK"
+        LOCKED --> [*]: "Захват OK"
     }
 ```
 

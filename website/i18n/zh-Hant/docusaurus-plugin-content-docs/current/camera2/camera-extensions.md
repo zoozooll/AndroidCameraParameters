@@ -44,12 +44,12 @@ flowchart LR
 
     subgraph EXTENSION["CameraExtensionSession (EIPP 管線)"]
         direction TB
-        E1["感光元件 → ISP<br/>(僅 RAW / 低級 YUV)"]
+        E1["感光元件 -> ISP<br/>(僅 RAW / 低級 YUV)"]
         E2["幀累積緩衝區<br/>(廠商私有記憶體中的<br/>6–20 幀)"]
         E3["擴充中間處理管線 (EIPP)<br/>執行在 DSP / NPU / ISP 上:<br/>夜景: 對齊 + 合併 + TNR<br/>虛化: 分割 + 模糊<br/>HDR: 對齊 + 合併 + 色調映射"]
         E4["處理後的輸出 Surface<br/>(JPEG / YUV)"]
         E1 --> E2 --> E3 --> E4
-        ELAT["延遲: 500–8000 ms<br/>(幀數 × 基礎間隔)"]
+        ELAT["延遲: 500–8000 ms<br/>(幀數 x 基礎間隔)"]
     end
 
     style STANDARD fill:#e6f7ff,stroke:#0369a1

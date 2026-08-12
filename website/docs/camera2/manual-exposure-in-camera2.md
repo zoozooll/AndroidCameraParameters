@@ -29,15 +29,15 @@ For reliable manual exposure, set **both**. Disabling only `CONTROL_AE_MODE` on 
 
 ```mermaid
 stateDiagram-v2
-    [*] --> AUTO_MODE: Default Preview Starts
-    AUTO_MODE --> MANUAL_PREP: User toggles Manual Exposure
-    MANUAL_PREP --> VALIDATE_RANGES: Query SENSOR_INFO_EXPOSURE_TIME_RANGE
-    VALIDATE_RANGES --> BUILD_REQUEST: Clamp ISO &amp; Shutter to valid range
-    BUILD_REQUEST --> SUBMIT_REQUEST: set(CONTROL_MODE, OFF)
-    SUBMIT_REQUEST --> APPLY_FRAME_1: CaptureSession.capture()
-    APPLY_FRAME_1 --> APPLY_FRAME_N: New values settle (~3–5 frames)
-    APPLY_FRAME_N --> LOCKED_EXPOSURE: Preview now runs at fixed values
-    LOCKED_EXPOSURE --> AUTO_MODE: User re-enables Auto
+    [*] --> AUTO_MODE: "Default Preview Starts"
+    AUTO_MODE --> MANUAL_PREP: "User toggles Manual Exposure"
+    MANUAL_PREP --> VALIDATE_RANGES: "Query SENSOR_INFO_EXPOSURE_TIME_RANGE"
+    VALIDATE_RANGES --> BUILD_REQUEST: "Clamp ISO and Shutter to valid range"
+    BUILD_REQUEST --> SUBMIT_REQUEST: "set(CONTROL_MODE, OFF)"
+    SUBMIT_REQUEST --> APPLY_FRAME_1: "CaptureSession.capture()"
+    APPLY_FRAME_1 --> APPLY_FRAME_N: "New values settle (~3–5 frames)"
+    APPLY_FRAME_N --> LOCKED_EXPOSURE: "Preview now runs at fixed values"
+    LOCKED_EXPOSURE --> AUTO_MODE: "User re-enables Auto"
     note right of VALIDATE_RANGES
         Always query hardware caps!
         Shutter: 1/8000s to 10s typical

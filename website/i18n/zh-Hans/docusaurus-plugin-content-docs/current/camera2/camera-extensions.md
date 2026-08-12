@@ -35,7 +35,7 @@ keywords: [Android Camera2, 相机扩展, CameraExtensionSession, CameraExtensio
 flowchart LR
     subgraph STANDARD["标准 CameraCaptureSession (直接管线)"]
         direction TB
-        S1["传感器 → ISP<br/>(去马赛克, 降噪, 色彩)"]
+        S1["传感器 -> ISP<br/>(去马赛克, 降噪, 色彩)"]
         S2["标准 Surface 分配器<br/>(GPU / HAL Gralloc)"]
         S3["应用输出 Surface<br/>(预览, JPEG, MediaCodec)"]
         S1 --> S2 --> S3
@@ -44,12 +44,12 @@ flowchart LR
 
     subgraph EXTENSION["CameraExtensionSession (EIPP 管线)"]
         direction TB
-        E1["传感器 → ISP<br/>(仅 RAW / 低级 YUV)"]
+        E1["传感器 -> ISP<br/>(仅 RAW / 低级 YUV)"]
         E2["帧累积缓冲区<br/>(厂商私有内存中的<br/>6–20 帧)"]
         E3["扩展中间处理管线 (EIPP)<br/>运行在 DSP / NPU / ISP 上:<br/>夜景: 对齐 + 合并 + TNR<br/>虚化: 分割 + 模糊<br/>HDR: 对齐 + 合并 + 色调映射"]
         E4["处理后的输出 Surface<br/>(JPEG / YUV)"]
         E1 --> E2 --> E3 --> E4
-        ELAT["延迟: 500–8000 ms<br/>(帧数 × 基础间隔)"]
+        ELAT["延迟: 500–8000 ms<br/>(帧数 x 基础间隔)"]
     end
 
     style STANDARD fill:#e6f7ff,stroke:#0369a1

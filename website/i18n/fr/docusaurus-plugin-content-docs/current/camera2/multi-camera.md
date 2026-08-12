@@ -37,11 +37,11 @@ flowchart TB
         LOG <--> P
     end
 
-    subgraph ZoomScale["Rapports de zoom → Points de basculement HAL"]
-        Z1["0,5× – 0,9× → ULTRA-GRAND ANGLE (ID 8)"]
-        Z2["1,0× – 2,9× → GRAND ANGLE (ID 0)"]
-        Z3["3,0× – 9,9× → TÉLÉOBJECTIF (ID 5)"]
-        Z4["10,0×+ → PÉRISCOPE (ID 7)"]
+    subgraph ZoomScale["Rapports de zoom -> Points de basculement HAL"]
+        Z1["0,5x - 0,9x -> ULTRA-GRAND ANGLE (ID 8)"]
+        Z2["1,0x - 2,9x -> GRAND ANGLE (ID 0)"]
+        Z3["3,0x - 9,9x -> TÉLÉOBJECTIF (ID 5)"]
+        Z4["10,0x+ -> PÉRISCOPE (ID 7)"]
     end
 
     APP --> LOG
@@ -300,24 +300,24 @@ Les deux objets `Image` auront des **valeurs `image.timestamp` identiques** lors
 
 ```mermaid
 graph TD
-    subgraph BackLogical["Caméra arrière logique ID \"0\""]
+    subgraph BackLogical["Caméra arrière logique ID '0'"]
         direction TB
-        CAPFLAG["CAPACITÉS :<br/>LOGICAL_MULTI_CAMERA = true<br/>SENSOR_SYNC_TYPE = CALIBRATED<br/>MAX_DIGITAL_ZOOM = 100×"]
+        CAPFLAG["CAPACITÉS :<br/>LOGICAL_MULTI_CAMERA = true<br/>SENSOR_SYNC_TYPE = CALIBRATED<br/>MAX_DIGITAL_ZOOM = 100x"]
     end
 
     subgraph PhysChildren["Enfants physiques (getPhysicalCameraIds)"]
-        UWPHYS["ID \"8\" → Ultra-grand angle<br/>Focale=1,7mm<br/>f/1,8<br/>FOV=120°"]
-        WPHYS["ID \"0\" → Grand angle<br/>Focale=5,5mm<br/>f/1,6<br/>FOV=84°"]
-        TPHYS["ID \"5\" → Téléobjectif 3×<br/>Focale=16,5mm<br/>f/2,0<br/>FOV=28°"]
-        PPHYS["ID \"7\" → Périscope 10×<br/>Focale=55mm<br/>f/3,4<br/>FOV=8,5°"]
+        UWPHYS["ID '8' -> Ultra-grand angle<br/>Focale=1,7mm<br/>f/1,8<br/>FOV=120°"]
+        WPHYS["ID '0' -> Grand angle<br/>Focale=5,5mm<br/>f/1,6<br/>FOV=84°"]
+        TPHYS["ID '5' -> Téléobjectif 3x<br/>Focale=16,5mm<br/>f/2,0<br/>FOV=28°"]
+        PPHYS["ID '7' -> Périscope 10x<br/>Focale=55mm<br/>f/3,4<br/>FOV=8,5°"]
     end
 
     subgraph ReplaceRule["Sorties de session (Règle MR-1 appliquée)"]
         direction TB
         PREV["1x Aperçu logique<br/>SurfaceView 1080p<br/>(Pas d'ID physique défini)"]
-        PHYS1["1x YUV physique 12MP<br/>→ OutputConfiguration<br/>.setPhysicalCameraId(ID \"0\")<br/>← Cible l'objectif GA"]
-        PHYS2["1x YUV physique 12MP<br/>→ OutputConfiguration<br/>.setPhysicalCameraId(ID \"5\")<br/>← Cible l'objectif TÉLÉ"]
-        NOTE["✓ VALIDE selon MR-1 :<br/>Format YUV × Taille identique × 2 remplacements"]
+        PHYS1["1x YUV physique 12MP<br/>-> OutputConfiguration<br/>.setPhysicalCameraId(ID '0')<br/><- Cible l'objectif GA"]
+        PHYS2["1x YUV physique 12MP<br/>-> OutputConfiguration<br/>.setPhysicalCameraId(ID '5')<br/><- Cible l'objectif TÉLÉ"]
+        NOTE["✓ VALIDE selon MR-1 :<br/>Format YUV x Taille identique x 2 remplacements"]
     end
 
     BackLogical --> PhysChildren

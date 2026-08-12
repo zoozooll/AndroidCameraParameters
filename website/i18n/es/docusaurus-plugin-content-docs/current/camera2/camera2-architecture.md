@@ -275,18 +275,18 @@ Finalmente, mapee su propio viaje a través de este libro en las capas de arquit
 
 ```mermaid
 flowchart TB
-    subgraph Journey["Su viaje a través de este libro (Capítulos → Capas)"]
+    subgraph Journey["Su viaje a través de este libro (Capítulos -> Capas)"]
         direction LR
-        C1["Caps. 1–4<br/>Fundamentos<br/>Conceptos de la capa de hardware"] ~~~ H_L1["↔ Capa HW"]
-        C2["Caps. 5–9<br/>Primera app Camera2<br/>CameraManager · Sesión · ImageReader"] ~~~ H_L2["↔ App + Framework"]
-        C3["Caps. 10–12<br/>Tubería · Tipos de captura<br/>Inmersión profunda en Characteristics"] ~~~ H_L3["↔ Metadatos parcelados + contrato HAL3"]
-        C4["Caps. 13–17<br/>3A manual · Exposición · Enfoque · WB"] ~~~ H_L4["↔ Claves de metadatos → HAL3 → Controlador sensor I²C"]
-        C5["Caps. 18–23<br/>RAW · HDR · Multi-Cam · ZSL · Extensiones"] ~~~ H_L5["↔ Modelo solicitud HAL3 · Reprocesamiento ISP m2m"]
-        C6["Cap. 24 CameraX<br/>Fachada UseCase + Interop"] ~~~ H_L6["↔ Abstracción del lado de la App sobre el Framework"]
-        C7["Cap. 25 Nativo NDK<br/>ACamera + AHB → Vulkan"] ~~~ H_L7["↔ Adaptador NDK directamente sobre Camera3Device"]
-        C8["Cap. 26 Corrutinas/Flow<br/>Envoltorio asíncrono de retrollamadas"] ~~~ H_L8["↔ Asíncrono en capa de app sobre límites de Binder"]
-        C9["Cap. 27 Pruebas ITS/CTS<br/>Hardware simulado frente a real"] ~~~ H_L9["↔ Valida cada capa mediante el arnés de pruebas"]
-        C10["Cap. 28 ESTE CAPÍTULO<br/>Arquitectura de la pila completa"] ~~~ H_L10["↔ TODAS las capas, de extremo a extremo"]
+        C1["Caps. 1–4<br/>Fundamentos<br/>Conceptos de la capa de hardware"] ~~~ H_L1["<-> Capa HW"]
+        C2["Caps. 5–9<br/>Primera app Camera2<br/>CameraManager · Sesión · ImageReader"] ~~~ H_L2["<-> App + Framework"]
+        C3["Caps. 10–12<br/>Tubería · Tipos de captura<br/>Inmersión profunda en Characteristics"] ~~~ H_L3["<-> Metadatos parcelados + contrato HAL3"]
+        C4["Caps. 13–17<br/>3A manual · Exposición · Enfoque · WB"] ~~~ H_L4["<-> Claves de metadatos -> HAL3 -> Controlador sensor I²C"]
+        C5["Caps. 18–23<br/>RAW · HDR · Multi-Cam · ZSL · Extensiones"] ~~~ H_L5["<-> Modelo solicitud HAL3 · Reprocesamiento ISP m2m"]
+        C6["Cap. 24 CameraX<br/>Fachada UseCase + Interop"] ~~~ H_L6["<-> Abstracción del lado de la App sobre el Framework"]
+        C7["Cap. 25 Nativo NDK<br/>ACamera + AHB -> Vulkan"] ~~~ H_L7["<-> Adaptador NDK directamente sobre Camera3Device"]
+        C8["Cap. 26 Corrutinas/Flow<br/>Envoltorio asíncrono de retrollamadas"] ~~~ H_L8["<-> Asíncrono en capa de app sobre límites de Binder"]
+        C9["Cap. 27 Pruebas ITS/CTS<br/>Hardware simulado frente a real"] ~~~ H_L9["<-> Valida cada capa mediante el arnés de pruebas"]
+        C10["Cap. 28 ESTE CAPÍTULO<br/>Arquitectura de la pila completa"] ~~~ H_L10["<-> TODAS las capas, de extremo a extremo"]
     end
     H_L1 --> HW
     H_L2 --> FRAME

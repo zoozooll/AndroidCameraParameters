@@ -175,7 +175,7 @@ flowchart TB
 
     subgraph HAL ["HAL3 Hardware Layer"]
         direction LR
-        S["📷 Sensor<br/>Exposure & Readout"]
+        S["📷 Sensor<br/>Exposure and Readout"]
         I["⚙️ ISP Pipeline<br/>Demosaic, NR, Sharpen, Color"]
         O["💾 Output<br/>To Surfaces"]
         S --> I --> O
@@ -332,11 +332,11 @@ HAL は単一のセンサー読み出しを複数の ISP ブランチにルー�
 flowchart LR
     R["単一のCaptureRequest<br/>(1フレームの構成)"]
     HAL["HAL3 ISP処理 (1パス)"]
-    S1["プレビュー 1080p<br/>→ TextureView"]
-    S2["JPEG 12MP<br/>→ ImageReader"]
-    S3["RAW 12MP<br/>→ ImageReader"]
-    S4["ビデオ 4K<br/>→ MediaRecorder"]
-    RESULT["CaptureResult<br/>→ CaptureCallback"]
+    S1["プレビュー 1080p<br/>-> TextureView"]
+    S2["JPEG 12MP<br/>-> ImageReader"]
+    S3["RAW 12MP<br/>-> ImageReader"]
+    S4["ビデオ 4K<br/>-> MediaRecorder"]
+    RESULT["CaptureResult<br/>-> CaptureCallback"]
 
     R --> HAL
     HAL --> S1

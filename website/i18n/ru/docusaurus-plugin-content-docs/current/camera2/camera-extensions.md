@@ -35,7 +35,7 @@ keywords: [Android Camera2, расширения камеры, CameraExtensionSe
 flowchart LR
     subgraph STANDARD["Стандартный CameraCaptureSession (прямой конвейер)"]
         direction TB
-        S1["Сенсор → ISP<br/>(Демозаика, NR, Цвет)"]
+        S1["Сенсор -> ISP<br/>(Демозаика, NR, Цвет)"]
         S2["Стандартный распределитель поверхностей<br/>(GPU / HAL Gralloc)"]
         S3["Выходная поверхность приложения<br/>(Предпросмотр, JPEG, MediaCodec)"]
         S1 --> S2 --> S3
@@ -44,12 +44,12 @@ flowchart LR
 
     subgraph EXTENSION["CameraExtensionSession (конвейер EIPP)"]
         direction TB
-        E1["Сенсор → ISP<br/>(Только RAW / низкоуровневый YUV)"]
+        E1["Сенсор -> ISP<br/>(Только RAW / низкоуровневый YUV)"]
         E2["Буфер накопления кадров<br/>(6–20 кадров в<br/>частной памяти вендора)"]
         E3["Промежуточный конвейер обработки расширения (EIPP)<br/>Работает на DSP / NPU / ISP:<br/>Ночь: Выравнивание + Слияние + TNR<br/>Боке: Сегментация + Размытие<br/>HDR: Выравнивание + Слияние + Тональное отобр."]
         E4["Обработанная выходная поверхность<br/>(JPEG / YUV)"]
         E1 --> E2 --> E3 --> E4
-        ELAT["Задержка: 500–8000 мс<br/>(кол-во кадров × базовый интервал)"]
+        ELAT["Задержка: 500–8000 мс<br/>(кол-во кадров x базовый интервал)"]
     end
 
     style STANDARD fill:#e6f7ff,stroke:#0369a1
@@ -342,7 +342,7 @@ sequenceDiagram
         APP->>CAM: extSession.capture(builder)
         CAM->>HAL: ext_dispatch_capture(request, BOKEH)
         HAL->>ISP: Захват 3 кадров<br/>(усреднение экспозиции)
-        ISP-->>HAL: RAW / Low-YUV × 3
+        ISP-->>HAL: RAW / Low-YUV x 3
         HAL->>EIPP: Отправка пакета буферов<br/>Запуск сегментации + размытие
         EIPP-->>EIPP: Вывод глубины MiDaS<br/>Двустороннее размытие (20 проходов)
         EIPP-->>HAL: Альфа-маска + размытый фон<br/>Скомпонованный YUV

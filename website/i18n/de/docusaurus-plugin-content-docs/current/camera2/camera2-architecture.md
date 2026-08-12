@@ -30,7 +30,7 @@ graph TB
     subgraph FRAME["Java/Kotlin Framework-Schicht — android.hardware.camera2.*"]
         direction TB
         F1["CameraManager · CameraCharacteristics<br/>CaptureRequest.Builder · CaptureResult<br/>CameraDevice · CameraCaptureSession"]
-        F2["CameraBinderWrapper (AOSP frameworks/base)<br/>Übersetzt Java-Objekte → AIDL Binder-Parcel"]
+        F2["CameraBinderWrapper (AOSP frameworks/base)<br/>Übersetzt Java-Objekte -> AIDL Binder-Parcel"]
     end
     subgraph BIND["IPC-Schicht — Binder / HwBinder"]
         direction TB
@@ -46,7 +46,7 @@ graph TB
     subgraph HAL["Vendor-HAL-Schicht (OEM / SoC-Code)"]
         direction TB
         H1["HAL3 Interface: camera3_device_t<br/>— process_capture_request()<br/>— process_capture_result()<br/>— flush()"]
-        H2["HAL1-Wrapper (Legacy)<br/>camera2compat::Camera2Compat<br/>Übersetzt HAL3 Request → HAL1 CameraParameters<br/>für < INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED"]
+        H2["HAL1-Wrapper (Legacy)<br/>camera2compat::Camera2Compat<br/>Übersetzt HAL3 Request -> HAL1 CameraParameters<br/>für < INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED"]
         H3["Vendor-Implementierung<br/>Qualcomm QCamera2 · MediaTek CamHAL · Samsung Exynos Camera HAL"]
     end
     subgraph K["Kernel-Schicht (Linux)"]
@@ -59,7 +59,7 @@ graph TB
     subgraph HW["Physische Hardware-Schicht"]
         direction TB
         HW1["Objektiv-Baugruppe<br/>VCM Voice Coil Motor (I2C)<br/>Bewegt Linsengruppe für Fokus / OIS"]
-        HW2["Kamera-Sensor Pixel-Array<br/>CMOS-Sensor (Sony IMX / Samsung ISOCELL / OmniVision)<br/>Belichten → Auslesen → A/D"]
+        HW2["Kamera-Sensor Pixel-Array<br/>CMOS-Sensor (Sony IMX / Samsung ISOCELL / OmniVision)<br/>Belichten -> Auslesen -> A/D"]
         HW3["MIPI CSI-2 Physischer Bus<br/>2/4/8 Differenzialpaare bei 1,5 – 2,5 Gbit/s pro Lane"]
         HW4["ISP Image Signal Processor (auf SoC)<br/>Demosaic · Rauschunterdrückung · Schärfen · HDR-Merge · Gesichtserkennung in Hardware"]
         HW5["Blitz-LED-Controller (I2C)<br/>Xenon-Strobe oder LED-Stromsenke<br/>Synchronisiert mit Sensor EXRST-Pin"]
@@ -275,18 +275,18 @@ Zum Abschluss bilden Sie Ihre eigene Reise durch dieses Buch auf die Schichten a
 
 ```mermaid
 flowchart TB
-    subgraph Journey["Ihre Reise durch dieses Buch (Kapitel → Schichten)"]
+    subgraph Journey["Ihre Reise durch dieses Buch (Kapitel -> Schichten)"]
         direction LR
-        C1["Kap. 1–4<br/>Grundlagen<br/>Konzepte der Hardware-Schicht"] ~~~ H_L1["↔ HW-Schicht"]
-        C2["Kap. 5–9<br/>Erste Camera2-App<br/>CameraManager · Session · ImageReader"] ~~~ H_L2["↔ App + Framework"]
-        C3["Kap. 10–12<br/>Pipeline · Capture-Typen<br/>Characteristics Deep Dive"] ~~~ H_L3["↔ Parcel-Metadaten + HAL3-Vertrag"]
-        C4["Kap. 13–17<br/>Manuelle 3A · Belichtung · Fokus · WB"] ~~~ H_L4["↔ Metadaten-Keys → HAL3 → I²C-Sensortreiber"]
-        C5["Kap. 18–23<br/>RAW · HDR · Multi-Cam · ZSL · Extensions"] ~~~ H_L5["↔ HAL3 Request-Modell · ISP m2m Reprocessing"]
-        C6["Kap. 24 CameraX<br/>UseCase-Fassade + Interop"] ~~~ H_L6["↔ App-seitige Abstraktion über Framework"]
-        C7["Kap. 25 Natives NDK<br/>ACamera + AHB → Vulkan"] ~~~ H_L7["↔ NDK-Shim direkt über Camera3Device"]
-        C8["Kap. 26 Coroutines/Flow<br/>Async-Wrapping von Callbacks"] ~~~ H_L8["↔ App-Schicht Async um Binder-Grenzen"]
-        C9["Kap. 27 Tests ITS/CTS<br/>Mock vs. Reale Hardware"] ~~~ H_L9["↔ Validierung jeder Schicht über Test-Harness"]
-        C10["Kap. 28 DIESES KAPITEL<br/>Full Stack Architektur"] ~~~ H_L10["↔ ALLE Schichten, End-to-End"]
+        C1["Kap. 1–4<br/>Grundlagen<br/>Konzepte der Hardware-Schicht"] ~~~ H_L1["<-> HW-Schicht"]
+        C2["Kap. 5–9<br/>Erste Camera2-App<br/>CameraManager · Session · ImageReader"] ~~~ H_L2["<-> App + Framework"]
+        C3["Kap. 10–12<br/>Pipeline · Capture-Typen<br/>Characteristics Deep Dive"] ~~~ H_L3["<-> Parcel-Metadaten + HAL3-Vertrag"]
+        C4["Kap. 13–17<br/>Manuelle 3A · Belichtung · Fokus · WB"] ~~~ H_L4["<-> Metadaten-Keys -> HAL3 -> I²C-Sensortreiber"]
+        C5["Kap. 18–23<br/>RAW · HDR · Multi-Cam · ZSL · Extensions"] ~~~ H_L5["<-> HAL3 Request-Modell · ISP m2m Reprocessing"]
+        C6["Kap. 24 CameraX<br/>UseCase-Fassade + Interop"] ~~~ H_L6["<-> App-seitige Abstraktion über Framework"]
+        C7["Kap. 25 Natives NDK<br/>ACamera + AHB -> Vulkan"] ~~~ H_L7["<-> NDK-Shim direkt über Camera3Device"]
+        C8["Kap. 26 Coroutines/Flow<br/>Async-Wrapping von Callbacks"] ~~~ H_L8["<-> App-Schicht Async um Binder-Grenzen"]
+        C9["Kap. 27 Tests ITS/CTS<br/>Mock vs. Reale Hardware"] ~~~ H_L9["<-> Validierung jeder Schicht über Test-Harness"]
+        C10["Kap. 28 DIESES KAPITEL<br/>Full Stack Architektur"] ~~~ H_L10["<-> ALLE Schichten, End-to-End"]
     end
     H_L1 --> HW
     H_L2 --> FRAME

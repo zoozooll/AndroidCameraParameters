@@ -344,7 +344,7 @@ flowchart TD
     B -->|No| D[Show Runtime Permission Dialog]
     D --> E{User Grants Permission?}
     E -->|Yes| C
-    E -->|No| F[Show Error & Finish Activity]
+    E -->|No| F[Show Error and Finish Activity]
     C --> G[getSystemService CAMERA_SERVICE]
     G --> H[Cast to CameraManager]
     H --> I[Call cameraIdList]

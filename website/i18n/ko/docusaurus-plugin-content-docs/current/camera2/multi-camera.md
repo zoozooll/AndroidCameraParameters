@@ -18,17 +18,17 @@ keywords: [안드로이드 Camera2, 멀티 카메라, 논리적 카메라, 물�
 ```mermaid
 flowchart TB
     subgraph UserSpace["앱 (사용자 공간)"]
-        APP["CameraManager.openCamera<br/>cameraId = \"0\" (논리적 ID)"]
+        APP["CameraManager.openCamera<br/>cameraId = '0' (논리적 ID)"]
     end
 
     subgraph HAL["카메라 HAL (커널 / 제조사 파티션)"]
         LOG["논리적 카메라 장치 0<br/>가상 노드"]
 
         subgraph PhysicalCams["물리적 카메라 (동일 방향 그룹)"]
-            UW["물리적 ID \"8\"<br/>초광각 0.5×<br/>12MP, 13mm 환산"]
-            W["물리적 ID \"0\"<br/>광각 1.0×<br/>50MP, 24mm 환산"]
-            T["물리적 ID \"5\"<br/>망원 3.0×<br/>10MP, 72mm 환산"]
-            P["물리적 ID \"7\"<br/>잠망경 10×<br/>8MP, 240mm 환산"]
+            UW["물리적 ID '8'<br/>초광각 0.5x<br/>12MP, 13mm 환산"]
+            W["물리적 ID '0'<br/>광각 1.0x<br/>50MP, 24mm 환산"]
+            T["물리적 ID '5'<br/>망원 3.0x<br/>10MP, 72mm 환산"]
+            P["물리적 ID '7'<br/>잠망경 10x<br/>8MP, 240mm 환산"]
         end
 
         LOG <--> UW
@@ -37,11 +37,11 @@ flowchart TB
         LOG <--> P
     end
 
-    subgraph ZoomScale["줌 배율 → HAL 렌즈 전환 지점"]
-        Z1["0.5× – 0.9× → 초광각 (ID 8)"]
-        Z2["1.0× – 2.9× → 광각 (ID 0)"]
-        Z3["3.0× – 9.9× → 망원 (ID 5)"]
-        Z4["10.0× 이상 → 잠망경 (ID 7)"]
+    subgraph ZoomScale["줌 배율 -> HAL 렌즈 전환 지점"]
+        Z1["0.5x - 0.9x -> 초광각 (ID 8)"]
+        Z2["1.0x - 2.9x -> 광각 (ID 0)"]
+        Z3["3.0x - 9.9x -> 망원 (ID 5)"]
+        Z4["10.0x 이상 -> 잠망경 (ID 7)"]
     end
 
     APP --> LOG
@@ -300,24 +300,24 @@ fun createDualPhysicalSession(
 
 ```mermaid
 graph TD
-    subgraph BackLogical["후면 논리적 카메라 ID \"0\""]
+    subgraph BackLogical["후면 논리적 카메라 ID '0'"]
         direction TB
-        CAPFLAG["CAPABILITIES:<br/>LOGICAL_MULTI_CAMERA = true<br/>SENSOR_SYNC_TYPE = CALIBRATED<br/>MAX_DIGITAL_ZOOM = 100×"]
+        CAPFLAG["CAPABILITIES:<br/>LOGICAL_MULTI_CAMERA = true<br/>SENSOR_SYNC_TYPE = CALIBRATED<br/>MAX_DIGITAL_ZOOM = 100x"]
     end
 
     subgraph PhysChildren["물리적 하위 카메라 (getPhysicalCameraIds)"]
-        UWPHYS["ID \"8\" → 초광각<br/>초점=1.7mm<br/>f/1.8<br/>FOV=120°"]
-        WPHYS["ID \"0\" → 광각<br/>초점=5.5mm<br/>f/1.6<br/>FOV=84°"]
-        TPHYS["ID \"5\" → 망원 3×<br/>초점=16.5mm<br/>f/2.0<br/>FOV=28°"]
-        PPHYS["ID \"7\" → 잠망경 10×<br/>초점=55mm<br/>f/3.4<br/>FOV=8.5°"]
+        UWPHYS["ID '8' -> 초광각<br/>초점=1.7mm<br/>f/1.8<br/>FOV=120°"]
+        WPHYS["ID '0' -> 광각<br/>초점=5.5mm<br/>f/1.6<br/>FOV=84°"]
+        TPHYS["ID '5' -> 망원 3x<br/>초점=16.5mm<br/>f/2.0<br/>FOV=28°"]
+        PPHYS["ID '7' -> 잠망경 10x<br/>초점=55mm<br/>f/3.4<br/>FOV=8.5°"]
     end
 
     subgraph ReplaceRule["세션 출력 (규칙 MR-1 적용)"]
         direction TB
         PREV["1x 논리적 미리보기<br/>SurfaceView 1080p<br/>(물리적 ID 미설정)"]
-        PHYS1["1x 물리적 YUV 12MP<br/>→ OutputConfiguration<br/>.setPhysicalCameraId(ID \"0\")<br/>← 광각 렌즈 타겟팅"]
-        PHYS2["1x 물리적 YUV 12MP<br/>→ OutputConfiguration<br/>.setPhysicalCameraId(ID \"5\")<br/>← 망원 렌즈 타겟팅"]
-        NOTE["✓ MR-1에 따라 유효:<br/>형식 YUV × 크기 일치 × 2개 대체"]
+        PHYS1["1x 물리적 YUV 12MP<br/>-> OutputConfiguration<br/>.setPhysicalCameraId(ID '0')<br/><- 광각 렌즈 타겟팅"]
+        PHYS2["1x 물리적 YUV 12MP<br/>-> OutputConfiguration<br/>.setPhysicalCameraId(ID '5')<br/><- 망원 렌즈 타겟팅"]
+        NOTE["✓ MR-1에 따라 유효:<br/>형식 YUV x 크기 일치 x 2개 대체"]
     end
 
     BackLogical --> PhysChildren

@@ -28,42 +28,42 @@ sequenceDiagram
     participant AF as AF 엔진
     participant AWB as AWB 엔진
 
-    User->>App: "촬영" 버튼 누름
-    App->>HAL: AF_MODE = AUTO (또는 MACRO) 설정
-    App->>HAL: CONTROL_AF_TRIGGER = START
-    Note over HAL,AF: 초점 스캔 시작
+    User->>App: "촬영 버튼 누름"
+    App->>HAL: "AF_MODE = AUTO 설정"
+    App->>HAL: "CONTROL_AF_TRIGGER = START"
+    Note over HAL,AF: "초점 스캔 시작"
 
-    loop 매 미리보기 프레임마다
-        HAL-->>App: CaptureResult
-        App->>App: AF_STATE 확인
+    loop "매 미리보기 프레임마다"
+        HAL-->>App: "CaptureResult"
+        App->>App: "AF_STATE 확인"
     end
 
-    AF-->>HAL: AF 잠금 성공
-    HAL-->>App: AF_STATE = FOCUSED_LOCKED ✓
-    Note over App,AE: 초점 안정화 → AE 프리캡처로 진행
+    AF-->>HAL: "AF 잠금 성공"
+    HAL-->>App: "AF_STATE = FOCUSED_LOCKED"
+    Note over App,AE: "초점 안정화, AE 프리캡처로 진행"
 
-    App->>HAL: CONTROL_AE_PRECAPTURE_TRIGGER = START
-    Note over HAL,AE: 프리캡처 측광 스캔<br/>(플래시 모드에 따라<br/>측광용 프리플래시 발광)
+    App->>HAL: "CONTROL_AE_PRECAPTURE_TRIGGER = START"
+    Note over HAL,AE: "프리캡처 측광 스캔"
 
-    loop 매 미리보기 프레임마다
-        HAL-->>App: CaptureResult
-        App->>App: AE_STATE & FLASH_STATE 확인
+    loop "매 미리보기 프레임마다"
+        HAL-->>App: "CaptureResult"
+        App->>App: "AE_STATE 및 FLASH_STATE 확인"
     end
 
-    AE-->>HAL: AE 수렴; 최종 노출 결정
-    HAL-->>App: AE_STATE = CONVERGED (+ 필요 시 FLASH_STATE = READY) ✓
-    AWB-->>HAL: AWB_STATE = CONVERGED (보통 이미 완료됨)
-    Note over App: 모든 3A 수렴! 촬영 안전 상태
+    AE-->>HAL: "AE 수렴"
+    HAL-->>App: "AE_STATE = CONVERGED"
+    AWB-->>HAL: "AWB_STATE = CONVERGED"
+    Note over App: "모든 3A 수렴! 촬영 안전 상태"
 
-    App->>HAL: 스틸 캡처 요청 (TEMPLATE_STILL_CAPTURE)
-    HAL->>HAL: 필요 시 메인 플래시 발광
-    HAL->>HAL: 센서 노출, 프레임 판독
-    HAL-->>App: ImageReader를 통해 JPEG / RAW 프레임 전달
+    App->>HAL: "스틸 캡처 요청"
+    HAL->>HAL: "필요 시 메인 플래시 발광"
+    HAL->>HAL: "센서 노출, 프레임 판독"
+    HAL-->>App: "JPEG 프레임 전달"
 
-    App->>HAL: CONTROL_AF_TRIGGER = CANCEL
-    App->>HAL: CONTROL_AE_PRECAPTURE_TRIGGER = IDLE
-    App->>HAL: AF_MODE = CONTINUOUS_PICTURE 복원
-    Note over App,HAL: 정리: 미리보기가 정상 자동으로 재개됨
+    App->>HAL: "CONTROL_AF_TRIGGER = CANCEL"
+    App->>HAL: "CONTROL_AE_PRECAPTURE_TRIGGER = IDLE"
+    App->>HAL: "AF_MODE = CONTINUOUS_PICTURE 복원"
+    Note over App,HAL: "정리: 미리보기 정상 재개"
 ```
 
 **각 단계는 블로킹(blocking) 방식으로 작동합니다.** HAL이 N단계에 필요한 상태를 확인할 때까지 N+1단계로 이동하지 않습니다. 단계를 건너뛰지 마세요. 단계를 건너뛰면 초점이 흐릿하거나, 플래시 노출이 잘못되거나, 파란색 색조가 도는 사진이 찍히는 앱을 만들게 됩니다.
@@ -482,29 +482,29 @@ stateDiagram-v2
     direction LR
 
     state "AF 상태" as AF {
-        [*] --> ACTIVE_SCAN: AF_TRIGGER = START
-        ACTIVE_SCAN --> FOCUSED_LOCKED: ✓ 초점 잡힘
-        ACTIVE_SCAN --> NOT_FOCUSED_LOCKED: ✗ 잠금 실패
-        FOCUSED_LOCKED --> [*]: 2단계로 진행
-        NOT_FOCUSED_LOCKED --> [*]: 진행 (최선)
+        [*] --> ACTIVE_SCAN: "AF_TRIGGER = START"
+        ACTIVE_SCAN --> FOCUSED_LOCKED: "초점 잡힘"
+        ACTIVE_SCAN --> NOT_FOCUSED_LOCKED: "잠금 실패"
+        FOCUSED_LOCKED --> [*]: "2단계로 진행"
+        NOT_FOCUSED_LOCKED --> [*]: "진행 (최선)"
     }
 
     state "AE 상태" as AE {
-        [*] --> SEARCHING: 미리보기 실행 중
-        SEARCHING --> CONVERGED: 주변광 안정화
-        CONVERGED --> PRECAPTURE: PRECAPTURE_TRIGGER = START
-        PRECAPTURE --> CONVERGED: 최종 노출+플래시 계산됨
-        CONVERGED --> FLASH_REQUIRED: (자동 플래시 모드 전용)
-        CONVERGED --> [*]: 지금 캡처
-        FLASH_REQUIRED --> [*]: 지금 플래시와 함께 캡처
+        [*] --> SEARCHING: "미리보기 실행 중"
+        SEARCHING --> CONVERGED: "주변광 안정화"
+        CONVERGED --> PRECAPTURE: "PRECAPTURE_TRIGGER = START"
+        PRECAPTURE --> CONVERGED: "최종 노출+플래시 계산됨"
+        CONVERGED --> FLASH_REQUIRED: "자동 플래시 모드 전용"
+        CONVERGED --> [*]: "지금 캡처"
+        FLASH_REQUIRED --> [*]: "지금 플래시와 함께 캡처"
     }
 
     state "AWB 상태" as AWB {
-        [*] --> SEARCHING: 큰 장면 변화
-        SEARCHING --> CONVERGED: 광원 찾음
-        CONVERGED --> LOCKED: AWB_LOCK = true
-        CONVERGED --> [*]: 캡처 OK
-        LOCKED --> [*]: 캡처 OK
+        [*] --> SEARCHING: "큰 장면 변화"
+        SEARCHING --> CONVERGED: "광원 찾음"
+        CONVERGED --> LOCKED: "AWB_LOCK = true"
+        CONVERGED --> [*]: "캡처 OK"
+        LOCKED --> [*]: "캡처 OK"
     }
 ```
 

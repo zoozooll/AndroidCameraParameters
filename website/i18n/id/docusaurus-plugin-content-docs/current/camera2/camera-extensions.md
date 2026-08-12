@@ -35,7 +35,7 @@ Pergeseran konseptual yang paling penting: `CameraExtensionSession` **tidak** me
 flowchart LR
     subgraph STANDARD["CameraCaptureSession Standar (Pipeline Langsung)"]
         direction TB
-        S1["Sensor → ISP<br/>(Demosaic, NR, Warna)"]
+        S1["Sensor -> ISP<br/>(Demosaic, NR, Warna)"]
         S2["Alokator Surface Standar<br/>(GPU / HAL Gralloc)"]
         S3["Surface Output Aplikasi<br/>(Pratinjau, JPEG, MediaCodec)"]
         S1 --> S2 --> S3
@@ -44,12 +44,12 @@ flowchart LR
 
     subgraph EXTENSION["CameraExtensionSession (Pipeline EIPP)"]
         direction TB
-        E1["Sensor → ISP<br/>(RAW / YUV tingkat rendah saja)"]
+        E1["Sensor -> ISP<br/>(RAW / YUV tingkat rendah saja)"]
         E2["Buffer Akumulasi Bingkai<br/>(6–20 bingkai dalam<br/>Memori Pribadi Vendor)"]
         E3["Extension Intermediate<br/>Processing Pipeline (EIPP)<br/>Berjalan di DSP / NPU / ISP:<br/>Malam: Selaraskan + Gabung + TNR<br/>Bokeh: Segmentasi + Blur<br/>HDR: Selaraskan + Gabung + Tonemap"]
         E4["Surface Output yang Diproses<br/>(JPEG / YUV)"]
         E1 --> E2 --> E3 --> E4
-        ELAT["Latensi: 500–8000 ms<br/>(jumlah bingkai × interval dasar)"]
+        ELAT["Latensi: 500–8000 ms<br/>(jumlah bingkai x interval dasar)"]
     end
 
     style STANDARD fill:#e6f7ff,stroke:#0369a1
@@ -342,7 +342,7 @@ sequenceDiagram
         APP->>CAM: extSession.capture(builder)
         CAM->>HAL: ext_dispatch_capture(request, BOKEH)
         HAL->>ISP: Ambil 3 Bingkai<br/>(Perataan Eksposur)
-        ISP-->>HAL: RAW / YUV Rendah × 3
+        ISP-->>HAL: RAW / YUV Rendah x 3
         HAL->>EIPP: Kirim Batch Buffer<br/>Jalankan Segmentasi + Blur
         EIPP-->>EIPP: Inferensi Kedalaman MiDaS<br/>Blur Bilateral (20 pass)
         EIPP-->>HAL: Alpha Matte + Latar Belakang Blur<br/>YUV Komposit

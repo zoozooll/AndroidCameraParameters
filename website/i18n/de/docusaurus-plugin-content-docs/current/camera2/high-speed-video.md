@@ -28,14 +28,14 @@ flowchart TD
         S1["App erstellt CaptureRequest<br/>pro Frame über Builder"] --> S2["Binder-IPC zum CameraService<br/>(1 Aufruf pro Frame)"]
         S2 --> S3["CameraService validiert +<br/>leitet an HAL weiter"]
         S3 --> S4["HAL plant Frame<br/>in Sensor-ISP-Pipeline"]
-        S4 --> S5["Frame-Ausgabe<br/>→ Surface / MediaCodec"]
+        S4 --> S5["Frame-Ausgabe<br/>-> Surface / MediaCodec"]
     end
 
     subgraph HighSpeed["CameraConstrainedHighSpeedCaptureSession (120/240 fps)"]
         H1["App ruft createHighSpeedRequestList()<br/>EINMAL auf — erstellt Burst-Liste"] --> H2["HAL vorvalidiert ALLE Frames<br/>in Burst-Liste (Timings, Größen, FPS)"]
         H2 --> H3["Burst-Liste wird in<br/>HAL-Hardware-Scheduler geladen"]
         H3 --> H4["Scheduler steuert Sensor + ISP<br/>direkt — kein Binder pro Frame"]
-        H4 --> H5["240 Frames/s Ausgabe<br/>→ MediaCodec-Video-Encoder"]
+        H4 --> H5["240 Frames/s Ausgabe<br/>-> MediaCodec-Video-Encoder"]
     end
 ```
 
@@ -47,10 +47,10 @@ Die Android Camera2 API bietet keine "Zeitlupe" als Funktion an – sie stellt *
 
 | Aufnahme-FPS | Feste `FpsRange` | Wiedergabe bei 30 fps → Zeitlupenfaktor | Typische Mindestauflösung | Typische Geräteklasse |
 |-------------|------------------|----------------------------------------|----------------------------|---------------------|
-| 120 | `[120, 120]` | 120 ÷ 30 = **4× langsamer** | 1280×720 (720p) | Mittelklasse und höher |
-| 240 | `[240, 240]` | 240 ÷ 30 = **8× langsamer** | 1280×720 oder 1920×1080 | Flaggschiff (Snapdragon 8-Serie, Exynos 2xxx) |
-| 480 | `[480, 480]` | 480 ÷ 30 = **16× langsamer** | 720p (meist beschnitten) | Gaming-Handys (Black Shark, ROG Phone, RedMagic) |
-| 960 | `[960, 960]` | 960 ÷ 30 = **32× langsamer** | 720p (DRAM-gepuffert, kurze Bursts < 0,5 s) | Samsung Galaxy S/Ultra, Sony Xperia 1-Serie |
+| 120 | `[120, 120]` | 120 ÷ 30 = **4x langsamer** | 1280×720 (720p) | Mittelklasse und höher |
+| 240 | `[240, 240]` | 240 ÷ 30 = **8x langsamer** | 1280×720 oder 1920×1080 | Flaggschiff (Snapdragon 8-Serie, Exynos 2xxx) |
+| 480 | `[480, 480]` | 480 ÷ 30 = **16x langsamer** | 720p (meist beschnitten) | Gaming-Handys (Black Shark, ROG Phone, RedMagic) |
+| 960 | `[960, 960]` | 960 ÷ 30 = **32x langsamer** | 720p (DRAM-gepuffert, kurze Bursts < 0,5 s) | Samsung Galaxy S/Ultra, Sony Xperia 1-Serie |
 
 Wichtig ist, dass **Modi mit 960 fps und 480 fps in der Regel "Super-Zeitlupen"-Modi sind, die eine DRAM-Pufferung auf dem Sensor erfordern** und nur ca. 0,33–0,5 Sekunden Material aufnehmen, bevor der Puffer voll ist. Diese Modi werden NICHT über `CameraConstrainedHighSpeedCaptureSession` bereitgestellt (die Standard-Sitzung kann hier nicht mithalten), sondern stattdessen über herstellerspezifische Erweiterungen oder über den CameraX ExtensionsManager auf von OEMs zugelassenen Geräten gehandhabt. Dieses Kapitel konzentriert sich auf 120 fps und 240 fps, die beiden Bereiche, die die standardmäßige eingeschränkte High-Speed-API von Camera2 universell unterstützt.
 
@@ -226,7 +226,7 @@ fun createHighSpeedSession(
 ```
 
 Jede Zeile hier ist bewusst gewählt und bildet direkt eine Einschränkung aus dem Forschungsdokument ab:
-- **`TEMPLATE_RECORD`** → erfüllt Einschränkung HS-4.
+- **`TEMPLATE_RECORD`** -> erfüllt Einschränkung HS-4.
 - **`CONTROL_AE_TARGET_FPS_RANGE = [240,240]`** → erfüllt Einschränkung HS-3.
 - **Genau 2 Ausgabe-Surfaces** (Vorschau + Aufnahme) → erfüllt Einschränkung HS-1.
 - **`createHighSpeedRequestList(recordBuilder.build())`** → erstellt die Burst-Liste mit der Mindestlänge (2 Frames), die der HAL-Hardware-Scheduler direkt verarbeitet.
@@ -245,7 +245,7 @@ flowchart LR
 
     subgraph HSPipeline["High-Speed-Pipeline mit 240 fps"]
         HP1[Sensor-Auslesen mit 240 fps<br/>über MIPI D-PHY High-Speed-Modus] --> HP2[Minimaler / schneller ISP:<br/>Binning + leichte Rauschunterdrückung<br/>(Kein schweres Tone-Mapping)]
-        HP2 --> HP3["HAL-Hardware-Scheduler<br/>Burst-Liste (vorvalidiert)<br/>← KEIN Binder pro Frame"]
+        HP2 --> HP3["HAL-Hardware-Scheduler<br/>Burst-Liste (vorvalidiert)<br/><- KEIN Binder pro Frame"]
         HP3 --> HP4["Dedizierter HEVC/H.264<br/>Encoder (High-Throughput-Modus)"]
         HP4 --> HP5[MediaRecorder muxt<br/>Audio + MP4-Container]
     end
@@ -308,7 +308,7 @@ Dieses Kapitel behandelte die vollständige Implementierung von Zeitlupenaufnahm
 
 - **CameraConstrainedHighSpeedCaptureSession** ist die einzige unterstützte API für hohe Bildraten, da einzelne CaptureRequests pro Frame über Binder einen unvertretbaren CPU-Overhead verursachen (68 %+ bei 240 fps, thermische Drosselung in 3,5 Minuten gemäß den Forschungs-Benchmarks).
 - **`getHighSpeedVideoSizes()` + `getHighSpeedVideoFpsRangesFor(size)`** sind die maßgeblichen Enumeratoren – reguläre Ergebnisse von `getOutputSizes()` könnten vom HAL abgelehnt werden.
-- **Zeitlupenfaktor** = Aufnahme-fps ÷ 30 fps Wiedergabe: 120 fps → 4-fache Zeitlupe, 240 fps → 8-fache Zeitlupe. Verwenden Sie `MediaRecorder.setCaptureRate(fps)`, um die korrekten Zeitlupen-Metadaten in den MP4-Container einzubetten.
+- **Zeitlupenfaktor** = Aufnahme-fps ÷ 30 fps Wiedergabe: 120 fps -> 4-fache Zeitlupe, 240 fps -> 8-fache Zeitlupe. Verwenden Sie `MediaRecorder.setCaptureRate(fps)`, um die korrekten Zeitlupen-Metadaten in den MP4-Container einzubetten.
 - **`createHighSpeedRequestList(builder.build())`** ist zwingend erforderlich. Dies validiert jeden Frame in einer Burst-Liste vorab und lädt ihn direkt in den HAL-Hardware-Scheduler, wodurch Binder-IPC pro Frame entfällt.
 - **7 HAL-Einschränkungen (HS-1 bis HS-7)** werden strikt erzwungen. Häufigster Fehler: mehr als 2 Ausgabe-Surfaces.
 - Das **architektonische Mermaid-Diagramm** zeigt den leichtgewichtigen/schnellen ISP, der bei 240 fps verwendet wird (Binning, einfache Rauschunterdrückung), im Vergleich zum vollen ISP in der 30-fps-Pipeline.

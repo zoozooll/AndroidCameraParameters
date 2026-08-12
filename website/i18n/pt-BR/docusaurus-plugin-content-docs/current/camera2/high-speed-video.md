@@ -28,14 +28,14 @@ flowchart TD
         S1["App Constrói CaptureRequest<br/>por quadro via Builder"] --> S2["Binder IPC para CameraService<br/>(1 chamada por quadro)"]
         S2 --> S3["CameraService Valida +<br/>Despacha para o HAL"]
         S3 --> S4["HAL Agenda o Quadro<br/>no Pipeline ISP do Sensor"]
-        S4 --> S5["Saída do Quadro<br/>→ Surface / MediaCodec"]
+        S4 --> S5["Saída do Quadro<br/>-> Surface / MediaCodec"]
     end
 
     subgraph HighSpeed["CameraConstrainedHighSpeedCaptureSession (120/240 FPS)"]
         H1["App chama createHighSpeedRequestList()<br/>UMA VEZ — constrói lista de burst"] --> H2["HAL Pré-Valida TODOS os Quadros<br/>na Lista de Burst (tempos, tamanhos, FPS)"]
         H2 --> H3["Lista de Burst Carregada no<br/>Agendador de Hardware do HAL"]
         H3 --> H4["Agendador Conduz Sensor + ISP<br/>Diretamente — Sem Binder por Quadro"]
-        H4 --> H5["Saída de 240 Quadros/seg<br/>→ Codificador de Vídeo MediaCodec"]
+        H4 --> H5["Saída de 240 Quadros/seg<br/>-> Codificador de Vídeo MediaCodec"]
     end
 ```
 
@@ -47,9 +47,9 @@ A API Android Camera2 não expõe "câmera lenta" como um recurso — ela expõe
 
 | FPS de Captura | `FpsRange` Fixo | Reprodução @ 30 fps → Fator de Câmera Lenta | Resolução Mínima Típica | Nível de Dispositivo Típico |
 |-------------|------------------|----------------------------------------|----------------------------|---------------------|
-| 120 | `[120, 120]` | 120 ÷ 30 = **4× mais lento** | 1280×720 (720p) | Intermediário e superior |
-| 240 | `[240, 240]` | 240 ÷ 30 = **8× mais lento** | 1280×720 ou 1920×1080 | Flagship (Série Snapdragon 8, Exynos 2xxx) |
-| 480 | `[480, 480]` | 480 ÷ 30 = **16× mais lento** | 720p (geralmente cortado) | Celulares gamers (Black Shark, ROG Phone, RedMagic) |
+| 120 | `[120, 120]` | 120 ÷ 30 = **4x mais lento** | 1280×720 (720p) | Intermediário e superior |
+| 240 | `[240, 240]` | 240 ÷ 30 = **8x mais lento** | 1280×720 ou 1920×1080 | Flagship (Série Snapdragon 8, Exynos 2xxx) |
+| 480 | `[480, 480]` | 480 ÷ 30 = **16x mais lento** | 720p (geralmente cortado) | Celulares gamers (Black Shark, ROG Phone, RedMagic) |
 | 960 | `[960, 960]` | 960 ÷ 30 = **32× mais lento** | 720p (bufferizado em DRAM, rajadas curtas < 0,5 seg) | Samsung Galaxy S/Ultra, Série Sony Xperia 1 |
 
 Fundamentalmente, **os modos de 960 fps e 480 fps são tipicamente modos de "super-câmera lenta" que exigem buffer de DRAM no sensor** e capturam apenas ~0,33–0,5 segundos de filmagem antes de encher o buffer — esses modos NÃO são expostos através da `CameraConstrainedHighSpeedCaptureSession` (a sessão padrão não consegue acompanhar) e são tratados por extensões específicas do fabricante ou via CameraX ExtensionsManager em dispositivos permitidos pelos OEMs. Este capítulo foca em 120 fps e 240 fps, que são as duas faixas que a API de alta velocidade restrita padrão do Camera2 suporta universalmente.
@@ -226,7 +226,7 @@ fun createHighSpeedSession(
 ```
 
 Cada linha aqui é deliberada e mapeia diretamente para uma restrição do documento de pesquisa:
-- **`TEMPLATE_RECORD`** → satisfaz a restrição HS-4.
+- **`TEMPLATE_RECORD`** -> satisfaz a restrição HS-4.
 - **`CONTROL_AE_TARGET_FPS_RANGE = [240,240]`** → satisfaz a restrição HS-3.
 - **Exatamente 2 superfícies de saída** (preview + gravação) → satisfaz a restrição HS-1.
 - **`createHighSpeedRequestList(recordBuilder.build())`** → cria o burst pré-validado de comprimento mínimo (2 quadros) que o agendador do HAL consome diretamente.
@@ -245,7 +245,7 @@ flowchart LR
 
     subgraph HSPipeline["Pipeline de Alta Velocidade Restrito 240 FPS"]
         HP1[Leitura do Sensor 240fps<br/>via Modo High-Speed MIPI D-PHY] --> HP2[ISP Mínimo / Rápido:<br/>Binning + Redução de Ruído Leve<br/>(Sem Mapeamento de Tons Pesado)]
-        HP2 --> HP3["Agendador de Hardware do HAL<br/>Lista de Burst (pré-validada)<br/>← SEM binder por quadro"]
+        HP2 --> HP3["Agendador de Hardware do HAL<br/>Lista de Burst (pré-validada)<br/><- SEM binder por quadro"]
         HP3 --> HP4["Codificador HEVC/H.264 Dedicado<br/>(Modo de Alto Rendimento)"]
         HP4 --> HP5[MediaRecorder Multiplexa<br/>Áudio + Contêiner MP4]
     end
@@ -308,7 +308,7 @@ Este capítulo cobriu a implementação completa da gravação em câmera lenta 
 
 - **CameraConstrainedHighSpeedCaptureSession** é a única API suportada para altas taxas de quadros, porque as CaptureRequests individuais por quadro via binder causam uma sobrecarga de CPU proibitiva (68%+ a 240 fps, limite térmico em 3,5 minutos conforme benchmarks de pesquisa).
 - **`getHighSpeedVideoSizes()` + `getHighSpeedVideoFpsRangesFor(size)`** são os enumeradores autoritativos — resultados regulares de `getOutputSizes()` podem ser rejeitados pelo HAL.
-- **Fator de câmera lenta** = fps de captura ÷ reprodução de 30 fps: 120 fps → 4× mais lento, 240 fps → 8× mais lento. Use `MediaRecorder.setCaptureRate(fps)` para incorporar os metadados corretos de reprodução em câmera lenta no contêiner MP4.
+- **Fator de câmera lenta** = fps de captura ÷ reprodução de 30 fps: 120 fps -> 4x mais lento, 240 fps -> 8x mais lento. Use `MediaRecorder.setCaptureRate(fps)` para incorporar os metadados corretos de reprodução em câmera lenta no contêiner MP4.
 - **`createHighSpeedRequestList(builder.build())`** é obrigatório. Isso pré-valida cada quadro em uma lista de burst e a carrega diretamente no agendador de hardware do HAL, eliminando o binder IPC por quadro.
 - **7 restrições do HAL (HS-1 a HS-7)** são rigorosamente aplicadas. Falha mais comum: > 2 superfícies de saída.
 - **Diagrama Mermaid arquitetural** mostra o ISP leve/rápido usado a 240 fps (binning, NR leve) vs o ISP completo no pipeline de 30 fps.

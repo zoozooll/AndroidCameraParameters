@@ -344,7 +344,7 @@ flowchart TD
     B -->|Nein| D[Dialog für Laufzeitberechtigung anzeigen]
     D --> E{Benutzer gewährt Berechtigung?}
     E -->|Ja| C
-    E -->|Nein| F[Fehler anzeigen & Activity beenden]
+    E -->|Nein| F[Fehler anzeigen und Activity beenden]
     C --> G[getSystemService CAMERA_SERVICE]
     G --> H[Cast auf CameraManager]
     H --> I[cameraIdList aufrufen]

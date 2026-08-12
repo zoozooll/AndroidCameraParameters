@@ -28,42 +28,42 @@ sequenceDiagram
     participant AF as Motor AF
     participant AWB as Motor AWB
 
-    User->>App: Toca el botón "Capturar"
-    App->>HAL: Establecer AF_MODE = AUTO (o MACRO)
-    App->>HAL: CONTROL_AF_TRIGGER = START
-    Note over HAL,AF: Se inicia el escaneo de enfoque
+    User->>App: "Toca el botón 'Capturar'"
+    App->>HAL: "Establecer AF_MODE = AUTO"
+    App->>HAL: "CONTROL_AF_TRIGGER = START"
+    Note over HAL,AF: "Se inicia el escaneo de enfoque"
 
-    loop Cada fotograma de vista previa
-        HAL-->>App: CaptureResult
-        App->>App: Comprobar AF_STATE
+    loop "Cada fotograma de vista previa"
+        HAL-->>App: "CaptureResult"
+        App->>App: "Comprobar AF_STATE"
     end
 
-    AF-->>HAL: Bloqueo de AF conseguido
-    HAL-->>App: AF_STATE = FOCUSED_LOCKED ✓
-    Note over App,AE: Enfoque estable → proceder a precaptura AE
+    AF-->>HAL: "Bloqueo de AF conseguido"
+    HAL-->>App: "AF_STATE = FOCUSED_LOCKED"
+    Note over App,AE: "Enfoque estable, proceder a precaptura AE"
 
-    App->>HAL: CONTROL_AE_PRECAPTURE_TRIGGER = START
-    Note over HAL,AE: Barrido de medición de precaptura<br/>(si el modo de flash lo requiere, dispara<br/>un preflash para la medición)
+    App->>HAL: "CONTROL_AE_PRECAPTURE_TRIGGER = START"
+    Note over HAL,AE: "Barrido de medición de precaptura"
 
-    loop Cada fotograma de vista previa
-        HAL-->>App: CaptureResult
-        App->>App: Comprobar AE_STATE y FLASH_STATE
+    loop "Cada fotograma de vista previa"
+        HAL-->>App: "CaptureResult"
+        App->>App: "Comprobar AE_STATE y FLASH_STATE"
     end
 
-    AE-->>HAL: AE convergido; exposición final decidida
-    HAL-->>App: AE_STATE = CONVERGED (+ FLASH_STATE = READY si es necesario) ✓
-    AWB-->>HAL: AWB_STATE = CONVERGED (normalmente ya hecho)
-    Note over App: ¡Todas las 3A han convergido! CAPTURA SEGURA
+    AE-->>HAL: "AE convergido"
+    HAL-->>App: "AE_STATE = CONVERGED"
+    AWB-->>HAL: "AWB_STATE = CONVERGED"
+    Note over App: "¡Todas las 3A han convergido! CAPTURA SEGURA"
 
-    App->>HAL: Solicitud de captura fija (TEMPLATE_STILL_CAPTURE)
-    HAL->>HAL: Disparar flash principal si es necesario
-    HAL->>HAL: Exponer el sensor, leer el fotograma
-    HAL-->>App: Fotograma JPEG / RAW entregado vía ImageReader
+    App->>HAL: "Solicitud de captura fija"
+    HAL->>HAL: "Disparar flash principal si es necesario"
+    HAL->>HAL: "Exponer el sensor, leer el fotograma"
+    HAL-->>App: "Fotograma JPEG entregado"
 
-    App->>HAL: CONTROL_AF_TRIGGER = CANCEL
-    App->>HAL: CONTROL_AE_PRECAPTURE_TRIGGER = IDLE
-    App->>HAL: Restaurar AF_MODE = CONTINUOUS_PICTURE
-    Note over App,HAL: Limpieza: la vista previa reanuda el auto normal
+    App->>HAL: "CONTROL_AF_TRIGGER = CANCEL"
+    App->>HAL: "CONTROL_AE_PRECAPTURE_TRIGGER = IDLE"
+    App->>HAL: "Restaurar AF_MODE = CONTINUOUS_PICTURE"
+    Note over App,HAL: "Limpieza: la vista previa se reanuda"
 ```
 
 **Cada paso es bloqueante.** No se pasa al paso N+1 hasta que la HAL confirma el estado requerido en el paso N. Nunca se salte pasos; así es como lanzará una aplicación con enfoques suaves intermitentes, malas exposiciones con flash o fotos con tinte azul.
@@ -482,29 +482,29 @@ stateDiagram-v2
     direction LR
 
     state "Estados de AF" as AF {
-        [*] --> ACTIVE_SCAN: AF_TRIGGER = START
-        ACTIVE_SCAN --> FOCUSED_LOCKED: ✓ Enfoque encontrado
-        ACTIVE_SCAN --> NOT_FOCUSED_LOCKED: ✗ No se pudo bloquear
-        FOCUSED_LOCKED --> [*]: Pasar a la Fase 2
-        NOT_FOCUSED_LOCKED --> [*]: Pasar (mejor esfuerzo)
+        [*] --> ACTIVE_SCAN: "AF_TRIGGER = START"
+        ACTIVE_SCAN --> FOCUSED_LOCKED: "Enfoque encontrado"
+        ACTIVE_SCAN --> NOT_FOCUSED_LOCKED: "No se pudo bloquear"
+        FOCUSED_LOCKED --> [*]: "Pasar a la Fase 2"
+        NOT_FOCUSED_LOCKED --> [*]: "Pasar (mejor esfuerzo)"
     }
 
     state "Estados de AE" as AE {
-        [*] --> SEARCHING: Vista previa funcionando
-        SEARCHING --> CONVERGED: Ambiente estable
-        CONVERGED --> PRECAPTURE: PRECAPTURE_TRIGGER = START
-        PRECAPTURE --> CONVERGED: Exposición final + flash calculados
-        CONVERGED --> FLASH_REQUIRED: (solo modo flash automático)
-        CONVERGED --> [*]: Capturar ahora
-        FLASH_REQUIRED --> [*]: Capturar con flash ahora
+        [*] --> SEARCHING: "Vista previa funcionando"
+        SEARCHING --> CONVERGED: "Ambiente estable"
+        CONVERGED --> PRECAPTURE: "PRECAPTURE_TRIGGER = START"
+        PRECAPTURE --> CONVERGED: "Exposición final + flash calculados"
+        CONVERGED --> FLASH_REQUIRED: "Solo modo flash automático"
+        CONVERGED --> [*]: "Capturar ahora"
+        FLASH_REQUIRED --> [*]: "Capturar con flash ahora"
     }
 
     state "Estados de AWB" as AWB {
-        [*] --> SEARCHING: Cambio importante de escena
-        SEARCHING --> CONVERGED: Iluminante encontrado
-        CONVERGED --> LOCKED: AWB_LOCK = true
-        CONVERGED --> [*]: Captura Correcta
-        LOCKED --> [*]: Captura Correcta
+        [*] --> SEARCHING: "Cambio importante de escena"
+        SEARCHING --> CONVERGED: "Iluminante encontrado"
+        CONVERGED --> LOCKED: "AWB_LOCK = true"
+        CONVERGED --> [*]: "Captura Correcta"
+        LOCKED --> [*]: "Captura Correcta"
     }
 ```
 

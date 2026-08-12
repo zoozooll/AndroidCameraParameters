@@ -35,7 +35,7 @@ flowchart TD
         H1["App Calls createHighSpeedRequestList()<br/>ONCE — builds burst list"] --> H2["HAL Pre-Validates ALL Frames<br/>in Burst List (timings, sizes, FPS)"]
         H2 --> H3["Burst List Loaded into<br/>HAL Hardware Scheduler"]
         H3 --> H4["Scheduler Drives Sensor + ISP<br/>Directly — No Per-Frame Binder"]
-        H4 --> H5["240 Frames/sec Output<br/>→ MediaCodec Video Encoder"]
+        H4 --> H5["240 Frames/sec Output<br/>-> MediaCodec Video Encoder"]
     end
 ```
 
@@ -245,7 +245,7 @@ flowchart LR
 
     subgraph HSPipeline["240 FPS Constrained High-Speed Pipeline"]
         HP1[Sensor 240fps Readout<br/>via MIPI D-PHY High-Speed Mode] --> HP2[Minimal / Fast ISP:<br/>Binning + Lite Noise Reduction<br/>(No Heavy Tone Mapping)]
-        HP2 --> HP3["HAL Hardware Scheduler<br/>Burst List (pre-validated)<br/>← NO binder per-frame"]
+        HP2 --> HP3["HAL Hardware Scheduler<br/>Burst List (pre-validated)<br/><- NO binder per-frame"]
         HP3 --> HP4["Dedicated HEVC/H.264<br/>Encoder (High-Throughput Mode)"]
         HP4 --> HP5[MediaRecorder Muxes<br/>Audio + MP4 Container]
     end

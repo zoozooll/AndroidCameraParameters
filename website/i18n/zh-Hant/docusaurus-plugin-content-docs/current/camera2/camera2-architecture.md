@@ -34,8 +34,8 @@ graph TB
     end
     subgraph BIND["IPC 層 — Binder / HwBinder"]
         direction TB
-        B1["AIDL ICameraService (AOSP)<br/>框架 ↔ CameraService"]
-        B2["HIDL / AIDL HAL Binder (Treble)<br/>CameraService ↔ 供應商 HAL"]
+        B1["AIDL ICameraService (AOSP)<br/>框架 <-> CameraService"]
+        B2["HIDL / AIDL HAL Binder (Treble)<br/>CameraService <-> 供應商 HAL"]
     end
     subgraph NS["原生 Mediaserver 層 (system/bin/cameraserver)"]
         direction TB
@@ -59,7 +59,7 @@ graph TB
     subgraph HW["物理硬體層"]
         direction TB
         HW1["鏡頭組件<br/>VCM 音圈馬達 (I2C)<br/>移動鏡組以實現對焦 / OIS"]
-        HW2["相機感光元件像素陣列<br/>CMOS 感光元件 (索尼 IMX / 三星 ISOCELL / 豪威)<br/>曝光 → 讀取 → A/D 轉換"]
+        HW2["相機感光元件像素陣列<br/>CMOS 感光元件 (索尼 IMX / 三星 ISOCELL / 豪威)<br/>曝光 -> 讀取 -> A/D 轉換"]
         HW3["MIPI CSI-2 物理總線<br/>2/4/8 對差分對，每通道 1.5 – 2.5 Gbps"]
         HW4["ISP 影像訊號處理器 (在 SoC 上)<br/>硬體實現去馬賽克 · 降噪 · 銳化 · HDR 合併 · 人臉偵測"]
         HW5["閃光燈 LED 控制器 (I2C)<br/>氙氣閃光燈或 LED 電流沈<br/>同步至感光元件 EXRST 引腳"]
@@ -275,18 +275,18 @@ val supported: Boolean = setup.isSessionConfigurationSupported(sessionConfig)
 
 ```mermaid
 flowchart TB
-    subgraph Journey["你在這本書中的旅程 (章節 → 層級)"]
+    subgraph Journey["你在這本書中的旅程 (章節 -> 層級)"]
         direction LR
-        C1["第 1–4 章<br/>基礎知識<br/>硬體層概念"] ~~~ H_L1["↔ HW 層"]
-        C2["第 5–9 章<br/>首个 Camera2 應用<br/>CameraManager · 工作階段 · ImageReader"] ~~~ H_L2["↔ 應用 + 框架層"]
-        C3["第 10–12 章<br/>管線 · 擷取類型<br/>特性深度挖掘"] ~~~ H_L3["↔ Parcel 元數據 + HAL3 契約"]
-        C4["第 13–17 章<br/>手動 3A · 曝光 · 對焦 · 白平衡"] ~~~ H_L4["↔ 元數據鍵 → HAL3 → I²C 感光元件驅動"]
-        C5["第 18–23 章<br/>RAW · HDR · 多攝 · ZSL · 擴充"] ~~~ H_L5["↔ HAL3 請求模型 · ISP m2m 重處理"]
-        C6["第 24 章 CameraX<br/>UseCase 門面 + 互操作"] ~~~ H_L6["↔ 應用側對框架層的抽象"]
-        C7["第 25 章 原生 NDK<br/>ACamera + AHB → Vulkan"] ~~~ H_L7["↔ Camera3Device 之上的 NDK 墊片"]
-        C8["第 26 章 協程/Flow<br/>回呼的非同步包裝"] ~~~ H_L8["↔ 圍繞 Binder 邊界的應用層非同步化"]
-        C9["第 27 章 測試 ITS/CTS<br/>Mock 對比 真實硬體"] ~~~ H_L9["↔ 透過測試套件驗證每一層"]
-        C10["第 28 章 本章內容<br/>全棧架構"] ~~~ H_L10["↔ 從頭到尾的所有層級"]
+        C1["第 1–4 章<br/>基礎知識<br/>硬體層概念"] ~~~ H_L1["<-> HW 層"]
+        C2["第 5–9 章<br/>首个 Camera2 應用<br/>CameraManager · 工作階段 · ImageReader"] ~~~ H_L2["<-> 應用 + 框架層"]
+        C3["第 10–12 章<br/>管線 · 擷取類型<br/>特性深度挖掘"] ~~~ H_L3["<-> Parcel 元數據 + HAL3 契約"]
+        C4["第 13–17 章<br/>手動 3A · 曝光 · 對焦 · 白平衡"] ~~~ H_L4["<-> 元數據鍵 -> HAL3 -> I²C 感光元件驅動"]
+        C5["第 18–23 章<br/>RAW · HDR · 多攝 · ZSL · 擴充"] ~~~ H_L5["<-> HAL3 請求模型 · ISP m2m 重處理"]
+        C6["第 24 章 CameraX<br/>UseCase 門面 + 互操作"] ~~~ H_L6["<-> 應用側對框架層的抽象"]
+        C7["第 25 章 原生 NDK<br/>ACamera + AHB -> Vulkan"] ~~~ H_L7["<-> Camera3Device 之上的 NDK 墊片"]
+        C8["第 26 章 協程/Flow<br/>回呼的非同步包裝"] ~~~ H_L8["<-> 圍繞 Binder 邊界的應用層非同步化"]
+        C9["第 27 章 測試 ITS/CTS<br/>Mock 對比 真實硬體"] ~~~ H_L9["<-> 透過測試套件驗證每一層"]
+        C10["第 28 章 本章內容<br/>全棧架構"] ~~~ H_L10["<-> 從頭到尾的所有層級"]
     end
     H_L1 --> HW
     H_L2 --> FRAME
