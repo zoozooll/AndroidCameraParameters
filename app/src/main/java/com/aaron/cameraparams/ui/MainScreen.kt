@@ -42,6 +42,7 @@ import com.aaron.cameraparams.ui.components.PrivacyPolicyDialog
 import com.aaron.cameraparams.ui.components.AboutDialog
 
 import androidx.annotation.StringRes
+import androidx.compose.runtime.saveable.rememberSaveable
 
 sealed class Screen(val route: String, @StringRes val label: Int, val icon: Int) {
     object Overview : Screen("overview", R.string.nav_overview, R.drawable.ic_overview)
@@ -77,7 +78,6 @@ fun CameraSelector(
                 tint = MaterialTheme.colorScheme.onSurface
             )
         }
-
         DropdownMenu(
             expanded = menuExpanded,
             onDismissRequest = { menuExpanded = false }
