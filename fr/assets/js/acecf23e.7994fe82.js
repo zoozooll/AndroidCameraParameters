@@ -1,0 +1,1 @@
+"use strict";(globalThis.webpackChunkwebsite=globalThis.webpackChunkwebsite||[]).push([[1903],{1912(a){a.exports=JSON.parse('{"blogBasePath":"/AndroidCameraParameters/fr/blog","blogTitle":"Blog","authorsListPath":"/AndroidCameraParameters/fr/blog/authors"}')}}]);

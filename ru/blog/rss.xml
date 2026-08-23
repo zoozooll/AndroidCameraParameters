@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?><?xml-stylesheet type="text/xsl" href="rss.xsl"?>
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+    <channel>
+        <title>Android Camera Parameters Blog</title>
+        <link>https://zoozooll.github.io/AndroidCameraParameters/ru/blog</link>
+        <description>Android Camera Parameters Blog</description>
+        <lastBuildDate>Sun, 23 Aug 2026 00:00:00 GMT</lastBuildDate>
+        <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
+        <generator>https://github.com/jpmonette/feed</generator>
+        <language>ru</language>
+        <item>
+            <title><![CDATA[Welcome to the Android Camera Parameters Blog]]></title>
+            <link>https://zoozooll.github.io/AndroidCameraParameters/ru/blog/welcome-to-camera-parameters-blog</link>
+            <guid>https://zoozooll.github.io/AndroidCameraParameters/ru/blog/welcome-to-camera-parameters-blog</guid>
+            <pubDate>Sun, 23 Aug 2026 00:00:00 GMT</pubDate>
+            <description><![CDATA[Welcome to the official blog for Android Camera Parameters!]]></description>
+            <content:encoded><![CDATA[<p>Welcome to the official blog for <strong>Android Camera Parameters</strong>!</p>
+<p>This blog will be the home for updates, tutorials, and deep dives into the Android Camera2 API.</p>
+<!-- -->
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="why-we-built-this-tool">Why we built this tool<a href="https://zoozooll.github.io/AndroidCameraParameters/ru/blog/welcome-to-camera-parameters-blog#why-we-built-this-tool" class="hash-link" aria-label="Прямая ссылка на Why we built this tool" title="Прямая ссылка на Why we built this tool" translate="no">​</a></h2>
+<p>Android Camera2 API is powerful but complex. Developers often struggle to understand what a specific device's camera can actually do. Our tool aims to make this information accessible and easy to understand.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="visualizing-camera-capabilities">Visualizing Camera Capabilities<a href="https://zoozooll.github.io/AndroidCameraParameters/ru/blog/welcome-to-camera-parameters-blog#visualizing-camera-capabilities" class="hash-link" aria-label="Прямая ссылка на Visualizing Camera Capabilities" title="Прямая ссылка на Visualizing Camera Capabilities" translate="no">​</a></h3>
+<p>You can inspect sensor details, lens characteristics, and hardware levels for all cameras on your device.</p>
+<p><img decoding="async" loading="lazy" alt="App Screenshot" src="https://zoozooll.github.io/AndroidCameraParameters/ru/assets/images/camera_params_screen_overview-9a50deb7ed222d3d4a01fae2551dbb97.png" width="887" height="1774" class="img_ev3q"></p>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="multimedia-features">Multimedia Features<a href="https://zoozooll.github.io/AndroidCameraParameters/ru/blog/welcome-to-camera-parameters-blog#multimedia-features" class="hash-link" aria-label="Прямая ссылка на Multimedia Features" title="Прямая ссылка на Multimedia Features" translate="no">​</a></h2>
+<p>Docusaurus allows us to embed various media types. For example, here is a placeholder for a future video tutorial:</p>
+<div class="video-container"><iframe width="100%" height="400" src="https://www.youtube.com/embed/dQw4w9WgXcQ" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen=""></iframe></div>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="technical-deep-dive-coming-soon">Technical Deep Dive (Coming Soon)<a href="https://zoozooll.github.io/AndroidCameraParameters/ru/blog/welcome-to-camera-parameters-blog#technical-deep-dive-coming-soon" class="hash-link" aria-label="Прямая ссылка на Technical Deep Dive (Coming Soon)" title="Прямая ссылка на Technical Deep Dive (Coming Soon)" translate="no">​</a></h2>
+<p>We will use the <code>camera2</code> tag for posts that explore technical aspects like:</p>
+<ul>
+<li class=""><strong>Stream Configurations</strong>: Understanding which resolutions and formats are supported.</li>
+<li class=""><strong>Hardware Level</strong>: What <code>LEGACY</code> vs <code>FULL</code> vs <code>LEVEL_3</code> really means.</li>
+<li class=""><strong>Physical vs Logical Cameras</strong>: Navigating the multi-camera era.</li>
+</ul>
+<p>Stay tuned for more updates!</p>]]></content:encoded>
+            <category>Release</category>
+            <category>Tutorial</category>
+        </item>
+    </channel>
+</rss>

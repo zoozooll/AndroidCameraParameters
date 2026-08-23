@@ -1,0 +1,1 @@
+"use strict";(globalThis.webpackChunkwebsite=globalThis.webpackChunkwebsite||[]).push([[7472],{5513(e){e.exports=JSON.parse('{"title":"Recent posts","items":[{"title":"Welcome to the Android Camera Parameters Blog","permalink":"/AndroidCameraParameters/es/blog/welcome-to-camera-parameters-blog","unlisted":false,"date":"2026-08-23T00:00:00.000Z"}]}')}}]);

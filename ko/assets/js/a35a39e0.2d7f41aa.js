@@ -1,0 +1,1 @@
+"use strict";(globalThis.webpackChunkwebsite=globalThis.webpackChunkwebsite||[]).push([[9474],{3990(o){o.exports=JSON.parse('{"authors":[{"name":"zoozooll","title":"Maintainer of Android Camera Parameters","url":"https://github.com/zoozooll","imageURL":"https://github.com/zoozooll.png","key":"zoozooll","page":null,"count":1}]}')}}]);
