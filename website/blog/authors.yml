@@ -1,8 +1,6 @@
 # Add your blog authors here
-# Example:
-# my_id:
-#   name: My Name
-#   title: My Title
-#   url: https://github.com/my_id
-#   image_url: https://github.com/my_id.png
-{}
+zoozooll:
+  name: zoozooll
+  title: Maintainer of Android Camera Parameters
+  url: https://github.com/zoozooll
+  image_url: https://github.com/zoozooll.png

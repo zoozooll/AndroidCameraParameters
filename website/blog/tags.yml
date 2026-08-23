@@ -1,7 +1,10 @@
 # Add your blog tags here
-# Example:
-# my_tag:
-#   label: My Tag
-#   permalink: /my-tag
-#   description: Description of my tag
-{}
+release:
+  label: Release
+  description: Announcements about new versions and features.
+tutorial:
+  label: Tutorial
+  description: Step-by-step guides for using the tool.
+camera2:
+  label: Camera2 API
+  description: Technical deep dives into the Android Camera2 API.
