@@ -175,4 +175,18 @@
     <string name="mode_minimal">極簡</string>
     <string name="mode_zero_shutter_lag">零快門延遲</string>
     <string name="mode_quality">品質</string>
+
+    <!-- Camera Import -->
+    <string name="menu_import_camera">匯入相機…</string>
+    <string name="import_camera_dialog_title">匯入相機 JSON</string>
+    <string name="import_camera_name_label">相機名稱</string>
+    <string name="import_camera_from_file">選擇 JSON 檔案</string>
+    <string name="import_dialog_hint">相機特性 JSON…</string>
+    <string name="action_save">儲存</string>
+    <string name="action_cancel">取消</string>
+    <string name="import_invalid_json">無效的 JSON 格式</string>
+    <string name="cd_delete">刪除</string>
+    <string name="cd_save">儲存檔案</string>
+    <string name="toast_json_saved">JSON 已儲存</string>
+    <string name="toast_json_save_failed">JSON 儲存失敗</string>
 </resources>

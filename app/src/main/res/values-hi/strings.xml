@@ -174,4 +174,18 @@
     <string name="dialog_at_resolution">रेज़ोल्यूशन पर</string>
     <string name="dialog_physical_dimensions">भौतिक आयाम</string>
     <string name="dialog_api_key_label">Camera2 API कुंजी:</string>
+
+    <!-- Camera Import -->
+    <string name="menu_import_camera">कैमरा आयात करें…</string>
+    <string name="import_camera_dialog_title">कैमरा JSON आयात करें</string>
+    <string name="import_camera_name_label">कैमरा नाम</string>
+    <string name="import_camera_from_file">JSON फ़ाइल चुनें</string>
+    <string name="import_dialog_hint">कैमरा विशेषताओं का JSON…</string>
+    <string name="action_save">सहेजें</string>
+    <string name="action_cancel">रद्द करें</string>
+    <string name="import_invalid_json">अमान्य JSON प्रारूप</string>
+    <string name="cd_delete">हटाएं</string>
+    <string name="cd_save">फ़ाइल सहेजें</string>
+    <string name="toast_json_saved">JSON सहेजा गया</string>
+    <string name="toast_json_save_failed">JSON सहेजने में विफल</string>
 </resources>

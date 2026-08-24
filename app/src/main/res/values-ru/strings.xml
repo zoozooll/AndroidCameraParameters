@@ -174,4 +174,18 @@
     <string name="dialog_at_resolution">При разрешении</string>
     <string name="dialog_physical_dimensions">Физические размеры</string>
     <string name="dialog_api_key_label">Ключ API Camera2:</string>
+
+    <!-- Camera Import -->
+    <string name="menu_import_camera">Импортировать камеру…</string>
+    <string name="import_camera_dialog_title">Импорт JSON камеры</string>
+    <string name="import_camera_name_label">Название камеры</string>
+    <string name="import_camera_from_file">Выбрать файл JSON</string>
+    <string name="import_dialog_hint">JSON характеристик камеры…</string>
+    <string name="action_save">Сохранить</string>
+    <string name="action_cancel">Отмена</string>
+    <string name="import_invalid_json">Недопустимый формат JSON</string>
+    <string name="cd_delete">Удалить</string>
+    <string name="cd_save">Сохранить файл</string>
+    <string name="toast_json_saved">JSON сохранён</string>
+    <string name="toast_json_save_failed">Не удалось сохранить JSON</string>
 </resources>

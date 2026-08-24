@@ -10,6 +10,8 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.FileOpen
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -38,6 +40,7 @@ import com.aaron.cameraparams.BuildConfig
 import com.aaron.cameraparams.R
 import com.aaron.cameraparams.ui.theme.CameraParamsTheme
 import com.aaron.cameraparams.ui.screens.*
+import com.aaron.cameraparams.ui.components.ImportCameraDialog
 import com.aaron.cameraparams.ui.components.PrivacyPolicyDialog
 import com.aaron.cameraparams.ui.components.AboutDialog
 
@@ -56,7 +59,9 @@ fun CameraSelector(
     state: CameraHeaderState,
     onPrivacyClick: () -> Unit,
     onAboutClick: () -> Unit,
-    onIntent: (CameraIntent) -> Unit
+    onIntent: (CameraIntent) -> Unit,
+    onImportClick: () -> Unit,
+    onDeleteImported: (Int) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
     var menuExpanded by remember { mutableStateOf(false) }
@@ -152,6 +157,38 @@ fun CameraSelector(
                     }
                 )
             }
+
+            if (state.importedCameras.isNotEmpty()) {
+                HorizontalDivider()
+                state.importedCameras.forEachIndexed { index, imported ->
+                    DropdownMenuItem(
+                        text = { Text(imported.name) },
+                        trailingIcon = {
+                            IconButton(onClick = { onDeleteImported(index) }) {
+                                Icon(
+                                    Icons.Default.Delete,
+                                    contentDescription = stringResource(R.string.cd_delete),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        },
+                        onClick = {
+                            onIntent(CameraIntent.SelectCamera(state.cameras.size + index))
+                            expanded = false
+                        }
+                    )
+                }
+            }
+
+            HorizontalDivider()
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.menu_import_camera)) },
+                leadingIcon = { Icon(Icons.Default.FileOpen, contentDescription = null) },
+                onClick = {
+                    expanded = false
+                    onImportClick()
+                }
+            )
         }
     }
 }
@@ -160,11 +197,21 @@ fun CameraSelector(
 fun MainScreen(viewModel: CameraViewModel = viewModel()) {
     val navController = rememberNavController()
     val uiState by viewModel.uiState.collectAsState()
+    var showImportDialog by remember { mutableStateOf(false) }
+
+    if (showImportDialog) {
+        ImportCameraDialog(
+            viewModel = viewModel,
+            onDismiss = { showImportDialog = false }
+        )
+    }
 
     MainScreenContent(
         headerState = uiState.header,
         navController = navController,
-        onIntent = { viewModel.handleIntent(it) }
+        onIntent = { viewModel.handleIntent(it) },
+        onImportClick = { showImportDialog = true },
+        onDeleteImported = { viewModel.removeImportedCamera(it) }
     ) { innerPadding ->
         NavHost(navController, startDestination = Screen.Overview.route, Modifier.padding(innerPadding)) {
             composable(Screen.Overview.route) { 
@@ -201,6 +248,8 @@ fun MainScreenContent(
     headerState: CameraHeaderState,
     navController: NavHostController,
     onIntent: (CameraIntent) -> Unit,
+    onImportClick: () -> Unit,
+    onDeleteImported: (Int) -> Unit,
     content: @Composable (PaddingValues) -> Unit
 ) {
     val items = listOf(
@@ -239,7 +288,9 @@ fun MainScreenContent(
                             state = headerState,
                             onPrivacyClick = { showPrivacyDialog = true },
                             onAboutClick = { showAboutDialog = true },
-                            onIntent = onIntent
+                            onIntent = onIntent,
+                            onImportClick = onImportClick,
+                            onDeleteImported = onDeleteImported
                         )
                     }
                 }
@@ -313,7 +364,9 @@ fun MainScreenPreview() {
                 cameras = listOf("0", "1", "2")
             ),
             navController = navController,
-            onIntent = {}
+            onIntent = {},
+            onImportClick = {},
+            onDeleteImported = {}
         ) { innerPadding ->
             Box(modifier = Modifier.padding(innerPadding).fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(stringResource(R.string.content_area_placeholder))

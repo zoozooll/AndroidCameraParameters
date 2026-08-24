@@ -55,7 +55,10 @@ fun AboutDialogContent() {
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Image(
-            painter = painterResource(id = R.mipmap.ic_launcher),
+            // ic_launcher resolves to the adaptive-icon XML on API 26+, which
+            // painterResource cannot load (only vectors/rasters are supported).
+            // The foreground asset is a plain raster webp, so use that instead.
+            painter = painterResource(id = R.mipmap.ic_launcher_foreground),
             contentDescription = null,
             modifier = Modifier.size(64.dp)
         )

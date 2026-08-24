@@ -174,4 +174,18 @@
     <string name="dialog_at_resolution">Pada Resolusi</string>
     <string name="dialog_physical_dimensions">Dimensi Fisik</string>
     <string name="dialog_api_key_label">Kunci API Camera2:</string>
+
+    <!-- Camera Import -->
+    <string name="menu_import_camera">Impor kamera…</string>
+    <string name="import_camera_dialog_title">Impor JSON kamera</string>
+    <string name="import_camera_name_label">Nama kamera</string>
+    <string name="import_camera_from_file">Pilih file JSON</string>
+    <string name="import_dialog_hint">JSON karakteristik kamera…</string>
+    <string name="action_save">Simpan</string>
+    <string name="action_cancel">Batal</string>
+    <string name="import_invalid_json">Format JSON tidak valid</string>
+    <string name="cd_delete">Hapus</string>
+    <string name="cd_save">Simpan file</string>
+    <string name="toast_json_saved">JSON disimpan</string>
+    <string name="toast_json_save_failed">Gagal menyimpan JSON</string>
 </resources>

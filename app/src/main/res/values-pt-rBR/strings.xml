@@ -174,4 +174,18 @@
     <string name="dialog_at_resolution">Na Resolução</string>
     <string name="dialog_physical_dimensions">Dimensões Fisicas</string>
     <string name="dialog_api_key_label">Chave da API Camera2:</string>
+
+    <!-- Camera Import -->
+    <string name="menu_import_camera">Importar câmera…</string>
+    <string name="import_camera_dialog_title">Importar JSON da câmera</string>
+    <string name="import_camera_name_label">Nome da câmera</string>
+    <string name="import_camera_from_file">Escolher arquivo JSON</string>
+    <string name="import_dialog_hint">JSON das características da câmera…</string>
+    <string name="action_save">Salvar</string>
+    <string name="action_cancel">Cancelar</string>
+    <string name="import_invalid_json">Formato JSON inválido</string>
+    <string name="cd_delete">Excluir</string>
+    <string name="cd_save">Salvar arquivo</string>
+    <string name="toast_json_saved">JSON salvo</string>
+    <string name="toast_json_save_failed">Falha ao salvar o JSON</string>
 </resources>

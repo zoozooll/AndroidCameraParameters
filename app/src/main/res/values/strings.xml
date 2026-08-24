@@ -25,6 +25,20 @@
     <string name="cd_share">Share</string>
     <string name="cd_copy_info">Copy Info</string>
 
+    <!-- Camera Import -->
+    <string name="menu_import_camera">Import camera…</string>
+    <string name="import_camera_dialog_title">Import camera JSON</string>
+    <string name="import_camera_name_label">Camera name</string>
+    <string name="import_camera_from_file">Choose JSON file</string>
+    <string name="import_dialog_hint">Camera characteristics JSON…</string>
+    <string name="action_save">Save</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="import_invalid_json">Invalid JSON format</string>
+    <string name="cd_delete">Delete</string>
+    <string name="cd_save">Save file</string>
+    <string name="toast_json_saved">JSON saved</string>
+    <string name="toast_json_save_failed">Failed to save JSON</string>
+
     <!-- Screen Content -->
     <string name="screen_categories_title">Categories</string>
     <string name="search_placeholder">Search parameters…</string>

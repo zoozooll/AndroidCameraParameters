@@ -175,4 +175,18 @@
     <string name="mode_minimal">MÍNIMO</string>
     <string name="mode_zero_shutter_lag">Sin retardo de obturación</string>
     <string name="mode_quality">CALIDAD</string>
+
+    <!-- Camera Import -->
+    <string name="menu_import_camera">Importar cámara…</string>
+    <string name="import_camera_dialog_title">Importar JSON de cámara</string>
+    <string name="import_camera_name_label">Nombre de la cámara</string>
+    <string name="import_camera_from_file">Elegir archivo JSON</string>
+    <string name="import_dialog_hint">JSON de características de la cámara…</string>
+    <string name="action_save">Guardar</string>
+    <string name="action_cancel">Cancelar</string>
+    <string name="import_invalid_json">Formato JSON no válido</string>
+    <string name="cd_delete">Eliminar</string>
+    <string name="cd_save">Guardar archivo</string>
+    <string name="toast_json_saved">JSON guardado</string>
+    <string name="toast_json_save_failed">No se pudo guardar el JSON</string>
 </resources>

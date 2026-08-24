@@ -1,6 +1,11 @@
 package com.aaron.cameraparams.ui.screens
 
 import android.content.ClipData
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
@@ -8,6 +13,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -16,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -29,11 +36,40 @@ import kotlinx.coroutines.launch
 @Composable
 fun RawJsonScreen(viewModel: CameraViewModel) {
     val uiState by viewModel.uiState.collectAsState()
-    RawJsonScreenContent(rawJson = uiState.rawJson)
+    val context = LocalContext.current
+    val savedMessage = stringResource(R.string.toast_json_saved)
+    val saveFailedMessage = stringResource(R.string.toast_json_save_failed)
+    val shareTitle = stringResource(R.string.cd_share)
+
+    val saveLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri: Uri? ->
+        if (uri != null) {
+            viewModel.saveRawJsonToUri(uri) { success ->
+                val message = if (success) savedMessage else saveFailedMessage
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    RawJsonScreenContent(
+        rawJson = uiState.rawJson,
+        onSaveClick = { saveLauncher.launch(viewModel.buildSuggestedFileName()) },
+        onShareClick = {
+            val send = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_SUBJECT, viewModel.buildSuggestedFileName())
+                putExtra(Intent.EXTRA_TEXT, viewModel.buildExportContent())
+            }
+            context.startActivity(Intent.createChooser(send, shareTitle))
+        }
+    )
 }
 
 @Composable
-fun RawJsonScreenContent(rawJson: String) {
+fun RawJsonScreenContent(
+    rawJson: String,
+    onSaveClick: () -> Unit = {},
+    onShareClick: () -> Unit = {}
+) {
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
 
@@ -48,13 +84,16 @@ fun RawJsonScreenContent(rawJson: String) {
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f)
             )
+            IconButton(onClick = onSaveClick) {
+                Icon(Icons.Default.Save, contentDescription = stringResource(R.string.cd_save))
+            }
             IconButton(onClick = {
                 val clipData = ClipData.newPlainText("Raw JSON", rawJson)
                 scope.launch { clipboard.setClipEntry(ClipEntry(clipData)) }
             }) {
                 Icon(Icons.Default.Info, contentDescription = stringResource(R.string.cd_copy_info))
             }
-            IconButton(onClick = { /* Share action */ }) {
+            IconButton(onClick = onShareClick) {
                 Icon(Icons.Default.Share, contentDescription = stringResource(R.string.cd_share))
             }
         }

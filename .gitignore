@@ -65,3 +65,6 @@ fastlane/readme.md
 # AI Assistant Artifacts
 .artifacts/
 release/
+
+.trae/
+temp_docusaurus_test/

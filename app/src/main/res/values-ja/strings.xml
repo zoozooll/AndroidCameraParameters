@@ -175,4 +175,18 @@
     <string name="mode_minimal">最小</string>
     <string name="mode_zero_shutter_lag">ゼロシャッターラグ</string>
     <string name="mode_quality">画質優先</string>
+
+    <!-- Camera Import -->
+    <string name="menu_import_camera">カメラをインポート…</string>
+    <string name="import_camera_dialog_title">カメラJSONをインポート</string>
+    <string name="import_camera_name_label">カメラ名</string>
+    <string name="import_camera_from_file">JSONファイルを選択</string>
+    <string name="import_dialog_hint">カメラ特性のJSON…</string>
+    <string name="action_save">保存</string>
+    <string name="action_cancel">キャンセル</string>
+    <string name="import_invalid_json">無効なJSON形式です</string>
+    <string name="cd_delete">削除</string>
+    <string name="cd_save">ファイルを保存</string>
+    <string name="toast_json_saved">JSONを保存しました</string>
+    <string name="toast_json_save_failed">JSONの保存に失敗しました</string>
 </resources>
